@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "db:reset": "mysql -u root -p < db/0_reset.sql"
   },
   "devDependencies": {
     "@types/node": "^25.3.2",
