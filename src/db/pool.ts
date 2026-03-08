@@ -1,14 +1,15 @@
-import mysql from "mysql2/promise";
-import { dbConfig } from "./config.js";
+import mysql from 'mysql2/promise';
+import { env } from '../utils/env.js';
 
 export const pool = mysql.createPool({
-    host: dbConfig.host,
-    port: dbConfig.port,
-    user: dbConfig.user,
-    password: dbConfig.password,
-    database: dbConfig.database,
-    waitForConnections: true,
-    connectionLimit: dbConfig.poolMax,
-    enableKeepAlive: true,
-    timezone: "Z",
+  host: env.db.host,
+  port: env.db.port,
+  user: env.db.user,
+  password: env.db.password,
+  database: env.db.name,
+  waitForConnections: true,
+  connectionLimit: env.db.connectionLimit,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0,
+  timezone: 'Z',
 });

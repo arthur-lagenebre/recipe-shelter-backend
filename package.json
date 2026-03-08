@@ -10,12 +10,16 @@
     "db:reset": "mysql -u root -p < db/0_reset.sql"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.3.2",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "dotenv": "^17.3.1",
+    "jsonwebtoken": "^9.0.3",
     "mysql2": "^3.18.2"
   }
 }

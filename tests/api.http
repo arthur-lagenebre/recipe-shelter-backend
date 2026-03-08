@@ -1,0 +1,28 @@
+### Home
+GET http://localhost:3000/
+
+### Health
+GET http://localhost:3000/health
+
+### Register
+POST http://localhost:3000/auth/register
+Content-Type: application/json
+
+{
+  "mail": "test@example.com",
+  "username": "testuser",
+  "password": "Password123!"
+}
+
+### Login
+POST http://localhost:3000/auth/login
+Content-Type: application/json
+
+{
+  "mail": "test@example.com",
+  "password": "Password123!"
+}
+
+### Me (remplace TOKEN)
+GET http://localhost:3000/auth/me
+Authorization: Bearer TOKEN
