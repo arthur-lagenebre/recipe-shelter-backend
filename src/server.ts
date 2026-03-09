@@ -1,9 +1,10 @@
-import "dotenv/config";
+import 'dotenv/config';
 import http from 'node:http';
+
+import { env } from './utils/env.js';
 import { readJsonBody, makeRes } from './api/http/http.utils.js';
 import type { HttpRequest } from './api/http/http.types.js';
 import { Router } from './api/http/router.js';
-import { HttpError } from './utils/errors.js';
 
 import { pool, dbHealth } from './db/index.js';
 import { UserRepositoryMysql } from './repositories/users/UserRepository.mysql.js';
@@ -13,7 +14,11 @@ import { registerAuthRoutes } from './api/auth/auth.routes.js';
 import { createHealthController } from './api/health/health.controller.js';
 import { registerHealthRoutes } from './api/health/health.routes.js';
 
+import { applyCors, handlePreflight } from './api/http/cors.js';
+import { handleHttpError } from './api/http/error-handler.js';
+
 const router = new Router();
+
 const userRepo = new UserRepositoryMysql(pool);
 const authService = new AuthService(userRepo);
 const authController = new AuthController(authService);
@@ -23,8 +28,8 @@ registerAuthRoutes(router, authController);
 const healthController = createHealthController(dbHealth);
 registerHealthRoutes(router, healthController);
 
-router.get('/', (_request, result) => {
-  result.status(200).json({
+router.get('/', (_request, response) => {
+  response.status(200).json({
     message: 'Recipe Shelter API',
     timestamp: new Date().toISOString(),
   });
@@ -33,52 +38,36 @@ router.get('/', (_request, result) => {
 const handler = router.handler();
 
 const server = http.createServer(async (request, result) => {
+  const response = makeRes(result);
+
+  applyCors(request.headers.origin, response);
+
+  const method = (request.method ?? 'GET').toUpperCase();
+
+  if (handlePreflight(method, response))
+    return;
+
   const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`);
 
   const httpReq: HttpRequest = {
-    method: (request.method ?? 'GET') as HttpRequest['method'],
+    method: method as HttpRequest['method'],
     url,
-    headers: request.headers as any,
-    body: undefined,
+    headers: request.headers,
   };
 
   try {
-    httpReq.body = await readJsonBody(request);
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method))
+      httpReq.body = await readJsonBody(request);
 
-    const httpRes = makeRes(result);
-
-    await handler(httpReq, httpRes, (error?: unknown) => {
-      if (!error)
-        return;
-
-      if (error instanceof HttpError) {
-        return httpRes
-          .status(error.status)
-          .json({ error: { message: error.message, code: error.code } });
-      }
-
-      console.error(error);
-
-      return httpRes.status(500).json({ error: { message: 'Internal Server Error' } });
+    await handler(httpReq, response, (error?: unknown) => {
+      if (error)
+        handleHttpError(response, error);
     });
-
   } catch (error) {
-    const httpRes = makeRes(result);
-
-    if (error instanceof HttpError) {
-      return httpRes
-        .status(error.status)
-        .json({ error: { message: error.message, code: error.code } });
-    }
-
-    console.error(error);
-
-    return httpRes.status(500).json({ error: { message: 'Internal Server Error' } });
+    handleHttpError(response, error);
   }
 });
 
-const port = Number(process.env.PORT ?? 3000);
-
-server.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
+server.listen(env.http.port, () => {
+  console.log(`Server running on http://localhost:${env.http.port}`);
 });

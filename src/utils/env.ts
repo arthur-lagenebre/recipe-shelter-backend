@@ -1,8 +1,12 @@
-function mustGet(name: string): string {
+function getString(name: string, fallback?: string): string {
     const valueStr = process.env[name];
 
-    if (!valueStr)
+    if (!valueStr) {
+        if (fallback !== undefined)
+            return fallback;
+
         throw new Error(`Missing env var: ${name}`);
+    }
 
     return valueStr;
 }
@@ -22,16 +26,20 @@ function getInt(name: string, fallback: number): number {
 }
 
 export const env = {
+    http: {
+        port: getInt('PORT', 3000),
+        corsAllowedOrigins: getString('CORS_ALLOWED_ORIGINS', 'http://localhost:4200')
+    },
     db: {
-        host: mustGet('DB_HOST'),
+        host: getString('DB_HOST'),
         port: getInt('DB_PORT', 3306),
-        user: mustGet('DB_USER'),
+        user: getString('DB_USER'),
         connectionLimit: getInt('DB_CONNECTION_LIMIT', 10),
-        password: mustGet('DB_PASSWORD'),
-        name: mustGet('DB_NAME'),
+        password: getString('DB_PASSWORD'),
+        name: getString('DB_NAME'),
     },
     auth: {
-        jwtSecret: mustGet('JWT_SECRET'),
+        jwtSecret: getString('JWT_SECRET'),
         jwtExpiresIn: (process.env.JWT_EXPIRES_IN ?? '7d') as string | number,
         bcryptCost: getInt('BCRYPT_COST', 12),
         defaultRoleName: process.env.AUTH_DEFAULT_ROLE ?? 'User',
