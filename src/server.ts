@@ -44,6 +44,11 @@ const server = http.createServer(async (request, result) => {
 
   const method = (request.method ?? 'GET').toUpperCase();
 
+  if (method === 'OPTIONS') {
+    response.status(204).send();
+    return;
+  }
+
   if (handlePreflight(method, response))
     return;
 
