@@ -14,7 +14,7 @@ INSERT INTO Users (Mail, Username, Password, RoleId)
 VALUES (
   'admin@recipe-shelter.fr',
   'admin',
-  '$2b$10$REPLACE_WITH_REAL_BCRYPT_HASH........................................',
+  '$2b$12$zrX5iMCRel.f0GtuWfc2J.w8rq7bSuNnFnpd6.ODVPEGhgZlygfBW',
   (SELECT Id FROM Roles WHERE Name = 'admin')
 )
 ON DUPLICATE KEY UPDATE
