@@ -13,14 +13,16 @@ export const requireAuth: Handler = (req, _res, next) => {
   const token = value.slice('Bearer '.length).trim();
 
   try {
-    const payload = jwt.verify(token, env.auth.jwtSecret) as { sub?: unknown; roleId?: unknown };
+    const payload = jwt.verify(token, env.auth.jwtSecret) as { sub?: unknown; username?: unknown; roleId?: unknown; };
+
     const userId = Number(payload.sub);
+    const username = payload.username;
     const roleId = Number(payload.roleId);
 
-    if (!Number.isFinite(userId) || !Number.isFinite(roleId))
+    if (!Number.isFinite(userId) || typeof username !== 'string' || !Number.isFinite(roleId))
       return next(unauthorized('Invalid token payload', 'AUTH_BAD_TOKEN'));
 
-    req.auth = { userId, roleId };
+    req.auth = { userId, username, roleId };
 
     return next();
   } catch {

@@ -7,6 +7,7 @@ import type { User } from '../../repositories/users/user.types.js';
 
 export type AuthTokenPayload = {
     sub: number;
+    username: string;
     roleId: number;
 };
 
@@ -14,7 +15,7 @@ export class AuthService {
     constructor(private readonly users: IUserRepository) { }
 
     private signToken(user: User): string {
-        const payload: AuthTokenPayload = { sub: user.id, roleId: user.roleId };
+        const payload: AuthTokenPayload = { sub: user.id, username: user.username, roleId: user.roleId };
         const secret: Secret = env.auth.jwtSecret;
         const options: SignOptions = { expiresIn: env.auth.jwtExpiresIn as SignOptions['expiresIn'], };
 
