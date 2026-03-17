@@ -1,12 +1,19 @@
-import type { Router } from '../http/router.js';
-import type { Handler } from '../http/http.types.js';
+import { Router } from 'express';
+import type { RequestHandler } from 'express';
 import { requireAuth } from '../../middlewares/requireAuth.js';
 
-export function registerAuthRoutes(router: Router, controller: { register: Handler; login: Handler }) {
-  router.post('/auth/register', controller.register);
-  router.post('/auth/login', controller.login);
+type AuthController = {
+  register: RequestHandler;
+  login: RequestHandler;
+};
 
-  router.get('/auth/me', requireAuth, (req, res) => {
-    res.status(200).json({ auth: req.auth });
-  });
+export function createAuthRouter(controller: AuthController) {
+  const router = Router();
+
+  router.post('/register', controller.register);
+  router.post('/login', controller.login);
+
+  router.get('/me', requireAuth, (req, res) => { res.status(200).json({ auth: req.auth }); });
+
+  return router;
 }

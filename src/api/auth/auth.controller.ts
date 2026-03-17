@@ -1,29 +1,42 @@
-import type { Handler } from '../http/http.types.js';
-import type { AuthService } from '../../services/auth/auth.service.js';
-import { parseLoginBody, parseRegisterBody } from './auth.dto.js';
+import type { RequestHandler } from 'express';
+import { authService } from '../../services/auth/auth.service.js';
 
-export class AuthController {
-  constructor(private readonly auth: AuthService) { }
+export const register: RequestHandler = async (req, res, next) => {
+  try {
+    const { mail, username, password } = req.body as {
+      mail?: string;
+      username?: string;
+      password?: string;
+    };
 
-  register: Handler = async (request, result, next) => {
-    try {
-      const dto = parseRegisterBody(request.body);
-      const out = await this.auth.register(dto);
+    const result = await authService.register({
+      mail: mail ?? '',
+      username: username ?? '',
+      password: password ?? '',
+    });
 
-      result.status(201).json(out);
-    } catch (e) {
-      next(e);
-    }
-  };
+    return res.status(201).json(result);
+  } catch (error) {
+    return next(error);
+  }
+};
 
-  login: Handler = async (request, result, next) => {
-    try {
-      const dto = parseLoginBody(request.body);
-      const out = await this.auth.login(dto);
+export const login: RequestHandler = async (req, res, next) => {
+  try {
+    const { mail, password } = req.body as {
+      mail?: string;
+      password?: string;
+    };
 
-      result.status(200).json(out);
-    } catch (e) {
-      next(e);
-    }
-  };
-}
+    const result = await authService.login({
+      mail: mail ?? '',
+      password: password ?? '',
+    });
+
+    return res.status(200).json(result);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const authController = { register, login };
