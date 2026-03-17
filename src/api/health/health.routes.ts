@@ -1,8 +1,18 @@
-import type { Router } from '../http/router.js';
-import type { Handler } from '../http/http.types.js';
+import { Router } from 'express';
+import type { RequestHandler } from 'express';
 
-export function registerHealthRoutes(router: Router, controller: { live: Handler; ready: Handler; health: Handler }) {
-  router.get('/health/live', controller.live);
-  router.get('/health/ready', controller.ready);
-  router.get('/health', controller.health);
+type HealthController = {
+  live: RequestHandler;
+  ready: RequestHandler;
+  health: RequestHandler;
+};
+
+export function createHealthRouter(controller: HealthController) {
+  const router = Router();
+
+  router.get('/live', controller.live);
+  router.get('/ready', controller.ready);
+  router.get('/', controller.health);
+
+  return router;
 }

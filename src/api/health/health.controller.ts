@@ -1,36 +1,42 @@
-import type { Handler } from '../http/http.types.js';
+import type { RequestHandler } from 'express';
+import { dbHealth } from '../../db/health.js';
 
-export function createHealthController(dbHealth: () => Promise<boolean>) {
-  const live: Handler = async (_req, result) => {
-    result.status(200).json({
-      status: 'ok',
-      live: true,
-      timestamp: new Date().toISOString(),
+export const live: RequestHandler = async (_req, res, next) => {
+  try {
+    return res.status(200).json({ ok: true });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const ready: RequestHandler = async (_req, res, next) => {
+  try {
+    const dbOk = await dbHealth();
+
+    return res.status(dbOk ? 200 : 503).json({
+      ok: dbOk,
+      checks: {
+        db: dbOk,
+      },
     });
-  };
+  } catch (error) {
+    return next(error);
+  }
+};
 
-  const ready: Handler = async (_req, result) => {
-    const ok: boolean = await dbHealth();
+export const health: RequestHandler = async (_req, res, next) => {
+  try {
+    const dbOk = await dbHealth();
 
-    result.status(ok ? 200 : 503).json({
-      status: ok ? 'ok' : 'error',
-      ready: ok,
-      database: ok ? 'up' : 'down',
-      timestamp: new Date().toISOString(),
+    return res.status(dbOk ? 200 : 503).json({
+      ok: dbOk,
+      checks: {
+        db: dbOk,
+      },
     });
-  };
+  } catch (error) {
+    return next(error);
+  }
+};
 
-  const health: Handler = async (_req, result) => {
-    const ok: boolean = await dbHealth();
-
-    result.status(ok ? 200 : 503).json({
-      status: ok ? 'ok' : 'error',
-      live: true,
-      ready: ok,
-      database: ok ? 'up' : 'down',
-      timestamp: new Date().toISOString(),
-    });
-  };
-
-  return { live, ready, health };
-}
+export const healthController = { live, ready, health };
