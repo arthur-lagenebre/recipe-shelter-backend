@@ -1,6 +1,6 @@
-import { CreateUserInput, User, UserWithPassword } from './user.types.js';
+import type { CreateUserInput, User, UserWithPassword } from './user.types.js';
 
-export interface IUserRepository {
+export interface UserRepository {
     findById(id: number): Promise<User | null>;
     findByEmail(mail: string): Promise<User | null>;
     findAuthByEmail(mail: string): Promise<UserWithPassword | null>;

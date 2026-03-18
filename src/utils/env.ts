@@ -1,31 +1,35 @@
-function readNumber(value: string | undefined, fallback: number): number {
-    const number = Number(value);
+import 'dotenv/config';
 
-    return Number.isFinite(number) ? number : fallback;
+function readNumber(value: string | undefined, fallback: number): number {
+  const number = Number(value);
+
+  return Number.isFinite(number) ? number : fallback;
 }
 
 function readString(value: string | undefined, fallback: string): string {
-    return value && value.trim() ? value.trim() : fallback;
+  return value && value.trim() ? value.trim() : fallback;
 }
 
 export const env = {
-    port: readNumber(process.env.PORT, 3000),
+  port: readNumber(process.env.PORT, 3000),
 
-    http: { corsAllowedOrigins: readString(process.env.CORS_ALLOWED_ORIGINS, 'http://localhost:4200,http://127.0.0.1:4200') },
+  http: {
+    corsAllowedOrigins: readString(process.env.CORS_ALLOWED_ORIGINS, 'http://localhost:4200,http://127.0.0.1:4200')
+  },
 
-    db: {
-        host: readString(process.env.DB_HOST, '127.0.0.1'),
-        port: readNumber(process.env.DB_PORT, 3306),
-        user: readString(process.env.DB_USER, 'root'),
-        password: readString(process.env.DB_PASSWORD, 'Lp6Lvy``^Xb|pY]ab6U+'),
-        name: readString(process.env.DB_NAME, 'recipe_shelter'),
-        connectionLimit: readNumber(process.env.DB_CONNECTION_LIMIT, 10)
-    },
+  db: {
+    host: readString(process.env.DB_HOST, '127.0.0.1'),
+    port: readNumber(process.env.DB_PORT, 3306),
+    user: readString(process.env.DB_USER, 'root'),
+    password: readString(process.env.DB_PASSWORD, ''),
+    name: readString(process.env.DB_NAME, 'recipe_shelter'),
+    connectionLimit: readNumber(process.env.DB_CONNECTION_LIMIT, 10)
+  },
 
-    auth: {
-        jwtSecret: readString(process.env.JWT_SECRET, 'dev_secret'),
-        jwtExpiresIn: readString(process.env.JWT_EXPIRES_IN, '7d'),
-        defaultRoleName: readString(process.env.AUTH_DEFAULT_ROLE_NAME, 'user'),
-        bcryptCost: readNumber(process.env.BCRYPT_COST, 12)
-    }
+  auth: {
+    jwtSecret: readString(process.env.JWT_SECRET, 'dev_secret'),
+    jwtExpiresIn: readString(process.env.JWT_EXPIRES_IN, '7d'),
+    defaultRoleName: readString(process.env.AUTH_DEFAULT_ROLE_NAME, 'user'),
+    bcryptCost: readNumber(process.env.BCRYPT_COST, 12)
+  }
 };

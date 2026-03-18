@@ -16,6 +16,7 @@ export function toDbError(err: unknown, sql?: string): DbError {
   const e = err as any;
   const msg = e?.message ? String(e.message) : "Database error";
   const hint = sql ? ` | SQL: ${sql}` : "";
+  
   return new DbError(`${msg}${hint}`, {
     code: e?.code,
     sqlState: e?.sqlState,

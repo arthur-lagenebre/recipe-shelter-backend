@@ -1,19 +1,11 @@
 import type { RequestHandler } from 'express';
+import { parseLoginBody, parseRegisterBody } from './auth.dto.js';
 import { authService } from '../../services/auth/auth.service.js';
 
 export const register: RequestHandler = async (req, res, next) => {
   try {
-    const { mail, username, password } = req.body as {
-      mail?: string;
-      username?: string;
-      password?: string;
-    };
-
-    const result = await authService.register({
-      mail: mail ?? '',
-      username: username ?? '',
-      password: password ?? '',
-    });
+    const input = parseRegisterBody(req.body);
+    const result = await authService.register(input);
 
     return res.status(201).json(result);
   } catch (error) {
@@ -23,15 +15,8 @@ export const register: RequestHandler = async (req, res, next) => {
 
 export const login: RequestHandler = async (req, res, next) => {
   try {
-    const { mail, password } = req.body as {
-      mail?: string;
-      password?: string;
-    };
-
-    const result = await authService.login({
-      mail: mail ?? '',
-      password: password ?? '',
-    });
+    const input = parseLoginBody(req.body);
+    const result = await authService.login(input);
 
     return res.status(200).json(result);
   } catch (error) {
@@ -39,4 +24,17 @@ export const login: RequestHandler = async (req, res, next) => {
   }
 };
 
-export const authController = { register, login };
+export const me: RequestHandler = (req, res) => {
+  if (!req.auth) {
+    return res.status(401).json({
+      error: {
+        message: 'Unauthorized',
+        code: 'AUTH_UNAUTHORIZED'
+      }
+    });
+  }
+
+  return res.status(200).json({ auth: req.auth });
+};
+
+export const authController = { register, login, me };

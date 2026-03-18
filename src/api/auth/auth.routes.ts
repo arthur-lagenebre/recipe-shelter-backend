@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import type { RequestHandler } from 'express';
-import { requireAuth } from '../../middlewares/requireAuth.js';
+import { requireAuth } from '../../middlewares/require-auth.js';
 
 type AuthController = {
   register: RequestHandler;
   login: RequestHandler;
+  me: RequestHandler;
 };
 
 export function createAuthRouter(controller: AuthController) {
@@ -12,8 +13,7 @@ export function createAuthRouter(controller: AuthController) {
 
   router.post('/register', controller.register);
   router.post('/login', controller.login);
-
-  router.get('/me', requireAuth, (req, res) => { res.status(200).json({ auth: req.auth }); });
+  router.get('/me', requireAuth, controller.me);
 
   return router;
 }

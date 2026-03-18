@@ -2,10 +2,12 @@ import bcrypt from 'bcrypt';
 import jwt, { type Secret, type SignOptions } from 'jsonwebtoken';
 import { env } from '../../utils/env.js';
 import { conflict, unauthorized, badRequest } from '../../utils/errors.js';
-import type { IUserRepository } from '../../repositories/users/IUserRepository.js';
-import type { User } from '../../repositories/users/user.types.js';
-import { UserRepositoryMysql } from '../../repositories/users/UserRepository.mysql.js';
+import { UserRepositoryMysql } from '../../repositories/users/user-repository.mysql.js';
 import { pool } from '../../db/pool.js';
+import { normalizeEmail } from '../../utils/string.js';
+
+import type { UserRepository } from '../../repositories/users/user-repository.interface.js';
+import type { User } from '../../repositories/users/user.types.js';
 
 export type AuthTokenPayload = {
   sub: number;
@@ -14,7 +16,7 @@ export type AuthTokenPayload = {
 };
 
 export class AuthService {
-  constructor(private readonly users: IUserRepository) { }
+  constructor(private readonly users: UserRepository) { }
 
   private signToken(user: User): string {
     const payload: AuthTokenPayload = {
@@ -31,12 +33,14 @@ export class AuthService {
   }
 
   async register(input: { mail: string; username: string; password: string }): Promise<{ user: User; token: string }> {
-    const mail = input.mail.trim().toLowerCase();
+    const mail = normalizeEmail(input.mail);
     const username = input.username.trim();
-    const password = input.password;
+    const password = input.password.trim();
 
     if (!mail || !username || !password)
       throw badRequest('Missing fields', 'AUTH_MISSING_FIELDS');
+    if (username.length < 3)
+      throw badRequest('Username too short', 'AUTH_WEAK_USERNAME');
     if (password.length < 8)
       throw badRequest('Password must be at least 8 characters', 'AUTH_WEAK_PASSWORD');
     if (await this.users.isEmailTaken(mail))
@@ -47,7 +51,7 @@ export class AuthService {
     const roleId = await this.users.getRoleIdByName(env.auth.defaultRoleName);
 
     if (!roleId)
-      throw new Error(`Default role not found: ${env.auth.defaultRoleName}`);
+      throw badRequest(`Default role not found: ${env.auth.defaultRoleName}`, 'AUTH_ROLE_NOT_FOUND');
 
     const passwordHash = await bcrypt.hash(password, env.auth.bcryptCost);
     const user = await this.users.create({ mail, username, passwordHash, roleId });
@@ -57,8 +61,8 @@ export class AuthService {
   }
 
   async login(input: { mail: string; password: string }): Promise<{ user: User; token: string }> {
-    const mail = input.mail.trim().toLowerCase();
-    const password = input.password;
+    const mail = normalizeEmail(input.mail);
+    const password = input.password.trim();
 
     if (!mail || !password)
       throw badRequest('Missing fields', 'AUTH_MISSING_FIELDS');
@@ -78,4 +82,4 @@ export class AuthService {
   }
 }
 
-export const authService = new AuthService( new UserRepositoryMysql(pool) );
+export const authService = new AuthService(new UserRepositoryMysql(pool));

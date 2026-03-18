@@ -1,6 +1,30 @@
 import type { RequestHandler } from 'express';
 import { dbHealth } from '../../db/health.js';
 
+type HealthResponse = {
+  status: number;
+  body: {
+    ok: boolean;
+    checks: {
+      db: boolean;
+    };
+  };
+};
+
+async function buildHealthResponse(): Promise<HealthResponse> {
+  const dbOk = await dbHealth();
+
+  return {
+    status: dbOk ? 200 : 503,
+    body: {
+      ok: dbOk,
+      checks: {
+        db: dbOk,
+      },
+    },
+  };
+}
+
 export const live: RequestHandler = async (_req, res, next) => {
   try {
     return res.status(200).json({ ok: true });
@@ -11,32 +35,13 @@ export const live: RequestHandler = async (_req, res, next) => {
 
 export const ready: RequestHandler = async (_req, res, next) => {
   try {
-    const dbOk = await dbHealth();
-
-    return res.status(dbOk ? 200 : 503).json({
-      ok: dbOk,
-      checks: {
-        db: dbOk,
-      },
-    });
+    const result = await buildHealthResponse();
+    return res.status(result.status).json(result.body);
   } catch (error) {
     return next(error);
   }
 };
 
-export const health: RequestHandler = async (_req, res, next) => {
-  try {
-    const dbOk = await dbHealth();
-
-    return res.status(dbOk ? 200 : 503).json({
-      ok: dbOk,
-      checks: {
-        db: dbOk,
-      },
-    });
-  } catch (error) {
-    return next(error);
-  }
-};
+export const health: RequestHandler = ready;
 
 export const healthController = { live, ready, health };

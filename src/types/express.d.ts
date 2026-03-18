@@ -1,15 +1,9 @@
-import 'express';
+import type { AuthContext } from './auth.types.js';
 
 declare global {
-    namespace Express {
-        interface Request {
-            auth?: {
-                userId: number;
-                username: string;
-                roleId: number;
-            };
-        }
+  namespace Express {
+    interface Request {
+      auth?: AuthContext;
     }
+  }
 }
-
-export { };
