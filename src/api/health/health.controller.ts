@@ -1,5 +1,6 @@
-import type { RequestHandler } from 'express';
 import { dbHealth } from '../../db/health.js';
+
+import type { RequestHandler } from 'express';
 
 type HealthResponse = {
   status: number;

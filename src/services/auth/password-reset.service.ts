@@ -1,7 +1,9 @@
 import bcrypt from 'bcrypt';
+
+import { validatePassword } from './password-policy.js';
 import { env } from '../../utils/env.js';
 import { generateResetToken, hashResetToken } from '../../utils/security/password-reset-token.js';
-import { validatePassword } from './password-policy.js';
+
 import type { Mailer } from '../mail/mail.types.js';
 
 type UserLite = {

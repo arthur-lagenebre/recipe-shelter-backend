@@ -1,7 +1,8 @@
-import type { Pool, PoolConnection, RowDataPacket, ResultSetHeader } from "mysql2/promise";
-import { pool } from "./pool.js";
 import { toDbError } from "./errors.js";
+import { pool } from "./pool.js";
 import { logger } from "../utils/logger.js";
+
+import type { Pool, PoolConnection, RowDataPacket, ResultSetHeader } from "mysql2/promise";
 
 type ExecuteParams = Parameters<Pool["execute"]>[1];
 export type Queryable = Pool | PoolConnection;

@@ -1,8 +1,10 @@
-import type { Pool } from 'mysql2/promise';
+import { mapUser, mapUserWithPassword } from './user.mappers.js';
 import { firstOrNull } from '../../utils/array.js';
+
 import type { UserRepository } from './user-repository.interface.js';
 import type { CreateUserInput, ExistsRow, RoleRow, User, UserRow, UserWithPassword } from './user.types.js';
-import { mapUser, mapUserWithPassword } from './user.mappers.js';
+import type { Pool } from 'mysql2/promise';
+
 
 export class UserRepositoryMysql implements UserRepository {
     constructor(private readonly db: Pool) { }

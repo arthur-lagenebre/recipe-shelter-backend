@@ -1,8 +1,10 @@
 import { Router } from 'express';
-import type { RequestHandler } from 'express';
-import { requireAuth } from '../../middlewares/require-auth.js';
+
 import { makeForgotPasswordHandler, makeResetPasswordHandler } from './auth.controller.js';
+import { requireAuth } from '../../middlewares/require-auth.js';
+
 import type { PasswordResetService } from '../../services/auth/password-reset.service.js';
+import type { RequestHandler } from 'express';
 
 type AuthController = {
   register: RequestHandler;

@@ -1,11 +1,12 @@
 import bcrypt from 'bcrypt';
 import jwt, { type Secret, type SignOptions } from 'jsonwebtoken';
+
+import { validatePassword } from './password-policy.js';
+import { pool } from '../../db/pool.js';
+import { UserRepositoryMysql } from '../../repositories/users/user-repository.mysql.js';
 import { env } from '../../utils/env.js';
 import { conflict, unauthorized, badRequest } from '../../utils/errors.js';
-import { UserRepositoryMysql } from '../../repositories/users/user-repository.mysql.js';
-import { pool } from '../../db/pool.js';
 import { normalizeEmail } from '../../utils/string.js';
-import { validatePassword } from './password-policy.js';
 
 import type { UserRepository } from '../../repositories/users/user-repository.interface.js';
 import type { User } from '../../repositories/users/user.types.js';

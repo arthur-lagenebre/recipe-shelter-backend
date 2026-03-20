@@ -13,13 +13,19 @@ export class DbError extends Error {
 }
 
 export function toDbError(err: unknown, sql?: string): DbError {
-  const e = err as any;
+  const e = err as {
+    message?: unknown;
+    code?: string;
+    sqlState?: string;
+    errno?: number;
+  };
+
   const msg = e?.message ? String(e.message) : "Database error";
   const hint = sql ? ` | SQL: ${sql}` : "";
-  
+
   return new DbError(`${msg}${hint}`, {
     code: e?.code,
     sqlState: e?.sqlState,
-    errno: e?.errno,
+    errno: e?.errno
   });
 }

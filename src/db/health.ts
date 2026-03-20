@@ -1,5 +1,6 @@
-import type { RowDataPacket } from 'mysql2/promise';
 import { query } from './query.js';
+
+import type { RowDataPacket } from 'mysql2/promise';
 
 type VersionRow = RowDataPacket & { v: string };
 

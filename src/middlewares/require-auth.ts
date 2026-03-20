@@ -1,9 +1,11 @@
 import jwt from 'jsonwebtoken';
+
 import { env } from '../utils/env.js';
 import { unauthorized } from '../utils/errors.js';
-import type { NextFunction, Request, Response } from 'express';
+
 import type { AuthTokenPayload } from '../services/auth/auth.service.js';
 import type { AuthContext } from '../types/auth.types.js';
+import type { NextFunction, Request, Response } from 'express';
 
 function parseAuthPayload(payload: unknown): AuthContext | null {
   if (!payload || typeof payload !== 'object')

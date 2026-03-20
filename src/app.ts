@@ -1,20 +1,17 @@
-import express from 'express';
 import cors from 'cors';
+import express from 'express';
 import { createPool } from 'mysql2/promise';
 
-import { createAuthRouter } from './api/auth/auth.routes.js';
 import { authController } from './api/auth/auth.controller.js';
-import { createHealthRouter } from './api/health/health.routes.js';
+import { createAuthRouter } from './api/auth/auth.routes.js';
 import { healthController } from './api/health/health.controller.js';
-
-import { UserRepositoryMysql } from './repositories/users/user-repository.mysql.js';
-import { PasswordResetRepositoryMysql } from './repositories/auth/password-reset.repository.mysql.js';
-
-import { PasswordResetService } from './services/auth/password-reset.service.js';
-import { ConsoleMailer } from './services/mail/console.mailer.js';
-
+import { createHealthRouter } from './api/health/health.routes.js';
 import { errorHandler } from './middlewares/error-handler.js';
 import { notFound } from './middlewares/not-found.js';
+import { PasswordResetRepositoryMysql } from './repositories/auth/password-reset.repository.mysql.js';
+import { UserRepositoryMysql } from './repositories/users/user-repository.mysql.js';
+import { PasswordResetService } from './services/auth/password-reset.service.js';
+import { ConsoleMailer } from './services/mail/console.mailer.js';
 import { env } from './utils/env.js';
 
 export function createApp() {

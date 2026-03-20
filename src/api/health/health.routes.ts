@@ -1,4 +1,5 @@
 import { Router } from 'express';
+
 import type { RequestHandler } from 'express';
 
 type HealthController = {

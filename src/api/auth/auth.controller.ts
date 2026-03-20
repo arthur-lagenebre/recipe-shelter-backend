@@ -1,9 +1,9 @@
-import type { RequestHandler } from 'express';
 import { parseLoginBody, parseRegisterBody } from './auth.dto.js';
 import { authService } from '../../services/auth/auth.service.js';
 
 import type { Handler } from './http.types.js';
 import type { PasswordResetService } from '../../services/auth/password-reset.service.js';
+import type { RequestHandler } from 'express';
 
 export const register: RequestHandler = async (req, res, next) => {
   try {
