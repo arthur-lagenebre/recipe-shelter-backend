@@ -5,5 +5,6 @@ CREATE DATABASE recipe_shelter
 
 USE recipe_shelter;
 
-SOURCE database/1_create_schema.sql;
-SOURCE database/2_seed.sql;
+SOURCE database/migrations/1_create_schema.sql;
+SOURCE database/migrations/2_add_password_resets.sql;
+SOURCE database/seed.sql;
