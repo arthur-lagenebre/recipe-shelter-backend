@@ -8,4 +8,5 @@ export interface UserRepository {
     isUsernameTaken(username: string): Promise<boolean>;
     create(input: CreateUserInput): Promise<User>;
     getRoleIdByName(roleName: string): Promise<number | null>;
+    updatePassword(userId: number, passwordHash: string): Promise<void>;
 }

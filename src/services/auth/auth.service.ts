@@ -5,6 +5,7 @@ import { conflict, unauthorized, badRequest } from '../../utils/errors.js';
 import { UserRepositoryMysql } from '../../repositories/users/user-repository.mysql.js';
 import { pool } from '../../db/pool.js';
 import { normalizeEmail } from '../../utils/string.js';
+import { validatePassword } from './password-policy.js';
 
 import type { UserRepository } from '../../repositories/users/user-repository.interface.js';
 import type { User } from '../../repositories/users/user.types.js';
@@ -35,21 +36,24 @@ export class AuthService {
   async register(input: { mail: string; username: string; password: string }): Promise<{ user: User; token: string }> {
     const mail = normalizeEmail(input.mail);
     const username = input.username.trim();
-    const password = input.password.trim();
+    const password = input.password;
 
     if (!mail || !username || !password)
       throw badRequest('Missing fields', 'AUTH_MISSING_FIELDS');
-    if (username.length < 3)
-      throw badRequest('Username too short', 'AUTH_WEAK_USERNAME');
-    if (password.length < 8)
-      throw badRequest('Password must be at least 8 characters', 'AUTH_WEAK_PASSWORD');
+
+    const passwordError = validatePassword(password);
+    if (passwordError)
+      throw badRequest(passwordError, 'AUTH_WEAK_PASSWORD');
+
     if (await this.users.isEmailTaken(mail))
       throw conflict('Email already used', 'AUTH_EMAIL_TAKEN');
+
+    if (username.length < 3)
+      throw badRequest('Username too short', 'AUTH_WEAK_USERNAME');
     if (await this.users.isUsernameTaken(username))
       throw conflict('Username already used', 'AUTH_USERNAME_TAKEN');
 
     const roleId = await this.users.getRoleIdByName(env.auth.defaultRoleName);
-
     if (!roleId)
       throw badRequest(`Default role not found: ${env.auth.defaultRoleName}`, 'AUTH_ROLE_NOT_FOUND');
 
@@ -62,7 +66,7 @@ export class AuthService {
 
   async login(input: { mail: string; password: string }): Promise<{ user: User; token: string }> {
     const mail = normalizeEmail(input.mail);
-    const password = input.password.trim();
+    const password = input.password;
 
     if (!mail || !password)
       throw badRequest('Missing fields', 'AUTH_MISSING_FIELDS');

@@ -8,8 +8,8 @@ export class UserRepositoryMysql implements UserRepository {
     constructor(private readonly db: Pool) { }
 
     async findById(id: number): Promise<User | null> {
-        const [rows] = await this.db.query(
-            `SELECT Id, Mail, Username, Password, RoleId, CreatedAt, UpdatedAt
+        const [rows] = await this.db.execute(
+            `SELECT Id, Mail, Username, RoleId, CreatedAt, UpdatedAt
             FROM Users
             WHERE Id = ?`,
             [id]
@@ -20,8 +20,8 @@ export class UserRepositoryMysql implements UserRepository {
     }
 
     async findByEmail(mail: string): Promise<User | null> {
-        const [rows] = await this.db.query(
-            `SELECT Id, Mail, Username, Password, RoleId, CreatedAt, UpdatedAt
+        const [rows] = await this.db.execute(
+            `SELECT Id, Mail, Username, RoleId, CreatedAt, UpdatedAt
             FROM Users
             WHERE Mail = ?`,
             [mail]
@@ -32,7 +32,7 @@ export class UserRepositoryMysql implements UserRepository {
     }
 
     async findAuthByEmail(mail: string): Promise<UserWithPassword | null> {
-        const [rows] = await this.db.query(
+        const [rows] = await this.db.execute(
             `SELECT Id, Mail, Username, Password, RoleId, CreatedAt, UpdatedAt
             FROM Users
             WHERE Mail = ?`,
@@ -44,7 +44,7 @@ export class UserRepositoryMysql implements UserRepository {
     }
 
     async isEmailTaken(mail: string): Promise<boolean> {
-        const [rows] = await this.db.query(
+        const [rows] = await this.db.execute(
             `SELECT 1 AS One
             FROM Users
             WHERE Mail = ?
@@ -56,7 +56,7 @@ export class UserRepositoryMysql implements UserRepository {
     }
 
     async isUsernameTaken(username: string): Promise<boolean> {
-        const [rows] = await this.db.query(
+        const [rows] = await this.db.execute(
             `SELECT 1 AS One
             FROM Users
             WHERE Username = ?
@@ -68,7 +68,7 @@ export class UserRepositoryMysql implements UserRepository {
     }
 
     async getRoleIdByName(roleName: string): Promise<number | null> {
-        const [rows] = await this.db.query(
+        const [rows] = await this.db.execute(
             `SELECT Id
             FROM Roles
             WHERE Name = ?
@@ -77,7 +77,6 @@ export class UserRepositoryMysql implements UserRepository {
         );
 
         const row = firstOrNull(rows as RoleRow[]);
-
         return row ? Number(row.Id) : null;
     }
 
@@ -95,5 +94,14 @@ export class UserRepositoryMysql implements UserRepository {
             throw new Error('User created but cannot be reloaded');
 
         return created;
+    }
+
+    async updatePassword(userId: number, passwordHash: string): Promise<void> {
+        await this.db.execute(
+            `UPDATE Users
+            SET Password = ?
+            WHERE Id = ?`,
+            [passwordHash, userId]
+        );
     }
 }
