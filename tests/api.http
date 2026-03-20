@@ -1,28 +1,149 @@
+# ============================================
+# Recipe Shelter API - Test Flow
+# ============================================
+#
+# Order of execution:
+#
+# 1. Register a user
+#    → creates account
+#
+# 2. Login
+#    → copy the JWT into @jwt
+#
+# 3. Test /auth/me
+#    → verifies authentication works
+#
+# 4. Forgot password
+#    → triggers reset email (check server console)
+#    → copy token from resetUrl into @resetToken
+#
+# 5. Reset password
+#    → use @resetToken and @newPassword
+#
+# 6. Login with new password
+#    → should succeed
+#
+# 7. Login with old password
+#    → should fail
+#
+# Notes:
+# - JWT (@jwt) is used for authenticated routes
+# - Reset token (@resetToken) is temporary and single-use
+# - Tokens are printed in console (ConsoleMailer)
+#
+# ============================================
+
+@baseUrl = http://localhost:3000
+@mail = test@example.com
+@username = testuser
+@password = Password123!
+@newPassword = NewPassword123!
+@resetToken = PASTE_RESET_TOKEN_HERE
+@jwt = PASTE_JWT_HERE
+
 ### Home
-GET http://localhost:3000/
+GET {{baseUrl}}/
 
 ### Health
-GET http://localhost:3000/health
+GET {{baseUrl}}/health
 
 ### Register
-POST http://localhost:3000/auth/register
+POST {{baseUrl}}/auth/register
 Content-Type: application/json
 
 {
-  "mail": "test@example.com",
-  "username": "testuser",
-  "password": "Password123!"
+  "mail": "{{mail}}",
+  "username": "{{username}}",
+  "password": "{{password}}"
 }
 
 ### Login
-POST http://localhost:3000/auth/login
+POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "mail": "test@example.com",
-  "password": "Password123!"
+  "mail": "{{mail}}",
+  "password": "{{password}}"
 }
 
-### Me (remplace TOKEN)
-GET http://localhost:3000/auth/me
-Authorization: Bearer TOKEN
+### Me
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{jwt}}
+
+### Forgot password
+POST {{baseUrl}}/auth/forgot-password
+Content-Type: application/json
+
+{
+  "mail": "{{mail}}"
+}
+
+### Forgot password - unknown email
+POST {{baseUrl}}/auth/forgot-password
+Content-Type: application/json
+
+{
+  "mail": "unknown@example.com"
+}
+
+### Forgot password - missing email
+POST {{baseUrl}}/auth/forgot-password
+Content-Type: application/json
+
+{
+  "mail": ""
+}
+
+### Reset password
+POST {{baseUrl}}/auth/reset-password
+Content-Type: application/json
+
+{
+  "token": "{{resetToken}}",
+  "password": "{{newPassword}}"
+}
+
+### Reset password - missing token
+POST {{baseUrl}}/auth/reset-password
+Content-Type: application/json
+
+{
+  "token": "",
+  "password": "{{newPassword}}"
+}
+
+### Reset password - weak password
+POST {{baseUrl}}/auth/reset-password
+Content-Type: application/json
+
+{
+  "token": "{{resetToken}}",
+  "password": "123"
+}
+
+### Login with new password
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "mail": "{{mail}}",
+  "password": "{{newPassword}}"
+}
+
+### Login with old password should fail after reset
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "mail": "{{mail}}",
+  "password": "{{password}}"
+}
+
+### Reset password - reuse same token should fail
+POST {{baseUrl}}/auth/reset-password
+Content-Type: application/json
+
+{
+  "token": "{{resetToken}}",
+  "password": "AnotherPassword123!"
+}

@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import type { RequestHandler } from 'express';
 import { requireAuth } from '../../middlewares/require-auth.js';
+import { makeForgotPasswordHandler, makeResetPasswordHandler } from './auth.controller.js';
+import type { PasswordResetService } from '../../services/auth/password-reset.service.js';
 
 type AuthController = {
   register: RequestHandler;
@@ -8,12 +10,14 @@ type AuthController = {
   me: RequestHandler;
 };
 
-export function createAuthRouter(controller: AuthController) {
+export function createAuthRouter(controller: AuthController, passwordResetService: PasswordResetService) {
   const router = Router();
 
   router.post('/register', controller.register);
   router.post('/login', controller.login);
   router.get('/me', requireAuth, controller.me);
+  router.post('/forgot-password', makeForgotPasswordHandler(passwordResetService));
+  router.post('/reset-password', makeResetPasswordHandler(passwordResetService));
 
   return router;
 }

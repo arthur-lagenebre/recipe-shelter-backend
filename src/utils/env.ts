@@ -14,7 +14,8 @@ export const env = {
   port: readNumber(process.env.PORT, 3000),
 
   http: {
-    corsAllowedOrigins: readString(process.env.CORS_ALLOWED_ORIGINS, 'http://localhost:4200,http://127.0.0.1:4200')
+    corsAllowedOrigins: readString(process.env.CORS_ALLOWED_ORIGINS, 'http://localhost:4200,http://127.0.0.1:4200'),
+    frontendBaseUrl: process.env.FRONTEND_BASE_URL ?? 'http://localhost:4200'
   },
 
   db: {
