@@ -5,15 +5,14 @@ import type { UserRepository } from './user-repository.interface.js';
 import type { CreateUserInput, ExistsRow, RoleRow, User, UserRow, UserWithPassword } from './user.types.js';
 import type { Pool } from 'mysql2/promise';
 
-
 export class UserRepositoryMysql implements UserRepository {
     constructor(private readonly db: Pool) { }
 
     async findById(id: number): Promise<User | null> {
         const [rows] = await this.db.execute(
             `SELECT Id, Mail, Username, RoleId, CreatedAt, UpdatedAt
-            FROM Users
-            WHERE Id = ?`,
+             FROM Users
+             WHERE Id = ?`,
             [id]
         );
 
@@ -24,8 +23,8 @@ export class UserRepositoryMysql implements UserRepository {
     async findByEmail(mail: string): Promise<User | null> {
         const [rows] = await this.db.execute(
             `SELECT Id, Mail, Username, RoleId, CreatedAt, UpdatedAt
-            FROM Users
-            WHERE Mail = ?`,
+             FROM Users
+             WHERE Mail = ?`,
             [mail]
         );
 
@@ -36,8 +35,8 @@ export class UserRepositoryMysql implements UserRepository {
     async findAuthByEmail(mail: string): Promise<UserWithPassword | null> {
         const [rows] = await this.db.execute(
             `SELECT Id, Mail, Username, Password, RoleId, CreatedAt, UpdatedAt
-            FROM Users
-            WHERE Mail = ?`,
+             FROM Users
+             WHERE Mail = ?`,
             [mail]
         );
 
@@ -45,12 +44,33 @@ export class UserRepositoryMysql implements UserRepository {
         return row ? mapUserWithPassword(row) : null;
     }
 
+    async findWithPasswordById(id: number): Promise<UserWithPassword | null> {
+        const [rows] = await this.db.execute(
+            `SELECT Id, Mail, Username, Password, RoleId, CreatedAt, UpdatedAt
+             FROM Users
+             WHERE Id = ?`,
+            [id]
+        );
+
+        const row = firstOrNull(rows as UserRow[]);
+        return row ? mapUserWithPassword(row) : null;
+    }
+
+    async updateEmail(userId: number, mail: string): Promise<void> {
+        await this.db.execute(
+            `UPDATE Users
+             SET Mail = ?
+             WHERE Id = ?`,
+            [mail, userId]
+        );
+    }
+
     async isEmailTaken(mail: string): Promise<boolean> {
         const [rows] = await this.db.execute(
             `SELECT 1 AS One
-            FROM Users
-            WHERE Mail = ?
-            LIMIT 1`,
+             FROM Users
+             WHERE Mail = ?
+             LIMIT 1`,
             [mail]
         );
 
@@ -60,9 +80,9 @@ export class UserRepositoryMysql implements UserRepository {
     async isUsernameTaken(username: string): Promise<boolean> {
         const [rows] = await this.db.execute(
             `SELECT 1 AS One
-            FROM Users
-            WHERE Username = ?
-            LIMIT 1`,
+             FROM Users
+             WHERE Username = ?
+             LIMIT 1`,
             [username]
         );
 
@@ -72,9 +92,9 @@ export class UserRepositoryMysql implements UserRepository {
     async getRoleIdByName(roleName: string): Promise<number | null> {
         const [rows] = await this.db.execute(
             `SELECT Id
-            FROM Roles
-            WHERE Name = ?
-            LIMIT 1`,
+             FROM Roles
+             WHERE Name = ?
+             LIMIT 1`,
             [roleName]
         );
 
@@ -85,7 +105,7 @@ export class UserRepositoryMysql implements UserRepository {
     async create(input: CreateUserInput): Promise<User> {
         const [result] = await this.db.execute(
             `INSERT INTO Users (Mail, Username, Password, RoleId)
-            VALUES (?, ?, ?, ?)`,
+             VALUES (?, ?, ?, ?)`,
             [input.mail, input.username, input.passwordHash, input.roleId]
         );
 
@@ -101,8 +121,8 @@ export class UserRepositoryMysql implements UserRepository {
     async updatePassword(userId: number, passwordHash: string): Promise<void> {
         await this.db.execute(
             `UPDATE Users
-            SET Password = ?
-            WHERE Id = ?`,
+             SET Password = ?
+             WHERE Id = ?`,
             [passwordHash, userId]
         );
     }

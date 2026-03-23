@@ -147,3 +147,57 @@ Content-Type: application/json
   "token": "{{resetToken}}",
   "password": "AnotherPassword123!"
 }
+
+### users/Me
+GET http://localhost:3000/users/me
+Authorization: Bearer {{jwt}}
+
+### Update email
+PATCH http://localhost:3000/users/email
+Content-Type: application/json
+Authorization: Bearer {{jwt}}
+
+{
+  "newEmail": "new-test@example.com",
+  "currentPassword": "AnotherPassword123!"
+}
+
+### Update email - reset
+PATCH http://localhost:3000/users/email
+Content-Type: application/json
+Authorization: Bearer {{jwt}}
+
+{
+  "newEmail": "{{mail}}",
+  "currentPassword": "AnotherPassword123!"
+}
+
+### Update password
+PATCH http://localhost:3000/users/password
+Content-Type: application/json
+Authorization: Bearer {{jwt}}
+
+{
+  "currentPassword": "AnotherPassword123!",
+  "newPassword": "{{password}}"
+}
+
+### Update email - missing password
+PATCH http://localhost:3000/users/email
+Content-Type: application/json
+Authorization: Bearer {{jwt}}
+
+{
+  "newEmail": "test@example.com",
+  "currentPassword": ""
+}
+
+### Update password - wrong current password
+PATCH http://localhost:3000/users/password
+Content-Type: application/json
+Authorization: Bearer {{jwt}}
+
+{
+  "currentPassword": "WrongPassword123!",
+  "newPassword": "Password1234!"
+}

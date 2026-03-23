@@ -6,6 +6,8 @@ import { authController } from './api/auth/auth.controller.js';
 import { createAuthRouter } from './api/auth/auth.routes.js';
 import { healthController } from './api/health/health.controller.js';
 import { createHealthRouter } from './api/health/health.routes.js';
+import { usersController } from './api/users/users.controller.js';
+import { createUsersRouter } from './api/users/users.routes.js';
 import { errorHandler } from './middlewares/error-handler.js';
 import { notFound } from './middlewares/not-found.js';
 import { PasswordResetRepositoryMysql } from './repositories/auth/password-reset.repository.mysql.js';
@@ -39,6 +41,7 @@ export function createApp() {
 
   app.use('/auth', createAuthRouter(authController, passwordResetService));
   app.use('/health', createHealthRouter(healthController));
+  app.use('/users', createUsersRouter(usersController));
 
   app.use(notFound);
   app.use(errorHandler);
