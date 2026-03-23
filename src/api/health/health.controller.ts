@@ -1,6 +1,6 @@
 import { dbHealth } from '../../db/health.js';
 
-import type { RequestHandler } from 'express';
+import type { Handler } from '../http/http.types.js';
 
 type HealthResponse = {
   status: number;
@@ -26,23 +26,27 @@ async function buildHealthResponse(): Promise<HealthResponse> {
   };
 }
 
-export const live: RequestHandler = async (_req, res, next) => {
+export const live: Handler = async (_req, res, next) => {
   try {
-    return res.status(200).json({ ok: true });
+    res.status(200).json({ ok: true });
+    return;
   } catch (error) {
-    return next(error);
+    next(error);
+    return;
   }
 };
 
-export const ready: RequestHandler = async (_req, res, next) => {
+export const ready: Handler = async (_req, res, next) => {
   try {
     const result = await buildHealthResponse();
-    return res.status(result.status).json(result.body);
+    res.status(result.status).json(result.body);
+    return;
   } catch (error) {
-    return next(error);
+    next(error);
+    return;
   }
 };
 
-export const health: RequestHandler = ready;
+export const health: Handler = ready;
 
 export const healthController = { live, ready, health };
