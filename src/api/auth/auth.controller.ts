@@ -1,52 +1,94 @@
-import { dbHealth } from '../../db/health.js';
+import { parseLoginBody, parseRegisterBody } from './auth.dto.js';
+import { authService } from '../../services/auth/auth.service.js';
+import { asyncHandler } from '../http/async-handler.js';
 
+import type { PasswordResetService } from '../../services/auth/password-reset.service.js';
 import type { Handler } from '../http/http.types.js';
 
-type HealthResponse = {
-  status: number;
-  body: {
-    ok: boolean;
-    checks: {
-      db: boolean;
-    };
-  };
-};
+export const register = asyncHandler(async (req, res) => {
+  const input = parseRegisterBody(req.body);
+  const result = await authService.register(input);
 
-async function buildHealthResponse(): Promise<HealthResponse> {
-  const dbOk = await dbHealth();
+  res.status(201).json(result);
+});
 
-  return {
-    status: dbOk ? 200 : 503,
-    body: {
-      ok: dbOk,
-      checks: {
-        db: dbOk,
-      },
-    },
-  };
-}
+export const login = asyncHandler(async (req, res) => {
+  const input = parseLoginBody(req.body);
+  const result = await authService.login(input);
 
-export const live: Handler = async (_req, res, next) => {
-  try {
-    res.status(200).json({ ok: true });
-    return;
-  } catch (error) {
-    next(error);
+  res.status(200).json(result);
+});
+
+export const me: Handler = (req, res) => {
+  if (!req.auth) {
+    res.status(401).json({ error: { message: 'Unauthorized', code: 'AUTH_UNAUTHORIZED' } });
+
     return;
   }
+
+  res.status(200).json({ auth: req.auth });
 };
 
-export const ready: Handler = async (_req, res, next) => {
-  try {
-    const result = await buildHealthResponse();
-    res.status(result.status).json(result.body);
-    return;
-  } catch (error) {
-    next(error);
-    return;
-  }
-};
+export const makeForgotPasswordHandler = (service: PasswordResetService): Handler =>
+  asyncHandler(async (req, res) => {
+    const mail = typeof req.body?.mail === 'string' ? req.body.mail : '';
 
-export const health: Handler = ready;
+    if (!mail.trim()) {
+      res.status(400).json({
+        error: {
+          message: 'Email is required',
+          code: 'AUTH_FORGOT_PASSWORD_INVALID_EMAIL'
+        }
+      });
 
-export const healthController = { live, ready, health };
+      return;
+    }
+
+    await service.requestReset(mail);
+
+    res.status(200).json({ ok: true, message: 'If an account exists for this email, a password reset link has been sent.' });
+  });
+
+export const makeResetPasswordHandler = (service: PasswordResetService): Handler =>
+  asyncHandler(async (req, res, next) => {
+    const token = typeof req.body?.token === 'string' ? req.body.token : '';
+    const password = typeof req.body?.password === 'string' ? req.body.password : '';
+
+    if (!token.trim()) {
+      res.status(400).json({
+        error: {
+          message: 'Token is required',
+          code: 'AUTH_RESET_PASSWORD_MISSING_TOKEN'
+        }
+      });
+
+      return;
+    }
+
+    try {
+      await service.resetPassword(token, password);
+
+      res.status(200).json({
+        ok: true,
+        message: 'Password has been reset successfully.'
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Password reset failed';
+
+      if (message === 'Invalid or expired reset token') {
+        res.status(400).json({ error: { message, code: 'AUTH_RESET_PASSWORD_BAD_TOKEN' } });
+
+        return;
+      }
+
+      if (message === 'Password is required' || message === 'Password must be at least 8 characters' || message === 'Password must be at most 128 characters') {
+        res.status(400).json({ error: { message, code: 'AUTH_RESET_PASSWORD_BAD_PASSWORD' } });
+
+        return;
+      }
+
+      next(err);
+    }
+  });
+
+export const authController = { register, login, me, makeForgotPasswordHandler, makeResetPasswordHandler };
