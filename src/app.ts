@@ -33,10 +33,10 @@ export function createApp() {
   const authService = new AuthService(userRepository);
   const usersService = new UserService(userRepository);
   const passwordResetService = new PasswordResetService(userRepository, passwordResetRepository, mailer, env.http.frontendBaseUrl);
-  const authController = createAuthController(authService);
+  const authController = createAuthController(authService, passwordResetService);
   const usersController = createUsersController(usersService);
 
-  app.use('/auth', createAuthRouter(authController, passwordResetService));
+  app.use('/auth', createAuthRouter(authController));
   app.use('/health', createHealthRouter(healthController));
   app.use('/users', createUsersRouter(usersController));
 

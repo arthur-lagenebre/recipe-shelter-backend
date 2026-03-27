@@ -5,7 +5,7 @@ import type { AuthService } from '../../services/auth/auth.service.js';
 import type { PasswordResetService } from '../../services/auth/password-reset.service.js';
 import type { Handler } from '../http/http.types.js';
 
-export function createAuthController(authService: AuthService) {
+export function createAuthController(authService: AuthService, passwordResetService: PasswordResetService) {
   const register = asyncHandler(async (req, res) => {
     const input = parseRegisterBody(req.body);
     const result = await authService.register(input);
@@ -30,67 +30,65 @@ export function createAuthController(authService: AuthService) {
     res.status(200).json({ auth: req.auth });
   };
 
-  const makeForgotPasswordHandler = (service: PasswordResetService): Handler =>
-    asyncHandler(async (req, res) => {
-      const mail = typeof req.body?.mail === 'string' ? req.body.mail : '';
+  const forgotPassword: Handler = asyncHandler(async (req, res) => {
+    const mail = typeof req.body?.mail === 'string' ? req.body.mail : '';
 
-      if (!mail.trim()) {
-        res.status(400).json({
-          error: {
-            message: 'Email is required',
-            code: 'AUTH_FORGOT_PASSWORD_INVALID_EMAIL'
-          }
-        });
+    if (!mail.trim()) {
+      res.status(400).json({
+        error: {
+          message: 'Email is required',
+          code: 'AUTH_FORGOT_PASSWORD_INVALID_EMAIL'
+        }
+      });
+
+      return;
+    }
+
+    await passwordResetService.requestReset(mail);
+
+    res.status(200).json({ ok: true, message: 'If an account exists for this email, a password reset link has been sent.' });
+  });
+
+  const resetPassword: Handler = asyncHandler(async (req, res, next) => {
+    const token = typeof req.body?.token === 'string' ? req.body.token : '';
+    const password = typeof req.body?.password === 'string' ? req.body.password : '';
+
+    if (!token.trim()) {
+      res.status(400).json({
+        error: {
+          message: 'Token is required',
+          code: 'AUTH_RESET_PASSWORD_MISSING_TOKEN'
+        }
+      });
+
+      return;
+    }
+
+    try {
+      await passwordResetService.resetPassword(token, password);
+
+      res.status(200).json({
+        ok: true,
+        message: 'Password has been reset successfully.'
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Password reset failed';
+
+      if (message === 'Invalid or expired reset token') {
+        res.status(400).json({ error: { message, code: 'AUTH_RESET_PASSWORD_BAD_TOKEN' } });
 
         return;
       }
 
-      await service.requestReset(mail);
-
-      res.status(200).json({ ok: true, message: 'If an account exists for this email, a password reset link has been sent.' });
-    });
-
-  const makeResetPasswordHandler = (service: PasswordResetService): Handler =>
-    asyncHandler(async (req, res, next) => {
-      const token = typeof req.body?.token === 'string' ? req.body.token : '';
-      const password = typeof req.body?.password === 'string' ? req.body.password : '';
-
-      if (!token.trim()) {
-        res.status(400).json({
-          error: {
-            message: 'Token is required',
-            code: 'AUTH_RESET_PASSWORD_MISSING_TOKEN'
-          }
-        });
+      if (message === 'Password is required' || message === 'Password must be at least 8 characters' || message === 'Password must be at most 128 characters') {
+        res.status(400).json({ error: { message, code: 'AUTH_RESET_PASSWORD_BAD_PASSWORD' } });
 
         return;
       }
 
-      try {
-        await service.resetPassword(token, password);
+      next(err);
+    }
+  });
 
-        res.status(200).json({
-          ok: true,
-          message: 'Password has been reset successfully.'
-        });
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Password reset failed';
-
-        if (message === 'Invalid or expired reset token') {
-          res.status(400).json({ error: { message, code: 'AUTH_RESET_PASSWORD_BAD_TOKEN' } });
-
-          return;
-        }
-
-        if (message === 'Password is required' || message === 'Password must be at least 8 characters' || message === 'Password must be at most 128 characters') {
-          res.status(400).json({ error: { message, code: 'AUTH_RESET_PASSWORD_BAD_PASSWORD' } });
-
-          return;
-        }
-
-        next(err);
-      }
-    });
-
-  return { register, login, me, makeForgotPasswordHandler, makeResetPasswordHandler };
+  return { register, login, me, forgotPassword, resetPassword };
 }
