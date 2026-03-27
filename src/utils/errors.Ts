@@ -3,6 +3,10 @@ export class HttpError extends Error {
         super(message);
         this.name = 'HttpError';
     }
+
+    get statusCode(): number {
+        return this.status;
+    }
 }
 
 export const badRequest = (message: string, code?: string) => new HttpError(400, message, code);
