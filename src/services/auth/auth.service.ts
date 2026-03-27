@@ -2,8 +2,6 @@ import bcrypt from 'bcrypt';
 import jwt, { type Secret, type SignOptions } from 'jsonwebtoken';
 
 import { validatePassword } from './password-policy.js';
-import { pool } from '../../db/pool.js';
-import { UserRepositoryMysql } from '../../repositories/users/user-repository.mysql.js';
 import { env } from '../../utils/env.js';
 import { conflict, unauthorized, badRequest } from '../../utils/errors.js';
 import { normalizeEmail } from '../../utils/string.js';
@@ -86,5 +84,3 @@ export class AuthService {
     return { user, token };
   }
 }
-
-export const authService = new AuthService(new UserRepositoryMysql(pool));

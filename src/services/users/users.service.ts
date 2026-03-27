@@ -81,7 +81,10 @@ export class UserService {
         if (currentPassword === newPassword)
             throw badRequest('New password must be different from current password', 'USERS_UPDATE_PASSWORD_SAME_PASSWORD');
 
-        validatePassword(newPassword);
+        const passwordError = validatePassword(newPassword);
+
+        if (passwordError)
+            throw badRequest(passwordError, 'USERS_UPDATE_PASSWORD_WEAK_PASSWORD');
 
         const newPasswordHash = await bcrypt.hash(newPassword, 12);
 
