@@ -1,19 +1,21 @@
 import cors from 'cors';
 import express from 'express';
-import { createPool } from 'mysql2/promise';
 
-import { authController } from './api/auth/auth.controller.js';
+import { createAuthController } from './api/auth/auth.controller.js';
 import { createAuthRouter } from './api/auth/auth.routes.js';
 import { healthController } from './api/health/health.controller.js';
 import { createHealthRouter } from './api/health/health.routes.js';
-import { usersController } from './api/users/users.controller.js';
+import { createUsersController } from './api/users/users.controller.js';
 import { createUsersRouter } from './api/users/users.routes.js';
+import { pool } from './db/pool.js';
 import { errorHandler } from './middlewares/error-handler.js';
 import { notFound } from './middlewares/not-found.js';
 import { PasswordResetRepositoryMysql } from './repositories/auth/password-reset.repository.mysql.js';
 import { UserRepositoryMysql } from './repositories/users/user-repository.mysql.js';
+import { AuthService } from './services/auth/auth.service.js';
 import { PasswordResetService } from './services/auth/password-reset.service.js';
 import { ConsoleMailer } from './services/mail/console.mailer.js';
+import { UserService } from './services/users/users.service.js';
 import { env } from './utils/env.js';
 
 export function createApp() {
@@ -24,20 +26,15 @@ export function createApp() {
   app.use(cors({ origin: origins }));
   app.use(express.json());
 
-  const db = createPool({
-    host: env.db.host,
-    port: env.db.port,
-    user: env.db.user,
-    password: env.db.password,
-    database: env.db.name,
-    connectionLimit: env.db.connectionLimit,
-  });
-
-  const userRepository = new UserRepositoryMysql(db);
-  const passwordResetRepository = new PasswordResetRepositoryMysql(db);
+  const userRepository = new UserRepositoryMysql(pool);
+  const passwordResetRepository = new PasswordResetRepositoryMysql(pool);
   const mailer = new ConsoleMailer();
 
+  const authService = new AuthService(userRepository);
+  const usersService = new UserService(userRepository);
   const passwordResetService = new PasswordResetService(userRepository, passwordResetRepository, mailer, env.http.frontendBaseUrl);
+  const authController = createAuthController(authService);
+  const usersController = createUsersController(usersService);
 
   app.use('/auth', createAuthRouter(authController, passwordResetService));
   app.use('/health', createHealthRouter(healthController));
