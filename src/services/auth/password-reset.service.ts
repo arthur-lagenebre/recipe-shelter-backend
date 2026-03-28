@@ -4,6 +4,7 @@ import { validatePassword } from './password-policy.js';
 import { env } from '../../utils/env.js';
 import { generateResetToken, hashResetToken } from '../../utils/security/password-reset-token.js';
 
+import type { PasswordResetRepository } from '../../repositories/auth/password-reset.repository.interface.js';
 import type { Mailer } from '../mail/mail.types.js';
 
 type UserLite = {
@@ -16,18 +17,6 @@ type UserRepository = {
     findByEmail(mail: string): Promise<UserLite | null>;
     findById(id: number): Promise<UserLite | null>;
     updatePassword(userId: number, passwordHash: string): Promise<void>;
-};
-
-type PasswordResetRecord = {
-    Id: number;
-    UserId: number;
-};
-
-type PasswordResetRepository = {
-    create(input: { userId: number; tokenHash: string; expiresAt: Date }): Promise<void>;
-    invalidateAllForUser(userId: number): Promise<void>;
-    findValidByTokenHash(tokenHash: string): Promise<PasswordResetRecord | null>;
-    markUsed(id: number): Promise<void>;
 };
 
 export class PasswordResetService {

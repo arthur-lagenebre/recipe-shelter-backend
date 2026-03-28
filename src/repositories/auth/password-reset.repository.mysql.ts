@@ -1,3 +1,4 @@
+import type { PasswordResetCreateInput, PasswordResetRepository } from './password-reset.repository.interface.js';
 import type { Pool } from 'mysql2/promise';
 
 export interface PasswordResetRow {
@@ -9,10 +10,10 @@ export interface PasswordResetRow {
     CreatedAt: Date | string;
 }
 
-export class PasswordResetRepositoryMysql {
+export class PasswordResetRepositoryMysql implements PasswordResetRepository {
     constructor(private readonly pool: Pool) { }
 
-    async create(input: { userId: number; tokenHash: string; expiresAt: Date }): Promise<void> {
+    async create(input: PasswordResetCreateInput): Promise<void> {
         await this.pool.query(
             `INSERT INTO PasswordResets (UserId, TokenHash, ExpiresAt)
             VALUES (?, ?, ?)`,
