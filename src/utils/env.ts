@@ -31,6 +31,8 @@ export const env = {
     jwtSecret: process.env.JWT_SECRET ?? (() => { throw new Error('JWT_SECRET is required'); })(),
     jwtExpiresIn: readString(process.env.JWT_EXPIRES_IN, '7d'),
     defaultRoleName: readString(process.env.AUTH_DEFAULT_ROLE_NAME, 'user'),
-    bcryptCost: readNumber(process.env.BCRYPT_COST, 12)
+    bcryptCost: readNumber(process.env.BCRYPT_COST, 12),
+    rateLimitMaxAttempts: readNumber(process.env.AUTH_RATE_LIMIT_MAX_ATTEMPTS, 5),
+    rateLimitWindowMs: readNumber(process.env.AUTH_RATE_LIMIT_WINDOW_MS, 900000) // 15 minutes
   }
 };
