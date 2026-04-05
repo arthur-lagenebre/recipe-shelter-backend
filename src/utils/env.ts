@@ -28,7 +28,7 @@ export const env = {
   },
 
   auth: {
-    jwtSecret: readString(process.env.JWT_SECRET, 'dev_secret'),
+    jwtSecret: process.env.JWT_SECRET ?? (() => { throw new Error('JWT_SECRET is required'); })(),
     jwtExpiresIn: readString(process.env.JWT_EXPIRES_IN, '7d'),
     defaultRoleName: readString(process.env.AUTH_DEFAULT_ROLE_NAME, 'user'),
     bcryptCost: readNumber(process.env.BCRYPT_COST, 12)
