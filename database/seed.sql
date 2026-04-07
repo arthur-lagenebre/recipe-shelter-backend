@@ -1,5 +1,7 @@
 USE recipe_shelter;
 
+SET NAMES utf8mb4;
+
 START TRANSACTION;
 
 -- ---------- Roles ----------
