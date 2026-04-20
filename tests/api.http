@@ -201,3 +201,135 @@ Authorization: Bearer {{jwt}}
   "currentPassword": "WrongPassword123!",
   "newPassword": "Password1234!"
 }
+
+### Create recipe draft - minimal
+POST {{baseUrl}}/recipes/create
+Content-Type: application/json
+Authorization: Bearer {{jwt}}
+
+{
+  "title": "Tarte aux pommes"
+}
+
+### Get recipe draft - minimal
+GET {{baseUrl}}/recipes/2
+Authorization: Bearer {{jwt}}
+
+### Get my recipes
+GET {{baseUrl}}/recipes/me
+Authorization: Bearer {{jwt}}
+
+### Create recipe draft - full body
+POST {{baseUrl}}/recipes/create
+Content-Type: application/json
+Authorization: Bearer {{jwt}}
+
+{
+  "title": "Cake marbre maison",
+  "categoryId": 2,
+  "description": "Version brouillon pour test HTTP",
+  "prepTimeMinutes": 15,
+  "restTimeMinutes": null,
+  "cookTimeMinutes": 45,
+  "servings": 6,
+  "ingredients": [
+    {
+      "ingredientId": 18,
+      "quantity": 200,
+      "unit": "g",
+      "note": "Tamisee"
+    },
+    {
+      "ingredientId": 103,
+      "quantity": 3,
+      "unit": "piece"
+    }
+  ],
+  "steps": [
+    {
+      "description": "Prechauffer le four a 180 degres."
+    },
+    {
+      "description": "Melanger les ingredients puis verser dans un moule."
+    }
+  ],
+  "utensils": [
+    {
+      "utensilId": 1
+    },
+    {
+      "utensilId": 2
+    }
+  ]
+}
+
+### Create recipe draft - missing auth
+POST {{baseUrl}}/recipes/create
+Content-Type: application/json
+
+{
+  "title": "Soupe du soir"
+}
+
+### Create recipe draft - missing title
+POST {{baseUrl}}/recipes/create
+Content-Type: application/json
+Authorization: Bearer {{jwt}}
+
+{
+  "description": "Pas de titre"
+}
+
+### Create recipe draft - title too short
+POST {{baseUrl}}/recipes/create
+Content-Type: application/json
+Authorization: Bearer {{jwt}}
+
+{
+  "title": "Cake"
+}
+
+### Create recipe draft - invalid servings type
+POST {{baseUrl}}/recipes/create
+Content-Type: application/json
+Authorization: Bearer {{jwt}}
+
+{
+  "title": "Cake au citron",
+  "servings": "6"
+}
+
+### Update recipe draft
+PATCH {{baseUrl}}/recipes/1
+Content-Type: application/json
+Authorization: Bearer {{jwt}}
+
+{
+  "title": "Cake marbre maison v2",
+  "description": "Version mise a jour pour test HTTP",
+  "ingredients": [
+    {
+      "ingredientId": 18,
+      "quantity": 250,
+      "unit": "g"
+    }
+  ],
+  "steps": [
+    {
+      "description": "Prechauffer le four."
+    },
+    {
+      "description": "Cuire pendant 45 minutes."
+    }
+  ],
+  "utensils": [
+    {
+      "utensilId": 1
+    }
+  ]
+}
+
+### Submit recipe draft
+PATCH {{baseUrl}}/recipes/1/submit
+Content-Type: application/json
+Authorization: Bearer {{jwt}}

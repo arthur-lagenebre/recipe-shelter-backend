@@ -10,7 +10,7 @@ CREATE TABLE Roles (
   Name VARCHAR(64) NOT NULL,
   PRIMARY KEY (Id),
   UNIQUE KEY roles_name_UK (Name)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE Users (
   Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -28,7 +28,7 @@ CREATE TABLE Users (
     FOREIGN KEY (RoleId) REFERENCES Roles(Id)
     ON UPDATE CASCADE
     ON DELETE RESTRICT
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE PasswordResets (
   Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -44,31 +44,7 @@ CREATE TABLE PasswordResets (
     FOREIGN KEY (UserId) REFERENCES Users(Id)
     ON UPDATE CASCADE
     ON DELETE CASCADE
-) ENGINE=InnoDB;
-
--- ---------- Recipes ----------
-CREATE TABLE Recipes (
-  Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  UserId BIGINT UNSIGNED NOT NULL,
-  Title VARCHAR(255) NOT NULL,
-  Slug VARCHAR(255) NOT NULL,
-  Description TEXT NOT NULL,
-  PrepTimeMinutes INT NOT NULL,
-  RestTimeMinutes INT NULL,
-  CookTimeMinutes INT NULL,
-  Servings INT NOT NULL,
-  Status ENUM('draft','published') NOT NULL DEFAULT 'draft',
-  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PublishedAt DATETIME NULL,
-  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (Id),
-  UNIQUE KEY recipes_slug_UK (Slug),
-  KEY idx_recipes_user_id (UserId),
-  CONSTRAINT recipes_user_FK
-    FOREIGN KEY (UserId) REFERENCES Users(Id)
-    ON UPDATE CASCADE
-    ON DELETE RESTRICT
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------- Recipe Categories ----------
 CREATE TABLE RecipeCategories (
@@ -80,23 +56,48 @@ CREATE TABLE RecipeCategories (
   PRIMARY KEY (Id),
   UNIQUE KEY recipe_categories_name_UK (Name),
   UNIQUE KEY recipe_categories_slug_UK (Slug)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE RecipeCategoryLinks (
-  RecipeId BIGINT UNSIGNED NOT NULL,
-  CategoryId BIGINT UNSIGNED NOT NULL,
+-- ---------- Recipes ----------
+CREATE TABLE Recipes (
+  Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  UserId BIGINT UNSIGNED NOT NULL,
+  CategoryId BIGINT UNSIGNED NULL,
+  Title VARCHAR(255) NOT NULL,
+  Slug VARCHAR(255) NOT NULL,
+  Description TEXT NOT NULL,
+  PrepTimeMinutes INT NOT NULL,
+  RestTimeMinutes INT NULL,
+  CookTimeMinutes INT NULL,
+  Servings INT NOT NULL,
+  Status ENUM('draft','pending','published','rejected','archived') NOT NULL DEFAULT 'draft',
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (RecipeId, CategoryId),
-  KEY idx_recipe_categorylinks_category_id (CategoryId),
-  CONSTRAINT rcl_recipe_FK
-    FOREIGN KEY (RecipeId) REFERENCES Recipes(Id)
+  SubmittedAt DATETIME NULL,
+  ModeratedAt DATETIME NULL,
+  ModeratedByUserId BIGINT UNSIGNED NULL,
+  PublishedAt DATETIME NULL,
+  ArchivedAt DATETIME NULL,
+  RejectionReason TEXT NULL,
+  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (Id),
+  UNIQUE KEY recipes_slug_UK (Slug),
+  KEY idx_recipes_user_id (UserId),
+  KEY idx_recipes_category_id (CategoryId),
+  KEY idx_recipes_status (Status),
+  KEY idx_recipes_moderated_by_user_id (ModeratedByUserId),
+  CONSTRAINT recipes_user_FK
+    FOREIGN KEY (UserId) REFERENCES Users(Id)
     ON UPDATE CASCADE
-    ON DELETE CASCADE,
-  CONSTRAINT rcl_category_FK
+    ON DELETE RESTRICT,
+  CONSTRAINT recipes_category_FK
     FOREIGN KEY (CategoryId) REFERENCES RecipeCategories(Id)
     ON UPDATE CASCADE
-    ON DELETE RESTRICT
-) ENGINE=InnoDB;
+    ON DELETE RESTRICT,
+  CONSTRAINT recipes_moderated_by_user_FK
+    FOREIGN KEY (ModeratedByUserId) REFERENCES Users(Id)
+    ON UPDATE CASCADE
+    ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------- Ingredient catalogue ----------
 CREATE TABLE IngredientCategories (
@@ -106,7 +107,7 @@ CREATE TABLE IngredientCategories (
   PRIMARY KEY (Id),
   UNIQUE KEY ingredient_categories_name_UK (Name),
   UNIQUE KEY ingredient_categories_slug_UK (Slug)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE Ingredients (
   Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -121,7 +122,7 @@ CREATE TABLE Ingredients (
     FOREIGN KEY (CategoryId) REFERENCES IngredientCategories(Id)
     ON UPDATE CASCADE
     ON DELETE RESTRICT
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE Equipments (
   Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -130,7 +131,7 @@ CREATE TABLE Equipments (
   PRIMARY KEY (Id),
   UNIQUE KEY equipments_name_UK (Name),
   UNIQUE KEY equipments_slug_UK (Slug)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE Tags (
   Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -139,7 +140,7 @@ CREATE TABLE Tags (
   PRIMARY KEY (Id),
   UNIQUE KEY tags_name_UK (Name),
   UNIQUE KEY tags_slug_UK (Slug)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------- Recipe content ----------
 CREATE TABLE RecipeCoverImages (
@@ -152,7 +153,7 @@ CREATE TABLE RecipeCoverImages (
     FOREIGN KEY (RecipeId) REFERENCES Recipes(Id)
     ON UPDATE CASCADE
     ON DELETE CASCADE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE RecipeSteps (
   RecipeId BIGINT UNSIGNED NOT NULL,
@@ -163,15 +164,18 @@ CREATE TABLE RecipeSteps (
     FOREIGN KEY (RecipeId) REFERENCES Recipes(Id)
     ON UPDATE CASCADE
     ON DELETE CASCADE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE RecipeIngredients (
+  Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   RecipeId BIGINT UNSIGNED NOT NULL,
   IngredientId BIGINT UNSIGNED NOT NULL,
   Quantity DECIMAL(10,3) NOT NULL,
-  Unit VARCHAR(64) NOT NULL,
+  Unit VARCHAR(64) NULL,
   Note VARCHAR(255) NULL,
-  PRIMARY KEY (RecipeId, IngredientId),
+  SortOrder INT NOT NULL DEFAULT 1,
+  PRIMARY KEY (Id),
+  KEY idx_recipe_ingredients_recipe_sort (RecipeId, SortOrder),
   KEY idx_recipe_ingredients_ingredient_id (IngredientId),
   CONSTRAINT recipe_ingredients_recipe_FK
     FOREIGN KEY (RecipeId) REFERENCES Recipes(Id)
@@ -181,7 +185,7 @@ CREATE TABLE RecipeIngredients (
     FOREIGN KEY (IngredientId) REFERENCES Ingredients(Id)
     ON UPDATE CASCADE
     ON DELETE RESTRICT
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE RecipeTags (
   RecipeId BIGINT UNSIGNED NOT NULL,
@@ -196,7 +200,7 @@ CREATE TABLE RecipeTags (
     FOREIGN KEY (TagId) REFERENCES Tags(Id)
     ON UPDATE CASCADE
     ON DELETE RESTRICT
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE RecipeEquipments (
   RecipeId BIGINT UNSIGNED NOT NULL,
@@ -211,7 +215,7 @@ CREATE TABLE RecipeEquipments (
     FOREIGN KEY (EquipmentId) REFERENCES Equipments(Id)
     ON UPDATE CASCADE
     ON DELETE RESTRICT
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------- Social ----------
 CREATE TABLE Favorites (
@@ -228,7 +232,7 @@ CREATE TABLE Favorites (
     FOREIGN KEY (RecipeId) REFERENCES Recipes(Id)
     ON UPDATE CASCADE
     ON DELETE CASCADE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE Comments (
   Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -270,4 +274,4 @@ CREATE TABLE Comments (
 
   CONSTRAINT comments_rating_chk
     CHECK (Rating IS NULL OR (Rating BETWEEN 1 AND 5))
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
