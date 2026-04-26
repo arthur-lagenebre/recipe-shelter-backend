@@ -8,4 +8,7 @@ export interface RecipeRepository {
     findByIdForUser(id: number, userId: number): Promise<Recipe | null>;
     findByUserId(userId: number): Promise<Recipe[]>;
     existsBySlug(slug: string): Promise<boolean>;
+    findPendingForAdmin(): Promise<Recipe[]>;
+    publish(id: number, moderatedByUserId: number): Promise<boolean>;
+    reject(id: number, moderatedByUserId: number, rejectionReason: string): Promise<boolean>;
 }

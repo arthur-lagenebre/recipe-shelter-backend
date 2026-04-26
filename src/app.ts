@@ -1,9 +1,11 @@
 import cors from 'cors';
 import express from 'express';
 
+import { createAdminRecipesController } from './api/admin/admin-recipes.controller.js';
+import { createAdminRecipesRouter } from './api/admin/admin-recipes.routes.js';
 import { createAuthController } from './api/auth/auth.controller.js';
 import { createAuthRouter } from './api/auth/auth.routes.js';
-import { createEquipmentsContoller } from './api/equipments/equipments.controller.js';
+import { createEquipmentsController } from './api/equipments/equipments.controller.js';
 import { createEquipmentsRouter } from './api/equipments/equipments.routes.js';
 import { healthController } from './api/health/health.controller.js';
 import { createHealthRouter } from './api/health/health.routes.js';
@@ -55,7 +57,8 @@ export function createApp() {
   const passwordResetService = new PasswordResetService(userRepository, passwordResetRepository, mailer, env.http.frontendBaseUrl);
   const authController = createAuthController(authService, passwordResetService);
   const recipesController = createRecipesController(recipeService);
-  const equipmentsController = createEquipmentsContoller(equipmentService);
+  const adminRecipesController = createAdminRecipesController(recipeService);
+  const equipmentsController = createEquipmentsController(equipmentService);
   const ingredientsController = createIngredientsController(ingredientService);
   const usersController = createUsersController(usersService);
 
@@ -64,6 +67,7 @@ export function createApp() {
   app.use('/equipments', createEquipmentsRouter(equipmentsController));
   app.use('/ingredients', createIngredientsRouter(ingredientsController));
   app.use('/recipes', createRecipesRouter(recipesController));
+  app.use('/admin/recipes', createAdminRecipesRouter(adminRecipesController));
   app.use('/users', createUsersRouter(usersController));
 
   app.use(notFound);

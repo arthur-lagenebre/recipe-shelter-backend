@@ -185,6 +185,38 @@ export class RecipeRepositoryMysql implements RecipeRepository {
         ))).then((recipes) => recipes.filter((recipe): recipe is Recipe => recipe !== null));
     }
 
+    async findPendingForAdmin(): Promise<Recipe[]> {
+        const [rows] = await this.db.execute(
+            `SELECT  Id, UserId, CategoryId, Title, Slug, Description, PrepTimeMinutes, RestTimeMinutes, CookTimeMinutes, Servings, Status, CreatedAt, SubmittedAt, ModeratedAt, ModeratedByUserId, PublishedAt, ArchivedAt, RejectionReason, UpdatedAt
+             FROM Recipes
+             WHERE Status = 'pending'`
+        );
+
+        return (rows as RecipeRow[]).map(mapRecipe);
+    }
+
+    async publish(id: number, moderatedByUserId: number): Promise<boolean> {
+        await this.db.execute(
+            `UPDATE Recipes
+             SET Status = ?, PublishedAt = CURRENT_TIMESTAMP, ModeratedByUserId = ?
+             WHERE Id = ?`,
+            ['published', moderatedByUserId, id]
+        );
+
+        return true;
+    }
+
+    async reject(id: number, moderatedByUserId: number, rejectionReason: string): Promise<boolean> {
+        await this.db.execute(
+            `UPDATE Recipes
+             SET Status = ?, ModeratedAt = CURRENT_TIMESTAMP, ModeratedByUserId = ?, RejectionReason = ?
+             WHERE Id = ?`,
+            ['rejected', moderatedByUserId, rejectionReason, id]
+        );
+
+        return true;
+    }
+
     private async findOne(sql: string, params: Array<string | number | null>): Promise<Recipe | null> {
         const [rows] = await this.db.execute(
             sql,

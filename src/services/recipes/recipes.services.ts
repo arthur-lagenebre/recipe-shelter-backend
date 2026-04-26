@@ -18,14 +18,14 @@ type RecipeContentInput = {
 };
 
 export class RecipeService {
-    constructor(private readonly recipes: RecipeRepository, private readonly recipeSlugService: RecipeSlugService) { }
+    constructor(private readonly recipeRepository: RecipeRepository, private readonly recipeSlugService: RecipeSlugService) { }
 
     async getMine(userId: number): Promise<Recipe[]> {
-        return this.recipes.findByUserId(userId);
+        return this.recipeRepository.findByUserId(userId);
     }
 
     async create(userId: number, input: RecipeContentInput): Promise<Recipe> {
-        const recipe = await this.recipes.create(await normalizeCreateRecipeInput(userId, input, this.recipeSlugService));
+        const recipe = await this.recipeRepository.create(await normalizeCreateRecipeInput(userId, input, this.recipeSlugService));
 
         return recipe;
     }
@@ -42,7 +42,7 @@ export class RecipeService {
         if (recipe.status !== 'draft' && recipe.status !== 'rejected')
             throw badRequest('Only draft or rejected recipes can be updated', 'RECIPES_UPDATE_INVALID_STATUS');
 
-        return this.recipes.updateDraft(normalizeUpdateRecipeInput(recipe, input));
+        return this.recipeRepository.updateDraft(normalizeUpdateRecipeInput(recipe, input));
     }
 
     async submit(recipeId: number, userId: number): Promise<Recipe> {
@@ -53,11 +53,39 @@ export class RecipeService {
 
         const publicSlug = await this.recipeSlugService.createPublicSlug(recipe.title);
 
-        return this.recipes.submit(recipeId, publicSlug);
+        return this.recipeRepository.submit(recipeId, publicSlug);
+    }
+
+    async getPendingForAdmin(): Promise<Recipe[]> {
+        return this.recipeRepository.findPendingForAdmin();
+    }
+
+    async approve(recipeId: number, moderatedByUserId: number): Promise<boolean> {
+        const recipe = await this.recipeRepository.findById(recipeId);
+
+        if (!recipe)
+            throw notFound('Recipe not found', 'RECIPE_NOT_FOUND');
+
+        if (recipe.status !== 'pending')
+            throw badRequest('Only pending recipe can be published', 'RECIPE_APPROVE_INVALID_STATUS');
+
+        return this.recipeRepository.publish(recipeId, moderatedByUserId);
+    }
+
+    async reject(recipeId: number, moderatedByUserId: number, rejectionReason: string): Promise<boolean> {
+        const recipe = await this.recipeRepository.findById(recipeId);
+
+        if (!recipe)
+            throw notFound('Recipe not found', 'RECIPE_NOT_FOUND');
+
+        if (recipe.status !== 'pending')
+            throw badRequest('Only pending recipe can be rejected', 'RECIPE_REJECT_INVALID_STATUS');
+
+        return this.recipeRepository.reject(recipeId, moderatedByUserId, rejectionReason);
     }
 
     private async requireOwnedRecipe(recipeId: number, userId: number): Promise<Recipe> {
-        const recipe = await this.recipes.findByIdForUser(recipeId, userId);
+        const recipe = await this.recipeRepository.findByIdForUser(recipeId, userId);
 
         if (!recipe)
             throw notFound('Recipe not found', 'RECIPES_NOT_FOUND');
