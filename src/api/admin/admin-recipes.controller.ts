@@ -8,7 +8,7 @@ export function createAdminRecipesController(recipeService: RecipeService) {
     return {
         listPendingRecipes: asyncHandler(async (req, res) => {
             const recipes = await recipeService.getPendingForAdmin();
-            res.status(200).json({ data: recipes });
+            res.status(200).json(recipes);
         }),
 
         approveRecipe: asyncHandler(async (req, res) => {
