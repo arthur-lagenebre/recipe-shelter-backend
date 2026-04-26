@@ -38,8 +38,7 @@ export function createRecipesController(recipeService: RecipeService) {
             }
 
             const recipeId = parseRecipeIdParam(req.params.id);
-            const userId = req.auth.userId;
-            const result = await recipeService.get(recipeId, userId);
+            const result = await recipeService.get(recipeId, req.auth);
 
             res.status(200).json(result);
         }),
@@ -53,7 +52,7 @@ export function createRecipesController(recipeService: RecipeService) {
 
             const recipeId = parseRecipeIdParam(req.params.id);
             const body = parseUpdateRecipeBody(req.body);
-            const result = await recipeService.updateDraft(recipeId, req.auth.userId, body);
+            const result = await recipeService.updateDraft(recipeId, req.auth, body);
 
             res.status(200).json(result);
         }),
@@ -66,7 +65,7 @@ export function createRecipesController(recipeService: RecipeService) {
             }
 
             const recipeId = parseRecipeIdParam(req.params.id);
-            const result = await recipeService.submit(recipeId, req.auth.userId);
+            const result = await recipeService.submit(recipeId, req.auth);
 
             res.status(200).json(result);
         }),

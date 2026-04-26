@@ -19,9 +19,8 @@ export function createAdminRecipesController(recipeService: RecipeService) {
             }
 
             const recipeId = parseRecipeIdParam(req.params.id);
-            const moderatedByUserId = req.auth.userId;
             
-            await recipeService.approve(recipeId, moderatedByUserId);
+            await recipeService.approve(recipeId, req.auth);
 
             res.sendStatus(200);
         }),
@@ -34,10 +33,9 @@ export function createAdminRecipesController(recipeService: RecipeService) {
             }
 
             const recipeId = parseRecipeIdParam(req.params.id);
-            const moderatedByUserId = req.auth.userId;
             const rejectionReason = parseRejectRecipeBody(req.body);
 
-            await recipeService.reject(recipeId, moderatedByUserId, rejectionReason);
+            await recipeService.reject(recipeId, req.auth, rejectionReason);
 
             res.sendStatus(200);
         })

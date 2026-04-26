@@ -1,8 +1,11 @@
-import { badRequest, notFound } from '../../utils/errors.js';
+import { forbidden, notFound } from '../../utils/errors.js';
 
 import type { RecipeSlugService } from "./recipe-slug.service.js";
+import type { AuthContext } from "../../api/auth/auth.types.js";
 import type { RecipeRepository } from "../../repositories/recipes/recipe.repository.interface.js";
 import type { Recipe, RecipeIngredientInput, RecipeInput, RecipeStepInput, RecipeUtensilInput, UpdateRecipeInput } from "../../repositories/recipes/recipe.types.js";
+
+type AuthUser = AuthContext;
 
 type RecipeContentInput = {
     categoryId?: number | null;
@@ -30,26 +33,20 @@ export class RecipeService {
         return recipe;
     }
 
-    async get(recipeId: number, userId: number): Promise<Recipe> {
-        const recipe = await this.requireOwnedRecipe(recipeId, userId);
+    async get(recipeId: number, auth: AuthUser): Promise<Recipe> {
+        const recipe = await this.requireViewableRecipe(recipeId, auth);
 
         return recipe;
     }
 
-    async updateDraft(recipeId: number, userId: number, input: RecipeContentInput): Promise<Recipe> {
-        const recipe = await this.requireOwnedRecipe(recipeId, userId);
-
-        if (recipe.status !== 'draft' && recipe.status !== 'rejected')
-            throw badRequest('Only draft or rejected recipes can be updated', 'RECIPES_UPDATE_INVALID_STATUS');
+    async updateDraft(recipeId: number, auth: AuthUser, input: RecipeContentInput): Promise<Recipe> {
+        const recipe = await this.requireEditableRecipe(recipeId, auth);
 
         return this.recipeRepository.updateDraft(normalizeUpdateRecipeInput(recipe, input));
     }
 
-    async submit(recipeId: number, userId: number): Promise<Recipe> {
-        const recipe = await this.requireOwnedRecipe(recipeId, userId);
-
-        if (recipe.status !== 'draft' && recipe.status !== 'rejected')
-            throw badRequest('Only draft or rejected recipes can be submitted', 'RECIPES_SUBMIT_INVALID_STATUS');
+    async submit(recipeId: number, auth: AuthUser): Promise<Recipe> {
+        const recipe = await this.requireEditableRecipe(recipeId, auth);
 
         const publicSlug = await this.recipeSlugService.createPublicSlug(recipe.title);
 
@@ -60,37 +57,72 @@ export class RecipeService {
         return this.recipeRepository.findPendingForAdmin();
     }
 
-    async approve(recipeId: number, moderatedByUserId: number) {
-        const recipe = await this.recipeRepository.findById(recipeId);
+    async approve(recipeId: number, auth: AuthUser) {
+        await this.requireModeratableRecipe(recipeId, auth);
 
-        if (!recipe)
-            throw notFound('Recipe not found', 'RECIPE_NOT_FOUND');
-
-        if (recipe.status !== 'pending')
-            throw badRequest('Only pending recipe can be published', 'RECIPE_APPROVE_INVALID_STATUS');
-
-        await this.recipeRepository.publish(recipeId, moderatedByUserId);
+        await this.recipeRepository.publish(recipeId, auth.userId);
     }
 
-    async reject(recipeId: number, moderatedByUserId: number, rejectionReason: string) {
-        const recipe = await this.recipeRepository.findById(recipeId);
+    async reject(recipeId: number, auth: AuthUser, rejectionReason: string) {
+        await this.requireModeratableRecipe(recipeId, auth);
 
-        if (!recipe)
-            throw notFound('Recipe not found', 'RECIPE_NOT_FOUND');
-
-        if (recipe.status !== 'pending')
-            throw badRequest('Only pending recipe can be rejected', 'RECIPE_REJECT_INVALID_STATUS');
-
-        await this.recipeRepository.reject(recipeId, moderatedByUserId, rejectionReason);
+        await this.recipeRepository.reject(recipeId, auth.userId, rejectionReason);
     }
 
-    private async requireOwnedRecipe(recipeId: number, userId: number): Promise<Recipe> {
-        const recipe = await this.recipeRepository.findByIdForUser(recipeId, userId);
+    private async requireViewableRecipe(recipeId: number, auth: AuthUser): Promise<Recipe> {
+        const recipe = await this.recipeRepository.findById(recipeId);
 
         if (!recipe)
             throw notFound('Recipe not found', 'RECIPES_NOT_FOUND');
 
+        if (!this.canViewRecipe(recipe, auth))
+            throw forbidden('Recipe access denied', 'RECIPES_ACCESS_DENIED');
+
         return recipe;
+    }
+
+    private async requireEditableRecipe(recipeId: number, auth: AuthUser): Promise<Recipe> {
+        const recipe = await this.recipeRepository.findById(recipeId);
+
+        if (!recipe)
+            throw notFound('Recipe not found', 'RECIPES_NOT_FOUND');
+
+        if (!this.canEditRecipe(recipe, auth))
+            throw forbidden('Recipe cannot be edited', 'RECIPES_EDIT_FORBIDDEN');
+
+        return recipe;
+    }
+
+    private async requireModeratableRecipe(recipeId: number, auth: AuthUser): Promise<Recipe> {
+        const recipe = await this.recipeRepository.findById(recipeId);
+
+        if (!recipe)
+            throw notFound('Recipe not found', 'RECIPES_NOT_FOUND');
+
+        if (!this.canModerateRecipe(recipe, auth))
+            throw forbidden('Recipe cannot be moderated', 'RECIPES_MODERATE_FORBIDDEN');
+
+        return recipe;
+    }
+
+    private isAdmin(auth: AuthUser): boolean {
+        return auth.roleId === 1;
+    }
+
+    private isOwner(recipe: Recipe, auth: AuthUser): boolean {
+        return recipe.userId === auth.userId;
+    }
+
+    private canViewRecipe(recipe: Recipe, auth: AuthUser): boolean {
+        return this.isAdmin(auth) || this.isOwner(recipe, auth) || recipe.status === 'published';
+    }
+
+    private canEditRecipe(recipe: Recipe, auth: AuthUser): boolean {
+        return this.isOwner(recipe, auth) && (recipe.status === 'draft' || recipe.status === 'rejected');
+    }
+
+    private canModerateRecipe(recipe: Recipe, auth: AuthUser): boolean {
+        return this.isAdmin(auth) && recipe.status === 'pending';
     }
 }
 
