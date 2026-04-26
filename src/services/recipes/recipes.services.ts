@@ -60,7 +60,7 @@ export class RecipeService {
         return this.recipeRepository.findPendingForAdmin();
     }
 
-    async approve(recipeId: number, moderatedByUserId: number): Promise<boolean> {
+    async approve(recipeId: number, moderatedByUserId: number) {
         const recipe = await this.recipeRepository.findById(recipeId);
 
         if (!recipe)
@@ -69,10 +69,10 @@ export class RecipeService {
         if (recipe.status !== 'pending')
             throw badRequest('Only pending recipe can be published', 'RECIPE_APPROVE_INVALID_STATUS');
 
-        return this.recipeRepository.publish(recipeId, moderatedByUserId);
+        await this.recipeRepository.publish(recipeId, moderatedByUserId);
     }
 
-    async reject(recipeId: number, moderatedByUserId: number, rejectionReason: string): Promise<boolean> {
+    async reject(recipeId: number, moderatedByUserId: number, rejectionReason: string) {
         const recipe = await this.recipeRepository.findById(recipeId);
 
         if (!recipe)
@@ -81,7 +81,7 @@ export class RecipeService {
         if (recipe.status !== 'pending')
             throw badRequest('Only pending recipe can be rejected', 'RECIPE_REJECT_INVALID_STATUS');
 
-        return this.recipeRepository.reject(recipeId, moderatedByUserId, rejectionReason);
+        await this.recipeRepository.reject(recipeId, moderatedByUserId, rejectionReason);
     }
 
     private async requireOwnedRecipe(recipeId: number, userId: number): Promise<Recipe> {

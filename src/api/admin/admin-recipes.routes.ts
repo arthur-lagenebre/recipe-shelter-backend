@@ -15,8 +15,8 @@ export function createAdminRecipesRouter(controller: AdminRecipesController) {
     const router = Router();
 
     router.get('/', requireAuth, requireAdmin, controller.listPendingRecipes);
-    router.put('/:id', requireAuth, requireAdmin, controller.approveRecipe);
-    router.patch('/:id', requireAuth, requireAdmin, controller.rejectRecipe);
+    router.put('/:id/approve', requireAuth, requireAdmin, controller.approveRecipe);
+    router.put('/:id/reject', requireAuth, requireAdmin, controller.rejectRecipe);
 
     return router;
 }
