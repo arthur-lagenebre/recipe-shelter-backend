@@ -1,4 +1,4 @@
-import type { Recipe, RecipeIngredient, RecipeIngredientRow, RecipeRow, RecipeStep, RecipeStepRow, RecipeUtensil, RecipeUtensilRow } from './recipe.types.js';
+import type { Recipe, RecipeIngredient, RecipeIngredientRow, RecipePending, RecipePendingRow, RecipeRow, RecipeStep, RecipeStepRow, RecipeUtensil, RecipeUtensilRow } from './recipe.types.js';
 
 function toDate(value: Date | string): Date {
     return value instanceof Date ? value : new Date(value);
@@ -32,6 +32,18 @@ export function mapRecipe(row: RecipeRow): Recipe {
         ingredients: [],
         steps: [],
         utensils: []
+    };
+}
+
+export function mapRecipePending(row: RecipePendingRow): RecipePending {
+    return {
+        id: row.Id,
+        user: row.User,
+        category: row.Category,
+        title: row.Title,
+        slug: row.Slug,
+        description: row.Description,
+        submittedAt: toNullableDate(row.SubmittedAt)
     };
 }
 

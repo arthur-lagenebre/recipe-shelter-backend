@@ -3,7 +3,7 @@ import { forbidden, notFound } from '../../utils/errors.js';
 import type { RecipeSlugService } from "./recipe-slug.service.js";
 import type { AuthContext } from "../../api/auth/auth.types.js";
 import type { RecipeRepository } from "../../repositories/recipes/recipe.repository.interface.js";
-import type { Recipe, RecipeIngredientInput, RecipeInput, RecipeStepInput, RecipeUtensilInput, UpdateRecipeInput } from "../../repositories/recipes/recipe.types.js";
+import type { Recipe, RecipeIngredientInput, RecipeInput, RecipePending, RecipeStepInput, RecipeUtensilInput, UpdateRecipeInput } from "../../repositories/recipes/recipe.types.js";
 
 type AuthUser = AuthContext;
 
@@ -53,7 +53,7 @@ export class RecipeService {
         return this.recipeRepository.submit(recipeId, publicSlug);
     }
 
-    async getPendingForAdmin(): Promise<Recipe[]> {
+    async getPendingForAdmin(): Promise<RecipePending[]> {
         return this.recipeRepository.findPendingForAdmin();
     }
 

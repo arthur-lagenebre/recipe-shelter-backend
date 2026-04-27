@@ -1,6 +1,6 @@
-import { mapRecipe, mapRecipeIngredient, mapRecipeStep, mapRecipeUtensil } from './recipe.mapper.js';
+import { mapRecipe, mapRecipeIngredient, mapRecipePending, mapRecipeStep, mapRecipeUtensil } from './recipe.mapper.js';
 import { type RecipeRepository } from "./recipe.repository.interface.js";
-import { type Recipe, type RecipeIngredientRow, type RecipeInput, type RecipeRow, type RecipeStepRow, type RecipeUtensilRow, type UpdateRecipeInput } from "./recipe.types.js";
+import { type RecipePending, type RecipePendingRow, type Recipe, type RecipeIngredientRow, type RecipeInput, type RecipeRow, type RecipeStepRow, type RecipeUtensilRow, type UpdateRecipeInput } from "./recipe.types.js";
 import { firstOrNull } from '../../utils/array.js';
 
 import type { ResultSetHeader } from 'mysql2';
@@ -185,14 +185,16 @@ export class RecipeRepositoryMysql implements RecipeRepository {
         ))).then((recipes) => recipes.filter((recipe): recipe is Recipe => recipe !== null));
     }
 
-    async findPendingForAdmin(): Promise<Recipe[]> {
+    async findPendingForAdmin(): Promise<RecipePending[]> {
         const [rows] = await this.db.execute(
-            `SELECT  Id, UserId, CategoryId, Title, Slug, Description, PrepTimeMinutes, RestTimeMinutes, CookTimeMinutes, Servings, Status, CreatedAt, SubmittedAt, ModeratedAt, ModeratedByUserId, PublishedAt, ArchivedAt, RejectionReason, UpdatedAt
-             FROM Recipes
-             WHERE Status = 'pending'`
+            `SELECT  r.Id, u.Username AS User, rc.Name AS Category, r.Title, r.Slug, r.Description, SubmittedAt
+             FROM Recipes AS r
+             LEFT JOIN Users AS u ON r.UserId = u.Id
+             LEFT JOIN RecipeCategories AS rc ON r.CategoryId = rc.Id
+             WHERE r.Status = 'pending'`
         );
 
-        return (rows as RecipeRow[]).map(mapRecipe);
+        return (rows as RecipePendingRow[]).map(mapRecipePending);
     }
 
     async publish(id: number, moderatedByUserId: number): Promise<boolean> {

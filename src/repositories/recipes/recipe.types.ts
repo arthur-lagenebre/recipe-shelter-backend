@@ -78,6 +78,16 @@ export type Recipe = {
     utensils: RecipeUtensil[];
 };
 
+export type RecipePending = {
+    id: number;
+    user: string;
+    category: string | null;
+    title: string;
+    slug: string;
+    description: string;
+    submittedAt: Date | null;
+}
+
 export type RecipeRow = RowDataPacket & {
     Id: number;
     UserId: number;
@@ -98,6 +108,16 @@ export type RecipeRow = RowDataPacket & {
     ArchivedAt: Date | string | null;
     RejectionReason: string | null;
     UpdatedAt: Date | string;
+};
+
+export type RecipePendingRow = RowDataPacket & {
+    Id: number;
+    User: string;
+    Category: string | null;
+    Title: string;
+    Slug: string;
+    Description: string;
+    SubmittedAt: Date | string | null;
 };
 
 export type RecipeIngredientRow = RowDataPacket & {
