@@ -6,7 +6,7 @@ import { env } from '../../utils/env.js';
 import { conflict, unauthorized, badRequest } from '../../utils/errors.js';
 import { normalizeEmail } from '../../utils/string.js';
 
-import type { UserRepository } from '../../repositories/users/user-repository.interface.js';
+import type { UserRepository } from '../../repositories/users/user.repository.interface.js';
 import type { User } from '../../repositories/users/user.types.js';
 
 export type AuthTokenPayload = {

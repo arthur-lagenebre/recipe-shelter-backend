@@ -78,16 +78,6 @@ export type Recipe = {
     utensils: RecipeUtensil[];
 };
 
-export type RecipePending = {
-    id: number;
-    user: string;
-    category: string | null;
-    title: string;
-    slug: string;
-    description: string;
-    submittedAt: Date | null;
-}
-
 export type RecipeRow = RowDataPacket & {
     Id: number;
     UserId: number;
@@ -100,24 +90,14 @@ export type RecipeRow = RowDataPacket & {
     CookTimeMinutes: number | null;
     Servings: number;
     Status: string;
-    CreatedAt: Date | string;
-    SubmittedAt: Date | string | null;
-    ModeratedAt: Date | string | null;
+    CreatedAt: Date;
+    SubmittedAt: Date | null;
+    ModeratedAt: Date | null;
     ModeratedByUserId: number | null;
-    PublishedAt: Date | string | null;
-    ArchivedAt: Date | string | null;
+    PublishedAt: Date | null;
+    ArchivedAt: Date | null;
     RejectionReason: string | null;
-    UpdatedAt: Date | string;
-};
-
-export type RecipePendingRow = RowDataPacket & {
-    Id: number;
-    User: string;
-    Category: string | null;
-    Title: string;
-    Slug: string;
-    Description: string;
-    SubmittedAt: Date | string | null;
+    UpdatedAt: Date;
 };
 
 export type RecipeIngredientRow = RowDataPacket & {

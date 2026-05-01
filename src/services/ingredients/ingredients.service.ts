@@ -1,7 +1,7 @@
 import { type Ingredient } from '../../repositories/ingredients/ingredient.types.js';
 import { notFound } from '../../utils/errors.js';
 
-import type { IngredientRepository } from '../../repositories/ingredients/ingredient-repository.interface.js';
+import type { IngredientRepository } from '../../repositories/ingredients/ingredient.repository.interface.js';
 
 export class IngredientService {
     constructor(private readonly ingredientRepository: IngredientRepository) { }

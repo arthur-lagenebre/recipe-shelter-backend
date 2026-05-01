@@ -1,7 +1,7 @@
 import { type Equipment } from '../../repositories/equipments/equipment.types.js';
 import { notFound } from '../../utils/errors.js';
 
-import type { EquipmentRepository } from '../../repositories/equipments/equipment-repository.interface.js';
+import type { EquipmentRepository } from '../../repositories/equipments/equipment.repository.interface.js';
 
 export class EquipmentService {
     constructor(private readonly equipmentRepository: EquipmentRepository) { }

@@ -1,6 +1,6 @@
 
-import { type IngredientRepository } from "./ingredient-repository.interface.js";
 import { mapIngredient } from './ingredient.mapper.js';
+import { type IngredientRepository } from "./ingredient.repository.interface.js";
 import { type Ingredient, type IngredientRow } from "./ingredient.types.js";
 import { firstOrNull } from '../../utils/array.js';
 

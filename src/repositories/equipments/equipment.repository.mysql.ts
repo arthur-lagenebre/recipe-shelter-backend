@@ -1,6 +1,6 @@
 
-import { type EquipmentRepository } from "./equipment-repository.interface.js";
 import { mapEquipment } from './equipment.mapper.js';
+import { type EquipmentRepository } from "./equipment.repository.interface.js";
 import { type Equipment, type EquipmentRow } from "./equipment.types.js";
 import { firstOrNull } from '../../utils/array.js';
 

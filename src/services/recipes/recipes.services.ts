@@ -3,9 +3,7 @@ import { forbidden, notFound } from '../../utils/errors.js';
 import type { RecipeSlugService } from "./recipe-slug.service.js";
 import type { AuthContext } from "../../api/auth/auth.types.js";
 import type { RecipeRepository } from "../../repositories/recipes/recipe.repository.interface.js";
-import type { Recipe, RecipeIngredientInput, RecipeInput, RecipePending, RecipeStepInput, RecipeUtensilInput, UpdateRecipeInput } from "../../repositories/recipes/recipe.types.js";
-
-type AuthUser = AuthContext;
+import type { Recipe, RecipeIngredientInput, RecipeInput, RecipeStepInput, RecipeUtensilInput, UpdateRecipeInput } from "../../repositories/recipes/recipe.types.js";
 
 type RecipeContentInput = {
     categoryId?: number | null;
@@ -33,19 +31,19 @@ export class RecipeService {
         return recipe;
     }
 
-    async get(recipeId: number, auth: AuthUser): Promise<Recipe> {
+    async get(recipeId: number, auth: AuthContext): Promise<Recipe> {
         const recipe = await this.requireViewableRecipe(recipeId, auth);
 
         return recipe;
     }
 
-    async updateDraft(recipeId: number, auth: AuthUser, input: RecipeContentInput): Promise<Recipe> {
+    async updateDraft(recipeId: number, auth: AuthContext, input: RecipeContentInput): Promise<Recipe> {
         const recipe = await this.requireEditableRecipe(recipeId, auth);
 
         return this.recipeRepository.updateDraft(normalizeUpdateRecipeInput(recipe, input));
     }
 
-    async submit(recipeId: number, auth: AuthUser): Promise<Recipe> {
+    async submit(recipeId: number, auth: AuthContext): Promise<Recipe> {
         const recipe = await this.requireEditableRecipe(recipeId, auth);
 
         const publicSlug = await this.recipeSlugService.createPublicSlug(recipe.title);
@@ -53,23 +51,7 @@ export class RecipeService {
         return this.recipeRepository.submit(recipeId, publicSlug);
     }
 
-    async getPendingForAdmin(): Promise<RecipePending[]> {
-        return this.recipeRepository.findPendingForAdmin();
-    }
-
-    async approve(recipeId: number, auth: AuthUser) {
-        await this.requireModeratableRecipe(recipeId, auth);
-
-        await this.recipeRepository.publish(recipeId, auth.userId);
-    }
-
-    async reject(recipeId: number, auth: AuthUser, rejectionReason: string) {
-        await this.requireModeratableRecipe(recipeId, auth);
-
-        await this.recipeRepository.reject(recipeId, auth.userId, rejectionReason);
-    }
-
-    private async requireViewableRecipe(recipeId: number, auth: AuthUser): Promise<Recipe> {
+    private async requireViewableRecipe(recipeId: number, auth: AuthContext): Promise<Recipe> {
         const recipe = await this.recipeRepository.findById(recipeId);
 
         if (!recipe)
@@ -81,7 +63,7 @@ export class RecipeService {
         return recipe;
     }
 
-    private async requireEditableRecipe(recipeId: number, auth: AuthUser): Promise<Recipe> {
+    private async requireEditableRecipe(recipeId: number, auth: AuthContext): Promise<Recipe> {
         const recipe = await this.recipeRepository.findById(recipeId);
 
         if (!recipe)
@@ -93,36 +75,20 @@ export class RecipeService {
         return recipe;
     }
 
-    private async requireModeratableRecipe(recipeId: number, auth: AuthUser): Promise<Recipe> {
-        const recipe = await this.recipeRepository.findById(recipeId);
-
-        if (!recipe)
-            throw notFound('Recipe not found', 'RECIPES_NOT_FOUND');
-
-        if (!this.canModerateRecipe(recipe, auth))
-            throw forbidden('Recipe cannot be moderated', 'RECIPES_MODERATE_FORBIDDEN');
-
-        return recipe;
-    }
-
-    private isAdmin(auth: AuthUser): boolean {
+    private isAdmin(auth: AuthContext): boolean {
         return auth.roleId === 1;
     }
 
-    private isOwner(recipe: Recipe, auth: AuthUser): boolean {
+    private isOwner(recipe: Recipe, auth: AuthContext): boolean {
         return recipe.userId === auth.userId;
     }
 
-    private canViewRecipe(recipe: Recipe, auth: AuthUser): boolean {
+    private canViewRecipe(recipe: Recipe, auth: AuthContext): boolean {
         return this.isAdmin(auth) || this.isOwner(recipe, auth) || recipe.status === 'published';
     }
 
-    private canEditRecipe(recipe: Recipe, auth: AuthUser): boolean {
+    private canEditRecipe(recipe: Recipe, auth: AuthContext): boolean {
         return this.isOwner(recipe, auth) && (recipe.status === 'draft' || recipe.status === 'rejected');
-    }
-
-    private canModerateRecipe(recipe: Recipe, auth: AuthUser): boolean {
-        return this.isAdmin(auth) && recipe.status === 'pending';
     }
 }
 

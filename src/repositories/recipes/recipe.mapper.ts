@@ -1,12 +1,4 @@
-import type { Recipe, RecipeIngredient, RecipeIngredientRow, RecipePending, RecipePendingRow, RecipeRow, RecipeStep, RecipeStepRow, RecipeUtensil, RecipeUtensilRow } from './recipe.types.js';
-
-function toDate(value: Date | string): Date {
-    return value instanceof Date ? value : new Date(value);
-}
-
-function toNullableDate(value: Date | string | null): Date | null {
-    return value === null ? null : toDate(value);
-}
+import type { Recipe, RecipeIngredient, RecipeIngredientRow, RecipeRow, RecipeStep, RecipeStepRow, RecipeUtensil, RecipeUtensilRow } from './recipe.types.js';
 
 export function mapRecipe(row: RecipeRow): Recipe {
     return {
@@ -21,29 +13,17 @@ export function mapRecipe(row: RecipeRow): Recipe {
         cookTimeMinutes: row.CookTimeMinutes,
         servings: row.Servings,
         status: row.Status,
-        createdAt: toDate(row.CreatedAt),
-        submittedAt: toNullableDate(row.SubmittedAt),
-        moderatedAt: toNullableDate(row.ModeratedAt),
+        createdAt: row.CreatedAt,
+        submittedAt: row.SubmittedAt,
+        moderatedAt: row.ModeratedAt,
         moderatedByUserId: row.ModeratedByUserId,
-        publishedAt: toNullableDate(row.PublishedAt),
-        archivedAt: toNullableDate(row.ArchivedAt),
+        publishedAt: row.PublishedAt,
+        archivedAt: row.ArchivedAt,
         rejectionReason: row.RejectionReason,
-        updatedAt: toDate(row.UpdatedAt),
+        updatedAt: row.UpdatedAt,
         ingredients: [],
         steps: [],
         utensils: []
-    };
-}
-
-export function mapRecipePending(row: RecipePendingRow): RecipePending {
-    return {
-        id: row.Id,
-        user: row.User,
-        category: row.Category,
-        title: row.Title,
-        slug: row.Slug,
-        description: row.Description,
-        submittedAt: toNullableDate(row.SubmittedAt)
     };
 }
 

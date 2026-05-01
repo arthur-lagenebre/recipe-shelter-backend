@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt';
 import { badRequest, conflict, notFound, unauthorized } from '../../utils/errors.js';
 import { validatePassword } from '../auth/password-policy.js';
 
-import type { UserRepository } from '../../repositories/users/user-repository.interface.js';
+import type { UserRepository } from '../../repositories/users/user.repository.interface.js';
 
 export type PublicUserProfile = {
     id: number;

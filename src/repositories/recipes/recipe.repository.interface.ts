@@ -1,4 +1,4 @@
-import type { RecipeInput, Recipe, UpdateRecipeInput, RecipePending } from "./recipe.types.js";
+import type { RecipeInput, Recipe, UpdateRecipeInput } from "./recipe.types.js";
 
 export interface RecipeRepository {
     create(input: RecipeInput): Promise<Recipe>;
@@ -8,7 +8,4 @@ export interface RecipeRepository {
     findByIdForUser(id: number, userId: number): Promise<Recipe | null>;
     findByUserId(userId: number): Promise<Recipe[]>;
     existsBySlug(slug: string): Promise<boolean>;
-    findPendingForAdmin(): Promise<RecipePending[]>;
-    publish(id: number, moderatedByUserId: number): Promise<boolean>;
-    reject(id: number, moderatedByUserId: number, rejectionReason: string): Promise<boolean>;
 }

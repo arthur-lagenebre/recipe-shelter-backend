@@ -18,11 +18,13 @@ import { createUsersRouter } from './api/users/users.routes.js';
 import { pool } from './db/pool.js';
 import { errorHandler } from './middlewares/error-handler.js';
 import { notFound } from './middlewares/not-found.js';
+import { AdminRecipeRepositoryMysql } from './repositories/admin/admin.recipe.repository.mysql.js';
 import { PasswordResetRepositoryMysql } from './repositories/auth/password-reset.repository.mysql.js';
-import { EquipmentRepositoryMysql } from './repositories/equipments/equipment-repository.mysql.js';
-import { IngredientRepositoryMysql } from './repositories/ingredients/ingredient-repository.mysql.js';
+import { EquipmentRepositoryMysql } from './repositories/equipments/equipment.repository.mysql.js';
+import { IngredientRepositoryMysql } from './repositories/ingredients/ingredient.repository.mysql.js';
 import { RecipeRepositoryMysql } from './repositories/recipes/recipe.repository.mysql.js';
-import { UserRepositoryMysql } from './repositories/users/user-repository.mysql.js';
+import { UserRepositoryMysql } from './repositories/users/user.repository.mysql.js';
+import { AdminRecipeService } from './services/admin/admin.recipes.services.js';
 import { AuthService } from './services/auth/auth.service.js';
 import { PasswordResetService } from './services/auth/password-reset.service.js';
 import { EquipmentService } from './services/equipments/equipments.service.js';
@@ -46,6 +48,7 @@ export function createApp() {
   const equipmentRepository = new EquipmentRepositoryMysql(pool);
   const ingredientRepository = new IngredientRepositoryMysql(pool);
   const recipeRepository = new RecipeRepositoryMysql(pool);
+  const adminRecipeRepository = new AdminRecipeRepositoryMysql(pool);
   const mailer = new ConsoleMailer();
 
   const authService = new AuthService(userRepository);
@@ -53,11 +56,12 @@ export function createApp() {
   const equipmentService = new EquipmentService(equipmentRepository);
   const ingredientService = new IngredientService(ingredientRepository);
   const recipeService = new RecipeService(recipeRepository, recipeSlugService);
+  const adminRecipeService = new AdminRecipeService(recipeRepository, adminRecipeRepository);
   const usersService = new UserService(userRepository);
   const passwordResetService = new PasswordResetService(userRepository, passwordResetRepository, mailer, env.http.frontendBaseUrl);
   const authController = createAuthController(authService, passwordResetService);
   const recipesController = createRecipesController(recipeService);
-  const adminRecipesController = createAdminRecipesController(recipeService);
+  const adminRecipesController = createAdminRecipesController(adminRecipeService);
   const equipmentsController = createEquipmentsController(equipmentService);
   const ingredientsController = createIngredientsController(ingredientService);
   const usersController = createUsersController(usersService);
