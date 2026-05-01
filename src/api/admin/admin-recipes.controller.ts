@@ -35,7 +35,7 @@ export function createAdminRecipesController(adminRecipeService: AdminRecipeServ
             
             await adminRecipeService.approve(recipeId, req.auth);
 
-            res.sendStatus(200);
+            res.status(200).json({ message: 'Recipe approved successfully' });
         }),
 
         rejectRecipe: asyncHandler(async (req, res) => {
@@ -50,7 +50,7 @@ export function createAdminRecipesController(adminRecipeService: AdminRecipeServ
 
             await adminRecipeService.reject(recipeId, req.auth, rejectionReason);
 
-            res.sendStatus(200);
+            res.status(200).json({ message: 'Recipe rejected successfully' });
         })
     };
 }
