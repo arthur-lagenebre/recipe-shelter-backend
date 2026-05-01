@@ -1,4 +1,4 @@
-import { type Equipment, type EquipmentRow } from "./equipment.types.js";
+import type { Equipment, EquipmentRow } from "./equipment.types.js";
 
 export function mapEquipment(row: EquipmentRow): Equipment {
     return {

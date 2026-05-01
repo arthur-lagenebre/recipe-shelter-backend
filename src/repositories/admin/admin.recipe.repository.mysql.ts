@@ -1,9 +1,9 @@
 import { mapRecipeIngredient, mapRecipePending, mapRecipeStep, mapRecipeUtensil } from './admin.recipe.mapper.js';
-import { type AdminRecipeRepository } from "./admin.recipe.repository.interface.js";
-import { type RecipeAdmin, type RecipeAdminRow, type RecipeIngredientRow, type RecipePending, type RecipePendingRow, type RecipeStepRow, type RecipeUtensilRow } from './admin.recipe.types.js';
 import { firstOrNull } from '../../utils/array.js';
 import { mapRecipe } from '../recipes/recipe.mapper.js';
 
+import type { AdminRecipeRepository } from "./admin.recipe.repository.interface.js";
+import type { RecipeAdmin, RecipeAdminRow, RecipeIngredientRow, RecipePending, RecipePendingRow, RecipeStepRow, RecipeUtensilRow } from './admin.recipe.types.js';
 import type { Pool } from 'mysql2/promise';
 
 export class AdminRecipeRepositoryMysql implements AdminRecipeRepository {

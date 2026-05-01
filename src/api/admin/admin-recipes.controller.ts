@@ -1,7 +1,8 @@
 import { parseRejectRecipeBody } from './admin-recipes.dto.js';
-import { type AdminRecipeService } from '../../services/admin/admin.recipes.services.js';
 import { asyncHandler } from '../http/async-handler.js';
 import { parseRecipeIdParam } from '../recipes/recipes.dto.js';
+
+import type { AdminRecipeService } from '../../services/admin/admin.recipes.services.js';
 
 export function createAdminRecipesController(adminRecipeService: AdminRecipeService) {
     return {

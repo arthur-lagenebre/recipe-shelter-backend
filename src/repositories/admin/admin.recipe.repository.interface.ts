@@ -1,4 +1,4 @@
-import { type RecipeAdmin, type RecipePending } from "./admin.recipe.types.js";
+import type { RecipeAdmin, RecipePending } from "./admin.recipe.types.js";
 
 export interface AdminRecipeRepository {
     findPendingForAdmin(): Promise<RecipePending[]>;

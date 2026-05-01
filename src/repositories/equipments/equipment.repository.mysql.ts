@@ -1,9 +1,9 @@
 
 import { mapEquipment } from './equipment.mapper.js';
-import { type EquipmentRepository } from "./equipment.repository.interface.js";
-import { type Equipment, type EquipmentRow } from "./equipment.types.js";
 import { firstOrNull } from '../../utils/array.js';
 
+import type { EquipmentRepository } from "./equipment.repository.interface.js";
+import type { Equipment, EquipmentRow } from "./equipment.types.js";
 import type { Pool } from 'mysql2/promise';
 
 export class EquipmentRepositoryMysql implements EquipmentRepository {

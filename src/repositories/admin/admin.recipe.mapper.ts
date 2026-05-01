@@ -1,4 +1,4 @@
-import { type AdminRecipeIngredient, type RecipeIngredientRow, type RecipePending, type RecipePendingRow, type AdminRecipeStep, type RecipeStepRow, type AdminRecipeUtensil, type RecipeUtensilRow } from "./admin.recipe.types.js";
+import type { AdminRecipeIngredient, RecipeIngredientRow, RecipePending, RecipePendingRow, AdminRecipeStep, RecipeStepRow, AdminRecipeUtensil, RecipeUtensilRow } from "./admin.recipe.types.js";
 
 export function mapRecipePending(row: RecipePendingRow): RecipePending {
     return {

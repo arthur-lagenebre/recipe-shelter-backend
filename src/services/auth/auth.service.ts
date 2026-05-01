@@ -1,5 +1,5 @@
 import bcrypt from 'bcrypt';
-import jwt, { type Secret, type SignOptions } from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 
 import { validatePassword } from './password-policy.js';
 import { env } from '../../utils/env.js';
@@ -8,6 +8,7 @@ import { normalizeEmail } from '../../utils/string.js';
 
 import type { UserRepository } from '../../repositories/users/user.repository.interface.js';
 import type { User } from '../../repositories/users/user.types.js';
+import type { Secret, SignOptions } from 'jsonwebtoken';
 
 export type AuthTokenPayload = {
   sub: number;
