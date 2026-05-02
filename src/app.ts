@@ -5,6 +5,8 @@ import { createAdminRecipesController } from './api/admin/admin-recipes.controll
 import { createAdminRecipesRouter } from './api/admin/admin-recipes.routes.js';
 import { createAuthController } from './api/auth/auth.controller.js';
 import { createAuthRouter } from './api/auth/auth.routes.js';
+import { createCategoryController } from './api/category/category.controller.js';
+import { createCategoryRouter } from './api/category/category.routes.js';
 import { createEquipmentsController } from './api/equipments/equipments.controller.js';
 import { createEquipmentsRouter } from './api/equipments/equipments.routes.js';
 import { healthController } from './api/health/health.controller.js';
@@ -20,6 +22,7 @@ import { errorHandler } from './middlewares/error-handler.js';
 import { notFound } from './middlewares/not-found.js';
 import { AdminRecipeRepositoryMysql } from './repositories/admin/admin.recipe.repository.mysql.js';
 import { PasswordResetRepositoryMysql } from './repositories/auth/password-reset.repository.mysql.js';
+import { CategoryRepositoryMysql } from './repositories/category/category.repository.mysql.js';
 import { EquipmentRepositoryMysql } from './repositories/equipments/equipment.repository.mysql.js';
 import { IngredientRepositoryMysql } from './repositories/ingredients/ingredient.repository.mysql.js';
 import { RecipeRepositoryMysql } from './repositories/recipes/recipe.repository.mysql.js';
@@ -27,6 +30,7 @@ import { UserRepositoryMysql } from './repositories/users/user.repository.mysql.
 import { AdminRecipeService } from './services/admin/admin.recipes.services.js';
 import { AuthService } from './services/auth/auth.service.js';
 import { PasswordResetService } from './services/auth/password-reset.service.js';
+import { CategoryService } from './services/category/category.service.js';
 import { EquipmentService } from './services/equipments/equipments.service.js';
 import { IngredientService } from './services/ingredients/ingredients.service.js';
 import { ConsoleMailer } from './services/mail/console.mailer.js';
@@ -45,6 +49,7 @@ export function createApp() {
 
   const userRepository = new UserRepositoryMysql(pool);
   const passwordResetRepository = new PasswordResetRepositoryMysql(pool);
+  const categoryRepository = new CategoryRepositoryMysql(pool);
   const equipmentRepository = new EquipmentRepositoryMysql(pool);
   const ingredientRepository = new IngredientRepositoryMysql(pool);
   const recipeRepository = new RecipeRepositoryMysql(pool);
@@ -53,6 +58,7 @@ export function createApp() {
 
   const authService = new AuthService(userRepository);
   const recipeSlugService = new RecipeSlugService(recipeRepository);
+  const repositoryService = new CategoryService(categoryRepository);
   const equipmentService = new EquipmentService(equipmentRepository);
   const ingredientService = new IngredientService(ingredientRepository);
   const recipeService = new RecipeService(recipeRepository, recipeSlugService);
@@ -62,12 +68,14 @@ export function createApp() {
   const authController = createAuthController(authService, passwordResetService);
   const recipesController = createRecipesController(recipeService);
   const adminRecipesController = createAdminRecipesController(adminRecipeService);
+  const categoryController = createCategoryController(repositoryService);
   const equipmentsController = createEquipmentsController(equipmentService);
   const ingredientsController = createIngredientsController(ingredientService);
   const usersController = createUsersController(usersService);
 
   app.use('/auth', createAuthRouter(authController));
   app.use('/health', createHealthRouter(healthController));
+  app.use('/categories', createCategoryRouter(categoryController));
   app.use('/equipments', createEquipmentsRouter(equipmentsController));
   app.use('/ingredients', createIngredientsRouter(ingredientsController));
   app.use('/recipes', createRecipesRouter(recipesController));
