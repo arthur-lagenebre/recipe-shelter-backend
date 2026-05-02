@@ -7,7 +7,7 @@ export type Equipment = {
 };
 
 export type EquipmentRow = RowDataPacket & {
-    id: number;
-    name: string;
-    slug: string;
+    Id: number;
+    Name: string;
+    Slug: string;
 };

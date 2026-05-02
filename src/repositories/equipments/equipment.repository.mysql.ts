@@ -12,7 +12,7 @@ export class EquipmentRepositoryMysql implements EquipmentRepository {
     async findAll(): Promise<Equipment[]> {
         const [rows] = await this.db.execute(
             `SELECT Id, Name, Slug
-             FROM Equipements`);
+             FROM Equipments`);
 
         return (rows as EquipmentRow[]).map(mapEquipment);
     }
@@ -20,8 +20,8 @@ export class EquipmentRepositoryMysql implements EquipmentRepository {
     async findById(id: number): Promise<Equipment | null> {
         const [rows] = await this.db.execute(
             `SELECT Id, Name, Slug
-             FROM Equipements
-             WHERE i.Id = ?`,
+             FROM Equipments
+             WHERE Id = ?`,
             [id]
         );
 
