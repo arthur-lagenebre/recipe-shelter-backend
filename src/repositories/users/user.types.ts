@@ -26,8 +26,8 @@ export type UserRow = RowDataPacket & {
   Username: string;
   Password: string;
   RoleId: number;
-  CreatedAt: Date | string;
-  UpdatedAt: Date | string;
+  CreatedAt: Date;
+  UpdatedAt: Date;
 };
 
 export type ExistsRow = RowDataPacket & {
