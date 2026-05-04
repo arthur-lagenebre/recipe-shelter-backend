@@ -23,10 +23,12 @@ export type RecipeInput = {
     title: string;
     slug: string;
     description?: string;
+    coverImageUrl?: string | null;
     prepTimeMinutes?: number;
     restTimeMinutes?: number | null;
     cookTimeMinutes?: number | null;
     servings?: number;
+    tagIds?: number[];
     ingredients?: RecipeIngredientInput[];
     steps?: RecipeStepInput[];
     utensils?: RecipeUtensilInput[];
@@ -60,6 +62,7 @@ export type Recipe = {
     title: string;
     slug: string;
     description: string;
+    coverImageUrl: string | null;
     prepTimeMinutes: number;
     restTimeMinutes: number | null;
     cookTimeMinutes: number | null;
@@ -73,6 +76,7 @@ export type Recipe = {
     archivedAt: Date | null;
     rejectionReason: string | null;
     updatedAt: Date;
+    tagIds: number[];
     ingredients: RecipeIngredient[];
     steps: RecipeStep[];
     utensils: RecipeUtensil[];
@@ -85,6 +89,7 @@ export type RecipeRow = RowDataPacket & {
     Title: string;
     Slug: string;
     Description: string;
+    RecipeCoverImage: string | null;
     PrepTimeMinutes: number;
     RestTimeMinutes: number | null;
     CookTimeMinutes: number | null;
@@ -115,4 +120,8 @@ export type RecipeStepRow = RowDataPacket & {
 
 export type RecipeUtensilRow = RowDataPacket & {
     UtensilId: number;
+};
+
+export type RecipeTagRow = RowDataPacket & {
+    TagId: number;
 };

@@ -1,9 +1,9 @@
-import { mapRecipeIngredient, mapRecipePending, mapRecipeStep, mapRecipeUtensil } from './admin.recipe.mapper.js';
+import { mapRecipeIngredient, mapRecipePending, mapRecipeStep, mapRecipeTag, mapRecipeUtensil } from './admin.recipe.mapper.js';
 import { firstOrNull } from '../../utils/array.js';
 import { mapRecipe } from '../recipes/recipe.mapper.js';
 
 import type { AdminRecipeRepository } from "./admin.recipe.repository.interface.js";
-import type { RecipeAdmin, RecipeAdminRow, RecipeIngredientRow, RecipePending, RecipePendingRow, RecipeStepRow, RecipeUtensilRow } from './admin.recipe.types.js';
+import type { RecipeAdmin, RecipeAdminRow, RecipeIngredientRow, RecipePending, RecipePendingRow, RecipeStepRow, RecipeTagRow, RecipeUtensilRow } from './admin.recipe.types.js';
 import type { Pool } from 'mysql2/promise';
 
 export class AdminRecipeRepositoryMysql implements AdminRecipeRepository {
@@ -23,7 +23,7 @@ export class AdminRecipeRepositoryMysql implements AdminRecipeRepository {
 
     async findByIdForAdmin(id: number): Promise<RecipeAdmin | null> {
         const [rows] = await this.db.execute(
-            `SELECT r.Id, r.userId, u.Username, r.CategoryId, rc.Name AS Category, r.Title, r.Slug, r.Description, r.PrepTimeMinutes, r.RestTimeMinutes, r.CookTimeMinutes, r.Servings, r.Status, r.CreatedAt, r.SubmittedAt, r.ModeratedAt, r.ModeratedByUserId, r.PublishedAt, r.ArchivedAt, r.RejectionReason, r.UpdatedAt
+            `SELECT r.Id, r.UserId, u.Username, r.CategoryId, rc.Name AS Category, r.Title, r.Slug, r.Description, r.RecipeCoverImage, r.PrepTimeMinutes, r.RestTimeMinutes, r.CookTimeMinutes, r.Servings, r.Status, r.CreatedAt, r.SubmittedAt, r.ModeratedAt, r.ModeratedByUserId, r.PublishedAt, r.ArchivedAt, r.RejectionReason, r.UpdatedAt
              FROM Recipes AS r
              INNER JOIN Users AS u ON r.UserId = u.Id
              LEFT JOIN RecipeCategories AS rc ON r.CategoryId = rc.Id
@@ -36,16 +36,20 @@ export class AdminRecipeRepositoryMysql implements AdminRecipeRepository {
             return null;
 
         const recipe = mapRecipe(row);
-        const [ingredientRows, stepRows, equipmentRows] = await Promise.all([
+        const [ingredientRows, stepRows, equipmentRows, tagRows] = await Promise.all([
             this.findIngredientsByRecipeId(recipe.id),
             this.findStepsByRecipeId(recipe.id),
-            this.findUtensilsByRecipeId(recipe.id)
+            this.findUtensilsByRecipeId(recipe.id),
+            this.findTagsByRecipeId(recipe.id)
         ]);
+        const { tagIds, ...recipeWithoutTagIds } = recipe;
+        void tagIds;
 
         return {
-            ...recipe,
+            ...recipeWithoutTagIds,
             user: row.Username,
             category: row.Category,
+            tags: tagRows.map(mapRecipeTag),
             ingredients: ingredientRows.map(mapRecipeIngredient),
             steps: stepRows.map(mapRecipeStep),
             utensils: equipmentRows.map(mapRecipeUtensil)
@@ -107,5 +111,18 @@ export class AdminRecipeRepositoryMysql implements AdminRecipeRepository {
         );
 
         return rows as RecipeUtensilRow[];
+    }
+
+    private async findTagsByRecipeId(recipeId: number): Promise<RecipeTagRow[]> {
+        const [rows] = await this.db.execute(
+            `SELECT t.Id, t.Name
+             FROM RecipeTags AS rt
+             INNER JOIN Tags AS t ON rt.TagId = t.Id
+             WHERE rt.RecipeId = ?
+             ORDER BY t.Name ASC`,
+            [recipeId]
+        );
+
+        return rows as RecipeTagRow[];
     }
 }

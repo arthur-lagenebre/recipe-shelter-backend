@@ -30,6 +30,7 @@ export type RecipeAdmin = {
     archivedAt: Date | null;
     rejectionReason: string | null;
     updatedAt: Date;
+    tags: AdminRecipeTag[];
     ingredients: AdminRecipeIngredient[];
     steps: AdminRecipeStep[];
     utensils: AdminRecipeUtensil[];
@@ -47,6 +48,11 @@ export type AdminRecipeIngredient = {
 export type AdminRecipeStep = {
     stepNumber: number;
     description: string;
+};
+
+export type AdminRecipeTag = {
+    id: number;
+    name: string;
 };
 
 export type AdminRecipeUtensil = {
@@ -73,6 +79,11 @@ export type RecipeUtensilRow = RowDataPacket & {
     Name: string;
 };
 
+export type RecipeTagRow = RowDataPacket & {
+    Id: number;
+    Name: string;
+};
+
 export type RecipePendingRow = RowDataPacket & {
     Id: number;
     User: string;
@@ -90,6 +101,7 @@ export type RecipeAdminRow = RowDataPacket & {
     Title: string;
     Slug: string;
     Description: string;
+    RecipeCoverImage: string | null;
     PrepTimeMinutes: number;
     RestTimeMinutes: number | null;
     CookTimeMinutes: number | null;
@@ -103,13 +115,6 @@ export type RecipeAdminRow = RowDataPacket & {
     ArchivedAt: Date | null;
     RejectionReason: string | null;
     UpdatedAt: Date;
-    UserMail: string;
-    UserUsername: string;
-    UserRoleId: number;
-    UserCreatedAt: Date;
-    UserUpdatedAt: Date;
-    CategoryName: string;
-    CategorySlug: string;
-    CategoryCreatedAt: Date;
-    CategoryUpdatedAt: Date;
+    Username: string;
+    Category: string | null;
 };

@@ -8,6 +8,7 @@ export function mapRecipe(row: RecipeRow): Recipe {
         title: row.Title,
         slug: row.Slug,
         description: row.Description,
+        coverImageUrl: row.RecipeCoverImage,
         prepTimeMinutes: row.PrepTimeMinutes,
         restTimeMinutes: row.RestTimeMinutes,
         cookTimeMinutes: row.CookTimeMinutes,
@@ -21,6 +22,7 @@ export function mapRecipe(row: RecipeRow): Recipe {
         archivedAt: row.ArchivedAt,
         rejectionReason: row.RejectionReason,
         updatedAt: row.UpdatedAt,
+        tagIds: [],
         ingredients: [],
         steps: [],
         utensils: []

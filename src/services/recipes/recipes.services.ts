@@ -9,10 +9,12 @@ type RecipeContentInput = {
     categoryId?: number | null;
     title: string;
     description?: string;
+    coverImageUrl?: string | null;
     prepTimeMinutes?: number;
     restTimeMinutes?: number | null;
     cookTimeMinutes?: number | null;
     servings?: number;
+    tagIds?: number[];
     ingredients?: RecipeIngredientInput[];
     steps?: RecipeStepInput[];
     utensils?: RecipeUtensilInput[];
@@ -98,6 +100,16 @@ function normalizeNullableUnit(unit: string | null | undefined): string | null {
     return normalizedUnit ? normalizedUnit : null;
 }
 
+function normalizeNullableString(value: string | null | undefined): string | null {
+    const normalizedValue = value?.trim();
+
+    return normalizedValue ? normalizedValue : null;
+}
+
+function normalizeTagIds(tagIds: number[] | undefined): number[] {
+    return [...new Set(tagIds ?? [])];
+}
+
 async function normalizeCreateRecipeInput(userId: number, input: RecipeContentInput, recipeSlugService: RecipeSlugService): Promise<RecipeInput> {
     const normalizedTitle = input.title.trim();
     const normalizedSlug = await recipeSlugService.createDraftSlug(userId);
@@ -108,10 +120,12 @@ async function normalizeCreateRecipeInput(userId: number, input: RecipeContentIn
         title: normalizedTitle,
         slug: normalizedSlug,
         description: input.description?.trim() ?? '',
+        coverImageUrl: normalizeNullableString(input.coverImageUrl),
         prepTimeMinutes: input.prepTimeMinutes ?? 0,
         restTimeMinutes: input.restTimeMinutes ?? null,
         cookTimeMinutes: input.cookTimeMinutes ?? null,
         servings: input.servings ?? 1,
+        tagIds: normalizeTagIds(input.tagIds),
         ingredients: input.ingredients?.map((ingredient, index) => ({
             ingredientId: ingredient.ingredientId,
             quantity: ingredient.quantity,
@@ -137,10 +151,12 @@ function normalizeUpdateRecipeInput(recipe: Recipe, input: RecipeContentInput): 
         categoryId: input.categoryId,
         title: input.title.trim(),
         description: input.description?.trim(),
+        coverImageUrl: input.coverImageUrl === undefined ? undefined : normalizeNullableString(input.coverImageUrl),
         prepTimeMinutes: input.prepTimeMinutes,
         restTimeMinutes: input.restTimeMinutes,
         cookTimeMinutes: input.cookTimeMinutes,
         servings: input.servings,
+        tagIds: input.tagIds === undefined ? undefined : normalizeTagIds(input.tagIds),
         ingredients: input.ingredients?.map((ingredient, index) => ({
             ingredientId: ingredient.ingredientId,
             quantity: ingredient.quantity,

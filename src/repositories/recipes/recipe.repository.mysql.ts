@@ -2,7 +2,7 @@ import { mapRecipe, mapRecipeIngredient, mapRecipeStep, mapRecipeUtensil } from 
 import { firstOrNull } from '../../utils/array.js';
 
 import type { RecipeRepository } from "./recipe.repository.interface.js";
-import type { Recipe, RecipeIngredientRow, RecipeInput, RecipeRow, RecipeStepRow, RecipeUtensilRow, UpdateRecipeInput } from "./recipe.types.js";
+import type { Recipe, RecipeIngredientRow, RecipeInput, RecipeRow, RecipeStepRow, RecipeTagRow, RecipeUtensilRow, UpdateRecipeInput } from "./recipe.types.js";
 import type { ResultSetHeader } from 'mysql2';
 import type { Pool, PoolConnection } from 'mysql2/promise';
 
@@ -16,9 +16,9 @@ export class RecipeRepositoryMysql implements RecipeRepository {
             await connection.beginTransaction();
 
             const [result] = await connection.execute<ResultSetHeader>(
-                `INSERT INTO Recipes (UserId, CategoryId, Title, Slug, Description, PrepTimeMinutes, RestTimeMinutes, CookTimeMinutes, Servings, Status)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                [input.userId, input.categoryId ?? null, input.title, input.slug, input.description ?? '', input.prepTimeMinutes ?? 0, input.restTimeMinutes ?? null, input.cookTimeMinutes ?? null, input.servings ?? 1, 'draft']
+                `INSERT INTO Recipes (UserId, CategoryId, Title, Slug, Description, RecipeCoverImage, PrepTimeMinutes, RestTimeMinutes, CookTimeMinutes, Servings, Status)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [input.userId, input.categoryId ?? null, input.title, input.slug, input.description ?? '', input.coverImageUrl ?? null, input.prepTimeMinutes ?? 0, input.restTimeMinutes ?? null, input.cookTimeMinutes ?? null, input.servings ?? 1, 'draft']
             );
 
             const recipeId = Number(result.insertId);
@@ -26,6 +26,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
             await this.insertIngredients(connection, recipeId, input);
             await this.insertSteps(connection, recipeId, input);
             await this.insertUtensils(connection, recipeId, input);
+            await this.insertTags(connection, recipeId, input);
 
             await connection.commit();
 
@@ -67,6 +68,11 @@ export class RecipeRepositoryMysql implements RecipeRepository {
                 updateValues.push(input.description);
             }
 
+            if (input.coverImageUrl !== undefined) {
+                updateFields.push('RecipeCoverImage = ?');
+                updateValues.push(input.coverImageUrl);
+            }
+
             if (input.prepTimeMinutes !== undefined) {
                 updateFields.push('PrepTimeMinutes = ?');
                 updateValues.push(input.prepTimeMinutes);
@@ -104,6 +110,9 @@ export class RecipeRepositoryMysql implements RecipeRepository {
 
             if (input.utensils !== undefined)
                 await this.replaceUtensils(connection, input.id, input);
+
+            if (input.tagIds !== undefined)
+                await this.replaceTags(connection, input.id, input);
 
             await connection.commit();
 
@@ -151,7 +160,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
 
     async findById(id: number): Promise<Recipe | null> {
         return this.findOne(
-            `SELECT Id, UserId, CategoryId, Title, Slug, Description, PrepTimeMinutes, RestTimeMinutes, CookTimeMinutes, Servings, Status, CreatedAt, SubmittedAt, ModeratedAt, ModeratedByUserId, PublishedAt, ArchivedAt, RejectionReason, UpdatedAt
+            `SELECT Id, UserId, CategoryId, Title, Slug, Description, RecipeCoverImage, PrepTimeMinutes, RestTimeMinutes, CookTimeMinutes, Servings, Status, CreatedAt, SubmittedAt, ModeratedAt, ModeratedByUserId, PublishedAt, ArchivedAt, RejectionReason, UpdatedAt
              FROM Recipes
              WHERE Id = ?`,
             [id]
@@ -160,7 +169,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
 
     async findByIdForUser(id: number, userId: number): Promise<Recipe | null> {
         return this.findOne(
-            `SELECT Id, UserId, CategoryId, Title, Slug, Description, PrepTimeMinutes, RestTimeMinutes, CookTimeMinutes, Servings, Status, CreatedAt, SubmittedAt, ModeratedAt, ModeratedByUserId, PublishedAt, ArchivedAt, RejectionReason, UpdatedAt
+            `SELECT Id, UserId, CategoryId, Title, Slug, Description, RecipeCoverImage, PrepTimeMinutes, RestTimeMinutes, CookTimeMinutes, Servings, Status, CreatedAt, SubmittedAt, ModeratedAt, ModeratedByUserId, PublishedAt, ArchivedAt, RejectionReason, UpdatedAt
              FROM Recipes
              WHERE Id = ? AND UserId = ?`,
             [id, userId]
@@ -169,7 +178,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
 
     async findByUserId(userId: number): Promise<Recipe[]> {
         const [rows] = await this.db.execute(
-            `SELECT Id, UserId, CategoryId, Title, Slug, Description, PrepTimeMinutes, RestTimeMinutes, CookTimeMinutes, Servings, Status, CreatedAt, SubmittedAt, ModeratedAt, ModeratedByUserId, PublishedAt, ArchivedAt, RejectionReason, UpdatedAt
+            `SELECT Id, UserId, CategoryId, Title, Slug, Description, RecipeCoverImage, PrepTimeMinutes, RestTimeMinutes, CookTimeMinutes, Servings, Status, CreatedAt, SubmittedAt, ModeratedAt, ModeratedByUserId, PublishedAt, ArchivedAt, RejectionReason, UpdatedAt
              FROM Recipes
              WHERE UserId = ?`,
             [userId]
@@ -178,7 +187,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
         const recipeRows = rows as RecipeRow[];
 
         return Promise.all(recipeRows.map((row) => this.findOne(
-            `SELECT Id, UserId, CategoryId, Title, Slug, Description, PrepTimeMinutes, RestTimeMinutes, CookTimeMinutes, Servings, Status, CreatedAt, SubmittedAt, ModeratedAt, ModeratedByUserId, PublishedAt, ArchivedAt, RejectionReason, UpdatedAt
+            `SELECT Id, UserId, CategoryId, Title, Slug, Description, RecipeCoverImage, PrepTimeMinutes, RestTimeMinutes, CookTimeMinutes, Servings, Status, CreatedAt, SubmittedAt, ModeratedAt, ModeratedByUserId, PublishedAt, ArchivedAt, RejectionReason, UpdatedAt
              FROM Recipes
              WHERE Id = ?`,
             [row.Id]
@@ -196,15 +205,17 @@ export class RecipeRepositoryMysql implements RecipeRepository {
             return null;
 
         const recipe = mapRecipe(row);
-        const [ingredientRows, stepRows, equipmentRows] = await Promise.all([
+        const [ingredientRows, stepRows, equipmentRows, tagIds] = await Promise.all([
             this.findIngredientsByRecipeId(recipe.id),
             this.findStepsByRecipeId(recipe.id),
-            this.findUtensilsByRecipeId(recipe.id)
+            this.findUtensilsByRecipeId(recipe.id),
+            this.findTagIdsByRecipeId(recipe.id)
         ]);
 
         recipe.ingredients = ingredientRows.map(mapRecipeIngredient);
         recipe.steps = stepRows.map(mapRecipeStep);
         recipe.utensils = equipmentRows.map(mapRecipeUtensil);
+        recipe.tagIds = tagIds;
 
         return recipe;
     }
@@ -239,6 +250,17 @@ export class RecipeRepositoryMysql implements RecipeRepository {
             `INSERT INTO RecipeEquipments (RecipeId, EquipmentId)
              VALUES ?`,
             [input.utensils.map((utensil) => [recipeId, utensil.utensilId])]
+        );
+    }
+
+    private async insertTags(connection: PoolConnection, recipeId: number, input: RecipeInput): Promise<void> {
+        if (!input.tagIds?.length)
+            return;
+
+        await connection.query(
+            `INSERT INTO RecipeTags (RecipeId, TagId)
+             VALUES ?`,
+            [input.tagIds.map((tagId) => [recipeId, tagId])]
         );
     }
 
@@ -293,12 +315,28 @@ export class RecipeRepositoryMysql implements RecipeRepository {
         );
     }
 
+    private async replaceTags(connection: PoolConnection, recipeId: number, input: RecipeInput): Promise<void> {
+        await connection.execute(
+            `DELETE FROM RecipeTags
+             WHERE RecipeId = ?`,
+            [recipeId]
+        );
+
+        if (!input.tagIds?.length)
+            return;
+
+        await connection.query(
+            `INSERT INTO RecipeTags (RecipeId, TagId)
+             VALUES ?`,
+            [input.tagIds.map((tagId) => [recipeId, tagId])]
+        );
+    }
+
     private async findIngredientsByRecipeId(recipeId: number): Promise<RecipeIngredientRow[]> {
         const [rows] = await this.db.execute(
             `SELECT IngredientId, Quantity, Unit, Note, SortOrder
              FROM RecipeIngredients
-             WHERE RecipeId = ?
-             ORDER BY SortOrder ASC, Id ASC`,
+             WHERE RecipeId = ?`,
             [recipeId]
         );
 
@@ -309,8 +347,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
         const [rows] = await this.db.execute(
             `SELECT StepNumber, Description
              FROM RecipeSteps
-             WHERE RecipeId = ?
-             ORDER BY StepNumber ASC`,
+             WHERE RecipeId = ?`,
             [recipeId]
         );
 
@@ -321,11 +358,21 @@ export class RecipeRepositoryMysql implements RecipeRepository {
         const [rows] = await this.db.execute(
             `SELECT EquipmentId AS UtensilId
              FROM RecipeEquipments
-             WHERE RecipeId = ?
-             ORDER BY EquipmentId ASC`,
+             WHERE RecipeId = ?`,
             [recipeId]
         );
 
         return rows as RecipeUtensilRow[];
+    }
+
+    private async findTagIdsByRecipeId(recipeId: number): Promise<number[]> {
+        const [rows] = await this.db.execute(
+            `SELECT TagId
+             FROM RecipeTags
+             WHERE RecipeId = ?`,
+            [recipeId]
+        );
+
+        return (rows as RecipeTagRow[]).map((row) => row.TagId);
     }
 }

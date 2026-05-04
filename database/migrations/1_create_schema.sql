@@ -66,6 +66,7 @@ CREATE TABLE Recipes (
   Title VARCHAR(255) NOT NULL,
   Slug VARCHAR(255) NOT NULL,
   Description TEXT NOT NULL,
+  RecipeCoverImage VARCHAR(2048) NULL,
   PrepTimeMinutes INT NOT NULL,
   RestTimeMinutes INT NULL,
   CookTimeMinutes INT NULL,
@@ -143,18 +144,6 @@ CREATE TABLE Tags (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------- Recipe content ----------
-CREATE TABLE RecipeCoverImages (
-  RecipeId BIGINT UNSIGNED NOT NULL,
-  URL VARCHAR(2048) NOT NULL,
-  AltText VARCHAR(255) NOT NULL,
-  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (RecipeId),
-  CONSTRAINT recipe_cover_images_recipe_FK
-    FOREIGN KEY (RecipeId) REFERENCES Recipes(Id)
-    ON UPDATE CASCADE
-    ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 CREATE TABLE RecipeSteps (
   RecipeId BIGINT UNSIGNED NOT NULL,
   StepNumber INT NOT NULL,
