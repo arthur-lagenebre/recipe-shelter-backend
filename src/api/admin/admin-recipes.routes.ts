@@ -7,6 +7,7 @@ import type { RequestHandler } from 'express';
 
 type AdminRecipesController = {
     listPendingRecipes: RequestHandler;
+    countPendingRecipes: RequestHandler;
     getRecipeAdmin: RequestHandler;
     approveRecipe: RequestHandler;
     rejectRecipe: RequestHandler;
@@ -16,6 +17,7 @@ export function createAdminRecipesRouter(controller: AdminRecipesController) {
     const router = Router();
 
     router.get('/', requireAuth, requireAdmin, controller.listPendingRecipes);
+    router.get('/count', requireAuth, requireAdmin, controller.countPendingRecipes);
     router.get('/:id', requireAuth, requireAdmin, controller.getRecipeAdmin);
     router.put('/:id/approve', requireAuth, requireAdmin, controller.approveRecipe);
     router.put('/:id/reject', requireAuth, requireAdmin, controller.rejectRecipe);

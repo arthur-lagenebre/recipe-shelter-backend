@@ -13,6 +13,10 @@ export class AdminRecipeService {
         return this.adminRecipeRepository.findPendingForAdmin();
     }
 
+    async getCountPendingRecipesForAdmin(): Promise<number> {
+        return this.adminRecipeRepository.countPendingForAdmin();
+    }
+
     async getRecipeForAdmin(recipeId: number): Promise<RecipeAdmin> {
         const recipe = await this.adminRecipeRepository.findByIdForAdmin(recipeId);
 

@@ -21,6 +21,17 @@ export class AdminRecipeRepositoryMysql implements AdminRecipeRepository {
         return (rows as RecipePendingRow[]).map(mapRecipePending);
     }
 
+    async countPendingForAdmin(): Promise<number> {
+        const [rows] = await this.db.execute(
+            `SELECT COUNT(*) AS Count
+             FROM Recipes
+             WHERE Status = 'pending'`
+        );
+
+        const row = firstOrNull(rows as { Count: number }[]);
+        return row?.Count ?? 0;
+    }
+
     async findByIdForAdmin(id: number): Promise<RecipeAdmin | null> {
         const [rows] = await this.db.execute(
             `SELECT r.Id, r.UserId, u.Username, r.CategoryId, rc.Name AS Category, r.Title, r.Slug, r.Description, r.RecipeCoverImage, r.PrepTimeMinutes, r.RestTimeMinutes, r.CookTimeMinutes, r.Servings, r.Status, r.CreatedAt, r.SubmittedAt, r.ModeratedAt, r.ModeratedByUserId, r.PublishedAt, r.ArchivedAt, r.RejectionReason, r.UpdatedAt

@@ -11,6 +11,11 @@ export function createAdminRecipesController(adminRecipeService: AdminRecipeServ
             res.status(200).json(recipes);
         }),
 
+        countPendingRecipes: asyncHandler(async (req, res) => {
+            const count = await adminRecipeService.getCountPendingRecipesForAdmin();
+            res.status(200).json({ count });
+        }),
+
         getRecipeAdmin: asyncHandler(async (req, res) => {
             if (!req.auth) {
                 res.status(401).json({ error: { message: 'Unauthorized', code: 'AUTH_UNAUTHORIZED' } });
