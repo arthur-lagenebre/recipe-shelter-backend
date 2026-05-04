@@ -1,5 +1,8 @@
 import { Router } from 'express';
 
+import { requireAdmin } from '../../middlewares/require-admin.js';
+import { requireAuth } from '../../middlewares/require-auth.js';
+
 import type { RequestHandler } from 'express';
 
 type HealthController = {
@@ -11,9 +14,9 @@ type HealthController = {
 export function createHealthRouter(controller: HealthController) {
   const router = Router();
 
-  router.get('/live', controller.live);
-  router.get('/ready', controller.ready);
-  router.get('/', controller.health);
+  router.get('/live', requireAuth, requireAdmin, controller.live);
+  router.get('/ready', requireAuth, requireAdmin, controller.ready);
+  router.get('/', requireAuth, requireAdmin, controller.health);
 
   return router;
 }
