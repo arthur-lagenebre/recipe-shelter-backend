@@ -3,7 +3,7 @@ import { forbidden, notFound } from '../../utils/errors.js';
 import type { RecipeSlugService } from "./recipe-slug.service.js";
 import type { AuthContext } from "../../api/auth/auth.types.js";
 import type { RecipeRepository } from "../../repositories/recipes/recipe.repository.interface.js";
-import type { Recipe, RecipeIngredientInput, RecipeInput, RecipeStepInput, RecipeUtensilInput, UpdateRecipeInput } from "../../repositories/recipes/recipe.types.js";
+import type { Recipe, RecipeIngredientInput, RecipeInput, RecipeStepInput, RecipeSummary, RecipeUtensilInput, UpdateRecipeInput } from "../../repositories/recipes/recipe.types.js";
 
 type RecipeContentInput = {
     categoryId?: number | null;
@@ -23,7 +23,7 @@ type RecipeContentInput = {
 export class RecipeService {
     constructor(private readonly recipeRepository: RecipeRepository, private readonly recipeSlugService: RecipeSlugService) { }
 
-    async getMine(userId: number): Promise<Recipe[]> {
+    async getMine(userId: number): Promise<RecipeSummary[]> {
         return this.recipeRepository.findByUserId(userId);
     }
 

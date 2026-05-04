@@ -1,8 +1,8 @@
-import { mapRecipe, mapRecipeIngredient, mapRecipeStep, mapRecipeUtensil } from './recipe.mapper.js';
+import { mapRecipe, mapRecipeIngredient, mapRecipeStep, mapRecipeSummary, mapRecipeUtensil } from './recipe.mapper.js';
 import { firstOrNull } from '../../utils/array.js';
 
 import type { RecipeRepository } from "./recipe.repository.interface.js";
-import type { Recipe, RecipeIngredientRow, RecipeInput, RecipeRow, RecipeStepRow, RecipeTagRow, RecipeUtensilRow, UpdateRecipeInput } from "./recipe.types.js";
+import type { Recipe, RecipeIngredientRow, RecipeInput, RecipeRow, RecipeStepRow, RecipeSummary, RecipeTagRow, RecipeUtensilRow, UpdateRecipeInput } from "./recipe.types.js";
 import type { ResultSetHeader } from 'mysql2';
 import type { Pool, PoolConnection } from 'mysql2/promise';
 
@@ -167,16 +167,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
         );
     }
 
-    async findByIdForUser(id: number, userId: number): Promise<Recipe | null> {
-        return this.findOne(
-            `SELECT Id, UserId, CategoryId, Title, Slug, Description, RecipeCoverImage, PrepTimeMinutes, RestTimeMinutes, CookTimeMinutes, Servings, Status, CreatedAt, SubmittedAt, ModeratedAt, ModeratedByUserId, PublishedAt, ArchivedAt, RejectionReason, UpdatedAt
-             FROM Recipes
-             WHERE Id = ? AND UserId = ?`,
-            [id, userId]
-        );
-    }
-
-    async findByUserId(userId: number): Promise<Recipe[]> {
+    async findByUserId(userId: number): Promise<RecipeSummary[]> {
         const [rows] = await this.db.execute(
             `SELECT Id, UserId, CategoryId, Title, Slug, Description, RecipeCoverImage, PrepTimeMinutes, RestTimeMinutes, CookTimeMinutes, Servings, Status, CreatedAt, SubmittedAt, ModeratedAt, ModeratedByUserId, PublishedAt, ArchivedAt, RejectionReason, UpdatedAt
              FROM Recipes
@@ -186,19 +177,26 @@ export class RecipeRepositoryMysql implements RecipeRepository {
 
         const recipeRows = rows as RecipeRow[];
 
-        return Promise.all(recipeRows.map((row) => this.findOne(
-            `SELECT Id, UserId, CategoryId, Title, Slug, Description, RecipeCoverImage, PrepTimeMinutes, RestTimeMinutes, CookTimeMinutes, Servings, Status, CreatedAt, SubmittedAt, ModeratedAt, ModeratedByUserId, PublishedAt, ArchivedAt, RejectionReason, UpdatedAt
+        return Promise.all(recipeRows.map((row) => this.findOneSummary(
+            `SELECT Id, Title, Slug, Description, Status, CreatedAt, SubmittedAt, PublishedAt, RejectionReason, UpdatedAt
              FROM Recipes
              WHERE Id = ?`,
             [row.Id]
-        ))).then((recipes) => recipes.filter((recipe): recipe is Recipe => recipe !== null));
+        ))).then((recipeSummaries) => recipeSummaries.filter((recipeSummary): recipeSummary is RecipeSummary => recipeSummary !== null));
+    }
+
+    private async findOneSummary(sql: string, params: Array<string | number | null>): Promise<RecipeSummary | null> {
+        const [rows] = await this.db.execute(sql, params);
+
+        const row = firstOrNull(rows as RecipeRow[]);
+        if (!row)
+            return null;
+
+        return mapRecipeSummary(row);
     }
 
     private async findOne(sql: string, params: Array<string | number | null>): Promise<Recipe | null> {
-        const [rows] = await this.db.execute(
-            sql,
-            params
-        );
+        const [rows] = await this.db.execute(sql, params);
 
         const row = firstOrNull(rows as RecipeRow[]);
         if (!row)

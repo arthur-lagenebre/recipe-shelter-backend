@@ -82,6 +82,19 @@ export type Recipe = {
     utensils: RecipeUtensil[];
 };
 
+export type RecipeSummary = {
+    id: number;
+    title: string;
+    slug: string;
+    description: string;
+    status: string;
+    createdAt: Date;
+    submittedAt: Date | null;
+    updatedAt: Date;
+    publishedAt: Date | null;
+    rejectionReason: string | null;
+}
+
 export type RecipeRow = RowDataPacket & {
     Id: number;
     UserId: number;

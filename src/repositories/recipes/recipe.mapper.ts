@@ -1,4 +1,4 @@
-import type { Recipe, RecipeIngredient, RecipeIngredientRow, RecipeRow, RecipeStep, RecipeStepRow, RecipeUtensil, RecipeUtensilRow } from './recipe.types.js';
+import type { Recipe, RecipeIngredient, RecipeIngredientRow, RecipeRow, RecipeStep, RecipeStepRow, RecipeSummary, RecipeUtensil, RecipeUtensilRow } from './recipe.types.js';
 
 export function mapRecipe(row: RecipeRow): Recipe {
     return {
@@ -26,6 +26,21 @@ export function mapRecipe(row: RecipeRow): Recipe {
         ingredients: [],
         steps: [],
         utensils: []
+    };
+}
+
+export function mapRecipeSummary(row: RecipeRow): RecipeSummary {
+    return {
+        id: row.Id,
+        title: row.Title,
+        slug: row.Slug,
+        description: row.Description,
+        status: row.Status,
+        createdAt: row.CreatedAt,
+        submittedAt: row.SubmittedAt,
+        publishedAt: row.PublishedAt,
+        rejectionReason: row.RejectionReason,
+        updatedAt: row.UpdatedAt
     };
 }
 
