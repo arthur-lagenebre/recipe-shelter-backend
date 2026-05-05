@@ -183,3 +183,12 @@ export function parseRecipeIdParam(value: unknown): number {
 
     return recipeId;
 }
+
+export function parseRecipeSlugParam(value: unknown): string {
+    const slug = typeof value === 'string' ? value.trim() : '';
+
+    if (!slug)
+        throw badRequest('Recipe slug is required', 'RECIPES_BAD_SLUG');
+
+    return slug;
+}

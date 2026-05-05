@@ -1,4 +1,4 @@
-import type { Recipe, RecipeIngredient, RecipeIngredientRow, RecipeRow, RecipeStep, RecipeStepRow, RecipeSummary, RecipeUtensil, RecipeUtensilRow } from './recipe.types.js';
+import type { Recipe, RecipeDetail, RecipeDetailEquipment, RecipeDetailIngredient, RecipeDetailIngredientRow, RecipeDetailStep, RecipeDetailStepRow, RecipeDetailTag, RecipeDetailTagRow, RecipeDetailUtensilRow, RecipeIngredient, RecipeIngredientRow, RecipeListItem, RecipeListItemRow, RecipeRow, RecipeStep, RecipeStepRow, RecipeSummary, RecipeUtensil, RecipeUtensilRow } from './recipe.types.js';
 
 export function mapRecipe(row: RecipeRow): Recipe {
     return {
@@ -64,5 +64,78 @@ export function mapRecipeStep(row: RecipeStepRow): RecipeStep {
 export function mapRecipeUtensil(row: RecipeUtensilRow): RecipeUtensil {
     return {
         utensilId: row.UtensilId
+    };
+}
+
+export function mapRecipeListItem(row: RecipeListItemRow): RecipeListItem {
+    return {
+        id: row.Id,
+        title: row.Title,
+        slug: row.Slug,
+        description: row.Description,
+        category: row.Category,
+        coverImageUrl: row.RecipeCoverImage,
+        prepTimeMinutes: row.PrepTimeMinutes,
+        cookTimeMinutes: row.CookTimeMinutes,
+        restTimeMinutes: row.RestTimeMinutes,
+        servings: row.Servings,
+        authorUsername: row.AuthorUsername,
+        publishedAt: row.PublishedAt
+    };
+}
+
+export function mapRecipeDetail(row: RecipeListItemRow): RecipeDetail {
+    return {
+        id: row.Id,
+        title: row.Title,
+        slug: row.Slug,
+        description: row.Description,
+        category: row.Category,
+        coverImageUrl: row.RecipeCoverImage,
+        prepTimeMinutes: row.PrepTimeMinutes,
+        cookTimeMinutes: row.CookTimeMinutes,
+        restTimeMinutes: row.RestTimeMinutes,
+        servings: row.Servings,
+        authorUsername: row.AuthorUsername,
+        publishedAt: row.PublishedAt,
+        ingredients: [],
+        steps: [],
+        equipments: [],
+        tags: []
+    };
+}
+
+export function mapRecipeDetailIngredient(row: RecipeDetailIngredientRow): RecipeDetailIngredient {
+    return {
+        id: row.IngredientId,
+        name: row.Name,
+        slug: row.Slug,
+        quantity: Number(row.Quantity),
+        unit: row.Unit,
+        note: row.Note,
+        sortOrder: row.SortOrder
+    };
+}
+
+export function mapRecipeDetailStep(row: RecipeDetailStepRow): RecipeDetailStep {
+    return {
+        stepNumber: row.StepNumber,
+        description: row.Description
+    };
+}
+
+export function mapRecipeDetailUtensil(row: RecipeDetailUtensilRow): RecipeDetailEquipment {
+    return {
+        id: row.Id,
+        name: row.Name,
+        slug: row.Slug
+    };
+}
+
+export function mapRecipeDetailTag(row: RecipeDetailTagRow): RecipeDetailTag {
+    return {
+        id: row.Id,
+        name: row.Name,
+        slug: row.Slug
     };
 }

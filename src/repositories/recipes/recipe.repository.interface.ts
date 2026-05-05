@@ -1,4 +1,4 @@
-import type { RecipeInput, Recipe, UpdateRecipeInput, RecipeSummary } from "./recipe.types.js";
+import type { RecipeInput, Recipe, UpdateRecipeInput, RecipeSummary, RecipeListItem, RecipeDetail } from "./recipe.types.js";
 
 export interface RecipeRepository {
     create(input: RecipeInput): Promise<Recipe>;
@@ -6,5 +6,7 @@ export interface RecipeRepository {
     submit(id: number, slug: string): Promise<Recipe>;
     findById(id: number): Promise<Recipe | null>;
     findByUserId(userId: number): Promise<RecipeSummary[]>;
+    findPublished(): Promise<RecipeListItem[]>;
+    findPublishedBySlug(slug: string): Promise<RecipeDetail | null>;
     existsBySlug(slug: string): Promise<boolean>;
 }

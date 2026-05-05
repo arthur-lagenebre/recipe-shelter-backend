@@ -1,8 +1,8 @@
-import { mapRecipe, mapRecipeIngredient, mapRecipeStep, mapRecipeSummary, mapRecipeUtensil } from './recipe.mapper.js';
+import { mapRecipe, mapRecipeDetail, mapRecipeDetailIngredient, mapRecipeDetailStep, mapRecipeDetailTag, mapRecipeDetailUtensil, mapRecipeIngredient, mapRecipeListItem, mapRecipeStep, mapRecipeSummary, mapRecipeUtensil } from './recipe.mapper.js';
 import { firstOrNull } from '../../utils/array.js';
 
 import type { RecipeRepository } from "./recipe.repository.interface.js";
-import type { Recipe, RecipeIngredientRow, RecipeInput, RecipeRow, RecipeStepRow, RecipeSummary, RecipeTagRow, RecipeUtensilRow, UpdateRecipeInput } from "./recipe.types.js";
+import type { Recipe, RecipeDetail, RecipeDetailIngredientRow, RecipeDetailStepRow, RecipeDetailTagRow, RecipeDetailUtensilRow, RecipeIngredientRow, RecipeInput, RecipeListItem, RecipeListItemRow, RecipeRow, RecipeStepRow, RecipeSummary, RecipeTagRow, RecipeUtensilRow, UpdateRecipeInput } from "./recipe.types.js";
 import type { ResultSetHeader } from 'mysql2';
 import type { Pool, PoolConnection } from 'mysql2/promise';
 
@@ -169,30 +169,55 @@ export class RecipeRepositoryMysql implements RecipeRepository {
 
     async findByUserId(userId: number): Promise<RecipeSummary[]> {
         const [rows] = await this.db.execute(
-            `SELECT Id, UserId, CategoryId, Title, Slug, Description, RecipeCoverImage, PrepTimeMinutes, RestTimeMinutes, CookTimeMinutes, Servings, Status, CreatedAt, SubmittedAt, ModeratedAt, ModeratedByUserId, PublishedAt, ArchivedAt, RejectionReason, UpdatedAt
+            `SELECT Id, Title, Slug, Description, Status, CreatedAt, SubmittedAt, PublishedAt, RejectionReason, UpdatedAt
              FROM Recipes
              WHERE UserId = ?`,
             [userId]
         );
 
-        const recipeRows = rows as RecipeRow[];
-
-        return Promise.all(recipeRows.map((row) => this.findOneSummary(
-            `SELECT Id, Title, Slug, Description, Status, CreatedAt, SubmittedAt, PublishedAt, RejectionReason, UpdatedAt
-             FROM Recipes
-             WHERE Id = ?`,
-            [row.Id]
-        ))).then((recipeSummaries) => recipeSummaries.filter((recipeSummary): recipeSummary is RecipeSummary => recipeSummary !== null));
+        return (rows as RecipeRow[]).map(mapRecipeSummary);
     }
 
-    private async findOneSummary(sql: string, params: Array<string | number | null>): Promise<RecipeSummary | null> {
-        const [rows] = await this.db.execute(sql, params);
+    async findPublished(): Promise<RecipeListItem[]> {
+        const [rows] = await this.db.execute(
+            `SELECT r.Id, r.Title, r.Slug, r.Description, r.RecipeCoverImage, rc.Name AS Category, r.PrepTimeMinutes, r.RestTimeMinutes, r.CookTimeMinutes, r.Servings, u.UserName AS AuthorUsername, r.PublishedAt
+             FROM Recipes AS r
+             INNER JOIN RecipeCategories AS rc ON rc.Id = r.CategoryId
+             INNER JOIN Users AS u ON u.Id = r.UserId
+             WHERE r.Status = 'published'`
+        );
 
-        const row = firstOrNull(rows as RecipeRow[]);
+        return (rows as RecipeListItemRow[]).map(mapRecipeListItem);
+    }
+
+    async findPublishedBySlug(slug: string): Promise<RecipeDetail | null> {
+        const [rows] = await this.db.execute(
+            `SELECT r.Id, r.Title, r.Slug, r.Description, r.RecipeCoverImage, rc.Name AS Category, r.PrepTimeMinutes, r.RestTimeMinutes, r.CookTimeMinutes, r.Servings, u.UserName AS AuthorUsername, r.PublishedAt
+             FROM Recipes AS r
+             INNER JOIN RecipeCategories AS rc ON rc.Id = r.CategoryId
+             INNER JOIN Users AS u ON u.Id = r.UserId
+             WHERE r.Status = 'published' AND r.Slug = ?`,
+             [slug]
+        );
+
+        const row = firstOrNull(rows as RecipeListItemRow[]);
         if (!row)
             return null;
 
-        return mapRecipeSummary(row);
+        const recipe = mapRecipeDetail(row);
+        const [ingredientRows, stepRows, equipmentRows, tagRows] = await Promise.all([
+            this.findDetailIngredientsByRecipeId(recipe.id),
+            this.findDetailStepsByRecipeId(recipe.id),
+            this.findDetailUtensilsByRecipeId(recipe.id),
+            this.findDetailTagIdsByRecipeId(recipe.id)
+        ]);
+
+        recipe.ingredients = ingredientRows.map(mapRecipeDetailIngredient);
+        recipe.steps = stepRows.map(mapRecipeDetailStep);
+        recipe.equipments = equipmentRows.map(mapRecipeDetailUtensil);
+        recipe.tags = tagRows.map(mapRecipeDetailTag);
+
+        return recipe;
     }
 
     private async findOne(sql: string, params: Array<string | number | null>): Promise<Recipe | null> {
@@ -372,5 +397,52 @@ export class RecipeRepositoryMysql implements RecipeRepository {
         );
 
         return (rows as RecipeTagRow[]).map((row) => row.TagId);
+    }
+
+    private async findDetailIngredientsByRecipeId(recipeId: number): Promise<RecipeDetailIngredientRow[]> {
+        const [rows] = await this.db.execute(
+            `SELECT i.Id, i.Name, i.Slug, ri.Quantity, ri.Unit, ri.Note, ri.SortOrder
+             FROM RecipeIngredients AS ri
+             INNER JOIN Ingredients AS i ON i.Id = ri.IngredientId
+             WHERE ri.RecipeId =  ?`,
+            [recipeId]
+        );
+
+        return rows as RecipeDetailIngredientRow[];
+    }
+
+    private async findDetailStepsByRecipeId(recipeId: number): Promise<RecipeDetailStepRow[]> {
+        const [rows] = await this.db.execute(
+            `SELECT StepNumber, Description
+             FROM RecipeSteps
+             WHERE RecipeId = ?`,
+            [recipeId]
+        );
+
+        return rows as RecipeDetailStepRow[];
+    }
+
+    private async findDetailUtensilsByRecipeId(recipeId: number): Promise<RecipeDetailUtensilRow[]> {
+        const [rows] = await this.db.execute(
+            `SELECT e.Id, e.Name, e.Slug
+             FROM RecipeEquipments AS re
+             INNER JOIN Equipments AS e ON e.Id = re.EquipmentId
+             WHERE re.RecipeId = ?`,
+            [recipeId]
+        );
+
+        return rows as RecipeDetailUtensilRow[];
+    }
+
+    private async findDetailTagIdsByRecipeId(recipeId: number): Promise<RecipeDetailTagRow[]> {
+        const [rows] = await this.db.execute(
+            `SELECT t.Id, t.Name, t.Slug
+             FROM RecipeTags AS rt
+             INNER JOIN Tags AS t ON t.Id = rt.TagId
+             WHERE rt.RecipeId = ?`,
+            [recipeId]
+        );
+
+        return rows as RecipeDetailTagRow[];
     }
 }

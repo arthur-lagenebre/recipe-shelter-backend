@@ -3,7 +3,7 @@ import { forbidden, notFound } from '../../utils/errors.js';
 import type { RecipeSlugService } from "./recipe-slug.service.js";
 import type { AuthContext } from "../../api/auth/auth.types.js";
 import type { RecipeRepository } from "../../repositories/recipes/recipe.repository.interface.js";
-import type { Recipe, RecipeIngredientInput, RecipeInput, RecipeStepInput, RecipeSummary, RecipeUtensilInput, UpdateRecipeInput } from "../../repositories/recipes/recipe.types.js";
+import type { Recipe, RecipeDetail, RecipeIngredientInput, RecipeInput, RecipeListItem, RecipeStepInput, RecipeSummary, RecipeUtensilInput, UpdateRecipeInput } from "../../repositories/recipes/recipe.types.js";
 
 type RecipeContentInput = {
     categoryId?: number | null;
@@ -51,6 +51,14 @@ export class RecipeService {
         const publicSlug = await this.recipeSlugService.createPublicSlug(recipe.title);
 
         return this.recipeRepository.submit(recipeId, publicSlug);
+    }
+
+    async getPublished(): Promise<RecipeListItem[]> {
+        return await this.recipeRepository.findPublished();
+    }
+
+    async getBySlug(slug: string): Promise<RecipeDetail | null> {
+        return await this.recipeRepository.findPublishedBySlug(slug);
     }
 
     private async requireViewableRecipe(recipeId: number, auth: AuthContext): Promise<Recipe> {

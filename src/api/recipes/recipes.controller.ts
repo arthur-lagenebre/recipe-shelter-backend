@@ -1,4 +1,4 @@
-import { parseCreateRecipeBody, parseRecipeIdParam, parseUpdateRecipeBody } from './recipes.dto.js';
+import { parseCreateRecipeBody, parseRecipeSlugParam, parseRecipeIdParam, parseUpdateRecipeBody } from './recipes.dto.js';
 import { asyncHandler } from '../http/async-handler.js';
 
 import type { RecipeService } from '../../services/recipes/recipes.services.js';
@@ -29,6 +29,26 @@ export function createRecipesController(recipeService: RecipeService) {
 
             res.status(201).json(result);
         }),
+
+        getRecipes: asyncHandler(async (req, res) => {
+            const result = await recipeService.getPublished();
+
+            res.status(200).json(result);
+        }),
+
+        getRecipeBySlug: asyncHandler(async (req, res) => {
+            const recipeSlug = parseRecipeSlugParam(req.params.slug);
+            const result = await recipeService.getBySlug(recipeSlug);
+
+            if (!result) {
+                res.status(404).json({ error: { message: 'Recipe not found', code: 'NOT_FOUND' } });
+
+                return;
+            }
+
+            res.status(200).json(result);
+        }),
+
 
         getRecipe: asyncHandler(async (req, res) => {
             if (!req.auth) {
