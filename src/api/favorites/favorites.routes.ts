@@ -7,6 +7,7 @@ import type { RequestHandler } from 'express';
 type FavoritesController = {
     createFavorite: RequestHandler;
     deleteFavorite: RequestHandler;
+    getFavoriteRecipes: RequestHandler;
 };
 
 export function createFavoritesRouter(controller: FavoritesController) {
@@ -14,6 +15,7 @@ export function createFavoritesRouter(controller: FavoritesController) {
 
     router.post('/create', requireAuth, controller.createFavorite);
     router.post('/delete', requireAuth, controller.deleteFavorite);
+    router.get('/me', requireAuth, controller.getFavoriteRecipes)
 
     return router;
 }

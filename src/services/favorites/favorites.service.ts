@@ -2,6 +2,7 @@ import { internalError } from '../../utils/errors.js';
 
 import type { FavoriteRepository } from '../../repositories/favorites/favorites.repository.interface.js';
 import type { Favorite } from '../../repositories/favorites/favorites.types.js';
+import type { RecipeListItem } from '../../repositories/recipes/recipe.types.js';
 
 export class FavoriteService {
     constructor(private readonly favoriteRepository: FavoriteRepository) { }
@@ -22,5 +23,9 @@ export class FavoriteService {
             throw internalError('Favorite cannot be deleted', 'FAVORITE_CANNOT_BE_DELETED');
 
         return isDeleted;
+    }
+
+    async getFavoriteRecipes(userId: number): Promise<RecipeListItem[]> {
+        return this.favoriteRepository.getFavoriteRecipes(userId);
     }
 }

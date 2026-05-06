@@ -29,6 +29,18 @@ export function createFavoritesController(favoriteService: FavoriteService) {
             const isDeleted = await favoriteService.deleteFavorite(body.userId, body.recipeId);
 
             res.status(200).json(isDeleted);
+        }),
+
+        getFavoriteRecipes: asyncHandler(async (req, res) => {
+            if (!req.auth) {
+                res.status(401).json({ error: { message: 'Unauthorized', code: 'AUTH_UNAUTHORIZED' } });
+
+                return;
+            }
+
+            const favorites = await favoriteService.getFavoriteRecipes(req.auth.userId);
+
+            res.status(200).json(favorites);
         })
     };
 }

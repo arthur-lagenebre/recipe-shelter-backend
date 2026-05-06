@@ -1,6 +1,8 @@
-import { type Favorite } from "./favorites.types.js";
+import type { Favorite } from "./favorites.types.js";
+import type { RecipeListItem } from "../recipes/recipe.types.js";
 
 export interface FavoriteRepository {
     create(userId: number, recipeId: number): Promise<Favorite>;
     delete(userId: number, recipeId: number): Promise<boolean>;
+    getFavoriteRecipes(userId: number): Promise<RecipeListItem[]>;
 }

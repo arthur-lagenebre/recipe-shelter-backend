@@ -1,8 +1,10 @@
 import { mapFavorite } from './favorites.mapper.js';
-import { type Favorite, type FavoriteRow } from './favorites.types.js';
 import { firstOrNull } from '../../utils/array.js';
+import { mapRecipeListItem } from '../recipes/recipe.mapper.js';
 
 import type { FavoriteRepository } from "./favorites.repository.interface.js";
+import type { Favorite, FavoriteRow } from './favorites.types.js';
+import type { RecipeListItem, RecipeListItemRow } from '../recipes/recipe.types.js';
 import type { ResultSetHeader } from 'mysql2';
 import type { Pool } from 'mysql2/promise';
 
@@ -44,5 +46,17 @@ export class FavoriteRepositoryMysql implements FavoriteRepository {
         );
 
         return result.affectedRows > 0;
+    }
+
+    async getFavoriteRecipes(userId: number): Promise<RecipeListItem[]> {
+        const [rows] = await this.db.execute(
+            `SELECT *
+             FROM Favorites AS f
+             JOIN Recipes AS r ON r.Id = f.RecipeId
+            WHERE f.UserId = ?`,
+            [userId]
+        );
+
+        return (rows as RecipeListItemRow[]).map(mapRecipeListItem);
     }
 }
