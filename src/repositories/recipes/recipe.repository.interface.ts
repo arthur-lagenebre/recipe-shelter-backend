@@ -6,7 +6,7 @@ export interface RecipeRepository {
     submit(id: number, slug: string): Promise<Recipe>;
     findById(id: number): Promise<Recipe | null>;
     findByUserId(userId: number): Promise<RecipeSummary[]>;
-    findPublished(): Promise<RecipeListItem[]>;
-    findPublishedBySlug(slug: string): Promise<RecipeDetail | null>;
+    findPublished(userId: number | null): Promise<RecipeListItem[]>;
+    findPublishedBySlug(userId: number | null, slug: string): Promise<RecipeDetail | null>;
     existsBySlug(slug: string): Promise<boolean>;
 }

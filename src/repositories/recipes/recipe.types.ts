@@ -108,6 +108,7 @@ export interface RecipeListItem {
     servings: number | null;
     authorUsername: string;
     publishedAt: Date;
+    isFavorite: boolean;
 }
 
 export interface RecipeDetail extends RecipeListItem {
@@ -200,6 +201,7 @@ export type RecipeListItemRow = RowDataPacket & {
     Servings: number;
     AuthorUsername: string;
     PublishedAt: Date;
+    IsFavorite: boolean | number;
 };
 
 export type RecipeDetailIngredientRow = RowDataPacket & {

@@ -31,14 +31,14 @@ export function createRecipesController(recipeService: RecipeService) {
         }),
 
         getRecipes: asyncHandler(async (req, res) => {
-            const result = await recipeService.getPublished();
+            const result = await recipeService.getPublished(req.auth?.userId ?? null);
 
             res.status(200).json(result);
         }),
 
         getRecipeBySlug: asyncHandler(async (req, res) => {
             const recipeSlug = parseRecipeSlugParam(req.params.slug);
-            const result = await recipeService.getBySlug(recipeSlug);
+            const result = await recipeService.getBySlug(req.auth?.userId ?? null, recipeSlug);
 
             if (!result) {
                 res.status(404).json({ error: { message: 'Recipe not found', code: 'NOT_FOUND' } });

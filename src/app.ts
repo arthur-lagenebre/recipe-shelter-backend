@@ -9,6 +9,8 @@ import { createCategoryController } from './api/category/category.controller.js'
 import { createCategoryRouter } from './api/category/category.routes.js';
 import { createEquipmentsController } from './api/equipments/equipments.controller.js';
 import { createEquipmentsRouter } from './api/equipments/equipments.routes.js';
+import { createFavoritesController } from './api/favorites/favorites.controller.js';
+import { createFavoritesRouter } from './api/favorites/favorites.routes.js';
 import { healthController } from './api/health/health.controller.js';
 import { createHealthRouter } from './api/health/health.routes.js';
 import { createIngredientsController } from './api/ingredients/ingredients.controller.js';
@@ -26,6 +28,7 @@ import { AdminRecipeRepositoryMysql } from './repositories/admin/admin.recipe.re
 import { PasswordResetRepositoryMysql } from './repositories/auth/password-reset.repository.mysql.js';
 import { CategoryRepositoryMysql } from './repositories/category/category.repository.mysql.js';
 import { EquipmentRepositoryMysql } from './repositories/equipments/equipment.repository.mysql.js';
+import { FavoriteRepositoryMysql } from './repositories/favorites/favorites.repository.mysql.js';
 import { IngredientRepositoryMysql } from './repositories/ingredients/ingredient.repository.mysql.js';
 import { RecipeRepositoryMysql } from './repositories/recipes/recipe.repository.mysql.js';
 import { TagRepositoryMysql } from './repositories/tag/tag.repository.mysql.js';
@@ -35,6 +38,7 @@ import { AuthService } from './services/auth/auth.service.js';
 import { PasswordResetService } from './services/auth/password-reset.service.js';
 import { CategoryService } from './services/category/category.service.js';
 import { EquipmentService } from './services/equipments/equipments.service.js';
+import { FavoriteService } from './services/favorites/favorites.service.js';
 import { IngredientService } from './services/ingredients/ingredients.service.js';
 import { ConsoleMailer } from './services/mail/console.mailer.js';
 import { RecipeSlugService } from './services/recipes/recipe-slug.service.js';
@@ -56,6 +60,7 @@ export function createApp() {
   const adminRecipeRepository = new AdminRecipeRepositoryMysql(pool);
   const categoryRepository = new CategoryRepositoryMysql(pool);
   const equipmentRepository = new EquipmentRepositoryMysql(pool);
+  const favoriteRepository = new FavoriteRepositoryMysql(pool);
   const ingredientRepository = new IngredientRepositoryMysql(pool);
   const passwordResetRepository = new PasswordResetRepositoryMysql(pool);
   const recipeRepository = new RecipeRepositoryMysql(pool);
@@ -64,12 +69,13 @@ export function createApp() {
 
   const adminRecipeService = new AdminRecipeService(recipeRepository, adminRecipeRepository);
   const authService = new AuthService(userRepository);
+  const categoryService = new CategoryService(categoryRepository);
   const equipmentService = new EquipmentService(equipmentRepository);
+  const favoriteService = new FavoriteService(favoriteRepository);
   const ingredientService = new IngredientService(ingredientRepository);
   const passwordResetService = new PasswordResetService(userRepository, passwordResetRepository, mailer, env.http.frontendBaseUrl);
   const recipeSlugService = new RecipeSlugService(recipeRepository);
   const recipeService = new RecipeService(recipeRepository, recipeSlugService);
-  const categoryService = new CategoryService(categoryRepository);
   const tagService = new TagService(tagRepository);
   const usersService = new UserService(userRepository);
 
@@ -77,6 +83,7 @@ export function createApp() {
   const authController = createAuthController(authService, passwordResetService);
   const categoryController = createCategoryController(categoryService);
   const equipmentsController = createEquipmentsController(equipmentService);
+  const favoritesController = createFavoritesController(favoriteService);
   const ingredientsController = createIngredientsController(ingredientService);
   const recipesController = createRecipesController(recipeService);
   const tagController = createTagsController(tagService);
@@ -84,9 +91,10 @@ export function createApp() {
 
   app.use('/admin/recipes', createAdminRecipesRouter(adminRecipesController));
   app.use('/auth', createAuthRouter(authController));
-  app.use('/health', createHealthRouter(healthController));
   app.use('/categories', createCategoryRouter(categoryController));
   app.use('/equipments', createEquipmentsRouter(equipmentsController));
+  app.use('/favorites', createFavoritesRouter(favoritesController));
+  app.use('/health', createHealthRouter(healthController));
   app.use('/ingredients', createIngredientsRouter(ingredientsController));
   app.use('/recipes', createRecipesRouter(recipesController));
   app.use('/tags', createTagssRouter(tagController));

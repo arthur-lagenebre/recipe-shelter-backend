@@ -80,7 +80,8 @@ export function mapRecipeListItem(row: RecipeListItemRow): RecipeListItem {
         restTimeMinutes: row.RestTimeMinutes,
         servings: row.Servings,
         authorUsername: row.AuthorUsername,
-        publishedAt: row.PublishedAt
+        publishedAt: row.PublishedAt,
+        isFavorite: Boolean(row.IsFavorite)
     };
 }
 
@@ -98,6 +99,7 @@ export function mapRecipeDetail(row: RecipeListItemRow): RecipeDetail {
         servings: row.Servings,
         authorUsername: row.AuthorUsername,
         publishedAt: row.PublishedAt,
+        isFavorite: Boolean(row.IsFavorite),
         ingredients: [],
         steps: [],
         equipments: [],

@@ -178,26 +178,31 @@ export class RecipeRepositoryMysql implements RecipeRepository {
         return (rows as RecipeRow[]).map(mapRecipeSummary);
     }
 
-    async findPublished(): Promise<RecipeListItem[]> {
+    async findPublished(userId: number | null): Promise<RecipeListItem[]> {
         const [rows] = await this.db.execute(
-            `SELECT r.Id, r.Title, r.Slug, r.Description, r.RecipeCoverImage, rc.Name AS Category, r.PrepTimeMinutes, r.RestTimeMinutes, r.CookTimeMinutes, r.Servings, u.UserName AS AuthorUsername, r.PublishedAt
+            `SELECT r.Id, r.Title, r.Slug, r.Description, r.RecipeCoverImage, rc.Name AS Category, r.PrepTimeMinutes, r.RestTimeMinutes, r.CookTimeMinutes, r.Servings, u.UserName AS AuthorUsername, r.PublishedAt,
+                    CASE WHEN ? IS NULL THEN FALSE ELSE f.UserId IS NOT NULL END AS IsFavorite
              FROM Recipes AS r
              INNER JOIN RecipeCategories AS rc ON rc.Id = r.CategoryId
              INNER JOIN Users AS u ON u.Id = r.UserId
-             WHERE r.Status = 'published'`
+             LEFT JOIN Favorites AS f ON f.RecipeId = r.Id AND f.UserId = ?
+             WHERE r.Status = 'published'`,
+            [userId, userId]
         );
 
         return (rows as RecipeListItemRow[]).map(mapRecipeListItem);
     }
 
-    async findPublishedBySlug(slug: string): Promise<RecipeDetail | null> {
+    async findPublishedBySlug(userId: number | null, slug: string): Promise<RecipeDetail | null> {
         const [rows] = await this.db.execute(
-            `SELECT r.Id, r.Title, r.Slug, r.Description, r.RecipeCoverImage, rc.Name AS Category, r.PrepTimeMinutes, r.RestTimeMinutes, r.CookTimeMinutes, r.Servings, u.UserName AS AuthorUsername, r.PublishedAt
+            `SELECT r.Id, r.Title, r.Slug, r.Description, r.RecipeCoverImage, rc.Name AS Category, r.PrepTimeMinutes, r.RestTimeMinutes, r.CookTimeMinutes, r.Servings, u.UserName AS AuthorUsername, r.PublishedAt,
+                    CASE WHEN ? IS NULL THEN FALSE ELSE f.UserId IS NOT NULL END AS IsFavorite
              FROM Recipes AS r
              INNER JOIN RecipeCategories AS rc ON rc.Id = r.CategoryId
              INNER JOIN Users AS u ON u.Id = r.UserId
+             LEFT JOIN Favorites AS f ON f.RecipeId = r.Id AND f.UserId = ?
              WHERE r.Status = 'published' AND r.Slug = ?`,
-             [slug]
+             [userId, userId, slug]
         );
 
         const row = firstOrNull(rows as RecipeListItemRow[]);

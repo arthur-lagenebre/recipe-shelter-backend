@@ -1,4 +1,5 @@
 import { badRequest } from '../../utils/errors.js';
+import { getOptionalArray, getOptionalNullableNumber, getOptionalNullableString, getOptionalNumber, getOptionalString, getRequiredNumber, getRequiredPositiveInteger, getRequiredString, isRecord } from '../http/dto.helpers.js';
 
 import type { RecipeIngredientInput, RecipeStepInput, RecipeUtensilInput } from '../../repositories/recipes/recipe.types.js';
 
@@ -19,89 +20,6 @@ export type RecipeBody = {
 
 export type CreateRecipeBody = RecipeBody;
 export type UpdateRecipeBody = RecipeBody;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null;
-}
-
-function getRequiredString(value: unknown, message: string, code: string): string {
-    const result = typeof value === 'string' ? value.trim() : '';
-
-    if (!result)
-        throw badRequest(message, code);
-
-    return result;
-}
-
-function getOptionalString(value: unknown, message: string, code: string): string | undefined {
-    if (value === undefined || value === null)
-        return undefined;
-
-    if (typeof value !== 'string')
-        throw badRequest(message, code);
-
-    return value.trim();
-}
-
-function getOptionalNullableString(value: unknown, message: string, code: string): string | null | undefined {
-    if (value === undefined)
-        return undefined;
-
-    if (value === null)
-        return null;
-
-    if (typeof value !== 'string')
-        throw badRequest(message, code);
-
-    return value.trim();
-}
-
-function getOptionalNumber(value: unknown, message: string, code: string): number | undefined {
-    if (value === undefined || value === null)
-        return undefined;
-
-    if (typeof value !== 'number' || !Number.isFinite(value))
-        throw badRequest(message, code);
-
-    return value;
-}
-
-function getOptionalNullableNumber(value: unknown, message: string, code: string): number | null | undefined {
-    if (value === undefined)
-        return undefined;
-
-    if (value === null)
-        return null;
-
-    if (typeof value !== 'number' || !Number.isFinite(value))
-        throw badRequest(message, code);
-
-    return value;
-}
-
-function getRequiredNumber(value: unknown, message: string, code: string): number {
-    if (typeof value !== 'number' || !Number.isFinite(value))
-        throw badRequest(message, code);
-
-    return value;
-}
-
-function getRequiredPositiveInteger(value: unknown, message: string, code: string): number {
-    if (typeof value !== 'number' || !Number.isInteger(value) || value <= 0)
-        throw badRequest(message, code);
-
-    return value;
-}
-
-function getOptionalArray<T>(value: unknown, parser: (item: unknown, index: number) => T, message: string, code: string): T[] | undefined {
-    if (value === undefined || value === null)
-        return undefined;
-
-    if (!Array.isArray(value))
-        throw badRequest(message, code);
-
-    return value.map(parser);
-}
 
 function parseIngredient(item: unknown, index: number): RecipeIngredientInput {
     if (!isRecord(item))

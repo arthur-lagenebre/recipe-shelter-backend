@@ -44,3 +44,31 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction) {
     return next(unauthorized('Invalid or expired token', 'AUTH_BAD_TOKEN'));
   }
 }
+
+export function optionalAuth(req: Request, _res: Response, next: NextFunction) {
+  const header = req.headers.authorization;
+
+  if (!header)
+    return next();
+
+  if (!header.startsWith('Bearer '))
+    return next();
+
+  const token = header.slice('Bearer '.length).trim();
+
+  if (!token)
+    return next();
+
+  try {
+    const payload = jwt.verify(token, env.auth.jwtSecret);
+    const auth = parseAuthPayload(payload);
+
+    if (!auth)
+      return next();
+
+    req.auth = auth;
+    return next();
+  } catch {
+    return next();
+  }
+}

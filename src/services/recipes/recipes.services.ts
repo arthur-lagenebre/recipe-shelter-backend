@@ -53,12 +53,12 @@ export class RecipeService {
         return this.recipeRepository.submit(recipeId, publicSlug);
     }
 
-    async getPublished(): Promise<RecipeListItem[]> {
-        return await this.recipeRepository.findPublished();
+    async getPublished(userId: number | null): Promise<RecipeListItem[]> {
+        return await this.recipeRepository.findPublished(userId);
     }
 
-    async getBySlug(slug: string): Promise<RecipeDetail | null> {
-        return await this.recipeRepository.findPublishedBySlug(slug);
+    async getBySlug(userId: number | null, slug: string): Promise<RecipeDetail | null> {
+        return await this.recipeRepository.findPublishedBySlug(userId, slug);
     }
 
     private async requireViewableRecipe(recipeId: number, auth: AuthContext): Promise<Recipe> {

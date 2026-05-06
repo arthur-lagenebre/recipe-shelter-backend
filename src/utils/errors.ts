@@ -14,3 +14,4 @@ export const unauthorized = (message = 'Unauthorized', code?: string) => new Htt
 export const forbidden = (message = 'Forbidden', code?: string) => new HttpError(403, message, code);
 export const notFound = (message = 'Not found', code?: string) => new HttpError(404, message, code);
 export const conflict = (message = 'Conflict', code?: string) => new HttpError(409, message, code);
+export const internalError = (message = 'Internal Error', code?: string) => new HttpError(500, message, code);

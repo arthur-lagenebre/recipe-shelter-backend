@@ -1,0 +1,48 @@
+import { mapFavorite } from './favorites.mapper.js';
+import { type Favorite, type FavoriteRow } from './favorites.types.js';
+import { firstOrNull } from '../../utils/array.js';
+
+import type { FavoriteRepository } from "./favorites.repository.interface.js";
+import type { ResultSetHeader } from 'mysql2';
+import type { Pool } from 'mysql2/promise';
+
+export class FavoriteRepositoryMysql implements FavoriteRepository {
+    constructor(private readonly db: Pool) { }
+
+    async create(userId: number, recipeId: number): Promise<Favorite> {
+        await this.db.execute(
+            `INSERT INTO Favorites (UserId, RecipeId)
+             VALUES (?, ?)`,
+            [userId, recipeId]
+        );
+
+        const created = await this.findById(userId, recipeId);
+
+        if (!created)
+            throw new Error('User created but cannot be reloaded');
+
+        return created;
+    }
+
+    async findById(userId: number, recipeId: number): Promise<Favorite | null> {
+        const [rows] = await this.db.execute(
+            `SELECT UserId, RecipeId, CreatedAt
+             FROM Favorites
+             WHERE UserId = ? AND RecipeId = ?`,
+            [userId, recipeId]
+        );
+
+        const row = firstOrNull(rows as FavoriteRow[]);
+        return row ? mapFavorite(row) : null;
+    }
+
+    async delete(userId: number, recipeId: number): Promise<boolean> {
+        const [result] = await this.db.execute<ResultSetHeader>(
+            `DELETE FROM Favorites
+             WHERE UserId = ? AND RecipeId = ?`,
+            [userId, recipeId]
+        );
+
+        return result.affectedRows > 0;
+    }
+}
