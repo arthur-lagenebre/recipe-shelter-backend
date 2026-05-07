@@ -4,6 +4,7 @@ export interface RecipeRepository {
     create(input: RecipeInput): Promise<Recipe>;
     updateDraft(input: UpdateRecipeInput): Promise<Recipe>;
     submit(id: number, slug: string): Promise<Recipe>;
+    archive(id: number): Promise<boolean>;
     findById(id: number): Promise<Recipe | null>;
     findByUserId(userId: number): Promise<RecipeSummary[]>;
     findPublished(userId: number | null): Promise<RecipeListItem[]>;

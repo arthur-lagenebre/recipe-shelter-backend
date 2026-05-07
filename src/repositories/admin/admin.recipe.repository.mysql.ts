@@ -4,6 +4,7 @@ import { mapRecipe } from '../recipes/recipe.mapper.js';
 
 import type { AdminRecipeRepository } from "./admin.recipe.repository.interface.js";
 import type { RecipeAdmin, RecipeAdminRow, RecipeIngredientRow, RecipePending, RecipePendingRow, RecipeStepRow, RecipeTagRow, RecipeUtensilRow } from './admin.recipe.types.js';
+import type { ResultSetHeader } from 'mysql2';
 import type { Pool } from 'mysql2/promise';
 
 export class AdminRecipeRepositoryMysql implements AdminRecipeRepository {
@@ -87,6 +88,16 @@ export class AdminRecipeRepositoryMysql implements AdminRecipeRepository {
         );
 
         return true;
+    }
+
+    async delete(id: number): Promise<boolean> {
+        const [result] = await this.db.execute<ResultSetHeader>(
+            `DELETE FROM Recipes
+             WHERE Id = ?`,
+            [id]
+        );
+
+        return result.affectedRows > 0;
     }
 
     private async findIngredientsByRecipeId(recipeId: number): Promise<RecipeIngredientRow[]> {

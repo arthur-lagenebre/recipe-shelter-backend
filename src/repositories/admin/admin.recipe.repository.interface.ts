@@ -6,4 +6,5 @@ export interface AdminRecipeRepository {
     findByIdForAdmin(id: number): Promise<RecipeAdmin | null>;
     publish(id: number, moderatedByUserId: number): Promise<boolean>;
     reject(id: number, moderatedByUserId: number, rejectionReason: string): Promise<boolean>;
+    delete(id: number): Promise<boolean>;
 }

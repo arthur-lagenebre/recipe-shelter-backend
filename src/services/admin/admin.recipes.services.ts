@@ -1,6 +1,5 @@
 import { forbidden, notFound } from '../../utils/errors.js';
 
-import type { AuthContext } from '../../api/auth/auth.types.js';
 import type { AdminRecipeRepository } from "../../repositories/admin/admin.recipe.repository.interface.js";
 import type { RecipeAdmin, RecipePending } from "../../repositories/admin/admin.recipe.types.js";
 import type { RecipeRepository } from '../../repositories/recipes/recipe.repository.interface.js';
@@ -26,35 +25,52 @@ export class AdminRecipeService {
         return recipe;
     }
 
-    async approve(recipeId: number, auth: AuthContext) {
-        await this.requireModeratableRecipe(recipeId, auth);
+    async approve(recipeId: number, adminUserId: number) {
+        await this.requireModeratableRecipe(recipeId);
 
-        await this.adminRecipeRepository.publish(recipeId, auth.userId);
+        await this.adminRecipeRepository.publish(recipeId, adminUserId);
     }
 
-    async reject(recipeId: number, auth: AuthContext, rejectionReason: string) {
-        await this.requireModeratableRecipe(recipeId, auth);
+    async reject(recipeId: number, adminUserId: number, rejectionReason: string) {
+        await this.requireModeratableRecipe(recipeId);
 
-        await this.adminRecipeRepository.reject(recipeId, auth.userId, rejectionReason);
+        await this.adminRecipeRepository.reject(recipeId, adminUserId, rejectionReason);
     }
 
-    private async requireModeratableRecipe(recipeId: number, auth: AuthContext): Promise<Recipe> {
+    async archive(recipeId: number): Promise<boolean> {
         const recipe = await this.recipeRepository.findById(recipeId);
 
         if (!recipe)
             throw notFound('Recipe not found', 'RECIPES_NOT_FOUND');
 
-        if (!this.canModerateRecipe(recipe, auth))
+        if (!this.canArchiveRecipe(recipe))
+            throw forbidden('Recipe cannot be archived', 'RECIPES_ARCHIVE_FORBIDDEN');
+
+        return this.recipeRepository.archive(recipeId);
+    }
+
+    async delete(recipeId: number): Promise<boolean> {
+        const recipe = await this.recipeRepository.findById(recipeId);
+
+        if (!recipe)
+            throw notFound('Recipe not found', 'RECIPES_NOT_FOUND');
+
+        return this.adminRecipeRepository.delete(recipeId);
+    }
+
+    private async requireModeratableRecipe(recipeId: number): Promise<Recipe> {
+        const recipe = await this.recipeRepository.findById(recipeId);
+
+        if (!recipe)
+            throw notFound('Recipe not found', 'RECIPES_NOT_FOUND');
+
+        if (recipe.status != 'pending')
             throw forbidden('Recipe cannot be moderated', 'RECIPES_MODERATE_FORBIDDEN');
 
         return recipe;
     }
 
-    private isAdmin(auth: AuthContext): boolean {
-        return auth.roleId === 1;
-    }
-
-    private canModerateRecipe(recipe: Recipe, auth: AuthContext): boolean {
-        return this.isAdmin(auth) && recipe.status === 'pending';
+    private canArchiveRecipe(recipe: Recipe): boolean {
+        return recipe.status === 'published' || recipe.status === 'rejected';
     }
 }

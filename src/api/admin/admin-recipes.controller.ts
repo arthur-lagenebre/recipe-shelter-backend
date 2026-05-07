@@ -17,12 +17,6 @@ export function createAdminRecipesController(adminRecipeService: AdminRecipeServ
         }),
 
         getRecipeAdmin: asyncHandler(async (req, res) => {
-            if (!req.auth) {
-                res.status(401).json({ error: { message: 'Unauthorized', code: 'AUTH_UNAUTHORIZED' } });
-
-                return;
-            }
-
             const recipeId = parseRecipeIdParam(req.params.id);
             const result = await adminRecipeService.getRecipeForAdmin(recipeId);
 
@@ -30,32 +24,35 @@ export function createAdminRecipesController(adminRecipeService: AdminRecipeServ
         }),
 
         approveRecipe: asyncHandler(async (req, res) => {
-            if (!req.auth) {
-                res.status(401).json({ error: { message: 'Unauthorized', code: 'AUTH_UNAUTHORIZED' } });
-
-                return;
-            }
-
             const recipeId = parseRecipeIdParam(req.params.id);
             
-            await adminRecipeService.approve(recipeId, req.auth);
+            await adminRecipeService.approve(recipeId, req.auth!.userId);
 
             res.status(200).json({ message: 'Recipe approved successfully' });
         }),
 
         rejectRecipe: asyncHandler(async (req, res) => {
-            if (!req.auth) {
-                res.status(401).json({ error: { message: 'Unauthorized', code: 'AUTH_UNAUTHORIZED' } });
-
-                return;
-            }
-
             const recipeId = parseRecipeIdParam(req.params.id);
             const rejectionReason = parseRejectRecipeBody(req.body);
 
-            await adminRecipeService.reject(recipeId, req.auth, rejectionReason);
+            await adminRecipeService.reject(recipeId, req.auth!.userId, rejectionReason);
 
             res.status(200).json({ message: 'Recipe rejected successfully' });
+        }),
+
+        archiveRecipe: asyncHandler(async (req, res) => {
+            const recipeId = parseRecipeIdParam(req.params.id);
+
+            await adminRecipeService.archive(recipeId);
+
+            res.status(200).json({ message: 'Recipe archived successfully' });
+        }),
+
+        deleteRecipe: asyncHandler(async (req, res) => {
+            const recipeId = parseRecipeIdParam(req.params.id);
+            const result = await adminRecipeService.delete(recipeId);
+
+            res.status(200).json(result);
         })
     };
 }

@@ -133,9 +133,9 @@ export class RecipeRepositoryMysql implements RecipeRepository {
     async submit(id: number, slug: string): Promise<Recipe> {
         await this.db.execute(
             `UPDATE Recipes
-             SET Status = ?, Slug = ?, SubmittedAt = CURRENT_TIMESTAMP, ModeratedAt = NULL, ModeratedByUserId = NULL, RejectionReason = NULL
+             SET Status = 'pending', Slug = ?, SubmittedAt = CURRENT_TIMESTAMP, ModeratedAt = NULL, ModeratedByUserId = NULL, RejectionReason = NULL
              WHERE Id = ?`,
-            ['pending', slug, id]
+            [slug, id]
         );
 
         const recipe = await this.findById(id);
@@ -144,6 +144,17 @@ export class RecipeRepositoryMysql implements RecipeRepository {
             throw new Error('Recipe submitted but cannot be reloaded');
 
         return recipe;
+    }
+
+    async archive(id: number): Promise<boolean> {
+        const [result] = await this.db.execute<ResultSetHeader>(
+            `UPDATE Recipes
+             SET Status = 'archived', ArchivedAt = CURRENT_TIMESTAMP
+             WHERE Id = ?`,
+            [id]
+        );
+
+        return result.affectedRows > 0;
     }
 
     async existsBySlug(slug: string): Promise<boolean> {
@@ -202,7 +213,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
              INNER JOIN Users AS u ON u.Id = r.UserId
              LEFT JOIN Favorites AS f ON f.RecipeId = r.Id AND f.UserId = ?
              WHERE r.Status = 'published' AND r.Slug = ?`,
-             [userId, userId, slug]
+            [userId, userId, slug]
         );
 
         const row = firstOrNull(rows as RecipeListItemRow[]);

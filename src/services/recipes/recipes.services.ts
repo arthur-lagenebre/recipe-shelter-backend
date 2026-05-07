@@ -53,6 +53,21 @@ export class RecipeService {
         return this.recipeRepository.submit(recipeId, publicSlug);
     }
 
+    async archive(recipeId: number, auth: AuthContext): Promise<boolean> {
+        const recipe = await this.recipeRepository.findById(recipeId);
+
+        if (!recipe)
+            throw notFound('Recipe not found', 'RECIPES_NOT_FOUND');
+
+        if (!this.isOwner(recipe, auth))
+            throw forbidden('Recipe access denied', 'RECIPES_ACCESS_DENIED');
+
+        if (!this.canArchiveRecipe(recipe))
+            throw forbidden('Recipe cannot be archived', 'RECIPES_ARCHIVE_FORBIDDEN');
+
+        return this.recipeRepository.archive(recipeId);
+    }
+
     async getPublished(userId: number | null): Promise<RecipeListItem[]> {
         return await this.recipeRepository.findPublished(userId);
     }
@@ -100,6 +115,11 @@ export class RecipeService {
     private canEditRecipe(recipe: Recipe, auth: AuthContext): boolean {
         return this.isOwner(recipe, auth) && (recipe.status === 'draft' || recipe.status === 'rejected');
     }
+
+    private canArchiveRecipe(recipe: Recipe): boolean {
+        return recipe.status === 'published' || recipe.status === 'rejected';
+    }
+
 }
 
 function normalizeNullableUnit(unit: string | null | undefined): string | null {

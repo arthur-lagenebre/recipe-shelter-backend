@@ -11,6 +11,8 @@ type AdminRecipesController = {
     getRecipeAdmin: RequestHandler;
     approveRecipe: RequestHandler;
     rejectRecipe: RequestHandler;
+    archiveRecipe: RequestHandler;
+    deleteRecipe: RequestHandler;
 };
 
 export function createAdminRecipesRouter(controller: AdminRecipesController) {
@@ -19,8 +21,10 @@ export function createAdminRecipesRouter(controller: AdminRecipesController) {
     router.get('/', requireAuth, requireAdmin, controller.listPendingRecipes);
     router.get('/count', requireAuth, requireAdmin, controller.countPendingRecipes);
     router.get('/:id', requireAuth, requireAdmin, controller.getRecipeAdmin);
-    router.put('/:id/approve', requireAuth, requireAdmin, controller.approveRecipe);
-    router.put('/:id/reject', requireAuth, requireAdmin, controller.rejectRecipe);
+    router.post('/:id/approve', requireAuth, requireAdmin, controller.approveRecipe);
+    router.post('/:id/reject', requireAuth, requireAdmin, controller.rejectRecipe);
+    router.post('/:id/archive', requireAuth, requireAdmin, controller.archiveRecipe);
+    router.delete('/:id', requireAuth, requireAdmin, controller.deleteRecipe);
 
     return router;
 }

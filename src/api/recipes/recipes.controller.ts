@@ -89,5 +89,19 @@ export function createRecipesController(recipeService: RecipeService) {
 
             res.status(200).json(result);
         }),
+
+        archiveRecipe: asyncHandler(async (req, res) => {
+            if (!req.auth) {
+                res.status(401).json({ error: { message: 'Unauthorized', code: 'AUTH_UNAUTHORIZED' } });
+
+                return;
+            }
+
+            const recipeId = parseRecipeIdParam(req.params.id);
+            const result = await recipeService.archive(recipeId, req.auth);
+
+            res.status(200).json(result);
+        }),
+
     };
 }

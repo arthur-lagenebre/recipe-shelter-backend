@@ -1,35 +1,17 @@
 # ============================================
-# Recipe Shelter API - Test Flow
+# Recipe Shelter API - HTTP smoke tests
 # ============================================
 #
-# Order of execution:
-#
-# 1. Register a user
-#    → creates account
-#
-# 2. Login
-#    → copy the JWT into @jwt
-#
-# 3. Test /auth/me
-#    → verifies authentication works
-#
-# 4. Forgot password
-#    → triggers reset email (check server console)
-#    → copy token from resetUrl into @resetToken
-#
-# 5. Reset password
-#    → use @resetToken and @newPassword
-#
-# 6. Login with new password
-#    → should succeed
-#
-# 7. Login with old password
-#    → should fail
+# How to use:
+# 1. Start the API on http://localhost:3000.
+# 2. Register or login, then copy the returned JWT into @jwt.
+# 3. For admin routes, copy an admin JWT into @adminJwt.
+# 4. Update @recipeId and @recipeSlug with values from your database/responses.
 #
 # Notes:
-# - JWT (@jwt) is used for authenticated routes
-# - Reset token (@resetToken) is temporary and single-use
-# - Tokens are printed in console (ConsoleMailer)
+# - Authenticated routes use Authorization: Bearer {{jwt}}.
+# - Admin routes require a token whose payload has roleId === 1.
+# - Password reset tokens are printed by ConsoleMailer in the server logs.
 #
 # ============================================
 
@@ -40,12 +22,20 @@
 @newPassword = NewPassword123!
 @resetToken = PASTE_RESET_TOKEN_HERE
 @jwt = PASTE_JWT_HERE
+@adminJwt = PASTE_ADMIN_JWT_HERE
+@recipeId = 1
+@recipeSlug = cake-marbre-maison
+@categoryId = 1
+@equipmentId = 1
+@ingredientId = 1
+@tagId = 1
 
-### Home
+### Unknown route - should return 404 ROUTE_NOT_FOUND
 GET {{baseUrl}}/
 
-### Health
-GET {{baseUrl}}/health
+# ============================================
+# Auth
+# ============================================
 
 ### Register
 POST {{baseUrl}}/auth/register
@@ -66,7 +56,7 @@ Content-Type: application/json
   "password": "{{password}}"
 }
 
-### Me
+### Auth me
 GET {{baseUrl}}/auth/me
 Authorization: Bearer {{jwt}}
 
@@ -76,14 +66,6 @@ Content-Type: application/json
 
 {
   "mail": "{{mail}}"
-}
-
-### Forgot password - unknown email
-POST {{baseUrl}}/auth/forgot-password
-Content-Type: application/json
-
-{
-  "mail": "unknown@example.com"
 }
 
 ### Forgot password - missing email
@@ -103,15 +85,6 @@ Content-Type: application/json
   "password": "{{newPassword}}"
 }
 
-### Reset password - missing token
-POST {{baseUrl}}/auth/reset-password
-Content-Type: application/json
-
-{
-  "token": "",
-  "password": "{{newPassword}}"
-}
-
 ### Reset password - weak password
 POST {{baseUrl}}/auth/reset-password
 Content-Type: application/json
@@ -121,79 +94,46 @@ Content-Type: application/json
   "password": "123"
 }
 
-### Login with new password
-POST {{baseUrl}}/auth/login
-Content-Type: application/json
+# ============================================
+# Users
+# ============================================
 
-{
-  "mail": "{{mail}}",
-  "password": "{{newPassword}}"
-}
-
-### Login with old password should fail after reset
-POST {{baseUrl}}/auth/login
-Content-Type: application/json
-
-{
-  "mail": "{{mail}}",
-  "password": "{{password}}"
-}
-
-### Reset password - reuse same token should fail
-POST {{baseUrl}}/auth/reset-password
-Content-Type: application/json
-
-{
-  "token": "{{resetToken}}",
-  "password": "AnotherPassword123!"
-}
-
-### users/Me
-GET http://localhost:3000/users/me
+### User profile
+GET {{baseUrl}}/users/me
 Authorization: Bearer {{jwt}}
 
 ### Update email
-PATCH http://localhost:3000/users/me/email
+PATCH {{baseUrl}}/users/me/email
 Content-Type: application/json
 Authorization: Bearer {{jwt}}
 
 {
   "newEmail": "new-test@example.com",
-  "currentPassword": "AnotherPassword123!"
+  "currentPassword": "{{password}}"
 }
 
-### Update email - reset
-PATCH http://localhost:3000/users/me/email
+### Update username
+PATCH {{baseUrl}}/users/me/username
 Content-Type: application/json
 Authorization: Bearer {{jwt}}
 
 {
-  "newEmail": "{{mail}}",
-  "currentPassword": "AnotherPassword123!"
+  "newUsername": "newtestuser",
+  "currentPassword": "{{password}}"
 }
 
 ### Update password
-PATCH http://localhost:3000/users/me/password
+PATCH {{baseUrl}}/users/me/password
 Content-Type: application/json
 Authorization: Bearer {{jwt}}
 
 {
-  "currentPassword": "AnotherPassword123!",
-  "newPassword": "{{password}}"
-}
-
-### Update email - missing password
-PATCH http://localhost:3000/users/me/email
-Content-Type: application/json
-Authorization: Bearer {{jwt}}
-
-{
-  "newEmail": "test@example.com",
-  "currentPassword": ""
+  "currentPassword": "{{password}}",
+  "newPassword": "{{newPassword}}"
 }
 
 ### Update password - wrong current password
-PATCH http://localhost:3000/users/me/password
+PATCH {{baseUrl}}/users/me/password
 Content-Type: application/json
 Authorization: Bearer {{jwt}}
 
@@ -202,8 +142,27 @@ Authorization: Bearer {{jwt}}
   "newPassword": "Password1234!"
 }
 
+# ============================================
+# Recipes
+# ============================================
+
+### Published recipes - public
+GET {{baseUrl}}/recipes
+
+### Published recipes - with optional auth, includes isFavorite for current user
+GET {{baseUrl}}/recipes
+Authorization: Bearer {{jwt}}
+
+### Published recipe detail by slug
+GET {{baseUrl}}/recipes/{{recipeSlug}}
+Authorization: Bearer {{jwt}}
+
+### My recipes
+GET {{baseUrl}}/recipes/me
+Authorization: Bearer {{jwt}}
+
 ### Create recipe draft - minimal
-POST {{baseUrl}}/recipes/create
+POST {{baseUrl}}/recipes
 Content-Type: application/json
 Authorization: Bearer {{jwt}}
 
@@ -211,16 +170,8 @@ Authorization: Bearer {{jwt}}
   "title": "Tarte aux pommes"
 }
 
-### Get recipe draft - minimal
-GET {{baseUrl}}/recipes/2
-Authorization: Bearer {{jwt}}
-
-### Get my recipes
-GET {{baseUrl}}/recipes/me
-Authorization: Bearer {{jwt}}
-
 ### Create recipe draft - full body
-POST {{baseUrl}}/recipes/create
+POST {{baseUrl}}/recipes
 Content-Type: application/json
 Authorization: Bearer {{jwt}}
 
@@ -228,10 +179,12 @@ Authorization: Bearer {{jwt}}
   "title": "Cake marbre maison",
   "categoryId": 2,
   "description": "Version brouillon pour test HTTP",
+  "coverImageUrl": null,
   "prepTimeMinutes": 15,
   "restTimeMinutes": null,
   "cookTimeMinutes": 45,
   "servings": 6,
+  "tagIds": [1, 2],
   "ingredients": [
     {
       "ingredientId": 18,
@@ -264,7 +217,7 @@ Authorization: Bearer {{jwt}}
 }
 
 ### Create recipe draft - missing auth
-POST {{baseUrl}}/recipes/create
+POST {{baseUrl}}/recipes
 Content-Type: application/json
 
 {
@@ -272,7 +225,7 @@ Content-Type: application/json
 }
 
 ### Create recipe draft - missing title
-POST {{baseUrl}}/recipes/create
+POST {{baseUrl}}/recipes
 Content-Type: application/json
 Authorization: Bearer {{jwt}}
 
@@ -281,7 +234,7 @@ Authorization: Bearer {{jwt}}
 }
 
 ### Create recipe draft - title too short
-POST {{baseUrl}}/recipes/create
+POST {{baseUrl}}/recipes
 Content-Type: application/json
 Authorization: Bearer {{jwt}}
 
@@ -290,7 +243,7 @@ Authorization: Bearer {{jwt}}
 }
 
 ### Create recipe draft - invalid servings type
-POST {{baseUrl}}/recipes/create
+POST {{baseUrl}}/recipes
 Content-Type: application/json
 Authorization: Bearer {{jwt}}
 
@@ -299,8 +252,12 @@ Authorization: Bearer {{jwt}}
   "servings": "6"
 }
 
+### Get my recipe by id
+GET {{baseUrl}}/recipes/me/{{recipeId}}
+Authorization: Bearer {{jwt}}
+
 ### Update recipe draft
-PATCH {{baseUrl}}/recipes/1
+PUT {{baseUrl}}/recipes/me/{{recipeId}}
 Content-Type: application/json
 Authorization: Bearer {{jwt}}
 
@@ -330,6 +287,126 @@ Authorization: Bearer {{jwt}}
 }
 
 ### Submit recipe draft
-PATCH {{baseUrl}}/recipes/1/submit
+POST {{baseUrl}}/recipes/me/{{recipeId}}/submit
+Authorization: Bearer {{jwt}}
+
+### Archive my recipe
+POST {{baseUrl}}/recipes/me/{{recipeId}}/archive
+Authorization: Bearer {{jwt}}
+
+# ============================================
+# Favorites
+# ============================================
+
+### Add favorite
+POST {{baseUrl}}/favorites/create
 Content-Type: application/json
 Authorization: Bearer {{jwt}}
+
+{
+  "userId": 1,
+  "recipeId": {{recipeId}}
+}
+
+### My favorite recipes
+GET {{baseUrl}}/favorites/me
+Authorization: Bearer {{jwt}}
+
+### Remove favorite
+POST {{baseUrl}}/favorites/delete
+Content-Type: application/json
+Authorization: Bearer {{jwt}}
+
+{
+  "userId": 1,
+  "recipeId": {{recipeId}}
+}
+
+# ============================================
+# Reference data
+# ============================================
+
+### Categories
+GET {{baseUrl}}/categories
+Authorization: Bearer {{jwt}}
+
+### Category by id
+GET {{baseUrl}}/categories/{{categoryId}}
+Authorization: Bearer {{jwt}}
+
+### Equipments
+GET {{baseUrl}}/equipments
+Authorization: Bearer {{jwt}}
+
+### Equipment by id
+GET {{baseUrl}}/equipments/{{equipmentId}}
+Authorization: Bearer {{jwt}}
+
+### Ingredients
+GET {{baseUrl}}/ingredients
+Authorization: Bearer {{jwt}}
+
+### Ingredient by id
+GET {{baseUrl}}/ingredients/{{ingredientId}}
+Authorization: Bearer {{jwt}}
+
+### Tags
+GET {{baseUrl}}/tags
+Authorization: Bearer {{jwt}}
+
+### Tag by id
+GET {{baseUrl}}/tags/{{tagId}}
+Authorization: Bearer {{jwt}}
+
+# ============================================
+# Admin recipes
+# ============================================
+
+### Pending recipes
+GET {{baseUrl}}/admin/recipes
+Authorization: Bearer {{adminJwt}}
+
+### Pending recipes count
+GET {{baseUrl}}/admin/recipes/count
+Authorization: Bearer {{adminJwt}}
+
+### Admin recipe detail
+GET {{baseUrl}}/admin/recipes/{{recipeId}}
+Authorization: Bearer {{adminJwt}}
+
+### Approve recipe
+POST {{baseUrl}}/admin/recipes/{{recipeId}}/approve
+Authorization: Bearer {{adminJwt}}
+
+### Reject recipe
+POST {{baseUrl}}/admin/recipes/{{recipeId}}/reject
+Content-Type: application/json
+Authorization: Bearer {{adminJwt}}
+
+{
+  "rejectionReason": "La recette doit etre completee avant publication."
+}
+
+### Archive recipe as admin
+POST {{baseUrl}}/admin/recipes/{{recipeId}}/archive
+Authorization: Bearer {{adminJwt}}
+
+### Delete recipe as admin
+DELETE {{baseUrl}}/admin/recipes/{{recipeId}}
+Authorization: Bearer {{adminJwt}}
+
+# ============================================
+# Health
+# ============================================
+
+### Health live
+GET {{baseUrl}}/health/live
+Authorization: Bearer {{adminJwt}}
+
+### Health ready
+GET {{baseUrl}}/health/ready
+Authorization: Bearer {{adminJwt}}
+
+### Health
+GET {{baseUrl}}/health
+Authorization: Bearer {{adminJwt}}
