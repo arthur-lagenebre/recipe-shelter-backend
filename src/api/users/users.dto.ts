@@ -1,4 +1,5 @@
 import { badRequest } from '../../utils/errors.js';
+import { isRecord } from '../http/dto.helpers.js';
 
 export type UpdateEmailInput = {
     newEmail: string;
@@ -10,9 +11,10 @@ export type UpdatePasswordInput = {
     newPassword: string;
 };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null;
-}
+export type UpdateUsernameInput = {
+    newUsername: string;
+    currentPassword: string;
+};
 
 export function parseUpdateEmailBody(body: unknown): UpdateEmailInput {
     if (!isRecord(body))
@@ -44,4 +46,20 @@ export function parseUpdatePasswordBody(body: unknown): UpdatePasswordInput {
         throw badRequest('New password is required', 'USERS_UPDATE_PASSWORD_MISSING_NEW');
 
     return { currentPassword, newPassword };
+}
+
+export function parseUpdateUsernameBody(body: unknown): UpdateUsernameInput {
+    if (!isRecord(body))
+        throw badRequest('Invalid body', 'USERS_UPDATE_USERNAME_BAD_BODY');
+
+    const newUsername = typeof body.newUsername === 'string' ? body.newUsername.trim() : '';
+    const currentPassword = typeof body.currentPassword === 'string' ? body.currentPassword : '';
+
+    if (!newUsername)
+        throw badRequest('New username is required', 'USERS_UPDATE_USERNAME_MISSING_USERNAME');
+
+    if (!currentPassword)
+        throw badRequest('Current password is required', 'USERS_UPDATE_USERNAME_MISSING_PASSWORD');
+
+    return { newUsername, currentPassword };
 }

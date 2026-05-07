@@ -153,7 +153,7 @@ GET http://localhost:3000/users/me
 Authorization: Bearer {{jwt}}
 
 ### Update email
-PATCH http://localhost:3000/users/email
+PATCH http://localhost:3000/users/me/email
 Content-Type: application/json
 Authorization: Bearer {{jwt}}
 
@@ -163,7 +163,7 @@ Authorization: Bearer {{jwt}}
 }
 
 ### Update email - reset
-PATCH http://localhost:3000/users/email
+PATCH http://localhost:3000/users/me/email
 Content-Type: application/json
 Authorization: Bearer {{jwt}}
 
@@ -173,7 +173,7 @@ Authorization: Bearer {{jwt}}
 }
 
 ### Update password
-PATCH http://localhost:3000/users/password
+PATCH http://localhost:3000/users/me/password
 Content-Type: application/json
 Authorization: Bearer {{jwt}}
 
@@ -183,7 +183,7 @@ Authorization: Bearer {{jwt}}
 }
 
 ### Update email - missing password
-PATCH http://localhost:3000/users/email
+PATCH http://localhost:3000/users/me/email
 Content-Type: application/json
 Authorization: Bearer {{jwt}}
 
@@ -193,7 +193,7 @@ Authorization: Bearer {{jwt}}
 }
 
 ### Update password - wrong current password
-PATCH http://localhost:3000/users/password
+PATCH http://localhost:3000/users/me/password
 Content-Type: application/json
 Authorization: Bearer {{jwt}}
 

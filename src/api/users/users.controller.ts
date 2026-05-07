@@ -1,4 +1,4 @@
-import { parseUpdateEmailBody, parseUpdatePasswordBody } from './users.dto.js';
+import { parseUpdateEmailBody, parseUpdatePasswordBody, parseUpdateUsernameBody } from './users.dto.js';
 import { asyncHandler } from '../http/async-handler.js';
 
 import type { UserService } from '../../services/users/users.service.js';
@@ -42,5 +42,19 @@ export function createUsersController(userService: UserService) {
 
             res.status(200).json({ ok: true, message: 'Password updated successfully.' });
         }),
+
+        updateUsername: asyncHandler(async (req, res) => {
+            if (!req.auth) {
+                res.status(401).json({ error: { message: 'Unauthorized', code: 'AUTH_UNAUTHORIZED' } });
+
+                return;
+            }
+
+            const input = parseUpdateUsernameBody(req.body);
+
+            const profile = await userService.updateUsername(req.auth.userId, input.currentPassword, input.newUsername);
+
+            res.status(200).json({ ok: true, message: 'Username updated successfully.', user: profile });
+        })
     };
 }

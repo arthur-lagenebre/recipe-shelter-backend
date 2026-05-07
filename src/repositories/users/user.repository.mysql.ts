@@ -44,6 +44,18 @@ export class UserRepositoryMysql implements UserRepository {
         return row ? mapUserWithPassword(row) : null;
     }
 
+    async findByUsername(username: string): Promise<User | null> {
+        const [rows] = await this.db.execute(
+            `SELECT Id, Mail, Username, RoleId, CreatedAt, UpdatedAt
+             FROM Users
+             WHERE Username = ?`,
+            [username]
+        );
+
+        const row = firstOrNull(rows as UserRow[]);
+        return row ? mapUser(row) : null;
+    }
+
     async findWithPasswordById(id: number): Promise<UserWithPassword | null> {
         const [rows] = await this.db.execute(
             `SELECT Id, Mail, Username, Password, RoleId, CreatedAt, UpdatedAt
@@ -124,6 +136,15 @@ export class UserRepositoryMysql implements UserRepository {
              SET Password = ?
              WHERE Id = ?`,
             [passwordHash, userId]
+        );
+    }
+
+    async updateUsername(userId: number, username: string): Promise<void> {
+        await this.db.execute(
+            `UPDATE Users
+             SET Username = ?
+             WHERE Id = ?`,
+            [username, userId]
         );
     }
 }

@@ -90,4 +90,36 @@ export class UserService {
 
         await this.userRepository.updatePassword(userId, newPasswordHash);
     }
+
+    async updateUsername(userId: number, currentPassword: string, newUsername: string): Promise<PublicUserProfile> {
+        const username = newUsername.trim();
+
+        if (!username)
+            throw badRequest('New username is required', 'USERS_UPDATE_USERNAME_MISSING_USERNAME');
+
+        if (username.length < 3)
+            throw badRequest('Username too short', 'USERS_UPDATE_USERNAME_WEAK_USERNAME');
+
+        const user = await this.userRepository.findWithPasswordById(userId);
+
+        if (!user)
+            throw notFound('User not found', 'USER_NOT_FOUND');
+
+        const passwordOk = await bcrypt.compare(currentPassword, user.passwordHash);
+
+        if (!passwordOk)
+            throw unauthorized('Current password is incorrect', 'USERS_UPDATE_USERNAME_BAD_PASSWORD');
+
+        if (user.username === username)
+            throw badRequest('New username must be different from current username', 'USERS_UPDATE_USERNAME_SAME_USERNAME');
+
+        const existingUser = await this.userRepository.findByUsername(username);
+
+        if (existingUser && existingUser.id !== userId)
+            throw conflict('Username already in use', 'USERS_UPDATE_USERNAME_ALREADY_USED');
+
+        await this.userRepository.updateUsername(userId, username);
+
+        return this.getMe(userId);
+    }
 }
