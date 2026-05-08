@@ -206,12 +206,12 @@ Authorization: Bearer {{jwt}}
       "description": "Melanger les ingredients puis verser dans un moule."
     }
   ],
-  "utensils": [
+  "equipments": [
     {
-      "utensilId": 1
+      "equipmentId": 1
     },
     {
-      "utensilId": 2
+      "equipmentId": 2
     }
   ]
 }
@@ -257,7 +257,7 @@ GET {{baseUrl}}/recipes/me/{{recipeId}}
 Authorization: Bearer {{jwt}}
 
 ### Update recipe draft
-PUT {{baseUrl}}/recipes/me/{{recipeId}}
+PATCH {{baseUrl}}/recipes/me/{{recipeId}}
 Content-Type: application/json
 Authorization: Bearer {{jwt}}
 
@@ -279,9 +279,9 @@ Authorization: Bearer {{jwt}}
       "description": "Cuire pendant 45 minutes."
     }
   ],
-  "utensils": [
+  "equipments": [
     {
-      "utensilId": 1
+      "equipmentId": 1
     }
   ]
 }
@@ -299,28 +299,16 @@ Authorization: Bearer {{jwt}}
 # ============================================
 
 ### Add favorite
-POST {{baseUrl}}/favorites/create
-Content-Type: application/json
+POST {{baseUrl}}/favorites/{{recipeId}}
 Authorization: Bearer {{jwt}}
-
-{
-  "userId": 1,
-  "recipeId": {{recipeId}}
-}
 
 ### My favorite recipes
 GET {{baseUrl}}/favorites/me
 Authorization: Bearer {{jwt}}
 
 ### Remove favorite
-POST {{baseUrl}}/favorites/delete
-Content-Type: application/json
+DELETE {{baseUrl}}/favorites/{{recipeId}}
 Authorization: Bearer {{jwt}}
-
-{
-  "userId": 1,
-  "recipeId": {{recipeId}}
-}
 
 # ============================================
 # Reference data
@@ -363,11 +351,11 @@ Authorization: Bearer {{jwt}}
 # ============================================
 
 ### Pending recipes
-GET {{baseUrl}}/admin/recipes
+GET {{baseUrl}}/admin/recipes/pending
 Authorization: Bearer {{adminJwt}}
 
 ### Pending recipes count
-GET {{baseUrl}}/admin/recipes/count
+GET {{baseUrl}}/admin/recipes/pending/count
 Authorization: Bearer {{adminJwt}}
 
 ### Admin recipe detail

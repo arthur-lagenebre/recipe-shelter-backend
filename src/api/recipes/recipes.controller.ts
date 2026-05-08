@@ -100,7 +100,7 @@ export function createRecipesController(recipeService: RecipeService) {
             const recipeId = parseRecipeIdParam(req.params.id);
             const result = await recipeService.archive(recipeId, req.auth);
 
-            res.status(200).json(result);
+            res.status(200).json({ "ok": result });
         }),
 
     };

@@ -1,4 +1,4 @@
-import type { Recipe, RecipeDetail, RecipeDetailEquipment, RecipeDetailIngredient, RecipeDetailIngredientRow, RecipeDetailStep, RecipeDetailStepRow, RecipeDetailTag, RecipeDetailTagRow, RecipeDetailUtensilRow, RecipeIngredient, RecipeIngredientRow, RecipeListItem, RecipeListItemRow, RecipeRow, RecipeStep, RecipeStepRow, RecipeSummary, RecipeUtensil, RecipeUtensilRow } from './recipe.types.js';
+import type { Recipe, RecipeDetail, RecipeDetailEquipment, RecipeDetailIngredient, RecipeDetailIngredientRow, RecipeDetailStep, RecipeDetailStepRow, RecipeDetailTag, RecipeDetailTagRow, RecipeDetailEquipmentRow, RecipeIngredient, RecipeIngredientRow, RecipeListItem, RecipeListItemRow, RecipeRow, RecipeStep, RecipeStepRow, RecipeSummary, RecipeEquipment, RecipeEquipmentRow } from './recipe.types.js';
 
 export function mapRecipe(row: RecipeRow): Recipe {
     return {
@@ -25,7 +25,7 @@ export function mapRecipe(row: RecipeRow): Recipe {
         tagIds: [],
         ingredients: [],
         steps: [],
-        utensils: []
+        equipments: []
     };
 }
 
@@ -61,9 +61,9 @@ export function mapRecipeStep(row: RecipeStepRow): RecipeStep {
     };
 }
 
-export function mapRecipeUtensil(row: RecipeUtensilRow): RecipeUtensil {
+export function mapRecipeEquipment(row: RecipeEquipmentRow): RecipeEquipment {
     return {
-        utensilId: row.UtensilId
+        equipmentId: row.EquipmentId
     };
 }
 
@@ -126,7 +126,7 @@ export function mapRecipeDetailStep(row: RecipeDetailStepRow): RecipeDetailStep 
     };
 }
 
-export function mapRecipeDetailUtensil(row: RecipeDetailUtensilRow): RecipeDetailEquipment {
+export function mapRecipeDetailEquipment(row: RecipeDetailEquipmentRow): RecipeDetailEquipment {
     return {
         id: row.Id,
         name: row.Name,

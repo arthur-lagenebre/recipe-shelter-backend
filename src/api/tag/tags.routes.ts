@@ -1,7 +1,5 @@
 import { Router } from 'express';
 
-import { requireAuth } from '../../middlewares/require-auth.js';
-
 import type { RequestHandler } from 'express';
 
 type TagsController = {
@@ -12,8 +10,8 @@ type TagsController = {
 export function createTagssRouter(controller: TagsController) {
     const router = Router();
 
-    router.get('/', requireAuth, controller.getTags);
-    router.get('/:id', requireAuth, controller.getTag);
+    router.get('/', controller.getTags);
+    router.get('/:id', controller.getTag);
 
     return router;
 }

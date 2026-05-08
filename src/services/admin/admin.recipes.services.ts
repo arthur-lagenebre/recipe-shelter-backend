@@ -25,16 +25,16 @@ export class AdminRecipeService {
         return recipe;
     }
 
-    async approve(recipeId: number, adminUserId: number) {
+    async approve(recipeId: number, adminUserId: number): Promise<boolean> {
         await this.requireModeratableRecipe(recipeId);
 
-        await this.adminRecipeRepository.publish(recipeId, adminUserId);
+        return await this.adminRecipeRepository.publish(recipeId, adminUserId);
     }
 
-    async reject(recipeId: number, adminUserId: number, rejectionReason: string) {
+    async reject(recipeId: number, adminUserId: number, rejectionReason: string): Promise<boolean> {
         await this.requireModeratableRecipe(recipeId);
 
-        await this.adminRecipeRepository.reject(recipeId, adminUserId, rejectionReason);
+        return await this.adminRecipeRepository.reject(recipeId, adminUserId, rejectionReason);
     }
 
     async archive(recipeId: number): Promise<boolean> {

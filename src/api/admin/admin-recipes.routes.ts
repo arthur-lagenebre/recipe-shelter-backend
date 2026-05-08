@@ -18,8 +18,8 @@ type AdminRecipesController = {
 export function createAdminRecipesRouter(controller: AdminRecipesController) {
     const router = Router();
 
-    router.get('/', requireAuth, requireAdmin, controller.listPendingRecipes);
-    router.get('/count', requireAuth, requireAdmin, controller.countPendingRecipes);
+    router.get('/pending', requireAuth, requireAdmin, controller.listPendingRecipes);
+    router.get('/pending/count', requireAuth, requireAdmin, controller.countPendingRecipes);
     router.get('/:id', requireAuth, requireAdmin, controller.getRecipeAdmin);
     router.post('/:id/approve', requireAuth, requireAdmin, controller.approveRecipe);
     router.post('/:id/reject', requireAuth, requireAdmin, controller.rejectRecipe);

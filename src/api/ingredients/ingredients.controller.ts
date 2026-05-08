@@ -6,23 +6,11 @@ import type { IngredientService } from '../../services/ingredients/ingredients.s
 export function createIngredientsController(ingredientService: IngredientService) {
     return {
         getIngredients: asyncHandler(async (req, res) => {
-            if (!req.auth) {
-                res.status(401).json({ error: { message: 'Unauthorized', code: 'AUTH_UNAUTHORIZED' } });
-
-                return;
-            }
-
             const ingredients = await ingredientService.getIngredients();
             res.status(200).json(ingredients);
         }),
 
         getIngredient: asyncHandler(async (req, res) => {
-            if (!req.auth) {
-                res.status(401).json({ error: { message: 'Unauthorized', code: 'AUTH_UNAUTHORIZED' } });
-
-                return;
-            }
-            
             const ingredientId = parseIngredientIdParam(req.params.id);
             const profile = await ingredientService.getIngredient(ingredientId);
             res.status(200).json(profile);

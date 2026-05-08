@@ -1,7 +1,7 @@
 import { badRequest } from '../../utils/errors.js';
 import { getOptionalArray, getOptionalNullableNumber, getOptionalNullableString, getOptionalNumber, getOptionalString, getRequiredNumber, getRequiredPositiveInteger, getRequiredString, isRecord } from '../http/dto.helpers.js';
 
-import type { RecipeIngredientInput, RecipeStepInput, RecipeUtensilInput } from '../../repositories/recipes/recipe.types.js';
+import type { RecipeIngredientInput, RecipeStepInput, RecipeEquipmentInput } from '../../repositories/recipes/recipe.types.js';
 
 export type RecipeBody = {
     categoryId?: number | null;
@@ -15,7 +15,7 @@ export type RecipeBody = {
     tagIds?: number[];
     ingredients?: RecipeIngredientInput[];
     steps?: RecipeStepInput[];
-    utensils?: RecipeUtensilInput[];
+    equipments?: RecipeEquipmentInput[];
 };
 
 export type CreateRecipeBody = RecipeBody;
@@ -48,12 +48,12 @@ function parseStep(item: unknown, index: number): RecipeStepInput {
     };
 }
 
-function parseUtensil(item: unknown, index: number): RecipeUtensilInput {
+function parseEquipment(item: unknown, index: number): RecipeEquipmentInput {
     if (!isRecord(item))
-        throw badRequest(`Utensil #${index + 1} is invalid`, 'RECIPES_CREATE_BAD_UTENSIL');
+        throw badRequest(`Equipment #${index + 1} is invalid`, 'RECIPES_CREATE_BAD_EQUIPMENT');
 
     return {
-        utensilId: getRequiredNumber(item.utensilId, 'UtensilId must be a number', 'RECIPES_CREATE_BAD_UTENSIL_ID')
+        equipmentId: getRequiredNumber(item.equipmentId, 'EquipmentId must be a number', 'RECIPES_CREATE_BAD_EQUIPMENT_ID')
     };
 }
 
@@ -80,9 +80,9 @@ function parseRecipeContentBody(body: unknown, codePrefix: 'RECIPES_CREATE' | 'R
     const tagIds = getOptionalArray(body.tagIds, parseTagId, 'Tags must be an array', `${codePrefix}_BAD_TAGS`);
     const ingredients = getOptionalArray(body.ingredients, parseIngredient, 'Ingredients must be an array', `${codePrefix}_BAD_INGREDIENTS`);
     const steps = getOptionalArray(body.steps, parseStep, 'Steps must be an array', `${codePrefix}_BAD_STEPS`);
-    const utensils = getOptionalArray(body.utensils, parseUtensil, 'Utensils must be an array', `${codePrefix}_BAD_UTENSILS`);
+    const equipments = getOptionalArray(body.equipments, parseEquipment, 'Equipments must be an array', `${codePrefix}_BAD_EQUIPMENTS`);
 
-    return { categoryId, title, description, coverImageUrl, prepTimeMinutes, restTimeMinutes, cookTimeMinutes, servings, tagIds, ingredients, steps, utensils };
+    return { categoryId, title, description, coverImageUrl, prepTimeMinutes, restTimeMinutes, cookTimeMinutes, servings, tagIds, ingredients, steps, equipments };
 }
 
 export function parseCreateRecipeBody(body: unknown): CreateRecipeBody {

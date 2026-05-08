@@ -33,7 +33,7 @@ export type RecipeAdmin = {
     tags: AdminRecipeTag[];
     ingredients: AdminRecipeIngredient[];
     steps: AdminRecipeStep[];
-    utensils: AdminRecipeUtensil[];
+    equipments: AdminRecipeEquipment[];
 }
 
 export type AdminRecipeIngredient = {
@@ -55,7 +55,7 @@ export type AdminRecipeTag = {
     name: string;
 };
 
-export type AdminRecipeUtensil = {
+export type AdminRecipeEquipment = {
     id: number;
     name: string;
 };
@@ -74,7 +74,7 @@ export type RecipeStepRow = RowDataPacket & {
     Description: string;
 };
 
-export type RecipeUtensilRow = RowDataPacket & {
+export type RecipeEquipmentRow = RowDataPacket & {
     Id: number;
     Name: string;
 };

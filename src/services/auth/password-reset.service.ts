@@ -24,7 +24,8 @@ export class PasswordResetService {
 
     async requestReset(mail: string): Promise<void> {
         const normalizedMail = mail.trim().toLowerCase();
-        if (!normalizedMail) return;
+        if (!normalizedMail)
+            return;
 
         const user = await this.users.findByEmail(normalizedMail);
 

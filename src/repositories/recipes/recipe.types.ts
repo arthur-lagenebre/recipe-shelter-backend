@@ -13,8 +13,8 @@ export type RecipeStepInput = {
     description: string;
 };
 
-export type RecipeUtensilInput = {
-    utensilId: number;
+export type RecipeEquipmentInput = {
+    equipmentId: number;
 };
 
 export type RecipeInput = {
@@ -31,7 +31,7 @@ export type RecipeInput = {
     tagIds?: number[];
     ingredients?: RecipeIngredientInput[];
     steps?: RecipeStepInput[];
-    utensils?: RecipeUtensilInput[];
+    equipments?: RecipeEquipmentInput[];
 };
 
 export type UpdateRecipeInput = RecipeInput & {
@@ -51,8 +51,8 @@ export type RecipeStep = {
     description: string;
 };
 
-export type RecipeUtensil = {
-    utensilId: number;
+export type RecipeEquipment = {
+    equipmentId: number;
 };
 
 export type Recipe = {
@@ -79,7 +79,7 @@ export type Recipe = {
     tagIds: number[];
     ingredients: RecipeIngredient[];
     steps: RecipeStep[];
-    utensils: RecipeUtensil[];
+    equipments: RecipeEquipment[];
 };
 
 export type RecipeSummary = {
@@ -181,8 +181,8 @@ export type RecipeStepRow = RowDataPacket & {
     Description: string;
 };
 
-export type RecipeUtensilRow = RowDataPacket & {
-    UtensilId: number;
+export type RecipeEquipmentRow = RowDataPacket & {
+    EquipmentId: number;
 };
 
 export type RecipeTagRow = RowDataPacket & {
@@ -219,7 +219,7 @@ export type RecipeDetailStepRow = RowDataPacket & {
     Description: string;
 };
 
-export type RecipeDetailUtensilRow = RowDataPacket & {
+export type RecipeDetailEquipmentRow = RowDataPacket & {
     Id: number;
     Name: string;
     Slug: string;

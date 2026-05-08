@@ -1,4 +1,4 @@
-import type { AdminRecipeIngredient, RecipeIngredientRow, RecipePending, RecipePendingRow, AdminRecipeStep, RecipeStepRow, AdminRecipeUtensil, RecipeUtensilRow, RecipeTagRow, AdminRecipeTag } from "./admin.recipe.types.js";
+import type { AdminRecipeIngredient, RecipeIngredientRow, RecipePending, RecipePendingRow, AdminRecipeStep, RecipeStepRow, AdminRecipeEquipment, RecipeEquipmentRow, RecipeTagRow, AdminRecipeTag } from "./admin.recipe.types.js";
 
 export function mapRecipePending(row: RecipePendingRow): RecipePending {
     return {
@@ -30,7 +30,7 @@ export function mapRecipeStep(row: RecipeStepRow): AdminRecipeStep {
     };
 }
 
-export function mapRecipeUtensil(row: RecipeUtensilRow): AdminRecipeUtensil {
+export function mapRecipeEquipment(row: RecipeEquipmentRow): AdminRecipeEquipment {
     return {
         id: row.Id,
         name: row.Name

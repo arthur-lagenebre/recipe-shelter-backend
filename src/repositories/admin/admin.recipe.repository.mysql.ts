@@ -1,9 +1,9 @@
-import { mapRecipeIngredient, mapRecipePending, mapRecipeStep, mapRecipeTag, mapRecipeUtensil } from './admin.recipe.mapper.js';
+import { mapRecipeEquipment, mapRecipeIngredient, mapRecipePending, mapRecipeStep, mapRecipeTag } from './admin.recipe.mapper.js';
 import { firstOrNull } from '../../utils/array.js';
 import { mapRecipe } from '../recipes/recipe.mapper.js';
 
 import type { AdminRecipeRepository } from "./admin.recipe.repository.interface.js";
-import type { RecipeAdmin, RecipeAdminRow, RecipeIngredientRow, RecipePending, RecipePendingRow, RecipeStepRow, RecipeTagRow, RecipeUtensilRow } from './admin.recipe.types.js';
+import type { RecipeAdmin, RecipeAdminRow, RecipeIngredientRow, RecipePending, RecipePendingRow, RecipeStepRow, RecipeTagRow, RecipeEquipmentRow } from './admin.recipe.types.js';
 import type { ResultSetHeader } from 'mysql2';
 import type { Pool } from 'mysql2/promise';
 
@@ -51,7 +51,7 @@ export class AdminRecipeRepositoryMysql implements AdminRecipeRepository {
         const [ingredientRows, stepRows, equipmentRows, tagRows] = await Promise.all([
             this.findIngredientsByRecipeId(recipe.id),
             this.findStepsByRecipeId(recipe.id),
-            this.findUtensilsByRecipeId(recipe.id),
+            this.findEquipmentsByRecipeId(recipe.id),
             this.findTagsByRecipeId(recipe.id)
         ]);
         const { tagIds, ...recipeWithoutTagIds } = recipe;
@@ -64,7 +64,7 @@ export class AdminRecipeRepositoryMysql implements AdminRecipeRepository {
             tags: tagRows.map(mapRecipeTag),
             ingredients: ingredientRows.map(mapRecipeIngredient),
             steps: stepRows.map(mapRecipeStep),
-            utensils: equipmentRows.map(mapRecipeUtensil)
+            equipments: equipmentRows.map(mapRecipeEquipment)
         };
     }
 
@@ -123,7 +123,7 @@ export class AdminRecipeRepositoryMysql implements AdminRecipeRepository {
         return rows as RecipeStepRow[];
     }
 
-    private async findUtensilsByRecipeId(recipeId: number): Promise<RecipeUtensilRow[]> {
+    private async findEquipmentsByRecipeId(recipeId: number): Promise<RecipeEquipmentRow[]> {
         const [rows] = await this.db.execute(
             `SELECT e.Id, e.Name
              FROM RecipeEquipments AS re
@@ -132,7 +132,7 @@ export class AdminRecipeRepositoryMysql implements AdminRecipeRepository {
             [recipeId]
         );
 
-        return rows as RecipeUtensilRow[];
+        return rows as RecipeEquipmentRow[];
     }
 
     private async findTagsByRecipeId(recipeId: number): Promise<RecipeTagRow[]> {

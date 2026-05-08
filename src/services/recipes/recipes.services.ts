@@ -3,7 +3,7 @@ import { forbidden, notFound } from '../../utils/errors.js';
 import type { RecipeSlugService } from "./recipe-slug.service.js";
 import type { AuthContext } from "../../api/auth/auth.types.js";
 import type { RecipeRepository } from "../../repositories/recipes/recipe.repository.interface.js";
-import type { Recipe, RecipeDetail, RecipeIngredientInput, RecipeInput, RecipeListItem, RecipeStepInput, RecipeSummary, RecipeUtensilInput, UpdateRecipeInput } from "../../repositories/recipes/recipe.types.js";
+import type { Recipe, RecipeDetail, RecipeIngredientInput, RecipeInput, RecipeListItem, RecipeStepInput, RecipeSummary, RecipeEquipmentInput, UpdateRecipeInput } from "../../repositories/recipes/recipe.types.js";
 
 type RecipeContentInput = {
     categoryId?: number | null;
@@ -17,7 +17,7 @@ type RecipeContentInput = {
     tagIds?: number[];
     ingredients?: RecipeIngredientInput[];
     steps?: RecipeStepInput[];
-    utensils?: RecipeUtensilInput[];
+    equipments?: RecipeEquipmentInput[];
 };
 
 export class RecipeService {
@@ -165,8 +165,8 @@ async function normalizeCreateRecipeInput(userId: number, input: RecipeContentIn
             stepNumber: step.stepNumber ?? index + 1,
             description: step.description.trim()
         })) ?? [],
-        utensils: input.utensils?.map((utensil) => ({
-            utensilId: utensil.utensilId
+        equipments: input.equipments?.map((equipment) => ({
+            equipmentId: equipment.equipmentId
         })) ?? []
     };
 }
@@ -196,8 +196,8 @@ function normalizeUpdateRecipeInput(recipe: Recipe, input: RecipeContentInput): 
             stepNumber: step.stepNumber ?? index + 1,
             description: step.description.trim()
         })),
-        utensils: input.utensils?.map((utensil) => ({
-            utensilId: utensil.utensilId
+        equipments: input.equipments?.map((equipment) => ({
+            equipmentId: equipment.equipmentId
         }))
     };
 }

@@ -23,7 +23,6 @@ export function createUsersController(userService: UserService) {
             }
 
             const input = parseUpdateEmailBody(req.body);
-
             const profile = await userService.updateEmail(req.auth.userId, input.newEmail, input.currentPassword);
 
             res.status(200).json({ ok: true, message: 'Email updated successfully.', user: profile });
@@ -51,7 +50,6 @@ export function createUsersController(userService: UserService) {
             }
 
             const input = parseUpdateUsernameBody(req.body);
-
             const profile = await userService.updateUsername(req.auth.userId, input.currentPassword, input.newUsername);
 
             res.status(200).json({ ok: true, message: 'Username updated successfully.', user: profile });

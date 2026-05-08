@@ -1,8 +1,8 @@
-import { mapRecipe, mapRecipeDetail, mapRecipeDetailIngredient, mapRecipeDetailStep, mapRecipeDetailTag, mapRecipeDetailUtensil, mapRecipeIngredient, mapRecipeListItem, mapRecipeStep, mapRecipeSummary, mapRecipeUtensil } from './recipe.mapper.js';
+import { mapRecipe, mapRecipeDetail, mapRecipeDetailIngredient, mapRecipeDetailStep, mapRecipeDetailTag, mapRecipeDetailEquipment, mapRecipeIngredient, mapRecipeListItem, mapRecipeStep, mapRecipeSummary, mapRecipeEquipment } from './recipe.mapper.js';
 import { firstOrNull } from '../../utils/array.js';
 
 import type { RecipeRepository } from "./recipe.repository.interface.js";
-import type { Recipe, RecipeDetail, RecipeDetailIngredientRow, RecipeDetailStepRow, RecipeDetailTagRow, RecipeDetailUtensilRow, RecipeIngredientRow, RecipeInput, RecipeListItem, RecipeListItemRow, RecipeRow, RecipeStepRow, RecipeSummary, RecipeTagRow, RecipeUtensilRow, UpdateRecipeInput } from "./recipe.types.js";
+import type { Recipe, RecipeDetail, RecipeDetailIngredientRow, RecipeDetailStepRow, RecipeDetailTagRow, RecipeDetailEquipmentRow, RecipeIngredientRow, RecipeInput, RecipeListItem, RecipeListItemRow, RecipeRow, RecipeStepRow, RecipeSummary, RecipeTagRow, RecipeEquipmentRow, UpdateRecipeInput } from "./recipe.types.js";
 import type { ResultSetHeader } from 'mysql2';
 import type { Pool, PoolConnection } from 'mysql2/promise';
 
@@ -25,7 +25,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
 
             await this.insertIngredients(connection, recipeId, input);
             await this.insertSteps(connection, recipeId, input);
-            await this.insertUtensils(connection, recipeId, input);
+            await this.insertEquipments(connection, recipeId, input);
             await this.insertTags(connection, recipeId, input);
 
             await connection.commit();
@@ -108,8 +108,8 @@ export class RecipeRepositoryMysql implements RecipeRepository {
             if (input.steps !== undefined)
                 await this.replaceSteps(connection, input.id, input);
 
-            if (input.utensils !== undefined)
-                await this.replaceUtensils(connection, input.id, input);
+            if (input.equipments !== undefined)
+                await this.replaceEquipments(connection, input.id, input);
 
             if (input.tagIds !== undefined)
                 await this.replaceTags(connection, input.id, input);
@@ -224,13 +224,13 @@ export class RecipeRepositoryMysql implements RecipeRepository {
         const [ingredientRows, stepRows, equipmentRows, tagRows] = await Promise.all([
             this.findDetailIngredientsByRecipeId(recipe.id),
             this.findDetailStepsByRecipeId(recipe.id),
-            this.findDetailUtensilsByRecipeId(recipe.id),
+            this.findDetailEquipmentsByRecipeId(recipe.id),
             this.findDetailTagIdsByRecipeId(recipe.id)
         ]);
 
         recipe.ingredients = ingredientRows.map(mapRecipeDetailIngredient);
         recipe.steps = stepRows.map(mapRecipeDetailStep);
-        recipe.equipments = equipmentRows.map(mapRecipeDetailUtensil);
+        recipe.equipments = equipmentRows.map(mapRecipeDetailEquipment);
         recipe.tags = tagRows.map(mapRecipeDetailTag);
 
         return recipe;
@@ -247,13 +247,13 @@ export class RecipeRepositoryMysql implements RecipeRepository {
         const [ingredientRows, stepRows, equipmentRows, tagIds] = await Promise.all([
             this.findIngredientsByRecipeId(recipe.id),
             this.findStepsByRecipeId(recipe.id),
-            this.findUtensilsByRecipeId(recipe.id),
+            this.findEquipmentsByRecipeId(recipe.id),
             this.findTagIdsByRecipeId(recipe.id)
         ]);
 
         recipe.ingredients = ingredientRows.map(mapRecipeIngredient);
         recipe.steps = stepRows.map(mapRecipeStep);
-        recipe.utensils = equipmentRows.map(mapRecipeUtensil);
+        recipe.equipments = equipmentRows.map(mapRecipeEquipment);
         recipe.tagIds = tagIds;
 
         return recipe;
@@ -281,14 +281,14 @@ export class RecipeRepositoryMysql implements RecipeRepository {
         );
     }
 
-    private async insertUtensils(connection: PoolConnection, recipeId: number, input: RecipeInput): Promise<void> {
-        if (!input.utensils?.length)
+    private async insertEquipments(connection: PoolConnection, recipeId: number, input: RecipeInput): Promise<void> {
+        if (!input.equipments?.length)
             return;
 
         await connection.query(
             `INSERT INTO RecipeEquipments (RecipeId, EquipmentId)
              VALUES ?`,
-            [input.utensils.map((utensil) => [recipeId, utensil.utensilId])]
+            [input.equipments.map((equipment) => [recipeId, equipment.equipmentId])]
         );
     }
 
@@ -337,20 +337,20 @@ export class RecipeRepositoryMysql implements RecipeRepository {
         );
     }
 
-    private async replaceUtensils(connection: PoolConnection, recipeId: number, input: RecipeInput): Promise<void> {
+    private async replaceEquipments(connection: PoolConnection, recipeId: number, input: RecipeInput): Promise<void> {
         await connection.execute(
             `DELETE FROM RecipeEquipments
              WHERE RecipeId = ?`,
             [recipeId]
         );
 
-        if (!input.utensils?.length)
+        if (!input.equipments?.length)
             return;
 
         await connection.query(
             `INSERT INTO RecipeEquipments (RecipeId, EquipmentId)
              VALUES ?`,
-            [input.utensils.map((utensil) => [recipeId, utensil.utensilId])]
+            [input.equipments.map((equipment) => [recipeId, equipment.equipmentId])]
         );
     }
 
@@ -393,15 +393,15 @@ export class RecipeRepositoryMysql implements RecipeRepository {
         return rows as RecipeStepRow[];
     }
 
-    private async findUtensilsByRecipeId(recipeId: number): Promise<RecipeUtensilRow[]> {
+    private async findEquipmentsByRecipeId(recipeId: number): Promise<RecipeEquipmentRow[]> {
         const [rows] = await this.db.execute(
-            `SELECT EquipmentId AS UtensilId
+            `SELECT EquipmentId
              FROM RecipeEquipments
              WHERE RecipeId = ?`,
             [recipeId]
         );
 
-        return rows as RecipeUtensilRow[];
+        return rows as RecipeEquipmentRow[];
     }
 
     private async findTagIdsByRecipeId(recipeId: number): Promise<number[]> {
@@ -438,7 +438,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
         return rows as RecipeDetailStepRow[];
     }
 
-    private async findDetailUtensilsByRecipeId(recipeId: number): Promise<RecipeDetailUtensilRow[]> {
+    private async findDetailEquipmentsByRecipeId(recipeId: number): Promise<RecipeDetailEquipmentRow[]> {
         const [rows] = await this.db.execute(
             `SELECT e.Id, e.Name, e.Slug
              FROM RecipeEquipments AS re
@@ -447,7 +447,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
             [recipeId]
         );
 
-        return rows as RecipeDetailUtensilRow[];
+        return rows as RecipeDetailEquipmentRow[];
     }
 
     private async findDetailTagIdsByRecipeId(recipeId: number): Promise<RecipeDetailTagRow[]> {

@@ -13,7 +13,7 @@ export function createAdminRecipesController(adminRecipeService: AdminRecipeServ
 
         countPendingRecipes: asyncHandler(async (req, res) => {
             const count = await adminRecipeService.getCountPendingRecipesForAdmin();
-            res.status(200).json({ count });
+            res.status(200).json({ pendingRecipes: count });
         }),
 
         getRecipeAdmin: asyncHandler(async (req, res) => {
@@ -26,33 +26,33 @@ export function createAdminRecipesController(adminRecipeService: AdminRecipeServ
         approveRecipe: asyncHandler(async (req, res) => {
             const recipeId = parseRecipeIdParam(req.params.id);
             
-            await adminRecipeService.approve(recipeId, req.auth!.userId);
+            const result = await adminRecipeService.approve(recipeId, req.auth!.userId);
 
-            res.status(200).json({ message: 'Recipe approved successfully' });
+            res.status(200).json({ ok: result });
         }),
 
         rejectRecipe: asyncHandler(async (req, res) => {
             const recipeId = parseRecipeIdParam(req.params.id);
             const rejectionReason = parseRejectRecipeBody(req.body);
 
-            await adminRecipeService.reject(recipeId, req.auth!.userId, rejectionReason);
+             const result = await adminRecipeService.reject(recipeId, req.auth!.userId, rejectionReason);
 
-            res.status(200).json({ message: 'Recipe rejected successfully' });
+            res.status(200).json({ ok: result });
         }),
 
         archiveRecipe: asyncHandler(async (req, res) => {
             const recipeId = parseRecipeIdParam(req.params.id);
 
-            await adminRecipeService.archive(recipeId);
+            const result = await adminRecipeService.archive(recipeId);
 
-            res.status(200).json({ message: 'Recipe archived successfully' });
+            res.status(200).json({ ok: result });
         }),
 
         deleteRecipe: asyncHandler(async (req, res) => {
             const recipeId = parseRecipeIdParam(req.params.id);
             const result = await adminRecipeService.delete(recipeId);
 
-            res.status(200).json(result);
+            res.status(200).json({ ok: result });
         })
     };
 }

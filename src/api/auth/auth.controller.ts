@@ -34,12 +34,7 @@ export function createAuthController(authService: AuthService, passwordResetServ
     const mail = typeof req.body?.mail === 'string' ? req.body.mail : '';
 
     if (!mail.trim()) {
-      res.status(400).json({
-        error: {
-          message: 'Email is required',
-          code: 'AUTH_FORGOT_PASSWORD_INVALID_EMAIL'
-        }
-      });
+      res.status(400).json({ error: { message: 'Email is required', code: 'AUTH_FORGOT_PASSWORD_INVALID_EMAIL' } });
 
       return;
     }
@@ -54,12 +49,7 @@ export function createAuthController(authService: AuthService, passwordResetServ
     const password = typeof req.body?.password === 'string' ? req.body.password : '';
 
     if (!token.trim()) {
-      res.status(400).json({
-        error: {
-          message: 'Token is required',
-          code: 'AUTH_RESET_PASSWORD_MISSING_TOKEN'
-        }
-      });
+      res.status(400).json({ error: { message: 'Token is required', code: 'AUTH_RESET_PASSWORD_MISSING_TOKEN' } });
 
       return;
     }
@@ -67,10 +57,7 @@ export function createAuthController(authService: AuthService, passwordResetServ
     try {
       await passwordResetService.resetPassword(token, password);
 
-      res.status(200).json({
-        ok: true,
-        message: 'Password has been reset successfully.'
-      });
+      res.status(200).json({ ok: true, message: 'Password has been reset successfully.' });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Password reset failed';
 

@@ -1,7 +1,5 @@
 import { Router } from 'express';
 
-import { requireAuth } from '../../middlewares/require-auth.js';
-
 import type { RequestHandler } from 'express';
 
 type IngredientsController = {
@@ -12,8 +10,8 @@ type IngredientsController = {
 export function createIngredientsRouter(controller: IngredientsController) {
     const router = Router();
 
-    router.get('/', requireAuth, controller.getIngredients);
-    router.get('/:id', requireAuth, controller.getIngredient);
+    router.get('/', controller.getIngredients);
+    router.get('/:id', controller.getIngredient);
 
     return router;
 }
