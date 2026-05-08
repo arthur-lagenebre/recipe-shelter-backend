@@ -53,7 +53,7 @@ export class FavoriteRepositoryMysql implements FavoriteRepository {
             `SELECT *
              FROM Favorites AS f
              JOIN Recipes AS r ON r.Id = f.RecipeId
-            WHERE f.UserId = ?`,
+            WHERE r.Status = 'published' AND f.UserId = ?`,
             [userId]
         );
 
