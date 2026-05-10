@@ -228,22 +228,19 @@ CREATE TABLE Comments (
   RecipeId BIGINT UNSIGNED NOT NULL,
   UserId BIGINT UNSIGNED NOT NULL,
   ParentCommentId BIGINT UNSIGNED NULL,
-
-  Status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
   ModeratedAt DATETIME NULL,
   ModeratedByUserId BIGINT UNSIGNED NULL,
-
+  DeletedAt DATETIME NULL,
+  DeletedByUserId BIGINT UNSIGNED NULL,
   Rating TINYINT UNSIGNED NULL,
   Comment TEXT NOT NULL,
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
   PRIMARY KEY (Id),
   KEY idx_comments_recipe_id (RecipeId),
   KEY idx_comments_user_id (UserId),
   KEY idx_comments_parent_comment_id (ParentCommentId),
-  KEY idx_comments_status (Status),
-
+  KEY idx_comments_deleted_at (DeletedAt),
   CONSTRAINT comments_recipe_FK
     FOREIGN KEY (RecipeId) REFERENCES Recipes(Id)
     ON UPDATE CASCADE
@@ -258,6 +255,10 @@ CREATE TABLE Comments (
     ON DELETE SET NULL,
   CONSTRAINT comments_moderated_by_FK
     FOREIGN KEY (ModeratedByUserId) REFERENCES Users(Id)
+    ON UPDATE CASCADE
+    ON DELETE SET NULL,
+  CONSTRAINT comments_deleted_by_FK
+    FOREIGN KEY (DeletedByUserId) REFERENCES Users(Id)
     ON UPDATE CASCADE
     ON DELETE SET NULL,
 

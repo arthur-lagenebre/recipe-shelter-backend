@@ -1,0 +1,19 @@
+# ============================================
+# Favorites
+# ============================================
+
+@baseUrl = http://localhost:3000
+@jwt = PASTE_JWT_HERE
+@recipeId = 1
+
+### Add favorite
+POST {{baseUrl}}/favorites/{{recipeId}}
+Authorization: Bearer {{jwt}}
+
+### My favorite recipes
+GET {{baseUrl}}/favorites/me
+Authorization: Bearer {{jwt}}
+
+### Remove favorite
+DELETE {{baseUrl}}/favorites/{{recipeId}}
+Authorization: Bearer {{jwt}}

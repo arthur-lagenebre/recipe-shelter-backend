@@ -1,0 +1,52 @@
+# ============================================
+# Users
+# ============================================
+
+@baseUrl = http://localhost:3000
+@jwt = PASTE_JWT_HERE
+@password = Password123!
+@newPassword = NewPassword123!
+
+### User profile
+GET {{baseUrl}}/users/me
+Authorization: Bearer {{jwt}}
+
+### Update email
+PATCH {{baseUrl}}/users/me/email
+Content-Type: application/json
+Authorization: Bearer {{jwt}}
+
+{
+  "newEmail": "new-test@example.com",
+  "currentPassword": "{{password}}"
+}
+
+### Update username
+PATCH {{baseUrl}}/users/me/username
+Content-Type: application/json
+Authorization: Bearer {{jwt}}
+
+{
+  "newUsername": "newtestuser",
+  "currentPassword": "{{password}}"
+}
+
+### Update password
+PATCH {{baseUrl}}/users/me/password
+Content-Type: application/json
+Authorization: Bearer {{jwt}}
+
+{
+  "currentPassword": "{{password}}",
+  "newPassword": "{{newPassword}}"
+}
+
+### Update password - wrong current password
+PATCH {{baseUrl}}/users/me/password
+Content-Type: application/json
+Authorization: Bearer {{jwt}}
+
+{
+  "currentPassword": "WrongPassword123!",
+  "newPassword": "Password1234!"
+}

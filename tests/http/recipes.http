@@ -1,0 +1,222 @@
+# ============================================
+# Recipes
+# ============================================
+
+@baseUrl = http://localhost:3000
+@jwt = PASTE_JWT_HERE
+@recipeId = 1
+@recipeSlug = cake-marbre-maison
+
+### Published recipes - public
+GET {{baseUrl}}/recipes
+
+### Published recipes - with optional auth, includes isFavorite for current user
+GET {{baseUrl}}/recipes
+Authorization: Bearer {{jwt}}
+
+### Published recipe detail by slug
+GET {{baseUrl}}/recipes/{{recipeSlug}}
+Authorization: Bearer {{jwt}}
+
+# Expected response includes:
+# {
+#   "commentsCount": 4,
+#   "averageRating": 4.5,
+#   "ratingsCount": 2,
+#   "comments": [
+#     {
+#       "id": 1,
+#       "isModerated": false,
+#       "isDeleted": false,
+#       "username": "alice",
+#       "parentCommentId": null,
+#       "moderatedAt": null,
+#       "moderatedByUsername": null,
+#       "rating": 5,
+#       "comment": "Super recette, facile à suivre.",
+#       "createdAt": "2026-05-10T10:00:00.000Z",
+#       "updatedAt": "2026-05-10T10:00:00.000Z",
+#       "children": [
+#         {
+#           "id": 2,
+#           "isModerated": false,
+#           "isDeleted": false,
+#           "username": "bob",
+#           "parentCommentId": 1,
+#           "moderatedAt": null,
+#           "moderatedByUsername": null,
+#           "rating": null,
+#           "comment": "Merci pour l'astuce.",
+#           "createdAt": "2026-05-10T10:05:00.000Z",
+#           "updatedAt": "2026-05-10T10:05:00.000Z",
+#           "children": []
+#         },
+#         {
+#           "id": 3,
+#           "isModerated": false,
+#           "isDeleted": true,
+#           "username": "charlie",
+#           "parentCommentId": 1,
+#           "moderatedAt": null,
+#           "moderatedByUsername": null,
+#           "rating": null,
+#           "comment": "Commentaire supprimé par son auteur.",
+#           "createdAt": "2026-05-10T10:10:00.000Z",
+#           "updatedAt": "2026-05-10T10:12:00.000Z",
+#           "children": []
+#         },
+#         {
+#           "id": 4,
+#           "isModerated": true,
+#           "isDeleted": false,
+#           "username": "diane",
+#           "parentCommentId": 1,
+#           "moderatedAt": "2026-05-10T10:20:00.000Z",
+#           "moderatedByUsername": "admin",
+#           "rating": null,
+#           "comment": "Ce commentaire a été masqué par la modération.",
+#           "createdAt": "2026-05-10T10:15:00.000Z",
+#           "updatedAt": "2026-05-10T10:20:00.000Z",
+#           "children": []
+#         }
+#       ]
+#     }
+#   ]
+# }
+
+### My recipes
+GET {{baseUrl}}/recipes/me
+Authorization: Bearer {{jwt}}
+
+### Create recipe draft - minimal
+POST {{baseUrl}}/recipes
+Content-Type: application/json
+Authorization: Bearer {{jwt}}
+
+{
+  "title": "Tarte aux pommes"
+}
+
+### Create recipe draft - full body
+POST {{baseUrl}}/recipes
+Content-Type: application/json
+Authorization: Bearer {{jwt}}
+
+{
+  "title": "Cake marbre maison",
+  "categoryId": 2,
+  "description": "Version brouillon pour test HTTP",
+  "coverImageUrl": null,
+  "prepTimeMinutes": 15,
+  "restTimeMinutes": null,
+  "cookTimeMinutes": 45,
+  "servings": 6,
+  "tagIds": [1, 2],
+  "ingredients": [
+    {
+      "ingredientId": 18,
+      "quantity": 200,
+      "unit": "g",
+      "note": "Tamisee"
+    },
+    {
+      "ingredientId": 103,
+      "quantity": 3,
+      "unit": "piece"
+    }
+  ],
+  "steps": [
+    {
+      "description": "Prechauffer le four a 180 degres."
+    },
+    {
+      "description": "Melanger les ingredients puis verser dans un moule."
+    }
+  ],
+  "equipments": [
+    {
+      "equipmentId": 1
+    },
+    {
+      "equipmentId": 2
+    }
+  ]
+}
+
+### Create recipe draft - missing auth
+POST {{baseUrl}}/recipes
+Content-Type: application/json
+
+{
+  "title": "Soupe du soir"
+}
+
+### Create recipe draft - missing title
+POST {{baseUrl}}/recipes
+Content-Type: application/json
+Authorization: Bearer {{jwt}}
+
+{
+  "description": "Pas de titre"
+}
+
+### Create recipe draft - title too short
+POST {{baseUrl}}/recipes
+Content-Type: application/json
+Authorization: Bearer {{jwt}}
+
+{
+  "title": "Cake"
+}
+
+### Create recipe draft - invalid servings type
+POST {{baseUrl}}/recipes
+Content-Type: application/json
+Authorization: Bearer {{jwt}}
+
+{
+  "title": "Cake au citron",
+  "servings": "6"
+}
+
+### Get my recipe by id
+GET {{baseUrl}}/recipes/me/{{recipeId}}
+Authorization: Bearer {{jwt}}
+
+### Update recipe draft
+PATCH {{baseUrl}}/recipes/me/{{recipeId}}
+Content-Type: application/json
+Authorization: Bearer {{jwt}}
+
+{
+  "title": "Cake marbre maison v2",
+  "description": "Version mise a jour pour test HTTP",
+  "ingredients": [
+    {
+      "ingredientId": 18,
+      "quantity": 250,
+      "unit": "g"
+    }
+  ],
+  "steps": [
+    {
+      "description": "Prechauffer le four."
+    },
+    {
+      "description": "Cuire pendant 45 minutes."
+    }
+  ],
+  "equipments": [
+    {
+      "equipmentId": 1
+    }
+  ]
+}
+
+### Submit recipe draft
+POST {{baseUrl}}/recipes/me/{{recipeId}}/submit
+Authorization: Bearer {{jwt}}
+
+### Archive my recipe
+POST {{baseUrl}}/recipes/me/{{recipeId}}/archive
+Authorization: Bearer {{jwt}}

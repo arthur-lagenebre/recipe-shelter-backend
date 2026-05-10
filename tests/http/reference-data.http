@@ -1,0 +1,42 @@
+# ============================================
+# Reference data
+# ============================================
+
+@baseUrl = http://localhost:3000
+@jwt = PASTE_JWT_HERE
+@categoryId = 1
+@equipmentId = 1
+@ingredientId = 1
+@tagId = 1
+
+### Categories
+GET {{baseUrl}}/categories
+Authorization: Bearer {{jwt}}
+
+### Category by id
+GET {{baseUrl}}/categories/{{categoryId}}
+Authorization: Bearer {{jwt}}
+
+### Equipments
+GET {{baseUrl}}/equipments
+Authorization: Bearer {{jwt}}
+
+### Equipment by id
+GET {{baseUrl}}/equipments/{{equipmentId}}
+Authorization: Bearer {{jwt}}
+
+### Ingredients
+GET {{baseUrl}}/ingredients
+Authorization: Bearer {{jwt}}
+
+### Ingredient by id
+GET {{baseUrl}}/ingredients/{{ingredientId}}
+Authorization: Bearer {{jwt}}
+
+### Tags
+GET {{baseUrl}}/tags
+Authorization: Bearer {{jwt}}
+
+### Tag by id
+GET {{baseUrl}}/tags/{{tagId}}
+Authorization: Bearer {{jwt}}

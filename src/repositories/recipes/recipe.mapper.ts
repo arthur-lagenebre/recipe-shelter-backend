@@ -1,4 +1,4 @@
-import type { Recipe, RecipeDetail, RecipeDetailEquipment, RecipeDetailIngredient, RecipeDetailIngredientRow, RecipeDetailStep, RecipeDetailStepRow, RecipeDetailTag, RecipeDetailTagRow, RecipeDetailEquipmentRow, RecipeIngredient, RecipeIngredientRow, RecipeListItem, RecipeListItemRow, RecipeRow, RecipeStep, RecipeStepRow, RecipeSummary, RecipeEquipment, RecipeEquipmentRow } from './recipe.types.js';
+import type { Recipe, RecipeDetail, RecipeDetailComment, RecipeDetailCommentRow, RecipeDetailEquipment, RecipeDetailIngredient, RecipeDetailIngredientRow, RecipeDetailStep, RecipeDetailStepRow, RecipeDetailTag, RecipeDetailTagRow, RecipeDetailEquipmentRow, RecipeIngredient, RecipeIngredientRow, RecipeListItem, RecipeListItemRow, RecipeRow, RecipeStep, RecipeStepRow, RecipeSummary, RecipeEquipment, RecipeEquipmentRow } from './recipe.types.js';
 
 export function mapRecipe(row: RecipeRow): Recipe {
     return {
@@ -103,7 +103,11 @@ export function mapRecipeDetail(row: RecipeListItemRow): RecipeDetail {
         ingredients: [],
         steps: [],
         equipments: [],
-        tags: []
+        tags: [],
+        comments: [],
+        commentsCount: 0,
+        averageRating: null,
+        ratingsCount: 0
     };
 }
 
@@ -140,4 +144,52 @@ export function mapRecipeDetailTag(row: RecipeDetailTagRow): RecipeDetailTag {
         name: row.Name,
         slug: row.Slug
     };
+}
+
+export function mapRecipeDetailComment(row: RecipeDetailCommentRow): RecipeDetailComment {
+    return {
+        id: row.Id,
+        isModerated: row.ModeratedAt !== null,
+        isDeleted: row.DeletedAt !== null,
+        username: row.Username,
+        parentCommentId: row.ParentCommentId,
+        moderatedAt: row.ModeratedAt,
+        moderatedByUsername: row.ModeratedByUsername,
+        rating: row.Rating,
+        comment: mapRecipeDetailCommentText(row),
+        createdAt: row.CreatedAt,
+        updatedAt: row.UpdatedAt,
+        children: []
+    };
+}
+
+export function mapRecipeDetailComments(rows: RecipeDetailCommentRow[]): RecipeDetailComment[] {
+    const commentsById = new Map<number, RecipeDetailComment>();
+    const rootComments: RecipeDetailComment[] = [];
+
+    for (const row of rows)
+        commentsById.set(row.Id, mapRecipeDetailComment(row));
+
+    for (const comment of commentsById.values()) {
+        if (comment.parentCommentId === null) {
+            rootComments.push(comment);
+            continue;
+        }
+
+        const parent = commentsById.get(comment.parentCommentId);
+        if (parent)
+            parent.children.push(comment);
+    }
+
+    return rootComments;
+}
+
+function mapRecipeDetailCommentText(row: RecipeDetailCommentRow): string {
+    if (row.DeletedAt !== null)
+        return 'Commentaire supprimé par son auteur.';
+
+    if (row.ModeratedAt !== null)
+        return 'Ce commentaire a été masqué par la modération.';
+
+    return row.Comment;
 }

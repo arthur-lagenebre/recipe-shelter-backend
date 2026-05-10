@@ -116,6 +116,10 @@ export interface RecipeDetail extends RecipeListItem {
     steps: RecipeDetailStep[];
     equipments: RecipeDetailEquipment[];
     tags: RecipeDetailTag[];
+    comments: RecipeDetailComment[];
+    commentsCount: number;
+    averageRating: number | null;
+    ratingsCount: number;
 }
 
 export type RecipeDetailIngredient = {
@@ -145,6 +149,21 @@ export type RecipeDetailTag = {
     slug: string;
 };
 
+export type RecipeDetailComment = {
+    id: number;
+    isModerated: boolean;
+    isDeleted: boolean;
+    username: string;
+    parentCommentId: number | null;
+    moderatedAt: Date | null;
+    moderatedByUsername: string | null;
+    rating: number | null;
+    comment: string;
+    createdAt: Date;
+    updatedAt: Date;
+    children: RecipeDetailComment[];
+};
+
 export type RecipeRow = RowDataPacket & {
     Id: number;
     UserId: number;
@@ -166,6 +185,12 @@ export type RecipeRow = RowDataPacket & {
     ArchivedAt: Date | null;
     RejectionReason: string | null;
     UpdatedAt: Date;
+};
+
+export type RecipeDetailCommentStatsRow = RowDataPacket & {
+    CommentsCount: number | string;
+    AverageRating: number | string | null;
+    RatingsCount: number | string;
 };
 
 export type RecipeIngredientRow = RowDataPacket & {
@@ -229,4 +254,17 @@ export type RecipeDetailTagRow = RowDataPacket & {
     Id: number;
     Name: string;
     Slug: string;
+};
+
+export type RecipeDetailCommentRow = RowDataPacket & {
+    Id: number;
+    Username: string;
+    ParentCommentId: number | null;
+    ModeratedAt: Date | null;
+    ModeratedByUsername: string | null;
+    DeletedAt: Date | null;
+    Rating: number | null;
+    Comment: string;
+    CreatedAt: Date;
+    UpdatedAt: Date;
 };

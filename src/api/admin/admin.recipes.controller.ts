@@ -1,4 +1,4 @@
-import { parseRejectRecipeBody } from './admin-recipes.dto.js';
+import { parseRejectRecipeBody } from './admin.recipes.dto.js';
 import { asyncHandler } from '../http/async-handler.js';
 import { parseRecipeIdParam } from '../recipes/recipes.dto.js';
 

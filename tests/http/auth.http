@@ -1,0 +1,68 @@
+# ============================================
+# Auth
+# ============================================
+
+@baseUrl = http://localhost:3000
+@mail = test@example.com
+@username = testuser
+@password = Password123!
+@newPassword = NewPassword123!
+@resetToken = PASTE_RESET_TOKEN_HERE
+@jwt = PASTE_JWT_HERE
+
+### Register
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "mail": "{{mail}}",
+  "username": "{{username}}",
+  "password": "{{password}}"
+}
+
+### Login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "mail": "{{mail}}",
+  "password": "{{password}}"
+}
+
+### Auth me
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{jwt}}
+
+### Forgot password
+POST {{baseUrl}}/auth/forgot-password
+Content-Type: application/json
+
+{
+  "mail": "{{mail}}"
+}
+
+### Forgot password - missing email
+POST {{baseUrl}}/auth/forgot-password
+Content-Type: application/json
+
+{
+  "mail": ""
+}
+
+### Reset password
+POST {{baseUrl}}/auth/reset-password
+Content-Type: application/json
+
+{
+  "token": "{{resetToken}}",
+  "password": "{{newPassword}}"
+}
+
+### Reset password - weak password
+POST {{baseUrl}}/auth/reset-password
+Content-Type: application/json
+
+{
+  "token": "{{resetToken}}",
+  "password": "123"
+}

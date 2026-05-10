@@ -1,8 +1,8 @@
-import { mapRecipe, mapRecipeDetail, mapRecipeDetailIngredient, mapRecipeDetailStep, mapRecipeDetailTag, mapRecipeDetailEquipment, mapRecipeIngredient, mapRecipeListItem, mapRecipeStep, mapRecipeSummary, mapRecipeEquipment } from './recipe.mapper.js';
+import { mapRecipe, mapRecipeDetail, mapRecipeDetailComments, mapRecipeDetailIngredient, mapRecipeDetailStep, mapRecipeDetailTag, mapRecipeDetailEquipment, mapRecipeIngredient, mapRecipeListItem, mapRecipeStep, mapRecipeSummary, mapRecipeEquipment } from './recipe.mapper.js';
 import { firstOrNull } from '../../utils/array.js';
 
 import type { RecipeRepository } from "./recipe.repository.interface.js";
-import type { Recipe, RecipeDetail, RecipeDetailIngredientRow, RecipeDetailStepRow, RecipeDetailTagRow, RecipeDetailEquipmentRow, RecipeIngredientRow, RecipeInput, RecipeListItem, RecipeListItemRow, RecipeRow, RecipeStepRow, RecipeSummary, RecipeTagRow, RecipeEquipmentRow, UpdateRecipeInput } from "./recipe.types.js";
+import type { Recipe, RecipeDetail, RecipeDetailCommentRow, RecipeDetailCommentStatsRow, RecipeDetailIngredientRow, RecipeDetailStepRow, RecipeDetailTagRow, RecipeDetailEquipmentRow, RecipeIngredientRow, RecipeInput, RecipeListItem, RecipeListItemRow, RecipeRow, RecipeStepRow, RecipeSummary, RecipeTagRow, RecipeEquipmentRow, UpdateRecipeInput } from "./recipe.types.js";
 import type { ResultSetHeader } from 'mysql2';
 import type { Pool, PoolConnection } from 'mysql2/promise';
 
@@ -221,17 +221,23 @@ export class RecipeRepositoryMysql implements RecipeRepository {
             return null;
 
         const recipe = mapRecipeDetail(row);
-        const [ingredientRows, stepRows, equipmentRows, tagRows] = await Promise.all([
+        const [ingredientRows, stepRows, equipmentRows, tagRows, commentRows, commentStats] = await Promise.all([
             this.findDetailIngredientsByRecipeId(recipe.id),
             this.findDetailStepsByRecipeId(recipe.id),
             this.findDetailEquipmentsByRecipeId(recipe.id),
-            this.findDetailTagIdsByRecipeId(recipe.id)
+            this.findDetailTagIdsByRecipeId(recipe.id),
+            this.findDetailCommentsByRecipeId(recipe.id),
+            this.findDetailCommentStatsByRecipeId(recipe.id)
         ]);
 
         recipe.ingredients = ingredientRows.map(mapRecipeDetailIngredient);
         recipe.steps = stepRows.map(mapRecipeDetailStep);
         recipe.equipments = equipmentRows.map(mapRecipeDetailEquipment);
         recipe.tags = tagRows.map(mapRecipeDetailTag);
+        recipe.comments = mapRecipeDetailComments(commentRows);
+        recipe.commentsCount = Number(commentStats.CommentsCount);
+        recipe.averageRating = commentStats.AverageRating === null ? null : Number(commentStats.AverageRating);
+        recipe.ratingsCount = Number(commentStats.RatingsCount);
 
         return recipe;
     }
@@ -460,5 +466,36 @@ export class RecipeRepositoryMysql implements RecipeRepository {
         );
 
         return rows as RecipeDetailTagRow[];
+    }
+
+    private async findDetailCommentsByRecipeId(recipeId: number): Promise<RecipeDetailCommentRow[]> {
+        const [rows] = await this.db.execute(
+            `SELECT c.Id, u.Username, c.ParentCommentId, c.ModeratedAt, moderator.Username AS ModeratedByUsername, c.DeletedAt, c.Rating, c.Comment, c.CreatedAt, c.UpdatedAt
+             FROM Comments AS c
+             INNER JOIN Users AS u ON u.Id = c.UserId
+             LEFT JOIN Users AS moderator ON moderator.Id = c.ModeratedByUserId
+             WHERE c.RecipeId = ?
+             ORDER BY COALESCE(c.ParentCommentId, c.Id), c.ParentCommentId IS NOT NULL, c.CreatedAt`,
+            [recipeId]
+        );
+
+        return rows as RecipeDetailCommentRow[];
+    }
+
+    private async findDetailCommentStatsByRecipeId(recipeId: number): Promise<RecipeDetailCommentStatsRow> {
+        const [rows] = await this.db.execute(
+            `SELECT COUNT(*) AS CommentsCount,
+                    AVG(CASE WHEN DeletedAt IS NULL AND ModeratedAt IS NULL AND Rating IS NOT NULL THEN Rating END) AS AverageRating,
+                    COUNT(CASE WHEN DeletedAt IS NULL AND ModeratedAt IS NULL AND Rating IS NOT NULL THEN 1 END) AS RatingsCount
+             FROM Comments
+             WHERE RecipeId = ?`,
+            [recipeId]
+        );
+
+        const row = firstOrNull(rows as RecipeDetailCommentStatsRow[]);
+        if (!row)
+            return { CommentsCount: 0, AverageRating: null, RatingsCount: 0 } as RecipeDetailCommentStatsRow;
+
+        return row;
     }
 }

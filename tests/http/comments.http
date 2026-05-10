@@ -1,0 +1,250 @@
+# ============================================
+# Comments
+# ============================================
+
+@baseUrl = http://localhost:3000
+@jwt = PASTE_JWT_HERE
+@recipeId = 1
+@commentId = 1
+@parentCommentId = 1
+@recipeSlug = cake-marbre-maison
+
+### Recipe comments - public
+GET {{baseUrl}}/recipes/{{recipeId}}/comments
+
+# Expected response shape:
+# [
+#   {
+#     "id": 1,
+#     "recipeId": 1,
+#     "userId": 10,
+#     "parentCommentId": null,
+#     "moderatedAt": null,
+#     "moderatedByUserId": null,
+#     "deletedAt": null,
+#     "deletedByUserId": null,
+#     "rating": 5,
+#     "comment": "Super recette, facile à suivre.",
+#     "createdAt": "2026-05-10T10:00:00.000Z",
+#     "updatedAt": "2026-05-10T10:00:00.000Z",
+#     "children": [
+#       {
+#         "id": 2,
+#         "recipeId": 1,
+#         "userId": 11,
+#         "parentCommentId": 1,
+#         "moderatedAt": null,
+#         "moderatedByUserId": null,
+#         "deletedAt": "2026-05-10T10:12:00.000Z",
+#         "deletedByUserId": 11,
+#         "rating": null,
+#         "comment": "Commentaire supprimé par son auteur.",
+#         "createdAt": "2026-05-10T10:05:00.000Z",
+#         "updatedAt": "2026-05-10T10:12:00.000Z",
+#         "children": []
+#       },
+#       {
+#         "id": 3,
+#         "recipeId": 1,
+#         "userId": 12,
+#         "parentCommentId": 1,
+#         "moderatedAt": "2026-05-10T10:20:00.000Z",
+#         "moderatedByUserId": 1,
+#         "deletedAt": null,
+#         "deletedByUserId": null,
+#         "rating": null,
+#         "comment": "Ce commentaire a été masqué par la modération.",
+#         "createdAt": "2026-05-10T10:15:00.000Z",
+#         "updatedAt": "2026-05-10T10:20:00.000Z",
+#         "children": []
+#       }
+#     ]
+#   }
+# ]
+
+### Published recipe detail with comment tree - public
+GET {{baseUrl}}/recipes/{{recipeSlug}}
+
+# Expected comments shape in recipe detail:
+# {
+#   "commentsCount": 4,
+#   "averageRating": 4.5,
+#   "ratingsCount": 2,
+#   "comments": [
+#     {
+#       "id": 1,
+#       "isModerated": false,
+#       "isDeleted": false,
+#       "username": "alice",
+#       "parentCommentId": null,
+#       "moderatedAt": null,
+#       "moderatedByUsername": null,
+#       "rating": 5,
+#       "comment": "Super recette, facile à suivre.",
+#       "createdAt": "2026-05-10T10:00:00.000Z",
+#       "updatedAt": "2026-05-10T10:00:00.000Z",
+#       "children": [
+#         {
+#           "id": 2,
+#           "isModerated": false,
+#           "isDeleted": false,
+#           "username": "bob",
+#           "parentCommentId": 1,
+#           "moderatedAt": null,
+#           "moderatedByUsername": null,
+#           "rating": null,
+#           "comment": "Merci pour l'astuce.",
+#           "createdAt": "2026-05-10T10:05:00.000Z",
+#           "updatedAt": "2026-05-10T10:05:00.000Z",
+#           "children": []
+#         },
+#         {
+#           "id": 3,
+#           "isModerated": false,
+#           "isDeleted": true,
+#           "username": "charlie",
+#           "parentCommentId": 1,
+#           "moderatedAt": null,
+#           "moderatedByUsername": null,
+#           "rating": null,
+#           "comment": "Commentaire supprimé par son auteur.",
+#           "createdAt": "2026-05-10T10:10:00.000Z",
+#           "updatedAt": "2026-05-10T10:12:00.000Z",
+#           "children": []
+#         },
+#         {
+#           "id": 4,
+#           "isModerated": true,
+#           "isDeleted": false,
+#           "username": "diane",
+#           "parentCommentId": 1,
+#           "moderatedAt": "2026-05-10T10:20:00.000Z",
+#           "moderatedByUsername": "admin",
+#           "rating": null,
+#           "comment": "Ce commentaire a été masqué par la modération.",
+#           "createdAt": "2026-05-10T10:15:00.000Z",
+#           "updatedAt": "2026-05-10T10:20:00.000Z",
+#           "children": []
+#         }
+#       ]
+#     }
+#   ]
+# }
+
+### Recipe comments - bad recipe id
+GET {{baseUrl}}/recipes/abc/comments
+
+### Create root comment with rating
+POST {{baseUrl}}/recipes/{{recipeId}}/comments
+Content-Type: application/json
+Authorization: Bearer {{jwt}}
+
+{
+  "rating": 5,
+  "comment": "Super recette, facile a suivre."
+}
+
+### Create reply without rating
+POST {{baseUrl}}/recipes/{{recipeId}}/comments
+Content-Type: application/json
+Authorization: Bearer {{jwt}}
+
+{
+  "parentCommentId": {{parentCommentId}},
+  "comment": "Merci pour l'astuce."
+}
+
+### Create comment - missing auth
+POST {{baseUrl}}/recipes/{{recipeId}}/comments
+Content-Type: application/json
+
+{
+  "rating": 4,
+  "comment": "Je teste sans token."
+}
+
+### Create comment - missing comment
+POST {{baseUrl}}/recipes/{{recipeId}}/comments
+Content-Type: application/json
+Authorization: Bearer {{jwt}}
+
+{
+  "rating": 5
+}
+
+### Create comment - invalid rating
+POST {{baseUrl}}/recipes/{{recipeId}}/comments
+Content-Type: application/json
+Authorization: Bearer {{jwt}}
+
+{
+  "rating": 6,
+  "comment": "Note invalide."
+}
+
+### Create reply - rating not allowed
+POST {{baseUrl}}/recipes/{{recipeId}}/comments
+Content-Type: application/json
+Authorization: Bearer {{jwt}}
+
+{
+  "parentCommentId": {{parentCommentId}},
+  "rating": 4,
+  "comment": "Une reponse ne peut pas noter la recette."
+}
+
+### Create nested reply - not allowed
+POST {{baseUrl}}/recipes/{{recipeId}}/comments
+Content-Type: application/json
+Authorization: Bearer {{jwt}}
+
+{
+  "parentCommentId": {{parentCommentId}},
+  "comment": "Une reponse a une reponse doit etre refusee."
+}
+
+### Update my comment
+PATCH {{baseUrl}}/comments/{{commentId}}
+Content-Type: application/json
+Authorization: Bearer {{jwt}}
+
+{
+  "rating": 4,
+  "comment": "Commentaire mis a jour."
+}
+
+### Update my comment - remove rating
+PATCH {{baseUrl}}/comments/{{commentId}}
+Content-Type: application/json
+Authorization: Bearer {{jwt}}
+
+{
+  "rating": null,
+  "comment": "Commentaire mis a jour sans note."
+}
+
+### Update comment - bad comment id
+PATCH {{baseUrl}}/comments/abc
+Content-Type: application/json
+Authorization: Bearer {{jwt}}
+
+{
+  "rating": 4,
+  "comment": "Identifiant invalide."
+}
+
+### Update comment - missing auth
+PATCH {{baseUrl}}/comments/{{commentId}}
+Content-Type: application/json
+
+{
+  "rating": 4,
+  "comment": "Je teste sans token."
+}
+
+### Delete my comment - soft delete
+DELETE {{baseUrl}}/comments/{{commentId}}
+Authorization: Bearer {{jwt}}
+
+### Delete comment - missing auth
+DELETE {{baseUrl}}/comments/{{commentId}}

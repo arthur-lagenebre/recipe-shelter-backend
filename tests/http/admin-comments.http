@@ -1,0 +1,59 @@
+# ============================================
+# Admin comments
+# ============================================
+
+@baseUrl = http://localhost:3000
+@adminJwt = PASTE_ADMIN_JWT_HERE
+@commentId = 1
+
+### Moderated comments
+GET {{baseUrl}}/admin/comments/moderated
+Authorization: Bearer {{adminJwt}}
+
+### Moderated comments count
+GET {{baseUrl}}/admin/comments/moderated/count
+Authorization: Bearer {{adminJwt}}
+
+### Soft deleted comments
+GET {{baseUrl}}/admin/comments/soft-deleted
+Authorization: Bearer {{adminJwt}}
+
+### Soft deleted comments count
+GET {{baseUrl}}/admin/comments/soft-deleted/count
+Authorization: Bearer {{adminJwt}}
+
+### Hide comment as admin
+POST {{baseUrl}}/admin/comments/{{commentId}}/hide
+Authorization: Bearer {{adminJwt}}
+
+### Remove moderation from comment as admin
+POST {{baseUrl}}/admin/comments/{{commentId}}/unmoderate
+Authorization: Bearer {{adminJwt}}
+
+### Restore soft deleted comment as admin
+POST {{baseUrl}}/admin/comments/{{commentId}}/restore
+Authorization: Bearer {{adminJwt}}
+
+### Update comment as admin
+PATCH {{baseUrl}}/admin/comments/{{commentId}}
+Content-Type: application/json
+Authorization: Bearer {{adminJwt}}
+
+{
+  "rating": null,
+  "comment": "Commentaire modifie par un administrateur."
+}
+
+### Update comment as admin - invalid rating
+PATCH {{baseUrl}}/admin/comments/{{commentId}}
+Content-Type: application/json
+Authorization: Bearer {{adminJwt}}
+
+{
+  "rating": 6,
+  "comment": "Note invalide."
+}
+
+### Delete comment as admin - hard delete
+DELETE {{baseUrl}}/admin/comments/{{commentId}}
+Authorization: Bearer {{adminJwt}}
