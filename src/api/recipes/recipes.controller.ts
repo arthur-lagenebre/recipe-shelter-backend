@@ -1,4 +1,4 @@
-import { parseCreateRecipeBody, parseRecipeSlugParam, parseRecipeIdParam, parseUpdateRecipeBody } from './recipes.dto.js';
+import { parseCreateRecipeBody, parseRecipeSlugParam, parseRecipeIdParam, parseRecipeSearchQuery, parseUpdateRecipeBody } from './recipes.dto.js';
 import { asyncHandler } from '../http/async-handler.js';
 
 import type { RecipeService } from '../../services/recipes/recipes.services.js';
@@ -32,6 +32,13 @@ export function createRecipesController(recipeService: RecipeService) {
 
         getRecipes: asyncHandler(async (req, res) => {
             const result = await recipeService.getPublished(req.auth?.userId ?? null);
+
+            res.status(200).json(result);
+        }),
+
+        searchRecipes: asyncHandler(async (req, res) => {
+            const filters = parseRecipeSearchQuery(req.query);
+            const result = await recipeService.searchPublished(req.auth?.userId ?? null, filters);
 
             res.status(200).json(result);
         }),

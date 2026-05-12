@@ -3,7 +3,7 @@ import { forbidden, notFound } from '../../utils/errors.js';
 import type { RecipeSlugService } from "./recipe-slug.service.js";
 import type { AuthContext } from "../../api/auth/auth.types.js";
 import type { RecipeRepository } from "../../repositories/recipes/recipe.repository.interface.js";
-import type { Recipe, RecipeDetail, RecipeIngredientInput, RecipeInput, RecipeListItem, RecipeStepInput, RecipeSummary, RecipeEquipmentInput, UpdateRecipeInput } from "../../repositories/recipes/recipe.types.js";
+import type { Recipe, RecipeDetail, RecipeIngredientInput, RecipeInput, RecipeListItem, RecipeStepInput, RecipeSummary, RecipeEquipmentInput, RecipeSearchFilters, UpdateRecipeInput } from "../../repositories/recipes/recipe.types.js";
 
 type RecipeContentInput = {
     categoryId?: number | null;
@@ -70,6 +70,10 @@ export class RecipeService {
 
     async getPublished(userId: number | null): Promise<RecipeListItem[]> {
         return await this.recipeRepository.findPublished(userId);
+    }
+
+    async searchPublished(userId: number | null, filters: RecipeSearchFilters): Promise<RecipeListItem[]> {
+        return await this.recipeRepository.searchPublished(userId, filters);
     }
 
     async getBySlug(userId: number | null, slug: string): Promise<RecipeDetail | null> {

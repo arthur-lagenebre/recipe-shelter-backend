@@ -34,6 +34,13 @@ export type RecipeInput = {
     equipments?: RecipeEquipmentInput[];
 };
 
+export type RecipeSearchFilters = {
+    q?: string;
+    categoryId?: number;
+    tagIds?: number[];
+    maxTotalTimeMinutes?: number;
+};
+
 export type UpdateRecipeInput = RecipeInput & {
     id: number;
 };

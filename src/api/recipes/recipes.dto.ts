@@ -2,6 +2,7 @@ import { badRequest } from '../../utils/errors.js';
 import { getOptionalArray, getOptionalNullableNumber, getOptionalNullableString, getOptionalNumber, getOptionalString, getRequiredNumber, getRequiredPositiveInteger, getRequiredString, isRecord } from '../http/dto.helpers.js';
 
 import type { RecipeIngredientInput, RecipeStepInput, RecipeEquipmentInput } from '../../repositories/recipes/recipe.types.js';
+import type { RecipeSearchFilters } from '../../repositories/recipes/recipe.types.js';
 
 export type RecipeBody = {
     categoryId?: number | null;
@@ -20,6 +21,8 @@ export type RecipeBody = {
 
 export type CreateRecipeBody = RecipeBody;
 export type UpdateRecipeBody = RecipeBody;
+
+export type RecipeSearchQuery = RecipeSearchFilters;
 
 function parseIngredient(item: unknown, index: number): RecipeIngredientInput {
     if (!isRecord(item))
@@ -109,4 +112,64 @@ export function parseRecipeSlugParam(value: unknown): string {
         throw badRequest('Recipe slug is required', 'RECIPES_BAD_SLUG');
 
     return slug;
+}
+
+function parsePositiveIntegerQueryValue(value: unknown, message: string, code: string): number {
+    if (typeof value !== 'string')
+        throw badRequest(message, code);
+
+    const parsedValue = Number(value);
+    if (!Number.isInteger(parsedValue) || parsedValue <= 0)
+        throw badRequest(message, code);
+
+    return parsedValue;
+}
+
+function parseTagIdsQueryValue(value: unknown): number[] {
+    if (typeof value !== 'string')
+        throw badRequest('Tag ids must be a comma-separated list of positive integers', 'RECIPES_SEARCH_BAD_TAGS');
+
+    const tagIds: number[] = [];
+
+    const parts = value.split(',').map((part) => part.trim()).filter(Boolean);
+    for (const part of parts) {
+        const tagId = Number(part);
+        if (!Number.isInteger(tagId) || tagId <= 0)
+            throw badRequest('Tag ids must be a comma-separated list of positive integers', 'RECIPES_SEARCH_BAD_TAGS');
+
+        if (!tagIds.includes(tagId))
+            tagIds.push(tagId);
+    }
+
+    return tagIds;
+}
+
+export function parseRecipeSearchQuery(query: unknown): RecipeSearchQuery {
+    if (!isRecord(query))
+        throw badRequest('Invalid query', 'RECIPES_SEARCH_BAD_QUERY');
+
+    const filters: RecipeSearchQuery = {};
+
+    if (query.q !== undefined) {
+        if (typeof query.q !== 'string')
+            throw badRequest('Search query must be a string', 'RECIPES_SEARCH_BAD_Q');
+
+        const q = query.q.trim();
+        if (q)
+            filters.q = q;
+    }
+
+    if (query.categoryId !== undefined)
+        filters.categoryId = parsePositiveIntegerQueryValue(query.categoryId, 'Category id must be a positive integer', 'RECIPES_SEARCH_BAD_CATEGORY');
+
+    if (query.tagIds !== undefined) {
+        const tagIds = parseTagIdsQueryValue(query.tagIds);
+        if (tagIds.length)
+            filters.tagIds = tagIds;
+    }
+
+    if (query.maxTotalTimeMinutes !== undefined)
+        filters.maxTotalTimeMinutes = parsePositiveIntegerQueryValue(query.maxTotalTimeMinutes, 'Total time must be a positive integer', 'RECIPES_SEARCH_BAD_TOTAL_TIME');
+
+    return filters;
 }

@@ -8,6 +8,7 @@ type RecipesController = {
   getMyRecipes: RequestHandler;
   createRecipe: RequestHandler;
   getRecipes: RequestHandler;
+  searchRecipes: RequestHandler;
   getRecipe: RequestHandler;
   getRecipeBySlug: RequestHandler;
   updateRecipe: RequestHandler;
@@ -21,6 +22,7 @@ export function createRecipesRouter(controller: RecipesController) {
   router.get('/me', requireAuth, controller.getMyRecipes);
   router.post('/', requireAuth, controller.createRecipe);
   router.get('/', optionalAuth, controller.getRecipes);
+  router.get('/search', optionalAuth, controller.searchRecipes);
   router.get('/:slug', optionalAuth, controller.getRecipeBySlug)
   router.get('/me/:id', requireAuth, controller.getRecipe)
   router.patch('/me/:id', requireAuth, controller.updateRecipe);

@@ -2,7 +2,7 @@ import { mapRecipe, mapRecipeDetail, mapRecipeDetailComments, mapRecipeDetailIng
 import { firstOrNull } from '../../utils/array.js';
 
 import type { RecipeRepository } from "./recipe.repository.interface.js";
-import type { Recipe, RecipeDetail, RecipeDetailCommentRow, RecipeDetailCommentStatsRow, RecipeDetailIngredientRow, RecipeDetailStepRow, RecipeDetailTagRow, RecipeDetailEquipmentRow, RecipeIngredientRow, RecipeInput, RecipeListItem, RecipeListItemRow, RecipeRow, RecipeStepRow, RecipeSummary, RecipeTagRow, RecipeEquipmentRow, UpdateRecipeInput } from "./recipe.types.js";
+import type { Recipe, RecipeDetail, RecipeDetailCommentRow, RecipeDetailCommentStatsRow, RecipeDetailIngredientRow, RecipeDetailStepRow, RecipeDetailTagRow, RecipeDetailEquipmentRow, RecipeIngredientRow, RecipeInput, RecipeListItem, RecipeListItemRow, RecipeRow, RecipeStepRow, RecipeSummary, RecipeTagRow, RecipeEquipmentRow, RecipeSearchFilters, UpdateRecipeInput } from "./recipe.types.js";
 import type { ResultSetHeader } from 'mysql2';
 import type { Pool, PoolConnection } from 'mysql2/promise';
 
@@ -199,6 +199,51 @@ export class RecipeRepositoryMysql implements RecipeRepository {
              LEFT JOIN Favorites AS f ON f.RecipeId = r.Id AND f.UserId = ?
              WHERE r.Status = 'published'`,
             [userId, userId]
+        );
+
+        return (rows as RecipeListItemRow[]).map(mapRecipeListItem);
+    }
+
+    async searchPublished(userId: number | null, filters: RecipeSearchFilters): Promise<RecipeListItem[]> {
+        const whereClauses = [`r.Status = 'published'`];
+        const params: Array<string | number | null> = [userId, userId];
+
+        if (filters.q) {
+            whereClauses.push('r.Title LIKE ?');
+            params.push(`%${filters.q}%`);
+        }
+
+        if (filters.categoryId !== undefined) {
+            whereClauses.push('r.CategoryId = ?');
+            params.push(filters.categoryId);
+        }
+
+        if (filters.tagIds?.length) {
+            const placeholders = filters.tagIds.map(() => '?').join(', ');
+            whereClauses.push(`r.Id IN (
+                SELECT rt.RecipeId
+                FROM RecipeTags AS rt
+                WHERE rt.TagId IN (${placeholders})
+                GROUP BY rt.RecipeId
+                HAVING COUNT(DISTINCT rt.TagId) = ?
+            )`);
+            params.push(...filters.tagIds, filters.tagIds.length);
+        }
+
+        if (filters.maxTotalTimeMinutes !== undefined) {
+            whereClauses.push('(r.PrepTimeMinutes + COALESCE(r.RestTimeMinutes, 0) + COALESCE(r.CookTimeMinutes, 0)) <= ?');
+            params.push(filters.maxTotalTimeMinutes);
+        }
+
+        const [rows] = await this.db.execute(
+            `SELECT r.Id, r.Title, r.Slug, r.Description, r.RecipeCoverImage, rc.Name AS Category, r.PrepTimeMinutes, r.RestTimeMinutes, r.CookTimeMinutes, r.Servings, u.UserName AS AuthorUsername, r.PublishedAt,
+                    CASE WHEN ? IS NULL THEN FALSE ELSE f.UserId IS NOT NULL END AS IsFavorite
+             FROM Recipes AS r
+             INNER JOIN RecipeCategories AS rc ON rc.Id = r.CategoryId
+             INNER JOIN Users AS u ON u.Id = r.UserId
+             LEFT JOIN Favorites AS f ON f.RecipeId = r.Id AND f.UserId = ?
+             WHERE ${whereClauses.join(' AND ')}`,
+            params
         );
 
         return (rows as RecipeListItemRow[]).map(mapRecipeListItem);

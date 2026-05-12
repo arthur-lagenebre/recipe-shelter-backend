@@ -10,6 +10,24 @@
 ### Published recipes - public
 GET {{baseUrl}}/recipes
 
+### Published recipes - search by title
+GET {{baseUrl}}/recipes/search?q=porc
+
+### Published recipes - filter by category
+GET {{baseUrl}}/recipes/search?categoryId=3
+
+### Published recipes - search by title and category
+GET {{baseUrl}}/recipes/search?q=porc&categoryId=3
+
+### Published recipes - filter by tags
+GET {{baseUrl}}/recipes/search?tagIds=1,2
+
+### Published recipes - filter by max total time
+GET {{baseUrl}}/recipes/search?maxTotalTimeMinutes=45
+
+### Published recipes - search with all filters
+GET {{baseUrl}}/recipes/search?q=porc&categoryId=3&tagIds=1,2&maxTotalTimeMinutes=60
+
 ### Published recipes - with optional auth, includes isFavorite for current user
 GET {{baseUrl}}/recipes
 Authorization: Bearer {{jwt}}
