@@ -101,30 +101,16 @@ CREATE TABLE Recipes (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------- Ingredient catalogue ----------
-CREATE TABLE IngredientCategories (
-  Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  Name VARCHAR(100) NOT NULL,
-  Slug VARCHAR(100) NOT NULL,
-  PRIMARY KEY (Id),
-  UNIQUE KEY ingredient_categories_name_UK (Name),
-  UNIQUE KEY ingredient_categories_slug_UK (Slug)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 CREATE TABLE Ingredients (
   Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   Name VARCHAR(255) NOT NULL,
   Slug VARCHAR(255) NOT NULL,
-  CategoryId BIGINT UNSIGNED NOT NULL,
   PRIMARY KEY (Id),
   UNIQUE KEY ingredients_name_UK (Name),
-  UNIQUE KEY ingredients_slug_UK (Slug),
-  KEY idx_ingredients_category_id (CategoryId),
-  CONSTRAINT ingredients_category_FK
-    FOREIGN KEY (CategoryId) REFERENCES IngredientCategories(Id)
-    ON UPDATE CASCADE
-    ON DELETE RESTRICT
+  UNIQUE KEY ingredients_slug_UK (Slug)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ---------- Equipment catalogue ----------
 CREATE TABLE Equipments (
   Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   Name VARCHAR(255) NOT NULL,
@@ -134,6 +120,7 @@ CREATE TABLE Equipments (
   UNIQUE KEY equipments_slug_UK (Slug)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ---------- Tag catalogue ----------
 CREATE TABLE Tags (
   Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   Name VARCHAR(255) NOT NULL,

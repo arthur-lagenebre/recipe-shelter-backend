@@ -2,10 +2,8 @@ import type { Ingredient, IngredientRow } from "./ingredient.types.js";
 
 export function mapIngredient(row: IngredientRow): Ingredient {
     return {
-        id: row.id,
-        name: row.name,
-        slug: row.slug,
-        categoryId: row.categoryId,
-        category: row.category
+        id: row.Id,
+        name: row.Name,
+        slug: row.Slug
     };
 }
