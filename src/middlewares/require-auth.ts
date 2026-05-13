@@ -4,8 +4,19 @@ import { env } from '../utils/env.js';
 import { unauthorized } from '../utils/errors.js';
 
 import type { AuthContext } from '../api/auth/auth.types.js';
+import type { User } from '../repositories/users/user.types.js';
 import type { AuthTokenPayload } from '../services/auth/auth.service.js';
 import type { NextFunction, Request, Response } from 'express';
+
+type AuthUserRepository = {
+  findById(id: number): Promise<User | null>;
+};
+
+let authUserRepository: AuthUserRepository | null = null;
+
+export function configureAuthUserRepository(repository: AuthUserRepository): void {
+  authUserRepository = repository;
+}
 
 function parseAuthPayload(payload: unknown): AuthContext | null {
   if (!payload || typeof payload !== 'object')
@@ -23,7 +34,19 @@ function parseAuthPayload(payload: unknown): AuthContext | null {
   return { userId, username, roleId };
 }
 
-export function requireAuth(req: Request, _res: Response, next: NextFunction) {
+async function resolveActiveAuth(auth: AuthContext): Promise<AuthContext | null> {
+  if (!authUserRepository)
+    return auth;
+
+  const user = await authUserRepository.findById(auth.userId);
+
+  if (!user || user.status !== 'active')
+    return null;
+
+  return { userId: user.id, username: user.username, roleId: user.roleId };
+}
+
+export async function requireAuth(req: Request, _res: Response, next: NextFunction) {
   const header = req.headers.authorization;
 
   if (!header || !header.startsWith('Bearer '))
@@ -38,14 +61,19 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction) {
     if (!auth)
       return next(unauthorized('Invalid token payload', 'AUTH_BAD_TOKEN'));
 
-    req.auth = auth;
+    const activeAuth = await resolveActiveAuth(auth);
+
+    if (!activeAuth)
+      return next(unauthorized('Invalid or expired token', 'AUTH_BAD_TOKEN'));
+
+    req.auth = activeAuth;
     return next();
   } catch {
     return next(unauthorized('Invalid or expired token', 'AUTH_BAD_TOKEN'));
   }
 }
 
-export function optionalAuth(req: Request, _res: Response, next: NextFunction) {
+export async function optionalAuth(req: Request, _res: Response, next: NextFunction) {
   const header = req.headers.authorization;
 
   if (!header)
@@ -66,7 +94,12 @@ export function optionalAuth(req: Request, _res: Response, next: NextFunction) {
     if (!auth)
       return next();
 
-    req.auth = auth;
+    const activeAuth = await resolveActiveAuth(auth);
+
+    if (!activeAuth)
+      return next();
+
+    req.auth = activeAuth;
     return next();
   } catch {
     return next();

@@ -43,7 +43,7 @@ class FakeCommentRepository implements CommentRepository {
         return { ...baseComment, ...input };
     }
 
-    async findById(_id: number): Promise<Comment | null> {
+    async findById(): Promise<Comment | null> {
         return this.comment;
     }
 
@@ -53,7 +53,7 @@ class FakeCommentRepository implements CommentRepository {
         return this.comment?.userId === userId;
     }
 
-    async findByRecipeId(_recipeid: number): Promise<Comment[]> {
+    async findByRecipeId(): Promise<Comment[]> {
         return this.comment ? [this.comment] : [];
     }
 }

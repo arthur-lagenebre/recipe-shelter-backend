@@ -2,7 +2,8 @@ import { mapUser, mapUserWithPassword } from './user.mappers.js';
 import { firstOrNull } from '../../utils/array.js';
 
 import type { UserRepository } from './user.repository.interface.js';
-import type { CreateUserInput, ExistsRow, RoleRow, User, UserRow, UserWithPassword } from './user.types.js';
+import type { CreateUserInput, ExistsRow, RoleRow, User, UserRow, UserWithPassword, UserWithPasswordRow } from './user.types.js';
+import type { ResultSetHeader } from 'mysql2';
 import type { Pool } from 'mysql2/promise';
 
 export class UserRepositoryMysql implements UserRepository {
@@ -10,7 +11,7 @@ export class UserRepositoryMysql implements UserRepository {
 
     async findById(id: number): Promise<User | null> {
         const [rows] = await this.db.execute(
-            `SELECT Id, Mail, Username, RoleId, CreatedAt, UpdatedAt
+            `SELECT Id, Mail, Username, RoleId, Status, EmailValidatedAt, BannedByUserId, BannedReason, BannedAt, CreatedAt, UpdatedAt
              FROM Users
              WHERE Id = ?`,
             [id]
@@ -22,7 +23,7 @@ export class UserRepositoryMysql implements UserRepository {
 
     async findByEmail(mail: string): Promise<User | null> {
         const [rows] = await this.db.execute(
-            `SELECT Id, Mail, Username, RoleId, CreatedAt, UpdatedAt
+            `SELECT Id, Mail, Username, RoleId, Status, EmailValidatedAt, BannedByUserId, BannedReason, BannedAt, CreatedAt, UpdatedAt
              FROM Users
              WHERE Mail = ?`,
             [mail]
@@ -34,19 +35,19 @@ export class UserRepositoryMysql implements UserRepository {
 
     async findAuthByEmail(mail: string): Promise<UserWithPassword | null> {
         const [rows] = await this.db.execute(
-            `SELECT Id, Mail, Username, Password, RoleId, CreatedAt, UpdatedAt
+            `SELECT Id, Mail, Username, Password, RoleId, Status, EmailValidatedAt, BannedByUserId, BannedReason, BannedAt, CreatedAt, UpdatedAt
              FROM Users
              WHERE Mail = ?`,
             [mail]
         );
 
-        const row = firstOrNull(rows as UserRow[]);
+        const row = firstOrNull(rows as UserWithPasswordRow[]);
         return row ? mapUserWithPassword(row) : null;
     }
 
     async findByUsername(username: string): Promise<User | null> {
         const [rows] = await this.db.execute(
-            `SELECT Id, Mail, Username, RoleId, CreatedAt, UpdatedAt
+            `SELECT Id, Mail, Username, RoleId, Status, EmailValidatedAt, BannedByUserId, BannedReason, BannedAt, CreatedAt, UpdatedAt
              FROM Users
              WHERE Username = ?`,
             [username]
@@ -58,13 +59,13 @@ export class UserRepositoryMysql implements UserRepository {
 
     async findWithPasswordById(id: number): Promise<UserWithPassword | null> {
         const [rows] = await this.db.execute(
-            `SELECT Id, Mail, Username, Password, RoleId, CreatedAt, UpdatedAt
+            `SELECT Id, Mail, Username, Password, RoleId, Status, EmailValidatedAt, BannedByUserId, BannedReason, BannedAt, CreatedAt, UpdatedAt
              FROM Users
              WHERE Id = ?`,
             [id]
         );
 
-        const row = firstOrNull(rows as UserRow[]);
+        const row = firstOrNull(rows as UserWithPasswordRow[]);
         return row ? mapUserWithPassword(row) : null;
     }
 
@@ -116,9 +117,9 @@ export class UserRepositoryMysql implements UserRepository {
 
     async create(input: CreateUserInput): Promise<User> {
         const [result] = await this.db.execute(
-            `INSERT INTO Users (Mail, Username, Password, RoleId)
-             VALUES (?, ?, ?, ?)`,
-            [input.mail, input.username, input.passwordHash, input.roleId]
+            `INSERT INTO Users (Mail, Username, Password, RoleId, Status)
+             VALUES (?, ?, ?, ?, ?)`,
+            [input.mail, input.username, input.passwordHash, input.roleId, input.status ?? 'inactive']
         );
 
         const insertId = Number((result as { insertId: number }).insertId);
@@ -128,6 +129,48 @@ export class UserRepositoryMysql implements UserRepository {
             throw new Error('User created but cannot be reloaded');
 
         return created;
+    }
+
+    async markEmailValidated(userId: number): Promise<boolean> {
+        const [result] = await this.db.execute<ResultSetHeader>(
+            `UPDATE Users
+             SET Status = 'active', EmailValidatedAt = CURRENT_TIMESTAMP
+             WHERE Id = ?`,
+            [userId]
+        );
+
+        return result.affectedRows > 0;
+    }
+
+    async ban(userId: number, bannedByUserId: number, reason: string): Promise<boolean> {
+        const [result] = await this.db.execute<ResultSetHeader>(
+            `UPDATE Users
+             SET Status = 'banned',
+                 BannedByUserId = ?,
+                 BannedReason = ?,
+                 BannedAt = CURRENT_TIMESTAMP
+             WHERE Id = ?`,
+            [bannedByUserId, reason, userId]
+        );
+
+        return result.affectedRows > 0;
+    }
+
+    async unban(userId: number): Promise<boolean> {
+        const [result] = await this.db.execute<ResultSetHeader>(
+            `UPDATE Users
+             SET Status = CASE
+                    WHEN EmailValidatedAt IS NULL THEN 'inactive'
+                    ELSE 'active'
+                 END,
+                 BannedByUserId = NULL,
+                 BannedReason = NULL,
+                 BannedAt = NULL
+             WHERE Id = ?`,
+            [userId]
+        );
+
+        return result.affectedRows > 0;
     }
 
     async updatePassword(userId: number, passwordHash: string): Promise<void> {

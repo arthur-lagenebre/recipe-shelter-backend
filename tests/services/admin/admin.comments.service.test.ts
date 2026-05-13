@@ -55,11 +55,12 @@ class FakeAdminCommentRepository implements AdminCommentRepository {
         return this.comment ? 1 : 0;
     }
 
-    async findByIdForAdmin(_id: number): Promise<AdminComment | null> {
+    async findByIdForAdmin(): Promise<AdminComment | null> {
         return this.comment;
     }
 
-    async hide(_id: number, moderatedByUserId: number): Promise<boolean> {
+    async hide(id: number, moderatedByUserId: number): Promise<boolean> {
+        void id;
         this.moderatedByUserId = moderatedByUserId;
 
         return this.hideResult;

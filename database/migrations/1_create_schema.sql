@@ -18,16 +18,43 @@ CREATE TABLE Users (
   Username VARCHAR(64) NOT NULL,
   Password VARCHAR(255) NOT NULL,
   RoleId BIGINT UNSIGNED NOT NULL,
+  Status ENUM('inactive', 'active', 'banned') NOT NULL DEFAULT 'inactive',
+  EmailValidatedAt DATETIME NULL,
+  BannedByUserId BIGINT UNSIGNED NULL,
+  BannedReason TEXT NULL,
+  BannedAt DATETIME NULL,
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (Id),
   UNIQUE KEY users_mail_UK (Mail),
   UNIQUE KEY users_username_UK (Username),
   KEY idx_users_role_id (RoleId),
+  KEY idx_users_status (Status),
+  KEY idx_users_banned_by_user_id (BannedByUserId),
   CONSTRAINT users_role_FK
     FOREIGN KEY (RoleId) REFERENCES Roles(Id)
     ON UPDATE CASCADE
-    ON DELETE RESTRICT
+    ON DELETE RESTRICT,
+  CONSTRAINT users_banned_by_user_FK
+    FOREIGN KEY (BannedByUserId) REFERENCES Users(Id)
+    ON UPDATE CASCADE
+    ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE EmailValidations (
+  Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  UserId BIGINT UNSIGNED NOT NULL,
+  TokenHash CHAR(64) NOT NULL,
+  ExpiresAt DATETIME NOT NULL,
+  UsedAt DATETIME NULL,
+  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (Id),
+  UNIQUE KEY email_validations_tokenhash_UK (TokenHash),
+  KEY idx_email_validations_user_id (UserId),
+  CONSTRAINT email_validations_user_FK
+    FOREIGN KEY (UserId) REFERENCES Users(Id)
+    ON UPDATE CASCADE
+    ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE PasswordResets (

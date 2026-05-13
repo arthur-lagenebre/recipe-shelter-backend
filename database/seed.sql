@@ -12,17 +12,21 @@ ON DUPLICATE KEY UPDATE Name = VALUES(Name);
 
 -- ---------- Admin user ----------
 -- Password: REPLACE_WITH_REAL_HASH (pbkdf2/scrypt/etc) ou bcrypt si tu décides
-INSERT INTO Users (Mail, Username, Password, RoleId)
+INSERT INTO Users (Mail, Username, Password, RoleId, Status, EmailValidatedAt)
 VALUES (
   'admin@recipe-shelter.fr',
   'admin',
   '$2b$12$zrX5iMCRel.f0GtuWfc2J.w8rq7bSuNnFnpd6.ODVPEGhgZlygfBW',
-  (SELECT Id FROM Roles WHERE Name = 'admin')
+  (SELECT Id FROM Roles WHERE Name = 'admin'),
+  'active',
+  CURRENT_TIMESTAMP
 )
 ON DUPLICATE KEY UPDATE
   Username = VALUES(Username),
   Password = VALUES(Password),
-  RoleId = VALUES(RoleId);
+  RoleId = VALUES(RoleId),
+  Status = VALUES(Status),
+  EmailValidatedAt = COALESCE(EmailValidatedAt, VALUES(EmailValidatedAt));
 
 
 -- ---------- Ingredients (base) ----------

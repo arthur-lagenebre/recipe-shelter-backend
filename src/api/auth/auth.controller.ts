@@ -1,11 +1,12 @@
-import { parseLoginBody, parseRegisterBody } from './auth.dto.js';
+import { parseLoginBody, parseRegisterBody, parseResendValidationEmailBody, parseResetPasswordBody, parseValidateEmailBody } from './auth.dto.js';
 import { asyncHandler } from '../http/async-handler.js';
 
 import type { AuthService } from '../../services/auth/auth.service.js';
+import type { EmailValidationService } from '../../services/auth/email-validation.service.js';
 import type { PasswordResetService } from '../../services/auth/password-reset.service.js';
 import type { Handler } from '../http/http.types.js';
 
-export function createAuthController(authService: AuthService, passwordResetService: PasswordResetService) {
+export function createAuthController(authService: AuthService, passwordResetService: PasswordResetService, emailValidationService: EmailValidationService) {
   const register = asyncHandler(async (req, res) => {
     const input = parseRegisterBody(req.body);
     const result = await authService.register(input);
@@ -45,17 +46,10 @@ export function createAuthController(authService: AuthService, passwordResetServ
   });
 
   const resetPassword: Handler = asyncHandler(async (req, res, next) => {
-    const token = typeof req.body?.token === 'string' ? req.body.token : '';
-    const password = typeof req.body?.password === 'string' ? req.body.password : '';
-
-    if (!token.trim()) {
-      res.status(400).json({ error: { message: 'Token is required', code: 'AUTH_RESET_PASSWORD_MISSING_TOKEN' } });
-
-      return;
-    }
+    const input = parseResetPasswordBody(req.body);
 
     try {
-      await passwordResetService.resetPassword(token, password);
+      await passwordResetService.resetPassword(input.token, input.password);
 
       res.status(200).json({ ok: true, message: 'Password has been reset successfully.' });
     } catch (err) {
@@ -77,5 +71,20 @@ export function createAuthController(authService: AuthService, passwordResetServ
     }
   });
 
-  return { register, login, me, forgotPassword, resetPassword };
+  const validateEmail: Handler = asyncHandler(async (req, res) => {
+    const input = parseValidateEmailBody(req.body);
+    const user = await emailValidationService.validateEmail(input.token);
+
+    res.status(200).json({ ok: true, message: 'Email has been validated successfully.', user });
+  });
+
+  const resendValidationEmail: Handler = asyncHandler(async (req, res) => {
+    const input = parseResendValidationEmailBody(req.body);
+
+    await emailValidationService.resendValidationEmail(input.mail);
+
+    res.status(200).json({ ok: true, message: 'If an inactive account exists for this email, a validation link has been sent.' });
+  });
+
+  return { register, login, me, forgotPassword, resetPassword, validateEmail, resendValidationEmail };
 }

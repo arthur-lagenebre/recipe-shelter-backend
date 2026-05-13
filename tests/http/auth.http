@@ -8,6 +8,7 @@
 @password = Password123!
 @newPassword = NewPassword123!
 @resetToken = PASTE_RESET_TOKEN_HERE
+@validationToken = PASTE_VALIDATION_TOKEN_HERE
 @jwt = PASTE_JWT_HERE
 
 ### Register
@@ -27,6 +28,22 @@ Content-Type: application/json
 {
   "mail": "{{mail}}",
   "password": "{{password}}"
+}
+
+### Validate email
+POST {{baseUrl}}/auth/validate-email
+Content-Type: application/json
+
+{
+  "token": "{{validationToken}}"
+}
+
+### Resend validation email
+POST {{baseUrl}}/auth/resend-validation-email
+Content-Type: application/json
+
+{
+  "mail": "{{mail}}"
 }
 
 ### Auth me

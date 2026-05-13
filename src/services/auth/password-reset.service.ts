@@ -19,6 +19,8 @@ type UserRepository = {
     updatePassword(userId: number, passwordHash: string): Promise<void>;
 };
 
+const PASSWORD_RESET_TTL_MINUTES = 30;
+
 export class PasswordResetService {
     constructor(private readonly users: UserRepository, private readonly resets: PasswordResetRepository, private readonly mailer: Mailer, private readonly appBaseUrl: string) { }
 
@@ -36,9 +38,7 @@ export class PasswordResetService {
 
         const token = generateResetToken();
         const tokenHash = hashResetToken(token);
-        const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
-
-        await this.resets.create({ userId: user.id, tokenHash, expiresAt });
+        await this.resets.create({ userId: user.id, tokenHash, expiresInMinutes: PASSWORD_RESET_TTL_MINUTES });
 
         const resetUrl = `${this.appBaseUrl}/reset-password?token=${encodeURIComponent(token)}`;
 
@@ -46,14 +46,16 @@ export class PasswordResetService {
     }
 
     async resetPassword(token: string, newPassword: string): Promise<void> {
-        if (!token.trim())
+        const normalizedToken = token.trim();
+
+        if (!normalizedToken)
             throw new Error('Reset token is required');
 
         const passwordError = validatePassword(newPassword);
         if (passwordError)
             throw new Error(passwordError);
 
-        const tokenHash = hashResetToken(token);
+        const tokenHash = hashResetToken(normalizedToken);
         const reset = await this.resets.findValidByTokenHash(tokenHash);
 
         if (!reset)

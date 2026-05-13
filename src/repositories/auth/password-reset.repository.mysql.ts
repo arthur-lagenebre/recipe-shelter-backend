@@ -16,8 +16,8 @@ export class PasswordResetRepositoryMysql implements PasswordResetRepository {
     async create(input: PasswordResetCreateInput): Promise<void> {
         await this.pool.query(
             `INSERT INTO PasswordResets (UserId, TokenHash, ExpiresAt)
-            VALUES (?, ?, ?)`,
-            [input.userId, input.tokenHash, input.expiresAt]
+            VALUES (?, ?, DATE_ADD(NOW(), INTERVAL ? MINUTE))`,
+            [input.userId, input.tokenHash, input.expiresInMinutes]
         );
     }
 

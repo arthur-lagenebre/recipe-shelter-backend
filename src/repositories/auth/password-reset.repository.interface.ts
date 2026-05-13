@@ -1,7 +1,7 @@
 export type PasswordResetCreateInput = {
     userId: number;
     tokenHash: string;
-    expiresAt: Date;
+    expiresInMinutes: number;
 };
 
 export type PasswordResetRecord = {

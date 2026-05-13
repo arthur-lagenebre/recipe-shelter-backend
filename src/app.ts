@@ -5,6 +5,8 @@ import { createAdminCommentsController } from './api/admin/admin.comments.contro
 import { createAdminCommentsRouter } from './api/admin/admin.comments.routes.js';
 import { createAdminRecipesController } from './api/admin/admin.recipes.controller.js';
 import { createAdminRecipesRouter } from './api/admin/admin.recipes.routes.js';
+import { createAdminUsersController } from './api/admin/admin.users.controller.js';
+import { createAdminUsersRouter } from './api/admin/admin.users.routes.js';
 import { createAuthController } from './api/auth/auth.controller.js';
 import { createAuthRouter } from './api/auth/auth.routes.js';
 import { createCategoryController } from './api/category/category.controller.js';
@@ -28,8 +30,11 @@ import { createUsersRouter } from './api/users/users.routes.js';
 import { pool } from './db/pool.js';
 import { errorHandler } from './middlewares/error-handler.js';
 import { notFound } from './middlewares/not-found.js';
+import { configureAuthUserRepository } from './middlewares/require-auth.js';
 import { AdminCommentRepositoryMysql } from './repositories/admin/admin.comments.repository.mysql.js';
 import { AdminRecipeRepositoryMysql } from './repositories/admin/admin.recipe.repository.mysql.js';
+import { AdminUserRepositoryMysql } from './repositories/admin/admin.users.repository.mysql.js';
+import { EmailValidationRepositoryMysql } from './repositories/auth/email-validation.repository.mysql.js';
 import { PasswordResetRepositoryMysql } from './repositories/auth/password-reset.repository.mysql.js';
 import { CategoryRepositoryMysql } from './repositories/category/category.repository.mysql.js';
 import { CommentRepositoryMysql } from './repositories/comments/comments.repository.mysql.js';
@@ -41,7 +46,9 @@ import { TagRepositoryMysql } from './repositories/tag/tag.repository.mysql.js';
 import { UserRepositoryMysql } from './repositories/users/user.repository.mysql.js';
 import { AdminCommentService } from './services/admin/admin.comments.services.js';
 import { AdminRecipeService } from './services/admin/admin.recipes.services.js';
+import { AdminUserService } from './services/admin/admin.users.service.js';
 import { AuthService } from './services/auth/auth.service.js';
+import { EmailValidationService } from './services/auth/email-validation.service.js';
 import { PasswordResetService } from './services/auth/password-reset.service.js';
 import { CategoryService } from './services/category/category.service.js';
 import { CommentService } from './services/comments/comments.service.js';
@@ -67,19 +74,25 @@ export function createApp() {
 
   const adminCommentRepository = new AdminCommentRepositoryMysql(pool);
   const adminRecipeRepository = new AdminRecipeRepositoryMysql(pool);
+  const adminUserRepository = new AdminUserRepositoryMysql(pool);
   const categoryRepository = new CategoryRepositoryMysql(pool);
   const commentRepository = new CommentRepositoryMysql(pool);
   const equipmentRepository = new EquipmentRepositoryMysql(pool);
   const favoriteRepository = new FavoriteRepositoryMysql(pool);
   const ingredientRepository = new IngredientRepositoryMysql(pool);
+  const emailValidationRepository = new EmailValidationRepositoryMysql(pool);
   const passwordResetRepository = new PasswordResetRepositoryMysql(pool);
   const recipeRepository = new RecipeRepositoryMysql(pool);
   const tagRepository = new TagRepositoryMysql(pool);
   const userRepository = new UserRepositoryMysql(pool);
 
+  configureAuthUserRepository(userRepository);
+
   const adminCommentService = new AdminCommentService(adminCommentRepository);
   const adminRecipeService = new AdminRecipeService(recipeRepository, adminRecipeRepository);
-  const authService = new AuthService(userRepository);
+  const adminUserService = new AdminUserService(userRepository, adminUserRepository);
+  const emailValidationService = new EmailValidationService(userRepository, emailValidationRepository, mailer, env.http.frontendBaseUrl);
+  const authService = new AuthService(userRepository, emailValidationService);
   const categoryService = new CategoryService(categoryRepository);
   const commentService = new CommentService(commentRepository);
   const equipmentService = new EquipmentService(equipmentRepository);
@@ -93,7 +106,8 @@ export function createApp() {
 
   const adminCommentsController = createAdminCommentsController(adminCommentService);
   const adminRecipesController = createAdminRecipesController(adminRecipeService);
-  const authController = createAuthController(authService, passwordResetService);
+  const adminUsersController = createAdminUsersController(adminUserService);
+  const authController = createAuthController(authService, passwordResetService, emailValidationService);
   const categoryController = createCategoryController(categoryService);
   const commentsController = createCommentsController(commentService);
   const equipmentsController = createEquipmentsController(equipmentService);
@@ -105,6 +119,7 @@ export function createApp() {
 
   app.use('/admin/comments', createAdminCommentsRouter(adminCommentsController));
   app.use('/admin/recipes', createAdminRecipesRouter(adminRecipesController));
+  app.use('/admin/users', createAdminUsersRouter(adminUsersController));
   app.use('/auth', createAuthRouter(authController));
   app.use('/categories', createCategoryRouter(categoryController));
   app.use('/comments', createCommentsRouter(commentsController));
