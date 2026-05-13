@@ -6,8 +6,8 @@ import type { CategoryService } from '../../services/category/category.service.j
 export function createCategoryController(categoryService: CategoryService) {
     return {
         getCategories: asyncHandler(async (req, res) => {
-            const equipments = await categoryService.getCategories();
-            res.status(200).json(equipments);
+            const categories = await categoryService.getCategories();
+            res.status(200).json(categories);
         }),
 
         getCategory: asyncHandler(async (req, res) => {

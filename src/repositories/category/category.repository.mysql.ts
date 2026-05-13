@@ -11,7 +11,7 @@ export class CategoryRepositoryMysql implements CategoryRepository {
 
     async findAll(): Promise<Category[]> {
         const [rows] = await this.db.execute(
-            `SELECT Id, Name, Slug, CreatedAt, UpdatedAt
+            `SELECT Id, Name, Slug, IconName, CreatedAt, UpdatedAt
              FROM RecipeCategories`);
 
         return (rows as CategoryRow[]).map(mapCategory);
@@ -19,9 +19,9 @@ export class CategoryRepositoryMysql implements CategoryRepository {
 
     async findById(id: number): Promise<Category | null> {
         const [rows] = await this.db.execute(
-            `SELECT Id, Name, Slug, CreatedAt, UpdatedAt
+            `SELECT Id, Name, Slug, IconName, CreatedAt, UpdatedAt
              FROM RecipeCategories
-             WHERE i.Id = ?`,
+             WHERE Id = ?`,
             [id]
         );
 
