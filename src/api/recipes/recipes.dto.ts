@@ -125,23 +125,31 @@ function parsePositiveIntegerQueryValue(value: unknown, message: string, code: s
     return parsedValue;
 }
 
-function parseTagIdsQueryValue(value: unknown): number[] {
+function parseCommaSeparatedPositiveIntegerQueryValue(value: unknown, message: string, code: string): number[] {
     if (typeof value !== 'string')
-        throw badRequest('Tag ids must be a comma-separated list of positive integers', 'RECIPES_SEARCH_BAD_TAGS');
+        throw badRequest(message, code);
 
-    const tagIds: number[] = [];
+    const values: number[] = [];
 
     const parts = value.split(',').map((part) => part.trim()).filter(Boolean);
     for (const part of parts) {
-        const tagId = Number(part);
-        if (!Number.isInteger(tagId) || tagId <= 0)
-            throw badRequest('Tag ids must be a comma-separated list of positive integers', 'RECIPES_SEARCH_BAD_TAGS');
+        const parsedValue = Number(part);
+        if (!Number.isInteger(parsedValue) || parsedValue <= 0)
+            throw badRequest(message, code);
 
-        if (!tagIds.includes(tagId))
-            tagIds.push(tagId);
+        if (!values.includes(parsedValue))
+            values.push(parsedValue);
     }
 
-    return tagIds;
+    return values;
+}
+
+function parseTagIdsQueryValue(value: unknown): number[] {
+    return parseCommaSeparatedPositiveIntegerQueryValue(value, 'Tag ids must be a comma-separated list of positive integers', 'RECIPES_SEARCH_BAD_TAGS');
+}
+
+function parseIngredientIdsQueryValue(value: unknown): number[] {
+    return parseCommaSeparatedPositiveIntegerQueryValue(value, 'Ingredient ids must be a comma-separated list of positive integers', 'RECIPES_SEARCH_BAD_INGREDIENTS');
 }
 
 export function parseRecipeSearchQuery(query: unknown): RecipeSearchQuery {
@@ -166,6 +174,12 @@ export function parseRecipeSearchQuery(query: unknown): RecipeSearchQuery {
         const tagIds = parseTagIdsQueryValue(query.tagIds);
         if (tagIds.length)
             filters.tagIds = tagIds;
+    }
+
+    if (query.ingredientIds !== undefined) {
+        const ingredientIds = parseIngredientIdsQueryValue(query.ingredientIds);
+        if (ingredientIds.length)
+            filters.ingredientIds = ingredientIds;
     }
 
     if (query.maxTotalTimeMinutes !== undefined)

@@ -22,11 +22,14 @@ GET {{baseUrl}}/recipes/search?q=porc&categoryId=3
 ### Published recipes - filter by tags
 GET {{baseUrl}}/recipes/search?tagIds=1,2
 
+### Published recipes - filter by ingredients
+GET {{baseUrl}}/recipes/search?ingredientIds=18,103
+
 ### Published recipes - filter by max total time
 GET {{baseUrl}}/recipes/search?maxTotalTimeMinutes=45
 
 ### Published recipes - search with all filters
-GET {{baseUrl}}/recipes/search?q=porc&categoryId=3&tagIds=1,2&maxTotalTimeMinutes=60
+GET {{baseUrl}}/recipes/search?q=porc&categoryId=3&tagIds=1,2&ingredientIds=18,103&maxTotalTimeMinutes=60
 
 ### Published recipes - with optional auth, includes isFavorite for current user
 GET {{baseUrl}}/recipes

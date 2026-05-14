@@ -31,15 +31,20 @@ describe('recipes.dto', () => {
         assert.deepEqual(parseRecipeSearchQuery({ tagIds: '1, 2,2' }), { tagIds: [1, 2] });
     });
 
+    it('parses comma-separated ingredient filters', () => {
+        assert.deepEqual(parseRecipeSearchQuery({ ingredientIds: '18, 103,18' }), { ingredientIds: [18, 103] });
+    });
+
     it('parses a max total time filter', () => {
         assert.deepEqual(parseRecipeSearchQuery({ maxTotalTimeMinutes: '45' }), { maxTotalTimeMinutes: 45 });
     });
 
-    it('combines title search, category, tag and total time filters', () => {
-        assert.deepEqual(parseRecipeSearchQuery({ q: 'porc', categoryId: '3', tagIds: '1,2', maxTotalTimeMinutes: '60' }), {
+    it('combines title search, category, tag, ingredient and total time filters', () => {
+        assert.deepEqual(parseRecipeSearchQuery({ q: 'porc', categoryId: '3', tagIds: '1,2', ingredientIds: '18,103', maxTotalTimeMinutes: '60' }), {
             q: 'porc',
             categoryId: 3,
             tagIds: [1, 2],
+            ingredientIds: [18, 103],
             maxTotalTimeMinutes: 60
         });
     });
@@ -71,6 +76,28 @@ describe('recipes.dto', () => {
             () => parseRecipeSearchQuery({ tagIds: ['1', '2'] }),
             (error) => {
                 assertHttpError(error, 'RECIPES_SEARCH_BAD_TAGS', 400);
+
+                return true;
+            }
+        );
+    });
+
+    it('rejects invalid ingredient filters', () => {
+        assert.throws(
+            () => parseRecipeSearchQuery({ ingredientIds: '18,abc' }),
+            (error) => {
+                assertHttpError(error, 'RECIPES_SEARCH_BAD_INGREDIENTS', 400);
+
+                return true;
+            }
+        );
+    });
+
+    it('rejects repeated ingredient filters', () => {
+        assert.throws(
+            () => parseRecipeSearchQuery({ ingredientIds: ['18', '103'] }),
+            (error) => {
+                assertHttpError(error, 'RECIPES_SEARCH_BAD_INGREDIENTS', 400);
 
                 return true;
             }

@@ -38,6 +38,7 @@ export type RecipeSearchFilters = {
     q?: string;
     categoryId?: number;
     tagIds?: number[];
+    ingredientIds?: number[];
     maxTotalTimeMinutes?: number;
 };
 

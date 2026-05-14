@@ -230,6 +230,18 @@ export class RecipeRepositoryMysql implements RecipeRepository {
             params.push(...filters.tagIds, filters.tagIds.length);
         }
 
+        if (filters.ingredientIds?.length) {
+            const placeholders = filters.ingredientIds.map(() => '?').join(', ');
+            whereClauses.push(`r.Id IN (
+                SELECT ri.RecipeId
+                FROM RecipeIngredients AS ri
+                WHERE ri.IngredientId IN (${placeholders})
+                GROUP BY ri.RecipeId
+                HAVING COUNT(DISTINCT ri.IngredientId) = ?
+            )`);
+            params.push(...filters.ingredientIds, filters.ingredientIds.length);
+        }
+
         if (filters.maxTotalTimeMinutes !== undefined) {
             whereClauses.push('(r.PrepTimeMinutes + COALESCE(r.RestTimeMinutes, 0) + COALESCE(r.CookTimeMinutes, 0)) <= ?');
             params.push(filters.maxTotalTimeMinutes);
