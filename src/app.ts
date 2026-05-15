@@ -58,7 +58,6 @@ import { ContactService } from './services/contact/contact.service.js';
 import { EquipmentService } from './services/equipments/equipments.service.js';
 import { FavoriteService } from './services/favorites/favorites.service.js';
 import { IngredientService } from './services/ingredients/ingredients.service.js';
-import { ConsoleMailer } from './services/mail/console.mailer.js';
 import { SmtpMailService } from './services/mail/mail.service.js';
 import { RecipeSlugService } from './services/recipes/recipe-slug.service.js';
 import { RecipeService } from './services/recipes/recipes.services.js';
@@ -74,8 +73,7 @@ export function createApp() {
   app.use(cors({ origin: origins }));
   app.use(express.json());
 
-  const mailer = new ConsoleMailer();
-  const contactMailer = new SmtpMailService(env.smtp);
+  const mailer = new SmtpMailService(env.smtp);
 
   const adminCommentRepository = new AdminCommentRepositoryMysql(pool);
   const adminRecipeRepository = new AdminRecipeRepositoryMysql(pool);
@@ -100,7 +98,7 @@ export function createApp() {
   const authService = new AuthService(userRepository, emailValidationService);
   const categoryService = new CategoryService(categoryRepository);
   const commentService = new CommentService(commentRepository);
-  const contactService = new ContactService(contactMailer);
+  const contactService = new ContactService(mailer);
   const equipmentService = new EquipmentService(equipmentRepository);
   const favoriteService = new FavoriteService(favoriteRepository);
   const ingredientService = new IngredientService(ingredientRepository);

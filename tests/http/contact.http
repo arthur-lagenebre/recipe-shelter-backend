@@ -1,0 +1,39 @@
+# ============================================
+# Contact
+# ============================================
+
+@baseUrl = http://localhost:3000
+@contactEmail = visitor@example.com
+
+### Send contact message
+POST {{baseUrl}}/contact
+Content-Type: application/json
+
+{
+  "name": "Recipe Shelter Visitor",
+  "email": "{{contactEmail}}",
+  "subject": "Question sur Recipe Shelter",
+  "message": "Bonjour, je souhaite obtenir plus d informations sur Recipe Shelter."
+}
+
+### Send contact message - invalid email
+POST {{baseUrl}}/contact
+Content-Type: application/json
+
+{
+  "name": "Recipe Shelter Visitor",
+  "email": "invalid-email",
+  "subject": "Question sur Recipe Shelter",
+  "message": "Bonjour, je teste la validation du formulaire de contact."
+}
+
+### Send contact message - missing fields
+POST {{baseUrl}}/contact
+Content-Type: application/json
+
+{
+  "name": "",
+  "email": "{{contactEmail}}",
+  "subject": "",
+  "message": ""
+}

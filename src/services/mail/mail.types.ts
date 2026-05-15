@@ -27,8 +27,5 @@ export interface Mailer {
     sendPasswordResetEmail(input: PasswordResetMailInput): Promise<void>;
     sendPasswordChangedEmail(input: PasswordChangedMailInput): Promise<void>;
     sendEmailValidationEmail(input: EmailValidationMailInput): Promise<void>;
-}
-
-export interface ContactMailer {
     sendContactEmail(input: ContactMailInput): Promise<void>;
 }
