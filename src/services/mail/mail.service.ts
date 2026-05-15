@@ -63,11 +63,11 @@ export class SmtpMailService implements ContactMailer {
 
   private formatContactMessage(input: ContactMailInput): string {
     return [
-      `Name: ${input.name}`,
-      `Email: ${input.email}`,
-      `Subject: ${input.subject}`,
-      `Sent at: ${input.sentAt.toISOString()}`,
-      'Message:',
+      `Nom     : ${input.name}`,
+      `Email   : ${input.email}`,
+      `Sujet   : ${input.subject}`,
+      `Envoyé  : ${input.sentAt.toLocaleString()}`,
+      'Message :',
       input.message
     ].join('\n');
   }
