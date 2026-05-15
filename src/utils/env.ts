@@ -1,9 +1,27 @@
 import 'dotenv/config';
 
 function readNumber(value: string | undefined, fallback: number): number {
+  if (!value?.trim())
+    return fallback;
+
   const number = Number(value);
 
   return Number.isFinite(number) ? number : fallback;
+}
+
+function readBoolean(value: string | undefined, fallback: boolean): boolean {
+  const normalizedValue = value?.trim().toLowerCase();
+
+  if (!normalizedValue)
+    return fallback;
+
+  if (['1', 'true', 'yes', 'on'].includes(normalizedValue))
+    return true;
+
+  if (['0', 'false', 'no', 'off'].includes(normalizedValue))
+    return false;
+
+  return fallback;
 }
 
 function readString(value: string | undefined, fallback: string): string {
@@ -34,5 +52,15 @@ export const env = {
     bcryptCost: readNumber(process.env.BCRYPT_COST, 12),
     rateLimitMaxAttempts: readNumber(process.env.AUTH_RATE_LIMIT_MAX_ATTEMPTS, 5),
     rateLimitWindowMs: readNumber(process.env.AUTH_RATE_LIMIT_WINDOW_MS, 900000) // 15 minutes
+  },
+
+  smtp: {
+    host: readString(process.env.SMTP_HOST, ''),
+    port: readNumber(process.env.SMTP_PORT, 587),
+    secure: readBoolean(process.env.SMTP_SECURE, false),
+    user: readString(process.env.SMTP_USER, ''),
+    password: readString(process.env.SMTP_PASSWORD, ''),
+    from: readString(process.env.SMTP_FROM, ''),
+    contactRecipientEmail: readString(process.env.CONTACT_RECIPIENT_EMAIL, '')
   }
 };

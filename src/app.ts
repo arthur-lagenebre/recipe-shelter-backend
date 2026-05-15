@@ -13,6 +13,8 @@ import { createCategoryController } from './api/category/category.controller.js'
 import { createCategoryRouter } from './api/category/category.routes.js';
 import { createCommentsController } from './api/comments/comments.controller.js';
 import { createCommentsRouter, createRecipeCommentsRouter } from './api/comments/comments.routes.js';
+import { createContactController } from './api/contact/contact.controller.js';
+import { createContactRouter } from './api/contact/contact.router.js';
 import { createEquipmentsController } from './api/equipments/equipments.controller.js';
 import { createEquipmentsRouter } from './api/equipments/equipments.routes.js';
 import { createFavoritesController } from './api/favorites/favorites.controller.js';
@@ -52,10 +54,12 @@ import { EmailValidationService } from './services/auth/email-validation.service
 import { PasswordResetService } from './services/auth/password-reset.service.js';
 import { CategoryService } from './services/category/category.service.js';
 import { CommentService } from './services/comments/comments.service.js';
+import { ContactService } from './services/contact/contact.service.js';
 import { EquipmentService } from './services/equipments/equipments.service.js';
 import { FavoriteService } from './services/favorites/favorites.service.js';
 import { IngredientService } from './services/ingredients/ingredients.service.js';
 import { ConsoleMailer } from './services/mail/console.mailer.js';
+import { SmtpMailService } from './services/mail/mail.service.js';
 import { RecipeSlugService } from './services/recipes/recipe-slug.service.js';
 import { RecipeService } from './services/recipes/recipes.services.js';
 import { TagService } from './services/tag/tags.service.js';
@@ -71,6 +75,7 @@ export function createApp() {
   app.use(express.json());
 
   const mailer = new ConsoleMailer();
+  const contactMailer = new SmtpMailService(env.smtp);
 
   const adminCommentRepository = new AdminCommentRepositoryMysql(pool);
   const adminRecipeRepository = new AdminRecipeRepositoryMysql(pool);
@@ -95,6 +100,7 @@ export function createApp() {
   const authService = new AuthService(userRepository, emailValidationService);
   const categoryService = new CategoryService(categoryRepository);
   const commentService = new CommentService(commentRepository);
+  const contactService = new ContactService(contactMailer);
   const equipmentService = new EquipmentService(equipmentRepository);
   const favoriteService = new FavoriteService(favoriteRepository);
   const ingredientService = new IngredientService(ingredientRepository);
@@ -110,6 +116,7 @@ export function createApp() {
   const authController = createAuthController(authService, passwordResetService, emailValidationService);
   const categoryController = createCategoryController(categoryService);
   const commentsController = createCommentsController(commentService);
+  const contactController = createContactController(contactService);
   const equipmentsController = createEquipmentsController(equipmentService);
   const favoritesController = createFavoritesController(favoriteService);
   const ingredientsController = createIngredientsController(ingredientService);
@@ -123,6 +130,7 @@ export function createApp() {
   app.use('/auth', createAuthRouter(authController));
   app.use('/categories', createCategoryRouter(categoryController));
   app.use('/comments', createCommentsRouter(commentsController));
+  app.use('/contact', createContactRouter(contactController));
   app.use('/equipments', createEquipmentsRouter(equipmentsController));
   app.use('/favorites', createFavoritesRouter(favoritesController));
   app.use('/health', createHealthRouter(healthController));
