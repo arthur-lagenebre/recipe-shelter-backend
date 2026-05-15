@@ -9,8 +9,7 @@ START TRANSACTION;
 -- =====================================================
 INSERT INTO Roles (Id, Name) VALUES
 (1, 'admin'),
-(2, 'user'),
-(3, 'anonyme')
+(2, 'user')
 AS new_roles
 ON DUPLICATE KEY UPDATE Name = new_roles.Name;
 
@@ -42,8 +41,8 @@ VALUES (
   2,
   'anonyme@recipe-shelter.fr',
   'Anonyme',
-  '$2b$12$REPLACE_WITH_REAL_HASH_FOR_ANONYME_USER',
-  3,
+  '$2b$12$BY86H8oVSASAM7V0RJKO3e10vL7kebIc7jrxNX5TR1cJSlCrDBEq6',
+  2,
   'active',
   CURRENT_TIMESTAMP
 ) AS new_anonyme
