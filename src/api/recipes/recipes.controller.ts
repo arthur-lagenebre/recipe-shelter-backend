@@ -1,4 +1,5 @@
 import { parseCreateRecipeBody, parseRecipeSlugParam, parseRecipeIdParam, parseRecipeSearchQuery, parseUpdateRecipeBody } from './recipes.dto.js';
+import { parsePaginationQuery } from '../../utils/pagination.js';
 import { asyncHandler } from '../http/async-handler.js';
 
 import type { RecipeService } from '../../services/recipes/recipes.services.js';
@@ -12,7 +13,8 @@ export function createRecipesController(recipeService: RecipeService) {
                 return;
             }
 
-            const result = await recipeService.getMine(req.auth.userId);
+            const pagination = parsePaginationQuery(req.query, 10, 'RECIPES_PAGINATION');
+            const result = await recipeService.getMine(req.auth.userId, pagination);
 
             res.status(200).json(result);
         }),
@@ -31,14 +33,17 @@ export function createRecipesController(recipeService: RecipeService) {
         }),
 
         getRecipes: asyncHandler(async (req, res) => {
-            const result = await recipeService.getPublished(req.auth?.userId ?? null);
+            const filters = parseRecipeSearchQuery(req.query);
+            const pagination = parsePaginationQuery(req.query, 12, 'RECIPES_PAGINATION');
+            const result = await recipeService.getPublished(req.auth?.userId ?? null, filters, pagination);
 
             res.status(200).json(result);
         }),
 
         searchRecipes: asyncHandler(async (req, res) => {
             const filters = parseRecipeSearchQuery(req.query);
-            const result = await recipeService.searchPublished(req.auth?.userId ?? null, filters);
+            const pagination = parsePaginationQuery(req.query, 12, 'RECIPES_PAGINATION');
+            const result = await recipeService.searchPublished(req.auth?.userId ?? null, filters, pagination);
 
             res.status(200).json(result);
         }),

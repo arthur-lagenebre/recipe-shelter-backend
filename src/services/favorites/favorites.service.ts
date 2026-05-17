@@ -3,6 +3,7 @@ import { internalError } from '../../utils/errors.js';
 import type { FavoriteRepository } from '../../repositories/favorites/favorites.repository.interface.js';
 import type { Favorite } from '../../repositories/favorites/favorites.types.js';
 import type { RecipeListItem } from '../../repositories/recipes/recipe.types.js';
+import type { PaginatedResult, PaginationOptions } from '../../utils/pagination.js';
 
 export class FavoriteService {
     constructor(private readonly favoriteRepository: FavoriteRepository) { }
@@ -25,7 +26,7 @@ export class FavoriteService {
         return isDeleted;
     }
 
-    async getFavoriteRecipes(userId: number): Promise<RecipeListItem[]> {
-        return this.favoriteRepository.getFavoriteRecipes(userId);
+    async getFavoriteRecipes(userId: number, pagination: PaginationOptions): Promise<PaginatedResult<RecipeListItem>> {
+        return this.favoriteRepository.getFavoriteRecipes(userId, pagination);
     }
 }

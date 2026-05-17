@@ -10,14 +10,20 @@
 ### Published recipes - public
 GET {{baseUrl}}/recipes
 
+### Published recipes - public paginated
+GET {{baseUrl}}/recipes?page=1&limit=12
+
 ### Published recipes - search by title
-GET {{baseUrl}}/recipes/search?q=porc
+GET {{baseUrl}}/recipes?q=porc&page=1&limit=12
 
 ### Published recipes - filter by category
-GET {{baseUrl}}/recipes/search?categoryId=3
+GET {{baseUrl}}/recipes?categoryId=3&page=1&limit=12
 
 ### Published recipes - search by title and category
-GET {{baseUrl}}/recipes/search?q=porc&categoryId=3
+GET {{baseUrl}}/recipes?q=porc&categoryId=3&page=2&limit=12
+
+### Published recipes - legacy search route
+GET {{baseUrl}}/recipes/search?q=porc&categoryId=3&page=1&limit=12
 
 ### Published recipes - filter by tags
 GET {{baseUrl}}/recipes/search?tagIds=1,2
@@ -106,7 +112,7 @@ Authorization: Bearer {{jwt}}
 # }
 
 ### My recipes
-GET {{baseUrl}}/recipes/me
+GET {{baseUrl}}/recipes/me?page=1&limit=10
 Authorization: Bearer {{jwt}}
 
 ### Create recipe draft - minimal

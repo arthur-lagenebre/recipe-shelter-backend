@@ -4,6 +4,7 @@ import type { RecipeSlugService } from "./recipe-slug.service.js";
 import type { AuthContext } from "../../api/auth/auth.types.js";
 import type { RecipeRepository } from "../../repositories/recipes/recipe.repository.interface.js";
 import type { Recipe, RecipeDetail, RecipeIngredientInput, RecipeInput, RecipeListItem, RecipeStepInput, RecipeSummary, RecipeEquipmentInput, RecipeSearchFilters, UpdateRecipeInput } from "../../repositories/recipes/recipe.types.js";
+import type { PaginatedResult, PaginationOptions } from "../../utils/pagination.js";
 
 type RecipeContentInput = {
     categoryId?: number | null;
@@ -23,8 +24,8 @@ type RecipeContentInput = {
 export class RecipeService {
     constructor(private readonly recipeRepository: RecipeRepository, private readonly recipeSlugService: RecipeSlugService) { }
 
-    async getMine(userId: number): Promise<RecipeSummary[]> {
-        return this.recipeRepository.findByUserId(userId);
+    async getMine(userId: number, pagination: PaginationOptions): Promise<PaginatedResult<RecipeSummary>> {
+        return this.recipeRepository.findByUserId(userId, pagination);
     }
 
     async create(userId: number, input: RecipeContentInput): Promise<Recipe> {
@@ -68,12 +69,12 @@ export class RecipeService {
         return this.recipeRepository.archive(recipeId);
     }
 
-    async getPublished(userId: number | null): Promise<RecipeListItem[]> {
-        return await this.recipeRepository.findPublished(userId);
+    async getPublished(userId: number | null, filters: RecipeSearchFilters, pagination: PaginationOptions): Promise<PaginatedResult<RecipeListItem>> {
+        return await this.recipeRepository.searchPublished(userId, filters, pagination);
     }
 
-    async searchPublished(userId: number | null, filters: RecipeSearchFilters): Promise<RecipeListItem[]> {
-        return await this.recipeRepository.searchPublished(userId, filters);
+    async searchPublished(userId: number | null, filters: RecipeSearchFilters, pagination: PaginationOptions): Promise<PaginatedResult<RecipeListItem>> {
+        return await this.recipeRepository.searchPublished(userId, filters, pagination);
     }
 
     async getBySlug(userId: number | null, slug: string): Promise<RecipeDetail | null> {

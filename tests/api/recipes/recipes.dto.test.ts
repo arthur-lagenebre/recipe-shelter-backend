@@ -49,6 +49,10 @@ describe('recipes.dto', () => {
         });
     });
 
+    it('ignores pagination keys in a search query', () => {
+        assert.deepEqual(parseRecipeSearchQuery({ q: ' porc ', page: '2', limit: '12' }), { q: 'porc' });
+    });
+
     it('rejects an invalid category filter', () => {
         assert.throws(
             () => parseRecipeSearchQuery({ categoryId: 'abc' }),

@@ -227,7 +227,8 @@ export type RecipeListItemRow = RowDataPacket & {
     Title: string;
     Slug: string;
     Description: string;
-    Category: string;
+    RecipeCoverImage: string | null;
+    Category: string | null;
     PrepTimeMinutes: number;
     RestTimeMinutes: number | null;
     CookTimeMinutes: number | null;

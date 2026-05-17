@@ -1,12 +1,18 @@
 import { mapFavorite } from './favorites.mapper.js';
 import { firstOrNull } from '../../utils/array.js';
+import { createPaginatedResult, formatLimitOffsetClause } from '../../utils/pagination.js';
 import { mapRecipeListItem } from '../recipes/recipe.mapper.js';
 
 import type { FavoriteRepository } from "./favorites.repository.interface.js";
 import type { Favorite, FavoriteRow } from './favorites.types.js';
+import type { PaginatedResult, PaginationOptions } from '../../utils/pagination.js';
 import type { RecipeListItem, RecipeListItemRow } from '../recipes/recipe.types.js';
 import type { ResultSetHeader } from 'mysql2';
 import type { Pool } from 'mysql2/promise';
+
+type CountRow = {
+    Count: number | string;
+};
 
 export class FavoriteRepositoryMysql implements FavoriteRepository {
     constructor(private readonly db: Pool) { }
@@ -48,15 +54,35 @@ export class FavoriteRepositoryMysql implements FavoriteRepository {
         return result.affectedRows > 0;
     }
 
-    async getFavoriteRecipes(userId: number): Promise<RecipeListItem[]> {
-        const [rows] = await this.db.execute(
-            `SELECT *
+    async getFavoriteRecipes(userId: number, pagination: PaginationOptions): Promise<PaginatedResult<RecipeListItem>> {
+        const limitOffsetClause = formatLimitOffsetClause(pagination);
+
+        const [countRows] = await this.db.execute(
+            `SELECT COUNT(*) AS Count
              FROM Favorites AS f
-             JOIN Recipes AS r ON r.Id = f.RecipeId
-            WHERE r.Status = 'published' AND f.UserId = ?`,
+             INNER JOIN Recipes AS r ON r.Id = f.RecipeId
+             WHERE r.Status = 'published' AND f.UserId = ?`,
             [userId]
         );
 
-        return (rows as RecipeListItemRow[]).map(mapRecipeListItem);
+        const [rows] = await this.db.execute(
+            `SELECT r.Id, r.Title, r.Slug, r.Description, r.RecipeCoverImage, rc.Name AS Category, r.PrepTimeMinutes, r.RestTimeMinutes, r.CookTimeMinutes, r.Servings, u.Username AS AuthorUsername, r.PublishedAt, TRUE AS IsFavorite
+             FROM Favorites AS f
+             INNER JOIN Recipes AS r ON r.Id = f.RecipeId
+             LEFT JOIN RecipeCategories AS rc ON rc.Id = r.CategoryId
+             INNER JOIN Users AS u ON u.Id = r.UserId
+             WHERE r.Status = 'published' AND f.UserId = ?
+             ORDER BY f.CreatedAt DESC, r.Id DESC
+             ${limitOffsetClause}`,
+            [userId]
+        );
+
+        return createPaginatedResult((rows as RecipeListItemRow[]).map(mapRecipeListItem), this.mapCount(countRows), pagination);
+    }
+
+    private mapCount(rows: unknown): number {
+        const row = firstOrNull(rows as CountRow[]);
+
+        return row ? Number(row.Count) : 0;
     }
 }

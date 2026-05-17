@@ -1,10 +1,21 @@
 import { mapRecipe, mapRecipeDetail, mapRecipeDetailComments, mapRecipeDetailIngredient, mapRecipeDetailStep, mapRecipeDetailTag, mapRecipeDetailEquipment, mapRecipeIngredient, mapRecipeListItem, mapRecipeStep, mapRecipeSummary, mapRecipeEquipment } from './recipe.mapper.js';
 import { firstOrNull } from '../../utils/array.js';
+import { createPaginatedResult, formatLimitOffsetClause } from '../../utils/pagination.js';
 
 import type { RecipeRepository } from "./recipe.repository.interface.js";
 import type { Recipe, RecipeDetail, RecipeDetailCommentRow, RecipeDetailCommentStatsRow, RecipeDetailIngredientRow, RecipeDetailStepRow, RecipeDetailTagRow, RecipeDetailEquipmentRow, RecipeIngredientRow, RecipeInput, RecipeListItem, RecipeListItemRow, RecipeRow, RecipeStepRow, RecipeSummary, RecipeTagRow, RecipeEquipmentRow, RecipeSearchFilters, UpdateRecipeInput } from "./recipe.types.js";
+import type { PaginatedResult, PaginationOptions } from '../../utils/pagination.js';
 import type { ResultSetHeader } from 'mysql2';
 import type { Pool, PoolConnection } from 'mysql2/promise';
+
+type CountRow = {
+    Count: number | string;
+};
+
+type PublishedWhere = {
+    clause: string;
+    params: Array<string | number>;
+};
 
 export class RecipeRepositoryMysql implements RecipeRepository {
     constructor(private readonly db: Pool) { }
@@ -178,35 +189,100 @@ export class RecipeRepositoryMysql implements RecipeRepository {
         );
     }
 
-    async findByUserId(userId: number): Promise<RecipeSummary[]> {
-        const [rows] = await this.db.execute(
-            `SELECT Id, Title, Slug, Description, Status, CreatedAt, SubmittedAt, PublishedAt, RejectionReason, UpdatedAt
+    async findByUserId(userId: number, pagination: PaginationOptions): Promise<PaginatedResult<RecipeSummary>> {
+        const limitOffsetClause = formatLimitOffsetClause(pagination);
+
+        const [countRows] = await this.db.execute(
+            `SELECT COUNT(*) AS Count
              FROM Recipes
              WHERE UserId = ?`,
             [userId]
         );
 
-        return (rows as RecipeRow[]).map(mapRecipeSummary);
+        const [rows] = await this.db.execute(
+            `SELECT Id, Title, Slug, Description, Status, CreatedAt, SubmittedAt, PublishedAt, RejectionReason, UpdatedAt
+             FROM Recipes
+             WHERE UserId = ?
+             ORDER BY UpdatedAt DESC, Id DESC
+             ${limitOffsetClause}`,
+            [userId]
+        );
+
+        return createPaginatedResult((rows as RecipeRow[]).map(mapRecipeSummary), this.mapCount(countRows), pagination);
     }
 
-    async findPublished(userId: number | null): Promise<RecipeListItem[]> {
+    async findPublished(userId: number | null, pagination: PaginationOptions): Promise<PaginatedResult<RecipeListItem>> {
+        return this.searchPublished(userId, {}, pagination);
+    }
+
+    async searchPublished(userId: number | null, filters: RecipeSearchFilters, pagination: PaginationOptions): Promise<PaginatedResult<RecipeListItem>> {
+        const where = this.buildPublishedWhere(filters);
+        const limitOffsetClause = formatLimitOffsetClause(pagination);
+
+        const [countRows] = await this.db.execute(
+            `SELECT COUNT(*) AS Count
+             FROM Recipes AS r
+             LEFT JOIN RecipeCategories AS rc ON rc.Id = r.CategoryId
+             INNER JOIN Users AS u ON u.Id = r.UserId
+             WHERE ${where.clause}`,
+            where.params
+        );
+
         const [rows] = await this.db.execute(
-            `SELECT r.Id, r.Title, r.Slug, r.Description, r.RecipeCoverImage, rc.Name AS Category, r.PrepTimeMinutes, r.RestTimeMinutes, r.CookTimeMinutes, r.Servings, u.UserName AS AuthorUsername, r.PublishedAt,
-                    CASE WHEN ? IS NULL THEN FALSE ELSE f.UserId IS NOT NULL END AS IsFavorite
+            `SELECT r.Id, r.Title, r.Slug, r.Description, r.RecipeCoverImage, rc.Name AS Category, r.PrepTimeMinutes, r.RestTimeMinutes, r.CookTimeMinutes, r.Servings, u.Username AS AuthorUsername, r.PublishedAt, CASE WHEN ? IS NULL THEN FALSE ELSE f.UserId IS NOT NULL END AS IsFavorite
+             FROM Recipes AS r
+             LEFT JOIN RecipeCategories AS rc ON rc.Id = r.CategoryId
+             INNER JOIN Users AS u ON u.Id = r.UserId
+             LEFT JOIN Favorites AS f ON f.RecipeId = r.Id AND f.UserId = ?
+             WHERE ${where.clause}
+             ORDER BY r.PublishedAt DESC, r.Id DESC
+             ${limitOffsetClause}`,
+            [userId, userId, ...where.params]
+        );
+
+        return createPaginatedResult((rows as RecipeListItemRow[]).map(mapRecipeListItem), this.mapCount(countRows), pagination);
+    }
+
+    async findPublishedBySlug(userId: number | null, slug: string): Promise<RecipeDetail | null> {
+        const [rows] = await this.db.execute(
+            `SELECT r.Id, r.Title, r.Slug, r.Description, r.RecipeCoverImage, rc.Name AS Category, r.PrepTimeMinutes, r.RestTimeMinutes, r.CookTimeMinutes, r.Servings, u.UserName AS AuthorUsername, r.PublishedAt, CASE WHEN ? IS NULL THEN FALSE ELSE f.UserId IS NOT NULL END AS IsFavorite
              FROM Recipes AS r
              INNER JOIN RecipeCategories AS rc ON rc.Id = r.CategoryId
              INNER JOIN Users AS u ON u.Id = r.UserId
              LEFT JOIN Favorites AS f ON f.RecipeId = r.Id AND f.UserId = ?
-             WHERE r.Status = 'published'`,
-            [userId, userId]
+             WHERE r.Status = 'published' AND r.Slug = ?`,
+            [userId, userId, slug]
         );
 
-        return (rows as RecipeListItemRow[]).map(mapRecipeListItem);
+        const row = firstOrNull(rows as RecipeListItemRow[]);
+        if (!row)
+            return null;
+
+        const recipe = mapRecipeDetail(row);
+        const [ingredientRows, stepRows, equipmentRows, tagRows, commentRows, commentStats] = await Promise.all([
+            this.findDetailIngredientsByRecipeId(recipe.id),
+            this.findDetailStepsByRecipeId(recipe.id),
+            this.findDetailEquipmentsByRecipeId(recipe.id),
+            this.findDetailTagIdsByRecipeId(recipe.id),
+            this.findDetailCommentsByRecipeId(recipe.id),
+            this.findDetailCommentStatsByRecipeId(recipe.id)
+        ]);
+
+        recipe.ingredients = ingredientRows.map(mapRecipeDetailIngredient);
+        recipe.steps = stepRows.map(mapRecipeDetailStep);
+        recipe.equipments = equipmentRows.map(mapRecipeDetailEquipment);
+        recipe.tags = tagRows.map(mapRecipeDetailTag);
+        recipe.comments = mapRecipeDetailComments(commentRows);
+        recipe.commentsCount = Number(commentStats.CommentsCount);
+        recipe.averageRating = commentStats.AverageRating === null ? null : Number(commentStats.AverageRating);
+        recipe.ratingsCount = Number(commentStats.RatingsCount);
+
+        return recipe;
     }
 
-    async searchPublished(userId: number | null, filters: RecipeSearchFilters): Promise<RecipeListItem[]> {
+    private buildPublishedWhere(filters: RecipeSearchFilters): PublishedWhere {
         const whereClauses = [`r.Status = 'published'`];
-        const params: Array<string | number | null> = [userId, userId];
+        const params: Array<string | number> = [];
 
         if (filters.q) {
             whereClauses.push('r.Title LIKE ?');
@@ -247,56 +323,16 @@ export class RecipeRepositoryMysql implements RecipeRepository {
             params.push(filters.maxTotalTimeMinutes);
         }
 
-        const [rows] = await this.db.execute(
-            `SELECT r.Id, r.Title, r.Slug, r.Description, r.RecipeCoverImage, rc.Name AS Category, r.PrepTimeMinutes, r.RestTimeMinutes, r.CookTimeMinutes, r.Servings, u.UserName AS AuthorUsername, r.PublishedAt,
-                    CASE WHEN ? IS NULL THEN FALSE ELSE f.UserId IS NOT NULL END AS IsFavorite
-             FROM Recipes AS r
-             INNER JOIN RecipeCategories AS rc ON rc.Id = r.CategoryId
-             INNER JOIN Users AS u ON u.Id = r.UserId
-             LEFT JOIN Favorites AS f ON f.RecipeId = r.Id AND f.UserId = ?
-             WHERE ${whereClauses.join(' AND ')}`,
+        return {
+            clause: whereClauses.join(' AND '),
             params
-        );
-
-        return (rows as RecipeListItemRow[]).map(mapRecipeListItem);
+        };
     }
 
-    async findPublishedBySlug(userId: number | null, slug: string): Promise<RecipeDetail | null> {
-        const [rows] = await this.db.execute(
-            `SELECT r.Id, r.Title, r.Slug, r.Description, r.RecipeCoverImage, rc.Name AS Category, r.PrepTimeMinutes, r.RestTimeMinutes, r.CookTimeMinutes, r.Servings, u.UserName AS AuthorUsername, r.PublishedAt,
-                    CASE WHEN ? IS NULL THEN FALSE ELSE f.UserId IS NOT NULL END AS IsFavorite
-             FROM Recipes AS r
-             INNER JOIN RecipeCategories AS rc ON rc.Id = r.CategoryId
-             INNER JOIN Users AS u ON u.Id = r.UserId
-             LEFT JOIN Favorites AS f ON f.RecipeId = r.Id AND f.UserId = ?
-             WHERE r.Status = 'published' AND r.Slug = ?`,
-            [userId, userId, slug]
-        );
+    private mapCount(rows: unknown): number {
+        const row = firstOrNull(rows as CountRow[]);
 
-        const row = firstOrNull(rows as RecipeListItemRow[]);
-        if (!row)
-            return null;
-
-        const recipe = mapRecipeDetail(row);
-        const [ingredientRows, stepRows, equipmentRows, tagRows, commentRows, commentStats] = await Promise.all([
-            this.findDetailIngredientsByRecipeId(recipe.id),
-            this.findDetailStepsByRecipeId(recipe.id),
-            this.findDetailEquipmentsByRecipeId(recipe.id),
-            this.findDetailTagIdsByRecipeId(recipe.id),
-            this.findDetailCommentsByRecipeId(recipe.id),
-            this.findDetailCommentStatsByRecipeId(recipe.id)
-        ]);
-
-        recipe.ingredients = ingredientRows.map(mapRecipeDetailIngredient);
-        recipe.steps = stepRows.map(mapRecipeDetailStep);
-        recipe.equipments = equipmentRows.map(mapRecipeDetailEquipment);
-        recipe.tags = tagRows.map(mapRecipeDetailTag);
-        recipe.comments = mapRecipeDetailComments(commentRows);
-        recipe.commentsCount = Number(commentStats.CommentsCount);
-        recipe.averageRating = commentStats.AverageRating === null ? null : Number(commentStats.AverageRating);
-        recipe.ratingsCount = Number(commentStats.RatingsCount);
-
-        return recipe;
+        return row ? Number(row.Count) : 0;
     }
 
     private async findOne(sql: string, params: Array<string | number | null>): Promise<Recipe | null> {
