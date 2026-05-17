@@ -33,7 +33,7 @@ ON DUPLICATE KEY UPDATE
   Password  = new_admin.Password,
   RoleId    = new_admin.RoleId,
   Status    = new_admin.Status,
-  EmailValidatedAt = COALESCE(EmailValidatedAt, new_admin.EmailValidatedAt);
+  EmailValidatedAt = COALESCE(Users.EmailValidatedAt, new_admin.EmailValidatedAt);
 
 -- Anonyme
 INSERT INTO Users (Id, Mail, Username, Password, RoleId, Status, EmailValidatedAt)
@@ -50,7 +50,7 @@ ON DUPLICATE KEY UPDATE
   Username  = new_anonyme.Username,
   RoleId    = new_anonyme.RoleId,
   Status    = new_anonyme.Status,
-  EmailValidatedAt = COALESCE(EmailValidatedAt, new_anonyme.EmailValidatedAt);
+  EmailValidatedAt = COALESCE(Users.EmailValidatedAt, new_anonyme.EmailValidatedAt);
 
 -- =====================================================
 -- Recipe Categories
