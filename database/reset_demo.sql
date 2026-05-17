@@ -7,3 +7,4 @@ USE recipe_shelter;
 
 SOURCE database/migrations/1_create_schema.sql;
 SOURCE database/seed.sql;
+SOURCE database/seed_demo.sql;
