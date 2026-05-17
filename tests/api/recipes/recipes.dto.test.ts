@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { parseRecipeSearchQuery } from '../../../src/api/recipes/recipes.dto.js';
+import { parseRecipeFeedLimitQuery, parseRecipeSearchQuery } from '../../../src/api/recipes/recipes.dto.js';
 import { HttpError } from '../../../src/utils/errors.js';
 
 function assertHttpError(error: unknown, code: string, status: number): void {
@@ -11,6 +11,29 @@ function assertHttpError(error: unknown, code: string, status: number): void {
 }
 
 describe('recipes.dto', () => {
+    it('uses the default feed limit when omitted', () => {
+        assert.equal(parseRecipeFeedLimitQuery({}), 12);
+    });
+
+    it('parses a feed limit', () => {
+        assert.equal(parseRecipeFeedLimitQuery({ limit: '8' }), 8);
+    });
+
+    it('caps feed limit to 20', () => {
+        assert.equal(parseRecipeFeedLimitQuery({ limit: '50' }), 20);
+    });
+
+    it('rejects an invalid feed limit', () => {
+        assert.throws(
+            () => parseRecipeFeedLimitQuery({ limit: '0' }),
+            (error) => {
+                assertHttpError(error, 'RECIPES_FEED_BAD_LIMIT', 400);
+
+                return true;
+            }
+        );
+    });
+
     it('parses an empty search query', () => {
         assert.deepEqual(parseRecipeSearchQuery({}), {});
     });

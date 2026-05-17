@@ -1,4 +1,4 @@
-import type { RecipeInput, Recipe, UpdateRecipeInput, RecipeSummary, RecipeListItem, RecipeDetail, RecipeSearchFilters } from "./recipe.types.js";
+import type { RecipeInput, Recipe, UpdateRecipeInput, RecipeSummary, RecipeListItem, RecipeDetail, RecipeSearchFilters, RatedRecipeListItem } from "./recipe.types.js";
 import type { PaginatedResult, PaginationOptions } from "../../utils/pagination.js";
 
 export interface RecipeRepository {
@@ -10,6 +10,8 @@ export interface RecipeRepository {
     findByUserId(userId: number, pagination: PaginationOptions): Promise<PaginatedResult<RecipeSummary>>;
     findPublished(userId: number | null, pagination: PaginationOptions): Promise<PaginatedResult<RecipeListItem>>;
     searchPublished(userId: number | null, filters: RecipeSearchFilters, pagination: PaginationOptions): Promise<PaginatedResult<RecipeListItem>>;
+    findRecentPublished(userId: number | null, limit: number): Promise<RecipeListItem[]>;
+    findTopRatedPublished(userId: number | null, limit: number): Promise<RatedRecipeListItem[]>;
     findPublishedBySlug(userId: number | null, slug: string): Promise<RecipeDetail | null>;
     existsBySlug(slug: string): Promise<boolean>;
 }

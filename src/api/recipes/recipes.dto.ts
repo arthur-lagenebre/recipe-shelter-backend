@@ -24,6 +24,9 @@ export type UpdateRecipeBody = RecipeBody;
 
 export type RecipeSearchQuery = RecipeSearchFilters;
 
+const DEFAULT_RECIPE_FEED_LIMIT = 12;
+const MAX_RECIPE_FEED_LIMIT = 20;
+
 function parseIngredient(item: unknown, index: number): RecipeIngredientInput {
     if (!isRecord(item))
         throw badRequest(`Ingredient #${index + 1} is invalid`, 'RECIPES_CREATE_BAD_INGREDIENT');
@@ -112,6 +115,18 @@ export function parseRecipeSlugParam(value: unknown): string {
         throw badRequest('Recipe slug is required', 'RECIPES_BAD_SLUG');
 
     return slug;
+}
+
+export function parseRecipeFeedLimitQuery(query: unknown): number {
+    if (!isRecord(query))
+        throw badRequest('Invalid query', 'RECIPES_FEED_BAD_QUERY');
+
+    if (query.limit === undefined)
+        return DEFAULT_RECIPE_FEED_LIMIT;
+
+    const requestedLimit = parsePositiveIntegerQueryValue(query.limit, 'Limit must be a positive integer', 'RECIPES_FEED_BAD_LIMIT');
+
+    return Math.min(requestedLimit, MAX_RECIPE_FEED_LIMIT);
 }
 
 function parsePositiveIntegerQueryValue(value: unknown, message: string, code: string): number {

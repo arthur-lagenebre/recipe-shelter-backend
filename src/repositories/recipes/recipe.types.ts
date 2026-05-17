@@ -119,6 +119,11 @@ export interface RecipeListItem {
     isFavorite: boolean;
 }
 
+export interface RatedRecipeListItem extends RecipeListItem {
+    averageRating: number;
+    ratingsCount: number;
+}
+
 export interface RecipeDetail extends RecipeListItem {
     ingredients: RecipeDetailIngredient[];
     steps: RecipeDetailStep[];
@@ -236,6 +241,11 @@ export type RecipeListItemRow = RowDataPacket & {
     AuthorUsername: string;
     PublishedAt: Date;
     IsFavorite: boolean | number;
+};
+
+export type RatedRecipeListItemRow = RecipeListItemRow & {
+    AverageRating: number | string;
+    RatingsCount: number | string;
 };
 
 export type RecipeDetailIngredientRow = RowDataPacket & {

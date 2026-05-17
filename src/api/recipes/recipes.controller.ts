@@ -1,4 +1,4 @@
-import { parseCreateRecipeBody, parseRecipeSlugParam, parseRecipeIdParam, parseRecipeSearchQuery, parseUpdateRecipeBody } from './recipes.dto.js';
+import { parseCreateRecipeBody, parseRecipeFeedLimitQuery, parseRecipeSlugParam, parseRecipeIdParam, parseRecipeSearchQuery, parseUpdateRecipeBody } from './recipes.dto.js';
 import { parsePaginationQuery } from '../../utils/pagination.js';
 import { asyncHandler } from '../http/async-handler.js';
 
@@ -44,6 +44,20 @@ export function createRecipesController(recipeService: RecipeService) {
             const filters = parseRecipeSearchQuery(req.query);
             const pagination = parsePaginationQuery(req.query, 12, 'RECIPES_PAGINATION');
             const result = await recipeService.searchPublished(req.auth?.userId ?? null, filters, pagination);
+
+            res.status(200).json(result);
+        }),
+
+        getRecentRecipes: asyncHandler(async (req, res) => {
+            const limit = parseRecipeFeedLimitQuery(req.query);
+            const result = await recipeService.getRecentPublished(req.auth?.userId ?? null, limit);
+
+            res.status(200).json(result);
+        }),
+
+        getTopRatedRecipes: asyncHandler(async (req, res) => {
+            const limit = parseRecipeFeedLimitQuery(req.query);
+            const result = await recipeService.getTopRatedPublished(req.auth?.userId ?? null, limit);
 
             res.status(200).json(result);
         }),
