@@ -1,4 +1,4 @@
-import { parseUpdateEmailBody, parseUpdatePasswordBody, parseUpdateUsernameBody } from './users.dto.js';
+import { parseUpdateEmailBody, parseUpdatePasswordBody, parseUpdateUsernameBody, parseUsernameParam } from './users.dto.js';
 import { asyncHandler } from '../http/async-handler.js';
 
 import type { UserService } from '../../services/users/users.service.js';
@@ -14,6 +14,13 @@ export function createUsersController(userService: UserService) {
 
             const profile = await userService.getMe(req.auth.userId);
             res.status(200).json(profile);
+        }),
+
+        getUser: asyncHandler(async (req, res) => {
+            const username = parseUsernameParam(req.params.username);
+            const user = await userService.getUser(username, req.auth?.userId ?? null);
+
+            res.status(200).json(user);
         }),
 
         updateEmail: asyncHandler(async (req, res) => {

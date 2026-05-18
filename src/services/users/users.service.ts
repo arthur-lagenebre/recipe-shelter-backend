@@ -3,6 +3,8 @@ import bcrypt from 'bcrypt';
 import { badRequest, conflict, notFound, unauthorized } from '../../utils/errors.js';
 import { validatePassword } from '../auth/password-policy.js';
 
+import type { RecipeRepository } from '../../repositories/recipes/recipe.repository.interface.js';
+import type { RecipeListItem } from '../../repositories/recipes/recipe.types.js';
 import type { UserRepository } from '../../repositories/users/user.repository.interface.js';
 
 export type PublicUserProfile = {
@@ -14,8 +16,14 @@ export type PublicUserProfile = {
     updatedAt: Date;
 };
 
+export type PublicUserWithPublishedRecipes = {
+    id: number;
+    username: string;
+    publishedRecipes: RecipeListItem[];
+};
+
 export class UserService {
-    constructor(private readonly userRepository: UserRepository) { }
+    constructor(private readonly userRepository: UserRepository, private readonly recipeRepository: RecipeRepository) { }
 
     async getMe(userId: number): Promise<PublicUserProfile> {
         const user = await this.userRepository.findById(userId);
@@ -30,6 +38,21 @@ export class UserService {
             roleId: user.roleId,
             createdAt: user.createdAt,
             updatedAt: user.updatedAt
+        };
+    }
+
+    async getUser(username: string, viewerUserId: number | null = null): Promise<PublicUserWithPublishedRecipes> {
+        const user = await this.userRepository.findByUsername(username.trim());
+
+        if (!user)
+            throw notFound('User not found', 'USER_NOT_FOUND');
+
+        const publishedRecipes = await this.recipeRepository.findPublishedByAuthorId(viewerUserId, user.id);
+
+        return {
+            id: user.id,
+            username: user.username,
+            publishedRecipes
         };
     }
 

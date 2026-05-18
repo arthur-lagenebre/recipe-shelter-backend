@@ -10,6 +10,7 @@ export interface RecipeRepository {
     findByUserId(userId: number, pagination: PaginationOptions): Promise<PaginatedResult<RecipeSummary>>;
     findPublished(userId: number | null, pagination: PaginationOptions): Promise<PaginatedResult<RecipeListItem>>;
     searchPublished(userId: number | null, filters: RecipeSearchFilters, pagination: PaginationOptions): Promise<PaginatedResult<RecipeListItem>>;
+    findPublishedByAuthorId(viewerUserId: number | null, authorUserId: number): Promise<RecipeListItem[]>;
     findRecentPublished(userId: number | null, limit: number): Promise<RecipeListItem[]>;
     findTopRatedPublished(userId: number | null, limit: number): Promise<RatedRecipeListItem[]>;
     findPublishedBySlug(userId: number | null, slug: string): Promise<RecipeDetail | null>;

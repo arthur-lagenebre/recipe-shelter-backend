@@ -63,3 +63,12 @@ export function parseUpdateUsernameBody(body: unknown): UpdateUsernameInput {
 
     return { newUsername, currentPassword };
 }
+
+export function parseUsernameParam(value: unknown): string {
+    const username = typeof value === 'string' ? value.trim() : '';
+
+    if (!username)
+        throw badRequest('Username is required', 'USERS_MISSING_USERNAME');
+
+    return username;
+}

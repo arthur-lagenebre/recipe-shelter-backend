@@ -106,7 +106,7 @@ export function createApp() {
   const recipeSlugService = new RecipeSlugService(recipeRepository);
   const recipeService = new RecipeService(recipeRepository, recipeSlugService);
   const tagService = new TagService(tagRepository);
-  const usersService = new UserService(userRepository);
+  const usersService = new UserService(userRepository, recipeRepository);
 
   const adminCommentsController = createAdminCommentsController(adminCommentService);
   const adminRecipesController = createAdminRecipesController(adminRecipeService);

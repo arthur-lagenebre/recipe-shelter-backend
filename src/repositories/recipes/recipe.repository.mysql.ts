@@ -243,6 +243,21 @@ export class RecipeRepositoryMysql implements RecipeRepository {
         return createPaginatedResult((rows as RecipeListItemRow[]).map(mapRecipeListItem), this.mapCount(countRows), pagination);
     }
 
+    async findPublishedByAuthorId(viewerUserId: number | null, authorUserId: number): Promise<RecipeListItem[]> {
+        const [rows] = await this.db.execute(
+            `SELECT r.Id, r.Title, r.Slug, r.Description, r.RecipeCoverImage, rc.Name AS Category, r.PrepTimeMinutes, r.RestTimeMinutes, r.CookTimeMinutes, r.Servings, u.Username AS AuthorUsername, r.PublishedAt, CASE WHEN ? IS NULL THEN FALSE ELSE f.UserId IS NOT NULL END AS IsFavorite
+             FROM Recipes AS r
+             LEFT JOIN RecipeCategories AS rc ON rc.Id = r.CategoryId
+             INNER JOIN Users AS u ON u.Id = r.UserId
+             LEFT JOIN Favorites AS f ON f.RecipeId = r.Id AND f.UserId = ?
+             WHERE r.Status = 'published' AND r.UserId = ?
+             ORDER BY r.PublishedAt DESC, r.Id DESC`,
+            [viewerUserId, viewerUserId, authorUserId]
+        );
+
+        return (rows as RecipeListItemRow[]).map(mapRecipeListItem);
+    }
+
     async findRecentPublished(userId: number | null, limit: number): Promise<RecipeListItem[]> {
         const limitOffsetClause = formatLimitOffsetClause({ page: 1, limit, offset: 0 });
 
