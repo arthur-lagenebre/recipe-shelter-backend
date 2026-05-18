@@ -1,3 +1,4 @@
+import type { PublicAuthorDto } from '../public-author.types.js';
 import type { RowDataPacket } from 'mysql2';
 
 export type Comment = {
@@ -14,6 +15,20 @@ export type Comment = {
     createdAt: Date;
     updatedAt: Date;
     children?: Comment[];
+};
+
+export type PublicComment = {
+    id: number;
+    recipeId: number;
+    author: PublicAuthorDto;
+    parentCommentId?: number | null; // One reply level only: replies cannot have their own replies.
+    moderatedAt?: Date | null; // Set when an admin hides the text from public endpoints.
+    deletedAt?: Date | null; // Set when the author soft deletes the comment.
+    rating?: number | null; // Root comments only. Replies cannot carry a rating.
+    comment: string;
+    createdAt: Date;
+    updatedAt: Date;
+    children?: PublicComment[];
 };
 
 export type CreateCommentInput = {
@@ -40,6 +55,20 @@ export type CommentRow = RowDataPacket & {
     ModeratedByUserId: number | null;
     DeletedAt: Date | null;
     DeletedByUserId: number | null;
+    Rating: number | null;
+    Comment: string;
+    CreatedAt: Date;
+    UpdatedAt: Date;
+};
+
+export type PublicCommentRow = RowDataPacket & {
+    Id: number;
+    RecipeId: number;
+    AuthorId: number;
+    AuthorUsername: string;
+    ParentCommentId: number | null;
+    ModeratedAt: Date | null;
+    DeletedAt: Date | null;
     Rating: number | null;
     Comment: string;
     CreatedAt: Date;

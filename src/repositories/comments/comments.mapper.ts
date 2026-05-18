@@ -1,4 +1,4 @@
-import type { Comment, CommentRow } from "./comments.types.js";
+import type { Comment, CommentRow, PublicComment, PublicCommentRow } from "./comments.types.js";
 
 const DELETED_COMMENT_TEXT = 'Commentaire supprimé par son auteur.';
 const MODERATED_COMMENT_TEXT = 'Ce commentaire a été masqué par la modération.';
@@ -20,17 +20,28 @@ export function mapComment(row: CommentRow): Comment {
     };
 }
 
-export function mapPublicComment(row: CommentRow): Comment {
+export function mapPublicComment(row: PublicCommentRow): PublicComment {
     return {
-        ...mapComment(row),
+        id: row.Id,
+        recipeId: row.RecipeId,
+        author: {
+            id: row.AuthorId,
+            username: row.AuthorUsername
+        },
+        parentCommentId: row.ParentCommentId,
+        moderatedAt: row.ModeratedAt,
+        deletedAt: row.DeletedAt,
+        rating: row.Rating,
         comment: mapPublicCommentText(row),
+        createdAt: row.CreatedAt,
+        updatedAt: row.UpdatedAt,
         children: []
     };
 }
 
-export function mapPublicComments(rows: CommentRow[]): Comment[] {
-    const commentsById = new Map<number, Comment>();
-    const rootComments: Comment[] = [];
+export function mapPublicComments(rows: PublicCommentRow[]): PublicComment[] {
+    const commentsById = new Map<number, PublicComment>();
+    const rootComments: PublicComment[] = [];
 
     for (const row of rows)
         commentsById.set(row.Id, mapPublicComment(row));
@@ -49,7 +60,7 @@ export function mapPublicComments(rows: CommentRow[]): Comment[] {
     return rootComments;
 }
 
-function mapPublicCommentText(row: CommentRow): string {
+function mapPublicCommentText(row: Pick<CommentRow, 'Comment' | 'DeletedAt' | 'ModeratedAt'>): string {
     if (row.DeletedAt !== null)
         return DELETED_COMMENT_TEXT;
 

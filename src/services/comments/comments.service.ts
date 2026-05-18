@@ -1,12 +1,12 @@
 import { badRequest, forbidden, internalError, notFound } from '../../utils/errors.js';
 
 import type { CommentRepository } from '../../repositories/comments/comments.repository.interface.js';
-import type { Comment, CreateCommentInput, UpdateCommentInput } from '../../repositories/comments/comments.types.js';
+import type { CreateCommentInput, PublicComment, UpdateCommentInput } from '../../repositories/comments/comments.types.js';
 
 export class CommentService {
     constructor(private readonly commentRepository: CommentRepository) { }
 
-    async createComment(input: CreateCommentInput): Promise<Comment> {
+    async createComment(input: CreateCommentInput): Promise<PublicComment> {
         if (input.parentCommentId !== undefined && input.parentCommentId !== null)
             await this.requireRootParentComment(input.parentCommentId);
 
@@ -18,7 +18,7 @@ export class CommentService {
         return comment;
     }
 
-    async updateComment(input: UpdateCommentInput): Promise<Comment> {
+    async updateComment(input: UpdateCommentInput): Promise<PublicComment> {
         const comment = await this.commentRepository.findById(input.id);
 
         if (!comment)
@@ -47,7 +47,7 @@ export class CommentService {
         return await this.commentRepository.softDelete(id, userId);
     }
 
-    async findCommentsForRecipe(recipeid: number): Promise<Comment[]> {
+    async findCommentsForRecipe(recipeid: number): Promise<PublicComment[]> {
         const comments = await this.commentRepository.findByRecipeId(recipeid);
 
         if (!comments)

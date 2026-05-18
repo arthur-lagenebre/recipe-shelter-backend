@@ -1,3 +1,4 @@
+import type { PublicAuthorDto } from '../public-author.types.js';
 import type { RowDataPacket } from 'mysql2';
 
 export type RecipeIngredientInput = {
@@ -124,7 +125,8 @@ export interface RatedRecipeListItem extends RecipeListItem {
     ratingsCount: number;
 }
 
-export interface RecipeDetail extends RecipeListItem {
+export interface RecipeDetail extends Omit<RecipeListItem, 'authorUsername'> {
+    author: PublicAuthorDto;
     ingredients: RecipeDetailIngredient[];
     steps: RecipeDetailStep[];
     equipments: RecipeDetailEquipment[];
@@ -166,10 +168,9 @@ export type RecipeDetailComment = {
     id: number;
     isModerated: boolean;
     isDeleted: boolean;
-    username: string;
+    author: PublicAuthorDto;
     parentCommentId: number | null;
     moderatedAt: Date | null;
-    moderatedByUsername: string | null;
     rating: number | null;
     comment: string;
     createdAt: Date;
@@ -243,6 +244,10 @@ export type RecipeListItemRow = RowDataPacket & {
     IsFavorite: boolean | number;
 };
 
+export type RecipeDetailRow = RecipeListItemRow & {
+    AuthorId: number;
+};
+
 export type RatedRecipeListItemRow = RecipeListItemRow & {
     AverageRating: number | string;
     RatingsCount: number | string;
@@ -277,10 +282,10 @@ export type RecipeDetailTagRow = RowDataPacket & {
 
 export type RecipeDetailCommentRow = RowDataPacket & {
     Id: number;
-    Username: string;
+    AuthorId: number;
+    AuthorUsername: string;
     ParentCommentId: number | null;
     ModeratedAt: Date | null;
-    ModeratedByUsername: string | null;
     DeletedAt: Date | null;
     Rating: number | null;
     Comment: string;

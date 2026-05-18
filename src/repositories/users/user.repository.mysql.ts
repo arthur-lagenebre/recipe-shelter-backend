@@ -142,37 +142,6 @@ export class UserRepositoryMysql implements UserRepository {
         return result.affectedRows > 0;
     }
 
-    async ban(userId: number, bannedByUserId: number, reason: string): Promise<boolean> {
-        const [result] = await this.db.execute<ResultSetHeader>(
-            `UPDATE Users
-             SET Status = 'banned',
-                 BannedByUserId = ?,
-                 BannedReason = ?,
-                 BannedAt = CURRENT_TIMESTAMP
-             WHERE Id = ?`,
-            [bannedByUserId, reason, userId]
-        );
-
-        return result.affectedRows > 0;
-    }
-
-    async unban(userId: number): Promise<boolean> {
-        const [result] = await this.db.execute<ResultSetHeader>(
-            `UPDATE Users
-             SET Status = CASE
-                    WHEN EmailValidatedAt IS NULL THEN 'inactive'
-                    ELSE 'active'
-                 END,
-                 BannedByUserId = NULL,
-                 BannedReason = NULL,
-                 BannedAt = NULL
-             WHERE Id = ?`,
-            [userId]
-        );
-
-        return result.affectedRows > 0;
-    }
-
     async updatePassword(userId: number, passwordHash: string): Promise<void> {
         await this.db.execute(
             `UPDATE Users

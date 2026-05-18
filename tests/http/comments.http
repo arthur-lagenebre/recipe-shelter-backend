@@ -17,12 +17,13 @@ GET {{baseUrl}}/recipes/{{recipeId}}/comments
 #   {
 #     "id": 1,
 #     "recipeId": 1,
-#     "userId": 10,
+#     "author": {
+#       "id": 10,
+#       "username": "alice"
+#     },
 #     "parentCommentId": null,
 #     "moderatedAt": null,
-#     "moderatedByUserId": null,
 #     "deletedAt": null,
-#     "deletedByUserId": null,
 #     "rating": 5,
 #     "comment": "Super recette, facile à suivre.",
 #     "createdAt": "2026-05-10T10:00:00.000Z",
@@ -31,12 +32,13 @@ GET {{baseUrl}}/recipes/{{recipeId}}/comments
 #       {
 #         "id": 2,
 #         "recipeId": 1,
-#         "userId": 11,
+#         "author": {
+#           "id": 11,
+#           "username": "bob"
+#         },
 #         "parentCommentId": 1,
 #         "moderatedAt": null,
-#         "moderatedByUserId": null,
 #         "deletedAt": "2026-05-10T10:12:00.000Z",
-#         "deletedByUserId": 11,
 #         "rating": null,
 #         "comment": "Commentaire supprimé par son auteur.",
 #         "createdAt": "2026-05-10T10:05:00.000Z",
@@ -46,12 +48,13 @@ GET {{baseUrl}}/recipes/{{recipeId}}/comments
 #       {
 #         "id": 3,
 #         "recipeId": 1,
-#         "userId": 12,
+#         "author": {
+#           "id": 12,
+#           "username": "charlie"
+#         },
 #         "parentCommentId": 1,
 #         "moderatedAt": "2026-05-10T10:20:00.000Z",
-#         "moderatedByUserId": 1,
 #         "deletedAt": null,
-#         "deletedByUserId": null,
 #         "rating": null,
 #         "comment": "Ce commentaire a été masqué par la modération.",
 #         "createdAt": "2026-05-10T10:15:00.000Z",
@@ -67,6 +70,10 @@ GET {{baseUrl}}/recipes/{{recipeSlug}}
 
 # Expected comments shape in recipe detail:
 # {
+#   "author": {
+#     "id": 12,
+#     "username": "arthur"
+#   },
 #   "commentsCount": 4,
 #   "averageRating": 4.5,
 #   "ratingsCount": 2,
@@ -75,10 +82,12 @@ GET {{baseUrl}}/recipes/{{recipeSlug}}
 #       "id": 1,
 #       "isModerated": false,
 #       "isDeleted": false,
-#       "username": "alice",
+#       "author": {
+#         "id": 10,
+#         "username": "alice"
+#       },
 #       "parentCommentId": null,
 #       "moderatedAt": null,
-#       "moderatedByUsername": null,
 #       "rating": 5,
 #       "comment": "Super recette, facile à suivre.",
 #       "createdAt": "2026-05-10T10:00:00.000Z",
@@ -88,10 +97,12 @@ GET {{baseUrl}}/recipes/{{recipeSlug}}
 #           "id": 2,
 #           "isModerated": false,
 #           "isDeleted": false,
-#           "username": "bob",
+#           "author": {
+#             "id": 11,
+#             "username": "bob"
+#           },
 #           "parentCommentId": 1,
 #           "moderatedAt": null,
-#           "moderatedByUsername": null,
 #           "rating": null,
 #           "comment": "Merci pour l'astuce.",
 #           "createdAt": "2026-05-10T10:05:00.000Z",
@@ -102,10 +113,12 @@ GET {{baseUrl}}/recipes/{{recipeSlug}}
 #           "id": 3,
 #           "isModerated": false,
 #           "isDeleted": true,
-#           "username": "charlie",
+#           "author": {
+#             "id": 12,
+#             "username": "charlie"
+#           },
 #           "parentCommentId": 1,
 #           "moderatedAt": null,
-#           "moderatedByUsername": null,
 #           "rating": null,
 #           "comment": "Commentaire supprimé par son auteur.",
 #           "createdAt": "2026-05-10T10:10:00.000Z",
@@ -116,10 +129,12 @@ GET {{baseUrl}}/recipes/{{recipeSlug}}
 #           "id": 4,
 #           "isModerated": true,
 #           "isDeleted": false,
-#           "username": "diane",
+#           "author": {
+#             "id": 13,
+#             "username": "diane"
+#           },
 #           "parentCommentId": 1,
 #           "moderatedAt": "2026-05-10T10:20:00.000Z",
-#           "moderatedByUsername": "admin",
 #           "rating": null,
 #           "comment": "Ce commentaire a été masqué par la modération.",
 #           "createdAt": "2026-05-10T10:15:00.000Z",

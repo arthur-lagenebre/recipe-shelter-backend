@@ -3,7 +3,7 @@ import { firstOrNull } from '../../utils/array.js';
 import { createPaginatedResult, formatLimitOffsetClause } from '../../utils/pagination.js';
 
 import type { RecipeRepository } from "./recipe.repository.interface.js";
-import type { RatedRecipeListItem, RatedRecipeListItemRow, Recipe, RecipeDetail, RecipeDetailCommentRow, RecipeDetailCommentStatsRow, RecipeDetailIngredientRow, RecipeDetailStepRow, RecipeDetailTagRow, RecipeDetailEquipmentRow, RecipeIngredientRow, RecipeInput, RecipeListItem, RecipeListItemRow, RecipeRow, RecipeStepRow, RecipeSummary, RecipeTagRow, RecipeEquipmentRow, RecipeSearchFilters, UpdateRecipeInput } from "./recipe.types.js";
+import type { RatedRecipeListItem, RatedRecipeListItemRow, Recipe, RecipeDetail, RecipeDetailCommentRow, RecipeDetailCommentStatsRow, RecipeDetailIngredientRow, RecipeDetailRow, RecipeDetailStepRow, RecipeDetailTagRow, RecipeDetailEquipmentRow, RecipeIngredientRow, RecipeInput, RecipeListItem, RecipeListItemRow, RecipeRow, RecipeStepRow, RecipeSummary, RecipeTagRow, RecipeEquipmentRow, RecipeSearchFilters, UpdateRecipeInput } from "./recipe.types.js";
 import type { PaginatedResult, PaginationOptions } from '../../utils/pagination.js';
 import type { ResultSetHeader } from 'mysql2';
 import type { Pool, PoolConnection } from 'mysql2/promise';
@@ -287,7 +287,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
 
     async findPublishedBySlug(userId: number | null, slug: string): Promise<RecipeDetail | null> {
         const [rows] = await this.db.execute(
-            `SELECT r.Id, r.Title, r.Slug, r.Description, r.RecipeCoverImage, rc.Name AS Category, r.PrepTimeMinutes, r.RestTimeMinutes, r.CookTimeMinutes, r.Servings, u.UserName AS AuthorUsername, r.PublishedAt, CASE WHEN ? IS NULL THEN FALSE ELSE f.UserId IS NOT NULL END AS IsFavorite
+            `SELECT r.Id, r.Title, r.Slug, r.Description, r.RecipeCoverImage, rc.Name AS Category, r.PrepTimeMinutes, r.RestTimeMinutes, r.CookTimeMinutes, r.Servings, u.Id AS AuthorId, u.Username AS AuthorUsername, r.PublishedAt, CASE WHEN ? IS NULL THEN FALSE ELSE f.UserId IS NOT NULL END AS IsFavorite
              FROM Recipes AS r
              INNER JOIN RecipeCategories AS rc ON rc.Id = r.CategoryId
              INNER JOIN Users AS u ON u.Id = r.UserId
@@ -296,7 +296,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
             [userId, userId, slug]
         );
 
-        const row = firstOrNull(rows as RecipeListItemRow[]);
+        const row = firstOrNull(rows as RecipeDetailRow[]);
         if (!row)
             return null;
 
@@ -605,10 +605,9 @@ export class RecipeRepositoryMysql implements RecipeRepository {
 
     private async findDetailCommentsByRecipeId(recipeId: number): Promise<RecipeDetailCommentRow[]> {
         const [rows] = await this.db.execute(
-            `SELECT c.Id, u.Username, c.ParentCommentId, c.ModeratedAt, moderator.Username AS ModeratedByUsername, c.DeletedAt, c.Rating, c.Comment, c.CreatedAt, c.UpdatedAt
+            `SELECT c.Id, u.Id AS AuthorId, u.Username AS AuthorUsername, c.ParentCommentId, c.ModeratedAt, c.DeletedAt, c.Rating, c.Comment, c.CreatedAt, c.UpdatedAt
              FROM Comments AS c
              INNER JOIN Users AS u ON u.Id = c.UserId
-             LEFT JOIN Users AS moderator ON moderator.Id = c.ModeratedByUserId
              WHERE c.RecipeId = ?
              ORDER BY COALESCE(c.ParentCommentId, c.Id), c.ParentCommentId IS NOT NULL, c.CreatedAt`,
             [recipeId]

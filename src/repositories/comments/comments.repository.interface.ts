@@ -1,9 +1,9 @@
-import type { Comment, CreateCommentInput, UpdateCommentInput } from "./comments.types.js";
+import type { Comment, CreateCommentInput, PublicComment, UpdateCommentInput } from "./comments.types.js";
 
 export interface CommentRepository {
-    create(input: CreateCommentInput): Promise<Comment>;
-    update(input: UpdateCommentInput): Promise<Comment | null>;
+    create(input: CreateCommentInput): Promise<PublicComment>;
+    update(input: UpdateCommentInput): Promise<PublicComment | null>;
     softDelete(id: number, userId: number): Promise<boolean>;
     findById(id: number): Promise<Comment | null>
-    findByRecipeId(recipeid: number): Promise<Comment[]>;
+    findByRecipeId(recipeid: number): Promise<PublicComment[]>;
 }

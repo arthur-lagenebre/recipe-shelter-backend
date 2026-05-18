@@ -1,4 +1,4 @@
-import { parseAdminUserIdParam, parseBanUserBody } from './admin.users.dto.js';
+import { parseAdminUserIdParam, parseBanUserBody, parseUnbanUserBody } from './admin.users.dto.js';
 import { asyncHandler } from '../http/async-handler.js';
 
 import type { AdminUserService } from '../../services/admin/admin.users.service.js';
@@ -17,6 +17,13 @@ export function createAdminUsersController(adminUserService: AdminUserService) {
             res.status(200).json({ bannedUsers: count });
         }),
 
+        getUserProfile: asyncHandler(async (req, res) => {
+            const userId = parseAdminUserIdParam(req.params.id);
+            const user = await adminUserService.getAdminUserProfile(userId);
+
+            res.status(200).json(user);
+        }),
+
         banUser: asyncHandler(async (req, res) => {
             const userId = parseAdminUserIdParam(req.params.id);
             const reason = parseBanUserBody(req.body);
@@ -27,7 +34,8 @@ export function createAdminUsersController(adminUserService: AdminUserService) {
 
         unbanUser: asyncHandler(async (req, res) => {
             const userId = parseAdminUserIdParam(req.params.id);
-            const result = await adminUserService.unban(userId);
+            const reason = parseUnbanUserBody(req.body);
+            const result = await adminUserService.unban(userId, req.auth!.userId, reason);
 
             res.status(200).json({ ok: result });
         })

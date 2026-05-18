@@ -8,6 +8,7 @@ import type { RequestHandler } from 'express';
 type AdminUsersController = {
     listBannedUsers: RequestHandler;
     countBannedUsers: RequestHandler;
+    getUserProfile: RequestHandler;
     banUser: RequestHandler;
     unbanUser: RequestHandler;
 };
@@ -17,6 +18,7 @@ export function createAdminUsersRouter(controller: AdminUsersController) {
 
     router.get('/banned', requireAuth, requireAdmin, controller.listBannedUsers);
     router.get('/banned/count', requireAuth, requireAdmin, controller.countBannedUsers);
+    router.get('/:id', requireAuth, requireAdmin, controller.getUserProfile);
     router.post('/:id/ban', requireAuth, requireAdmin, controller.banUser);
     router.post('/:id/unban', requireAuth, requireAdmin, controller.unbanUser);
 

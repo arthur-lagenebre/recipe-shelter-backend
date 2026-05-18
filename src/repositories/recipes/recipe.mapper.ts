@@ -1,4 +1,4 @@
-import type { RatedRecipeListItem, RatedRecipeListItemRow, Recipe, RecipeDetail, RecipeDetailComment, RecipeDetailCommentRow, RecipeDetailEquipment, RecipeDetailIngredient, RecipeDetailIngredientRow, RecipeDetailStep, RecipeDetailStepRow, RecipeDetailTag, RecipeDetailTagRow, RecipeDetailEquipmentRow, RecipeIngredient, RecipeIngredientRow, RecipeListItem, RecipeListItemRow, RecipeRow, RecipeStep, RecipeStepRow, RecipeSummary, RecipeEquipment, RecipeEquipmentRow } from './recipe.types.js';
+import type { RatedRecipeListItem, RatedRecipeListItemRow, Recipe, RecipeDetail, RecipeDetailComment, RecipeDetailCommentRow, RecipeDetailEquipment, RecipeDetailIngredient, RecipeDetailIngredientRow, RecipeDetailRow, RecipeDetailStep, RecipeDetailStepRow, RecipeDetailTag, RecipeDetailTagRow, RecipeDetailEquipmentRow, RecipeIngredient, RecipeIngredientRow, RecipeListItem, RecipeListItemRow, RecipeRow, RecipeStep, RecipeStepRow, RecipeSummary, RecipeEquipment, RecipeEquipmentRow } from './recipe.types.js';
 
 export function mapRecipe(row: RecipeRow): Recipe {
     return {
@@ -93,7 +93,7 @@ export function mapRatedRecipeListItem(row: RatedRecipeListItemRow): RatedRecipe
     };
 }
 
-export function mapRecipeDetail(row: RecipeListItemRow): RecipeDetail {
+export function mapRecipeDetail(row: RecipeDetailRow): RecipeDetail {
     return {
         id: row.Id,
         title: row.Title,
@@ -105,7 +105,10 @@ export function mapRecipeDetail(row: RecipeListItemRow): RecipeDetail {
         cookTimeMinutes: row.CookTimeMinutes,
         restTimeMinutes: row.RestTimeMinutes,
         servings: row.Servings,
-        authorUsername: row.AuthorUsername,
+        author: {
+            id: row.AuthorId,
+            username: row.AuthorUsername
+        },
         publishedAt: row.PublishedAt,
         isFavorite: Boolean(row.IsFavorite),
         ingredients: [],
@@ -159,10 +162,12 @@ export function mapRecipeDetailComment(row: RecipeDetailCommentRow): RecipeDetai
         id: row.Id,
         isModerated: row.ModeratedAt !== null,
         isDeleted: row.DeletedAt !== null,
-        username: row.Username,
+        author: {
+            id: row.AuthorId,
+            username: row.AuthorUsername
+        },
         parentCommentId: row.ParentCommentId,
         moderatedAt: row.ModeratedAt,
-        moderatedByUsername: row.ModeratedByUsername,
         rating: row.Rating,
         comment: mapRecipeDetailCommentText(row),
         createdAt: row.CreatedAt,

@@ -14,6 +14,10 @@ Authorization: Bearer {{adminJwt}}
 GET {{baseUrl}}/admin/users/banned/count
 Authorization: Bearer {{adminJwt}}
 
+### Admin user profile
+GET {{baseUrl}}/admin/users/{{userId}}
+Authorization: Bearer {{adminJwt}}
+
 ### Ban user
 POST {{baseUrl}}/admin/users/{{userId}}/ban
 Authorization: Bearer {{adminJwt}}
@@ -26,3 +30,8 @@ Content-Type: application/json
 ### Unban user
 POST {{baseUrl}}/admin/users/{{userId}}/unban
 Authorization: Bearer {{adminJwt}}
+Content-Type: application/json
+
+{
+  "reason": "Appeal accepted after moderation review."
+}

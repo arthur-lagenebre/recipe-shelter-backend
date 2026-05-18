@@ -5,7 +5,7 @@ import { CommentService } from '../../../src/services/comments/comments.service.
 import { HttpError } from '../../../src/utils/errors.js';
 
 import type { CommentRepository } from '../../../src/repositories/comments/comments.repository.interface.js';
-import type { Comment, CreateCommentInput, UpdateCommentInput } from '../../../src/repositories/comments/comments.types.js';
+import type { Comment, CreateCommentInput, PublicComment, UpdateCommentInput } from '../../../src/repositories/comments/comments.types.js';
 
 const baseComment: Comment = {
     id: 1,
@@ -22,25 +22,61 @@ const baseComment: Comment = {
     updatedAt: new Date('2026-05-09T10:00:00.000Z')
 };
 
+const basePublicComment: PublicComment = {
+    id: 1,
+    recipeId: 10,
+    author: {
+        id: 20,
+        username: 'testuser'
+    },
+    parentCommentId: null,
+    moderatedAt: null,
+    deletedAt: null,
+    rating: 5,
+    comment: 'Great recipe',
+    createdAt: new Date('2026-05-09T10:00:00.000Z'),
+    updatedAt: new Date('2026-05-09T10:00:00.000Z')
+};
+
 class FakeCommentRepository implements CommentRepository {
     createdInput: CreateCommentInput | null = null;
     updatedInput: UpdateCommentInput | null = null;
     deletedInput: { id: number; userId: number } | null = null;
     comment: Comment | null = baseComment;
 
-    async create(input: CreateCommentInput): Promise<Comment> {
+    async create(input: CreateCommentInput): Promise<PublicComment> {
         this.createdInput = input;
 
-        return { ...baseComment, ...input, id: 2 };
+        return {
+            ...basePublicComment,
+            id: 2,
+            recipeId: input.recipeId,
+            author: {
+                ...basePublicComment.author,
+                id: input.userId
+            },
+            parentCommentId: input.parentCommentId ?? null,
+            rating: input.rating ?? null,
+            comment: input.comment
+        };
     }
 
-    async update(input: UpdateCommentInput): Promise<Comment | null> {
+    async update(input: UpdateCommentInput): Promise<PublicComment | null> {
         this.updatedInput = input;
 
         if (this.comment?.userId !== input.userId)
             return null;
 
-        return { ...baseComment, ...input };
+        return {
+            ...basePublicComment,
+            id: input.id,
+            author: {
+                ...basePublicComment.author,
+                id: input.userId
+            },
+            rating: input.rating ?? null,
+            comment: input.comment
+        };
     }
 
     async findById(): Promise<Comment | null> {
@@ -53,8 +89,8 @@ class FakeCommentRepository implements CommentRepository {
         return this.comment?.userId === userId;
     }
 
-    async findByRecipeId(): Promise<Comment[]> {
-        return this.comment ? [this.comment] : [];
+    async findByRecipeId(): Promise<PublicComment[]> {
+        return this.comment ? [basePublicComment] : [];
     }
 }
 
@@ -86,6 +122,8 @@ describe('CommentService', () => {
 
         assert.deepEqual(repository.createdInput, input);
         assert.equal(result.id, 2);
+        assert.deepEqual(result.author, { id: 20, username: 'testuser' });
+        assert.equal('userId' in result, false);
         assert.equal(result.comment, input.comment);
     });
 

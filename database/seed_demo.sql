@@ -30,6 +30,19 @@ UPDATE Users SET
   BannedAt       = '2025-01-10 11:00:00'
 WHERE Id = 7;
 
+-- Historique de modération du compte banni
+INSERT INTO UserModerationLogs (Id, UserId, AdminId, Action, Reason, CreatedAt) VALUES
+(1, 7, 1, 'ban',   'Publication répétée de liens promotionnels dans les commentaires', '2024-12-12 09:30:00'),
+(2, 7, 1, 'unban', 'Compte réactivé après engagement à respecter les règles de la communauté', '2024-12-18 15:45:00'),
+(3, 7, 1, 'ban',   'Spam de liens commerciaux répétés', '2025-01-10 11:00:00')
+AS new_user_moderation_logs
+ON DUPLICATE KEY UPDATE
+  UserId    = new_user_moderation_logs.UserId,
+  AdminId   = new_user_moderation_logs.AdminId,
+  Action    = new_user_moderation_logs.Action,
+  Reason    = new_user_moderation_logs.Reason,
+  CreatedAt = new_user_moderation_logs.CreatedAt;
+
 
 -- =====================================================
 -- RECETTES (20 publiées)

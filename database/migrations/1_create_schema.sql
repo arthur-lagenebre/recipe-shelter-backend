@@ -41,6 +41,27 @@ CREATE TABLE Users (
     ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE UserModerationLogs (
+  Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  UserId BIGINT UNSIGNED NOT NULL,
+  AdminId BIGINT UNSIGNED NOT NULL,
+  Action ENUM('ban', 'unban') NOT NULL,
+  Reason TEXT NOT NULL,
+  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (Id),
+  KEY idx_user_moderation_logs_user_id (UserId),
+  KEY idx_user_moderation_logs_admin_id (AdminId),
+  KEY idx_user_moderation_logs_created_at (CreatedAt),
+  CONSTRAINT user_moderation_logs_user_FK
+    FOREIGN KEY (UserId) REFERENCES Users(Id)
+    ON UPDATE CASCADE
+    ON DELETE RESTRICT,
+  CONSTRAINT user_moderation_logs_admin_FK
+    FOREIGN KEY (AdminId) REFERENCES Users(Id)
+    ON UPDATE CASCADE
+    ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE EmailValidations (
   Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   UserId BIGINT UNSIGNED NOT NULL,
