@@ -31,7 +31,7 @@ export class SmtpMailService implements Mailer {
   async sendPasswordResetEmail(input: PasswordResetMailInput): Promise<void> {
     await this.sendApplicationMail({
       to: input.to,
-      subject: 'Reinitialisation de votre mot de passe',
+      subject: 'Réinitialisation de votre mot de passe',
       text: this.formatPasswordResetMessage(input.username, input.resetUrl)
     });
   }
@@ -39,7 +39,7 @@ export class SmtpMailService implements Mailer {
   async sendPasswordChangedEmail(input: PasswordChangedMailInput): Promise<void> {
     await this.sendApplicationMail({
       to: input.to,
-      subject: 'Votre mot de passe a ete modifie',
+      subject: 'Votre mot de passe a été modifié',
       text: this.formatPasswordChangedMessage(input.username)
     });
   }
