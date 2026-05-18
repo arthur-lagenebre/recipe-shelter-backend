@@ -10,31 +10,37 @@ START TRANSACTION;
 -- =====================================================
 
 INSERT INTO Users (Id, Mail, Username, Password, RoleId, Status, EmailValidatedAt) VALUES
+-- Admin de demonstration
+(3,  'admin_demo@recipe-shelter.fr', 'admin_demo',    '$2b$12$38g4GAx4PkRk7AHBCJ.y9.OIpEKu1igx5sWBV7k/LpsZzHboH8j8a', 1, 'active', '2024-09-15 10:23:00'),
 -- Utilisateurs actifs
-(3,  'marie.dupont@gmail.com',    'MarieDupont',   '$2b$12$38g4GAx4PkRk7AHBCJ.y9.OIpEKu1igx5sWBV7k/LpsZzHboH8j8a', 2, 'active', '2024-09-15 10:23:00'),
 (4,  'thomas.martin@hotmail.fr',  'ThomasMartin',  '$2b$12$38g4GAx4PkRk7AHBCJ.y9.OIpEKu1igx5sWBV7k/LpsZzHboH8j8a', 2, 'active', '2024-10-02 14:45:00'),
 (5,  'sophie.leclerc@yahoo.fr',   'SophieCuisine', '$2b$12$38g4GAx4PkRk7AHBCJ.y9.OIpEKu1igx5sWBV7k/LpsZzHboH8j8a', 2, 'active', '2024-11-20 09:10:00'),
+(8,  'marie.dupont@gmail.com',    'MarieDupont',   '$2b$12$38g4GAx4PkRk7AHBCJ.y9.OIpEKu1igx5sWBV7k/LpsZzHboH8j8a', 2, 'active', '2024-09-15 10:23:00'),
 -- Utilisateur en attente de validation
 (6,  'paul.bernard@gmail.com',    'PaulB',         '$2b$12$38g4GAx4PkRk7AHBCJ.y9.OIpEKu1igx5sWBV7k/LpsZzHboH8j8a', 2, 'inactive', NULL),
 -- Utilisateur banni
 (7,  'spammer42@outlook.com',     'SpammerDu42',   '$2b$12$38g4GAx4PkRk7AHBCJ.y9.OIpEKu1igx5sWBV7k/LpsZzHboH8j8a', 2, 'banned', '2024-08-01 00:00:00')
 AS new_users
 ON DUPLICATE KEY UPDATE
+  Mail = new_users.Mail,
   Username = new_users.Username,
-  Status   = new_users.Status;
+  Password = new_users.Password,
+  RoleId = new_users.RoleId,
+  Status = new_users.Status,
+  EmailValidatedAt = new_users.EmailValidatedAt;
 
 -- Mise à jour du ban (après insertion pour éviter la FK circulaire)
 UPDATE Users SET
-  BannedByUserId = 1,
+  BannedByUserId = 3,
   BannedReason   = 'Spam de liens commerciaux répétés',
   BannedAt       = '2025-01-10 11:00:00'
 WHERE Id = 7;
 
 -- Historique de modération du compte banni
 INSERT INTO UserModerationLogs (Id, UserId, AdminId, Action, Reason, CreatedAt) VALUES
-(1, 7, 1, 'ban',   'Publication répétée de liens promotionnels dans les commentaires', '2024-12-12 09:30:00'),
-(2, 7, 1, 'unban', 'Compte réactivé après engagement à respecter les règles de la communauté', '2024-12-18 15:45:00'),
-(3, 7, 1, 'ban',   'Spam de liens commerciaux répétés', '2025-01-10 11:00:00')
+(1, 7, 3, 'ban',   'Publication répétée de liens promotionnels dans les commentaires', '2024-12-12 09:30:00'),
+(2, 7, 3, 'unban', 'Compte réactivé après engagement à respecter les règles de la communauté', '2024-12-18 15:45:00'),
+(3, 7, 3, 'ban',   'Spam de liens commerciaux répétés', '2025-01-10 11:00:00')
 AS new_user_moderation_logs
 ON DUPLICATE KEY UPDATE
   UserId    = new_user_moderation_logs.UserId,
@@ -46,151 +52,151 @@ ON DUPLICATE KEY UPDATE
 
 -- =====================================================
 -- RECETTES (20 publiées, 1 en validation)
--- UserId répartis entre 1 (admin), 3, 4, 5
+-- UserId repartis entre 4, 5, 8 ; moderation par 3 (admin_demo)
 -- =====================================================
 
 INSERT INTO Recipes
   (Id, UserId, CategoryId, Title, Slug, Description, RecipeCoverImage, PrepTimeMinutes, RestTimeMinutes, CookTimeMinutes, Servings, Status, SubmittedAt, ModeratedAt, ModeratedByUserId, PublishedAt)
 VALUES
 -- 1. Feuilletés apéritif chorizo feta
-(1, 3, 1, 'Feuilletés apéritif chorizo feta',
+(1, 8, 1, 'Feuilletés apéritif chorizo feta',
  'feuilletes-aperitif-chorizo-feta',
  'Des petits feuilletés croustillants garnis de chorizo et de feta, parfaits pour l''apéritif. Rapides à préparer et irrésistibles, ils disparaissent en quelques minutes !',
  'https://placehold.co/1200x800/f97316/111827?text=Feuilletes+chorizo+feta',
- 15, NULL, 20, 6, 'published', '2024-10-05 18:00:00', '2024-10-06 09:00:00', 1, '2024-10-06 09:30:00'),
+ 15, NULL, 20, 6, 'published', '2024-10-05 18:00:00', '2024-10-06 09:00:00', 3, '2024-10-06 09:30:00'),
 
 -- 2. Poulet au coco et curry
-(2, 3, 6, 'Poulet au coco et curry',
+(2, 8, 6, 'Poulet au coco et curry',
  'poulet-au-coco-et-curry',
  'Un plat parfumé et crémeux qui mêle la douceur du lait de coco à la chaleur du curry. Un voyage savoureux en une seule casserole.',
  'https://placehold.co/1200x800/fbbf24/111827?text=Poulet+coco+curry',
- 15, NULL, 30, 4, 'published', '2024-10-10 12:00:00', '2024-10-11 08:00:00', 1, '2024-10-11 08:30:00'),
+ 15, NULL, 30, 4, 'published', '2024-10-10 12:00:00', '2024-10-11 08:00:00', 3, '2024-10-11 08:30:00'),
 
 -- 3. Soupe d'asperges blanches
 (3, 4, 4, 'Soupe d''asperges blanches',
  'soupe-asperges-blanches',
  'Une soupe veloutée et délicate à base d''asperges blanches fraîches, légèrement crémée. Idéale en entrée pour un repas printanier.',
  'https://placehold.co/1200x800/a7f3d0/064e3b?text=Soupe+asperges+blanches',
- 20, NULL, 25, 4, 'published', '2024-10-15 11:00:00', '2024-10-16 09:00:00', 1, '2024-10-16 09:30:00'),
+ 20, NULL, 25, 4, 'published', '2024-10-15 11:00:00', '2024-10-16 09:00:00', 3, '2024-10-16 09:30:00'),
 
 -- 4. Tarte chocolat orange
 (4, 5, 3, 'Tarte chocolat orange',
  'tarte-chocolat-orange',
  'Une tarte gourmande alliant l''intensité du chocolat noir à la fraîcheur de l''orange. Un dessert élégant qui épatera vos convives.',
  'https://placehold.co/1200x800/7f1d1d/fef3c7?text=Tarte+chocolat+orange',
- 30, 60, 15, 8, 'published', '2024-10-20 16:00:00', '2024-10-21 10:00:00', 1, '2024-10-21 10:30:00'),
+ 30, 60, 15, 8, 'published', '2024-10-20 16:00:00', '2024-10-21 10:00:00', 3, '2024-10-21 10:30:00'),
 
 -- 5. Omelette norvégienne facile
 (5, 5, 3, 'Omelette norvégienne facile',
  'omelette-norvegienne-facile',
  'Le grand classique des desserts festifs : une génoise, une glace et une meringue flambée. Plus simple qu''il n''y paraît !',
  'https://placehold.co/1200x800/f9a8d4/831843?text=Omelette+norvegienne',
- 40, 120, 10, 8, 'published', '2024-10-25 14:00:00', '2024-10-26 09:00:00', 1, '2024-10-26 09:30:00'),
+ 40, 120, 10, 8, 'published', '2024-10-25 14:00:00', '2024-10-26 09:00:00', 3, '2024-10-26 09:30:00'),
 
 -- 6. Figues confites au vin rouge
 (6, 4, 3, 'Figues confites au vin rouge',
  'figues-confites-au-vin-rouge',
  'Des figues fondantes pochées dans un vin rouge épicé au miel et aux aromates. Un dessert ou un accompagnement de fromages raffiné.',
  'https://placehold.co/1200x800/581c87/fdf4ff?text=Figues+vin+rouge',
- 10, NULL, 40, 4, 'published', '2024-11-01 10:00:00', '2024-11-02 09:00:00', 1, '2024-11-02 09:30:00'),
+ 10, NULL, 40, 4, 'published', '2024-11-01 10:00:00', '2024-11-02 09:00:00', 3, '2024-11-02 09:30:00'),
 
 -- 7. Tataki de thon
-(7, 3, 4, 'Tataki de thon',
+(7, 8, 4, 'Tataki de thon',
  'tataki-de-thon',
  'Une entrée japonaise sophistiquée : le thon est saisi quelques secondes, tranché fin et servi avec une sauce soja citronnée au gingembre.',
  'https://placehold.co/1200x800/0f766e/ecfeff?text=Tataki+de+thon',
- 15, 30, 5, 4, 'published', '2024-11-05 12:00:00', '2024-11-06 09:00:00', 1, '2024-11-06 09:30:00'),
+ 15, 30, 5, 4, 'published', '2024-11-05 12:00:00', '2024-11-06 09:00:00', 3, '2024-11-06 09:30:00'),
 
 -- 8. Œufs mollet de grand-mère
 (8, 5, 4, 'Œufs mollet de grand-mère',
  'oeufs-mollet-grand-mere',
  'Des œufs mollets servis sur une sauce aux champignons et lardons, sur toast. Un plat de bistrot réconfortant et plein de saveurs.',
  'https://placehold.co/1200x800/fde68a/713f12?text=Oeufs+mollet+grand-mere',
- 10, NULL, 15, 2, 'published', '2024-11-10 11:00:00', '2024-11-11 09:00:00', 1, '2024-11-11 09:30:00'),
+ 10, NULL, 15, 2, 'published', '2024-11-10 11:00:00', '2024-11-11 09:00:00', 3, '2024-11-11 09:30:00'),
 
 -- 9. Soupe aux 7 légumes
 (9, 4, 4, 'Soupe aux 7 légumes',
  'soupe-aux-7-legumes',
  'Une soupe nourrissante et colorée qui réunit sept légumes de saison. Simple, économique et délicieuse, elle réchauffe les longues soirées d''hiver.',
  'https://placehold.co/1200x800/86efac/14532d?text=Soupe+aux+7+legumes',
- 20, NULL, 35, 6, 'published', '2024-11-15 10:00:00', '2024-11-16 09:00:00', 1, '2024-11-16 09:30:00'),
+ 20, NULL, 35, 6, 'published', '2024-11-15 10:00:00', '2024-11-16 09:00:00', 3, '2024-11-16 09:30:00'),
 
 -- 10. Soupe au chou vert
-(10, 3, 4, 'Soupe au chou vert',
+(10, 8, 4, 'Soupe au chou vert',
  'soupe-au-chou-vert',
  'La soupe au chou traditionnelle, mijotée longuement avec de belles tranches de lard fumé. Un classique de la cuisine paysanne française.',
  'https://placehold.co/1200x800/4ade80/052e16?text=Soupe+au+chou+vert',
- 15, NULL, 60, 6, 'published', '2024-11-20 11:00:00', '2024-11-21 09:00:00', 1, '2024-11-21 09:30:00'),
+ 15, NULL, 60, 6, 'published', '2024-11-20 11:00:00', '2024-11-21 09:00:00', 3, '2024-11-21 09:30:00'),
 
 -- 11. Croissants pesto jambon
 (11, 5, 1, 'Croissants pesto jambon',
  'croissants-pesto-jambon',
  'Des croissants feuilletés garnis d''une généreuse couche de pesto et de jambon. Parfaits pour un apéritif dînatoire ou un brunch gourmand.',
  'https://placehold.co/1200x800/b45309/fff7ed?text=Croissants+pesto+jambon',
- 15, NULL, 20, 8, 'published', '2024-11-25 14:00:00', '2024-11-26 09:00:00', 1, '2024-11-26 09:30:00'),
+ 15, NULL, 20, 8, 'published', '2024-11-25 14:00:00', '2024-11-26 09:00:00', 3, '2024-11-26 09:30:00'),
 
 -- 12. Galette des rois salée façon couronne
 (12, 4, 1, 'Galette des rois salée façon couronne',
  'galette-des-rois-salee-facon-couronne',
  'Une couronne feuilletée salée garnie de fromage de chèvre, épinards et noix. Une belle alternative à la galette sucrée pour l''Épiphanie.',
  'https://placehold.co/1200x800/c084fc/3b0764?text=Galette+salee+couronne',
- 20, NULL, 25, 6, 'published', '2024-12-01 10:00:00', '2024-12-02 09:00:00', 1, '2024-12-02 09:30:00'),
+ 20, NULL, 25, 6, 'published', '2024-12-01 10:00:00', '2024-12-02 09:00:00', 3, '2024-12-02 09:30:00'),
 
 -- 13. Punch délicieux
-(13, 3, 2, 'Punch délicieux',
+(13, 8, 2, 'Punch délicieux',
  'punch-delicieux',
  'Un punch fruité et généreux au rhum, aux jus de fruits exotiques et au sirop de grenadine. La boisson festive par excellence pour vos soirées.',
  'https://placehold.co/1200x800/f43f5e/fff1f2?text=Punch+delicieux',
- 10, 60, NULL, 10, 'published', '2024-12-05 12:00:00', '2024-12-06 09:00:00', 1, '2024-12-06 09:30:00'),
+ 10, 60, NULL, 10, 'published', '2024-12-05 12:00:00', '2024-12-06 09:00:00', 3, '2024-12-06 09:30:00'),
 
 -- 14. Gambas à l'armoricaine
 (14, 5, 6, 'Gambas à l''armoricaine',
  'gambas-a-l-armoricaine',
  'Des gambas flambées au cognac et cuisinées dans une sauce tomate onctueuse à la crème fraîche. Un plat de fête aux saveurs marines inoubliables.',
  'https://placehold.co/1200x800/f87171/450a0a?text=Gambas+armoricaine',
- 20, NULL, 25, 4, 'published', '2024-12-10 11:00:00', '2024-12-11 09:00:00', 1, '2024-12-11 09:30:00'),
+ 20, NULL, 25, 4, 'published', '2024-12-10 11:00:00', '2024-12-11 09:00:00', 3, '2024-12-11 09:30:00'),
 
 -- 15. La gâche vendéenne du petit-déjeuner
 (15, 4, 5, 'La gâche vendéenne du petit-déjeuner',
  'gache-vendeenne-petit-dejeuner',
  'La brioche vendéenne traditionnelle, légèrement parfumée à la fleur d''oranger. Moelleuse à souhait, elle est irrésistible au petit-déjeuner.',
  'https://placehold.co/1200x800/facc15/422006?text=Gache+vendeenne',
- 30, 120, 35, 10, 'published', '2024-12-15 09:00:00', '2024-12-16 09:00:00', 1, '2024-12-16 09:30:00'),
+ 30, 120, 35, 10, 'published', '2024-12-15 09:00:00', '2024-12-16 09:00:00', 3, '2024-12-16 09:30:00'),
 
 -- 16. Egg McMuffin maison
-(16, 3, 5, 'Egg McMuffin maison',
+(16, 8, 5, 'Egg McMuffin maison',
  'egg-mcmuffin-maison',
  'Le célèbre sandwich du petit-déjeuner américain, fait maison avec un muffin anglais, un œuf poché, du bacon et du cheddar fondu.',
  'https://placehold.co/1200x800/f59e0b/431407?text=Egg+McMuffin+maison',
- 10, NULL, 10, 2, 'published', '2024-12-20 08:00:00', '2024-12-21 09:00:00', 1, '2024-12-21 09:30:00'),
+ 10, NULL, 10, 2, 'published', '2024-12-20 08:00:00', '2024-12-21 09:00:00', 3, '2024-12-21 09:30:00'),
 
 -- 17. Omelette aux pruneaux du petit-déjeuner
 (17, 5, 5, 'Omelette aux pruneaux du petit-déjeuner',
  'omelette-aux-pruneaux-petit-dejeuner',
  'Une omelette sucrée et originale garnie de pruneaux moelleux et d''une pointe de cannelle. Un petit-déjeuner doux et nourrissant.',
  'https://placehold.co/1200x800/a16207/fefce8?text=Omelette+aux+pruneaux',
- 5, NULL, 10, 2, 'published', '2025-01-05 08:00:00', '2025-01-06 09:00:00', 1, '2025-01-06 09:30:00'),
+ 5, NULL, 10, 2, 'published', '2025-01-05 08:00:00', '2025-01-06 09:00:00', 3, '2025-01-06 09:30:00'),
 
 -- 18. Cocktail à l'ouzo (Grèce)
 (18, 4, 2, 'Cocktail à l''ouzo',
  'cocktail-a-l-ouzo',
  'Un cocktail frais et anisé inspiré de la Grèce, mêlant l''ouzo au jus de citron vert, au sirop de miel et à l''eau pétillante.',
  'https://placehold.co/1200x800/38bdf8/082f49?text=Cocktail+a+l-ouzo',
- 5, NULL, NULL, 2, 'published', '2025-01-10 15:00:00', '2025-01-11 09:00:00', 1, '2025-01-11 09:30:00'),
+ 5, NULL, NULL, 2, 'published', '2025-01-10 15:00:00', '2025-01-11 09:00:00', 3, '2025-01-11 09:30:00'),
 
 -- 19. Mojito à la bière
-(19, 3, 2, 'Mojito à la bière',
+(19, 8, 2, 'Mojito à la bière',
  'mojito-a-la-biere',
  'Une version festive et originale du mojito classique : la bière blonde remplace le soda pour une boisson désaltérante et légèrement amère.',
  'https://placehold.co/1200x800/22c55e/052e16?text=Mojito+a+la+biere',
- 10, NULL, NULL, 4, 'published', '2025-01-15 16:00:00', '2025-01-16 09:00:00', 1, '2025-01-16 09:30:00'),
+ 10, NULL, NULL, 4, 'published', '2025-01-15 16:00:00', '2025-01-16 09:00:00', 3, '2025-01-16 09:30:00'),
 
 -- 20. Le vrai chocolat chaud maison
 (20, 5, 2, 'Le vrai chocolat chaud maison',
  'le-vrai-chocolat-chaud-maison',
  'Un chocolat chaud épais et velouté, préparé avec du vrai chocolat noir de qualité. Bien loin des poudres industrielles, c''est la perfection dans une tasse.',
  'https://placehold.co/1200x800/78350f/fef3c7?text=Chocolat+chaud+maison',
- 5, NULL, 10, 2, 'published', '2025-01-20 17:00:00', '2025-01-21 09:00:00', 1, '2025-01-21 09:30:00'),
+ 5, NULL, 10, 2, 'published', '2025-01-20 17:00:00', '2025-01-21 09:00:00', 3, '2025-01-21 09:30:00'),
 
 -- 21. Dahl de lentilles corail (en validation)
 (21, 4, 6, 'Dahl de lentilles corail',
@@ -699,49 +705,49 @@ INSERT INTO RecipeEquipments (RecipeId, EquipmentId) VALUES
 INSERT INTO Comments (Id, RecipeId, UserId, ParentCommentId, Rating, Comment, CreatedAt, ModeratedAt, ModeratedByUserId, DeletedAt, DeletedByUserId) VALUES
 
 -- Recette 1 : Feuilletés chorizo feta
-(1,  1, 3, NULL, 5, 'Testés hier soir pour l''apéro, ils ont été dévorés en 5 minutes ! J''ai ajouté un peu de paprika fumé, c''était encore meilleur.', '2024-10-08 19:30:00', NULL, NULL, NULL, NULL),
+(1,  1, 8, NULL, 5, 'Testés hier soir pour l''apéro, ils ont été dévorés en 5 minutes ! J''ai ajouté un peu de paprika fumé, c''était encore meilleur.', '2024-10-08 19:30:00', NULL, NULL, NULL, NULL),
 (2,  1, 4, NULL, 4, 'Très bien, j''ai remplacé la feta par du chèvre, ça marche aussi.', '2024-10-09 10:15:00', NULL, NULL, NULL, NULL),
 (3,  1, 5, 1, NULL, 'Super idée le paprika fumé, je vais essayer !', '2024-10-09 11:00:00', NULL, NULL, NULL, NULL),
 -- Commentaire modéré (spam)
-(4,  1, 7, NULL, 1, 'Achetez mes produits miracle sur www.spam-link.fr !!!', '2024-10-10 08:00:00', '2024-10-10 08:30:00', 1, NULL, NULL),
+(4,  1, 7, NULL, 1, 'Achetez mes produits miracle sur www.spam-link.fr !!!', '2024-10-10 08:00:00', '2024-10-10 08:30:00', 3, NULL, NULL),
 
 -- Recette 2 : Poulet coco curry
 (5,  2, 4, NULL, 5, 'Recette incroyable ! Je fais du curry depuis des années mais celui-là est vraiment exceptionnel. Le secret c''est bien le lait de coco de qualité.', '2024-10-14 20:00:00', NULL, NULL, NULL, NULL),
 (6,  2, 5, NULL, 4, 'Bon équilibre des épices. J''ai ajouté un peu de gingembre frais râpé et une touche de citronnelle, ça apporte beaucoup de fraîcheur.', '2024-10-15 12:30:00', NULL, NULL, '2024-10-15 13:00:00', 5),
 (7,  2, 4, 5, NULL, 'Oh oui la citronnelle c''est une excellente idée, je note !', '2024-10-15 14:00:00', NULL, NULL, NULL, NULL),
 -- Commentaire modéré (hors-sujet agressif)
-(8,  2, 7, NULL, 1, 'NAZE. Le curry c''est une honte culinaire, les gens qui font ça sont des ignorants !!!', '2024-10-16 09:00:00', '2024-10-16 10:00:00', 1, NULL, NULL),
+(8,  2, 7, NULL, 1, 'NAZE. Le curry c''est une honte culinaire, les gens qui font ça sont des ignorants !!!', '2024-10-16 09:00:00', '2024-10-16 10:00:00', 3, NULL, NULL),
 
 -- Recette 3 : Soupe asperges blanches
-(9,  3, 3, NULL, 5, 'Parfaite pour un dîner chic sans trop d''effort. J''ai ajouté quelques copeaux de parmesan et c''était sublime.', '2024-10-18 21:00:00', NULL, NULL, NULL, NULL),
+(9,  3, 8, NULL, 5, 'Parfaite pour un dîner chic sans trop d''effort. J''ai ajouté quelques copeaux de parmesan et c''était sublime.', '2024-10-18 21:00:00', NULL, NULL, NULL, NULL),
 (10, 3, 5, NULL, 4, 'Très délicate. Je recommande de bien sécher les asperges avant de les cuire pour éviter une soupe trop aqueuse.', '2024-10-19 13:00:00', NULL, NULL, NULL, NULL),
 
 -- Recette 4 : Tarte chocolat orange
-(11, 4, 3, NULL, 5, 'Cette tarte est un chef-d''œuvre. J''ai utilisé du chocolat Valrhona et des oranges bio, le résultat était époustouflant.', '2024-10-24 18:00:00', NULL, NULL, NULL, NULL),
+(11, 4, 8, NULL, 5, 'Cette tarte est un chef-d''œuvre. J''ai utilisé du chocolat Valrhona et des oranges bio, le résultat était époustouflant.', '2024-10-24 18:00:00', NULL, NULL, NULL, NULL),
 (12, 4, 4, NULL, 4, 'Très bonne recette mais attention : la ganache doit reposer au moins 2h au frais pour bien se tenir à la découpe.', '2024-10-25 15:30:00', NULL, NULL, NULL, NULL),
-(13, 4, 3, 12, NULL, 'Tout à fait d''accord, j''ai fait la bêtise de la couper trop tôt... 😅', '2024-10-25 16:00:00', NULL, NULL, NULL, NULL),
+(13, 4, 8, 12, NULL, 'Tout à fait d''accord, j''ai fait la bêtise de la couper trop tôt... 😅', '2024-10-25 16:00:00', NULL, NULL, NULL, NULL),
 
 -- Recette 7 : Tataki de thon
 (14, 7, 5, NULL, 5, 'Magnifique recette ! Le thon était cru au centre avec juste une légère croûte en surface. Résultat bluffant.', '2024-11-08 20:00:00', NULL, NULL, NULL, NULL),
-(15, 7, 3, NULL, 4, 'Très bien. J''ai mariné 1h au lieu de 30 min, c''était encore plus parfumé.', '2024-11-09 12:00:00', NULL, NULL, NULL, NULL),
+(15, 7, 8, NULL, 4, 'Très bien. J''ai mariné 1h au lieu de 30 min, c''était encore plus parfumé.', '2024-11-09 12:00:00', NULL, NULL, NULL, NULL),
 -- Commentaire supprimé soft par l'auteur
 (16, 7, 4, NULL, 2, 'Moyen, le thon était trop cuit chez moi.', '2024-11-09 14:00:00', NULL, NULL, '2024-11-10 09:00:00', 4),
 
 -- Recette 9 : Soupe 7 légumes
-(17, 9, 3, NULL, 5, 'La soupe de l''hiver par excellence ! Je la fais en grande quantité et je congèle des portions pour la semaine.', '2024-11-18 19:30:00', NULL, NULL, NULL, NULL),
+(17, 9, 8, NULL, 5, 'La soupe de l''hiver par excellence ! Je la fais en grande quantité et je congèle des portions pour la semaine.', '2024-11-18 19:30:00', NULL, NULL, NULL, NULL),
 (18, 9, 5, NULL, 4, 'Très nourrissante. J''y ajoute toujours des pois chiches pour encore plus de protéines.', '2024-11-19 11:00:00', NULL, NULL, NULL, NULL),
 
 -- Recette 10 : Soupe chou vert
 (19, 10, 4, NULL, 5, 'Un grand classique de ma grand-mère ! Cette recette est exactement la bonne. Merci de l''avoir partagée.', '2024-11-23 20:00:00', NULL, NULL, NULL, NULL),
-(20, 10, 3, 19, NULL, 'C''est tellement vrai, ce genre de recette mérite d''être transmis de génération en génération.', '2024-11-23 21:00:00', NULL, NULL, NULL, NULL),
+(20, 10, 8, 19, NULL, 'C''est tellement vrai, ce genre de recette mérite d''être transmis de génération en génération.', '2024-11-23 21:00:00', NULL, NULL, NULL, NULL),
 
 -- Recette 14 : Gambas armoricaine
 (21, 14, 5, NULL, 5, 'Recette de fête absolue. J''ai réalisé ce plat pour Noël et tout le monde a été conquis. Le flambage au cognac fait vraiment la différence.', '2024-12-14 21:00:00', NULL, NULL, NULL, NULL),
-(22, 14, 3, NULL, 5, 'Parfait ! J''ai ajouté une pointe de piment d''Espelette dans la sauce, c''est encore meilleur.', '2024-12-15 10:00:00', NULL, NULL, NULL, NULL),
+(22, 14, 8, NULL, 5, 'Parfait ! J''ai ajouté une pointe de piment d''Espelette dans la sauce, c''est encore meilleur.', '2024-12-15 10:00:00', NULL, NULL, NULL, NULL),
 
 -- Recette 15 : Gâche vendéenne
 (23, 15, 4, NULL, 5, 'Enfin la vraie recette de la gâche vendéenne ! Je suis vendéenne et c''est exactement comme ça qu''on la fait chez nous.', '2024-12-18 09:30:00', NULL, NULL, NULL, NULL),
-(24, 15, 3, NULL, 4, 'Très bonne mais j''ai dû ajouter un peu de lait car ma pâte était trop sèche. Peut-être une question de farine.', '2024-12-18 14:00:00', NULL, NULL, NULL, NULL),
+(24, 15, 8, NULL, 4, 'Très bonne mais j''ai dû ajouter un peu de lait car ma pâte était trop sèche. Peut-être une question de farine.', '2024-12-18 14:00:00', NULL, NULL, NULL, NULL),
 
 -- Recette 20 : Chocolat chaud
 (25, 20, 5, NULL, 5, 'Plus jamais le chocolat en sachet ! Cette recette a changé ma vie, c''est d''une onctuosité incomparable.', '2025-01-22 20:00:00', NULL, NULL, NULL, NULL),
@@ -756,13 +762,16 @@ ON DUPLICATE KEY UPDATE Comment = new_comments.Comment;
 -- FAVORITES
 -- =====================================================
 
+DELETE FROM Favorites
+WHERE UserId = 3;
+
 INSERT INTO Favorites (UserId, RecipeId, CreatedAt) VALUES
--- MarieDupont (UserId=3) : aime les desserts et les plats festifs
-(3, 4,  '2024-10-22 10:00:00'),
-(3, 5,  '2024-10-27 18:00:00'),
-(3, 14, '2024-12-12 20:00:00'),
-(3, 20, '2025-01-22 21:00:00'),
-(3, 7,  '2024-11-07 12:00:00'),
+-- MarieDupont (UserId=8) : aime les desserts et les plats festifs
+(8, 4,  '2024-10-22 10:00:00'),
+(8, 5,  '2024-10-27 18:00:00'),
+(8, 14, '2024-12-12 20:00:00'),
+(8, 20, '2025-01-22 21:00:00'),
+(8, 7,  '2024-11-07 12:00:00'),
 
 -- ThomasMartin (UserId=4) : fan de cuisine du quotidien
 (4, 2,  '2024-10-12 19:00:00'),
