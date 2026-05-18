@@ -50,130 +50,152 @@ ON DUPLICATE KEY UPDATE
 -- =====================================================
 
 INSERT INTO Recipes
-  (Id, UserId, CategoryId, Title, Slug, Description, PrepTimeMinutes, RestTimeMinutes, CookTimeMinutes, Servings, Status, SubmittedAt, ModeratedAt, ModeratedByUserId, PublishedAt)
+  (Id, UserId, CategoryId, Title, Slug, Description, RecipeCoverImage, PrepTimeMinutes, RestTimeMinutes, CookTimeMinutes, Servings, Status, SubmittedAt, ModeratedAt, ModeratedByUserId, PublishedAt)
 VALUES
 -- 1. Feuilletés apéritif chorizo feta
 (1, 3, 1, 'Feuilletés apéritif chorizo feta',
  'feuilletes-aperitif-chorizo-feta',
  'Des petits feuilletés croustillants garnis de chorizo et de feta, parfaits pour l''apéritif. Rapides à préparer et irrésistibles, ils disparaissent en quelques minutes !',
+ 'https://placehold.co/1200x800/f97316/111827?text=Feuilletes+chorizo+feta',
  15, NULL, 20, 6, 'published', '2024-10-05 18:00:00', '2024-10-06 09:00:00', 1, '2024-10-06 09:30:00'),
 
 -- 2. Poulet au coco et curry
 (2, 3, 6, 'Poulet au coco et curry',
  'poulet-au-coco-et-curry',
  'Un plat parfumé et crémeux qui mêle la douceur du lait de coco à la chaleur du curry. Un voyage savoureux en une seule casserole.',
+ 'https://placehold.co/1200x800/fbbf24/111827?text=Poulet+coco+curry',
  15, NULL, 30, 4, 'published', '2024-10-10 12:00:00', '2024-10-11 08:00:00', 1, '2024-10-11 08:30:00'),
 
 -- 3. Soupe d'asperges blanches
 (3, 4, 4, 'Soupe d''asperges blanches',
  'soupe-asperges-blanches',
  'Une soupe veloutée et délicate à base d''asperges blanches fraîches, légèrement crémée. Idéale en entrée pour un repas printanier.',
+ 'https://placehold.co/1200x800/a7f3d0/064e3b?text=Soupe+asperges+blanches',
  20, NULL, 25, 4, 'published', '2024-10-15 11:00:00', '2024-10-16 09:00:00', 1, '2024-10-16 09:30:00'),
 
 -- 4. Tarte chocolat orange
 (4, 5, 3, 'Tarte chocolat orange',
  'tarte-chocolat-orange',
  'Une tarte gourmande alliant l''intensité du chocolat noir à la fraîcheur de l''orange. Un dessert élégant qui épatera vos convives.',
+ 'https://placehold.co/1200x800/7f1d1d/fef3c7?text=Tarte+chocolat+orange',
  30, 60, 15, 8, 'published', '2024-10-20 16:00:00', '2024-10-21 10:00:00', 1, '2024-10-21 10:30:00'),
 
 -- 5. Omelette norvégienne facile
 (5, 5, 3, 'Omelette norvégienne facile',
  'omelette-norvegienne-facile',
  'Le grand classique des desserts festifs : une génoise, une glace et une meringue flambée. Plus simple qu''il n''y paraît !',
+ 'https://placehold.co/1200x800/f9a8d4/831843?text=Omelette+norvegienne',
  40, 120, 10, 8, 'published', '2024-10-25 14:00:00', '2024-10-26 09:00:00', 1, '2024-10-26 09:30:00'),
 
 -- 6. Figues confites au vin rouge
 (6, 4, 3, 'Figues confites au vin rouge',
  'figues-confites-au-vin-rouge',
  'Des figues fondantes pochées dans un vin rouge épicé au miel et aux aromates. Un dessert ou un accompagnement de fromages raffiné.',
+ 'https://placehold.co/1200x800/581c87/fdf4ff?text=Figues+vin+rouge',
  10, NULL, 40, 4, 'published', '2024-11-01 10:00:00', '2024-11-02 09:00:00', 1, '2024-11-02 09:30:00'),
 
 -- 7. Tataki de thon
 (7, 3, 4, 'Tataki de thon',
  'tataki-de-thon',
  'Une entrée japonaise sophistiquée : le thon est saisi quelques secondes, tranché fin et servi avec une sauce soja citronnée au gingembre.',
+ 'https://placehold.co/1200x800/0f766e/ecfeff?text=Tataki+de+thon',
  15, 30, 5, 4, 'published', '2024-11-05 12:00:00', '2024-11-06 09:00:00', 1, '2024-11-06 09:30:00'),
 
 -- 8. Œufs mollet de grand-mère
 (8, 5, 4, 'Œufs mollet de grand-mère',
  'oeufs-mollet-grand-mere',
  'Des œufs mollets servis sur une sauce aux champignons et lardons, sur toast. Un plat de bistrot réconfortant et plein de saveurs.',
+ 'https://placehold.co/1200x800/fde68a/713f12?text=Oeufs+mollet+grand-mere',
  10, NULL, 15, 2, 'published', '2024-11-10 11:00:00', '2024-11-11 09:00:00', 1, '2024-11-11 09:30:00'),
 
 -- 9. Soupe aux 7 légumes
 (9, 4, 4, 'Soupe aux 7 légumes',
  'soupe-aux-7-legumes',
  'Une soupe nourrissante et colorée qui réunit sept légumes de saison. Simple, économique et délicieuse, elle réchauffe les longues soirées d''hiver.',
+ 'https://placehold.co/1200x800/86efac/14532d?text=Soupe+aux+7+legumes',
  20, NULL, 35, 6, 'published', '2024-11-15 10:00:00', '2024-11-16 09:00:00', 1, '2024-11-16 09:30:00'),
 
 -- 10. Soupe au chou vert
 (10, 3, 4, 'Soupe au chou vert',
  'soupe-au-chou-vert',
  'La soupe au chou traditionnelle, mijotée longuement avec de belles tranches de lard fumé. Un classique de la cuisine paysanne française.',
+ 'https://placehold.co/1200x800/4ade80/052e16?text=Soupe+au+chou+vert',
  15, NULL, 60, 6, 'published', '2024-11-20 11:00:00', '2024-11-21 09:00:00', 1, '2024-11-21 09:30:00'),
 
 -- 11. Croissants pesto jambon
 (11, 5, 1, 'Croissants pesto jambon',
  'croissants-pesto-jambon',
  'Des croissants feuilletés garnis d''une généreuse couche de pesto et de jambon. Parfaits pour un apéritif dînatoire ou un brunch gourmand.',
+ 'https://placehold.co/1200x800/b45309/fff7ed?text=Croissants+pesto+jambon',
  15, NULL, 20, 8, 'published', '2024-11-25 14:00:00', '2024-11-26 09:00:00', 1, '2024-11-26 09:30:00'),
 
 -- 12. Galette des rois salée façon couronne
 (12, 4, 1, 'Galette des rois salée façon couronne',
  'galette-des-rois-salee-facon-couronne',
  'Une couronne feuilletée salée garnie de fromage de chèvre, épinards et noix. Une belle alternative à la galette sucrée pour l''Épiphanie.',
+ 'https://placehold.co/1200x800/c084fc/3b0764?text=Galette+salee+couronne',
  20, NULL, 25, 6, 'published', '2024-12-01 10:00:00', '2024-12-02 09:00:00', 1, '2024-12-02 09:30:00'),
 
 -- 13. Punch délicieux
 (13, 3, 2, 'Punch délicieux',
  'punch-delicieux',
  'Un punch fruité et généreux au rhum, aux jus de fruits exotiques et au sirop de grenadine. La boisson festive par excellence pour vos soirées.',
+ 'https://placehold.co/1200x800/f43f5e/fff1f2?text=Punch+delicieux',
  10, 60, NULL, 10, 'published', '2024-12-05 12:00:00', '2024-12-06 09:00:00', 1, '2024-12-06 09:30:00'),
 
 -- 14. Gambas à l'armoricaine
 (14, 5, 6, 'Gambas à l''armoricaine',
  'gambas-a-l-armoricaine',
  'Des gambas flambées au cognac et cuisinées dans une sauce tomate onctueuse à la crème fraîche. Un plat de fête aux saveurs marines inoubliables.',
+ 'https://placehold.co/1200x800/f87171/450a0a?text=Gambas+armoricaine',
  20, NULL, 25, 4, 'published', '2024-12-10 11:00:00', '2024-12-11 09:00:00', 1, '2024-12-11 09:30:00'),
 
 -- 15. La gâche vendéenne du petit-déjeuner
 (15, 4, 5, 'La gâche vendéenne du petit-déjeuner',
  'gache-vendeenne-petit-dejeuner',
  'La brioche vendéenne traditionnelle, légèrement parfumée à la fleur d''oranger. Moelleuse à souhait, elle est irrésistible au petit-déjeuner.',
+ 'https://placehold.co/1200x800/facc15/422006?text=Gache+vendeenne',
  30, 120, 35, 10, 'published', '2024-12-15 09:00:00', '2024-12-16 09:00:00', 1, '2024-12-16 09:30:00'),
 
 -- 16. Egg McMuffin maison
 (16, 3, 5, 'Egg McMuffin maison',
  'egg-mcmuffin-maison',
  'Le célèbre sandwich du petit-déjeuner américain, fait maison avec un muffin anglais, un œuf poché, du bacon et du cheddar fondu.',
+ 'https://placehold.co/1200x800/f59e0b/431407?text=Egg+McMuffin+maison',
  10, NULL, 10, 2, 'published', '2024-12-20 08:00:00', '2024-12-21 09:00:00', 1, '2024-12-21 09:30:00'),
 
 -- 17. Omelette aux pruneaux du petit-déjeuner
 (17, 5, 5, 'Omelette aux pruneaux du petit-déjeuner',
  'omelette-aux-pruneaux-petit-dejeuner',
  'Une omelette sucrée et originale garnie de pruneaux moelleux et d''une pointe de cannelle. Un petit-déjeuner doux et nourrissant.',
+ 'https://placehold.co/1200x800/a16207/fefce8?text=Omelette+aux+pruneaux',
  5, NULL, 10, 2, 'published', '2025-01-05 08:00:00', '2025-01-06 09:00:00', 1, '2025-01-06 09:30:00'),
 
 -- 18. Cocktail à l'ouzo (Grèce)
 (18, 4, 2, 'Cocktail à l''ouzo',
  'cocktail-a-l-ouzo',
  'Un cocktail frais et anisé inspiré de la Grèce, mêlant l''ouzo au jus de citron vert, au sirop de miel et à l''eau pétillante.',
+ 'https://placehold.co/1200x800/38bdf8/082f49?text=Cocktail+a+l-ouzo',
  5, NULL, NULL, 2, 'published', '2025-01-10 15:00:00', '2025-01-11 09:00:00', 1, '2025-01-11 09:30:00'),
 
 -- 19. Mojito à la bière
 (19, 3, 2, 'Mojito à la bière',
  'mojito-a-la-biere',
  'Une version festive et originale du mojito classique : la bière blonde remplace le soda pour une boisson désaltérante et légèrement amère.',
+ 'https://placehold.co/1200x800/22c55e/052e16?text=Mojito+a+la+biere',
  10, NULL, NULL, 4, 'published', '2025-01-15 16:00:00', '2025-01-16 09:00:00', 1, '2025-01-16 09:30:00'),
 
 -- 20. Le vrai chocolat chaud maison
 (20, 5, 2, 'Le vrai chocolat chaud maison',
  'le-vrai-chocolat-chaud-maison',
  'Un chocolat chaud épais et velouté, préparé avec du vrai chocolat noir de qualité. Bien loin des poudres industrielles, c''est la perfection dans une tasse.',
+ 'https://placehold.co/1200x800/78350f/fef3c7?text=Chocolat+chaud+maison',
  5, NULL, 10, 2, 'published', '2025-01-20 17:00:00', '2025-01-21 09:00:00', 1, '2025-01-21 09:30:00')
 
 AS new_recipes
-ON DUPLICATE KEY UPDATE Title = new_recipes.Title;
+ON DUPLICATE KEY UPDATE
+  Title = new_recipes.Title,
+  RecipeCoverImage = new_recipes.RecipeCoverImage;
 
 
 -- =====================================================
