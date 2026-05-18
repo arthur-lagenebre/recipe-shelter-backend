@@ -11,13 +11,13 @@ START TRANSACTION;
 
 INSERT INTO Users (Id, Mail, Username, Password, RoleId, Status, EmailValidatedAt) VALUES
 -- Utilisateurs actifs
-(3,  'marie.dupont@gmail.com',    'MarieDupont',   '$2b$12$eImiTXuWVxfM37uY4JANjOe0aF0YoZz3wGGBF1sGMXzK3rRkJkB6K', 2, 'active', '2024-09-15 10:23:00'),
-(4,  'thomas.martin@hotmail.fr',  'ThomasMartin',  '$2b$12$eImiTXuWVxfM37uY4JANjOe0aF0YoZz3wGGBF1sGMXzK3rRkJkB6K', 2, 'active', '2024-10-02 14:45:00'),
-(5,  'sophie.leclerc@yahoo.fr',   'SophieCuisine', '$2b$12$eImiTXuWVxfM37uY4JANjOe0aF0YoZz3wGGBF1sGMXzK3rRkJkB6K', 2, 'active', '2024-11-20 09:10:00'),
+(3,  'marie.dupont@gmail.com',    'MarieDupont',   '$2b$12$38g4GAx4PkRk7AHBCJ.y9.OIpEKu1igx5sWBV7k/LpsZzHboH8j8a', 2, 'active', '2024-09-15 10:23:00'),
+(4,  'thomas.martin@hotmail.fr',  'ThomasMartin',  '$2b$12$38g4GAx4PkRk7AHBCJ.y9.OIpEKu1igx5sWBV7k/LpsZzHboH8j8a', 2, 'active', '2024-10-02 14:45:00'),
+(5,  'sophie.leclerc@yahoo.fr',   'SophieCuisine', '$2b$12$38g4GAx4PkRk7AHBCJ.y9.OIpEKu1igx5sWBV7k/LpsZzHboH8j8a', 2, 'active', '2024-11-20 09:10:00'),
 -- Utilisateur en attente de validation
-(6,  'paul.bernard@gmail.com',    'PaulB',         '$2b$12$eImiTXuWVxfM37uY4JANjOe0aF0YoZz3wGGBF1sGMXzK3rRkJkB6K', 2, 'inactive', NULL),
+(6,  'paul.bernard@gmail.com',    'PaulB',         '$2b$12$38g4GAx4PkRk7AHBCJ.y9.OIpEKu1igx5sWBV7k/LpsZzHboH8j8a', 2, 'inactive', NULL),
 -- Utilisateur banni
-(7,  'spammer42@outlook.com',     'SpammerDu42',   '$2b$12$eImiTXuWVxfM37uY4JANjOe0aF0YoZz3wGGBF1sGMXzK3rRkJkB6K', 2, 'banned', '2024-08-01 00:00:00')
+(7,  'spammer42@outlook.com',     'SpammerDu42',   '$2b$12$38g4GAx4PkRk7AHBCJ.y9.OIpEKu1igx5sWBV7k/LpsZzHboH8j8a', 2, 'banned', '2024-08-01 00:00:00')
 AS new_users
 ON DUPLICATE KEY UPDATE
   Username = new_users.Username,
@@ -45,7 +45,7 @@ ON DUPLICATE KEY UPDATE
 
 
 -- =====================================================
--- RECETTES (20 publiées)
+-- RECETTES (20 publiées, 1 en validation)
 -- UserId répartis entre 1 (admin), 3, 4, 5
 -- =====================================================
 
@@ -190,7 +190,14 @@ VALUES
  'le-vrai-chocolat-chaud-maison',
  'Un chocolat chaud épais et velouté, préparé avec du vrai chocolat noir de qualité. Bien loin des poudres industrielles, c''est la perfection dans une tasse.',
  'https://placehold.co/1200x800/78350f/fef3c7?text=Chocolat+chaud+maison',
- 5, NULL, 10, 2, 'published', '2025-01-20 17:00:00', '2025-01-21 09:00:00', 1, '2025-01-21 09:30:00')
+ 5, NULL, 10, 2, 'published', '2025-01-20 17:00:00', '2025-01-21 09:00:00', 1, '2025-01-21 09:30:00'),
+
+-- 21. Dahl de lentilles corail (en validation)
+(21, 4, 6, 'Dahl de lentilles corail',
+ 'dahl-lentilles-corail',
+ 'Un dahl crémeux aux lentilles corail, lait de coco et épices douces. Une recette végétarienne simple, nourrissante et parfaite pour le batch cooking.',
+ 'https://placehold.co/1200x800/f97316/fff7ed?text=Dahl+lentilles+corail',
+ 15, NULL, 30, 4, 'pending', '2025-02-01 18:20:00', NULL, NULL, NULL)
 
 AS new_recipes
 ON DUPLICATE KEY UPDATE
@@ -337,7 +344,14 @@ INSERT INTO RecipeSteps (RecipeId, StepNumber, Description) VALUES
 (20, 2, 'Faites chauffer le lait à feu moyen sans le faire bouillir.'),
 (20, 3, 'Versez un tiers du lait chaud sur le chocolat. Attendez 1 min puis mélangez en cercles depuis le centre.'),
 (20, 4, 'Ajoutez le reste du lait progressivement, mélangez jusqu''à obtenir un chocolat lisse et brillant.'),
-(20, 5, 'Versez dans des tasses préchauffées. Ajoutez une touche de chantilly si désiré.');
+(20, 5, 'Versez dans des tasses préchauffées. Ajoutez une touche de chantilly si désiré.'),
+
+-- 21. Dahl de lentilles corail
+(21, 1, 'Rincez les lentilles corail jusqu''à ce que l''eau soit claire. Émincez l''oignon, l''ail et le gingembre.'),
+(21, 2, 'Faites revenir l''oignon dans l''huile d''olive. Ajoutez l''ail, le gingembre, le curry et le curcuma.'),
+(21, 3, 'Ajoutez les lentilles, les tomates concassées et le lait de coco. Salez puis mélangez.'),
+(21, 4, 'Laissez mijoter 25 à 30 min à feu doux en remuant régulièrement, jusqu''à obtenir une texture crémeuse.'),
+(21, 5, 'Servez avec du riz basmati et de la coriandre fraîche.');
 
 
 -- =====================================================
@@ -506,7 +520,21 @@ INSERT INTO RecipeIngredients (RecipeId, IngredientId, Quantity, Unit, Note, Sor
 (20, (SELECT Id FROM Ingredients WHERE Name = 'Chocolat noir'), 80,  'g',    'chocolat noir 70% minimum', 1),
 (20, (SELECT Id FROM Ingredients WHERE Name = 'Lait'),          400, 'ml',   'lait entier de préférence', 2),
 (20, (SELECT Id FROM Ingredients WHERE Name = 'Sucre'),         1,   'tbsp', 'optionnel',                 3),
-(20, (SELECT Id FROM Ingredients WHERE Name = 'Vanille'),       1,   'pinch','optionnel',                 4);
+(20, (SELECT Id FROM Ingredients WHERE Name = 'Vanille'),       1,   'pinch','optionnel',                 4),
+
+-- 21. Dahl de lentilles corail
+(21, (SELECT Id FROM Ingredients WHERE Name = 'Lentille corail'),     250, 'g',    NULL,                    1),
+(21, (SELECT Id FROM Ingredients WHERE Name = 'Lait de coco'),        400, 'ml',   'une boîte',             2),
+(21, (SELECT Id FROM Ingredients WHERE Name = 'Concentré de tomate'), 2,   'tbsp', NULL,                    3),
+(21, (SELECT Id FROM Ingredients WHERE Name = 'Oignon'),              1,   NULL,   NULL,                    4),
+(21, (SELECT Id FROM Ingredients WHERE Name = 'Ail'),                 2,   NULL,   'gousses',               5),
+(21, (SELECT Id FROM Ingredients WHERE Name = 'Gingembre'),           20,  'g',    'frais râpé',            6),
+(21, (SELECT Id FROM Ingredients WHERE Name = 'Curry'),               2,   'tsp',  NULL,                    7),
+(21, (SELECT Id FROM Ingredients WHERE Name = 'Curcuma'),             1,   'tsp',  NULL,                    8),
+(21, (SELECT Id FROM Ingredients WHERE Name = 'Huile d''olive'),      2,   'tbsp', NULL,                    9),
+(21, (SELECT Id FROM Ingredients WHERE Name = 'Riz basmati'),         250, 'g',    'pour servir',           10),
+(21, (SELECT Id FROM Ingredients WHERE Name = 'Coriandre'),           1,   NULL,   'bouquet',               11),
+(21, (SELECT Id FROM Ingredients WHERE Name = 'Sel'),                 1,   'tsp',  NULL,                    12);
 
 
 -- =====================================================
@@ -596,7 +624,12 @@ INSERT INTO RecipeTags (RecipeId, TagId) VALUES
 (20, (SELECT Id FROM Tags WHERE Name = 'Facile')),
 (20, (SELECT Id FROM Tags WHERE Name = 'Très rapide')),
 (20, (SELECT Id FROM Tags WHERE Name = 'Comfort food')),
-(20, (SELECT Id FROM Tags WHERE Name = 'Fait maison'));
+(20, (SELECT Id FROM Tags WHERE Name = 'Fait maison')),
+(21, (SELECT Id FROM Tags WHERE Name = 'Plat principal')),
+(21, (SELECT Id FROM Tags WHERE Name = 'Facile')),
+(21, (SELECT Id FROM Tags WHERE Name = 'Végétarien')),
+(21, (SELECT Id FROM Tags WHERE Name = 'Batch cooking')),
+(21, (SELECT Id FROM Tags WHERE Name = 'Cuisine indienne'));
 
 
 -- =====================================================
@@ -652,7 +685,10 @@ INSERT INTO RecipeEquipments (RecipeId, EquipmentId) VALUES
 (18, (SELECT Id FROM Equipments WHERE Name = 'Saladier')),
 (19, (SELECT Id FROM Equipments WHERE Name = 'Saladier')),
 (20, (SELECT Id FROM Equipments WHERE Name = 'Casserole')),
-(20, (SELECT Id FROM Equipments WHERE Name = 'Fouet'));
+(20, (SELECT Id FROM Equipments WHERE Name = 'Fouet')),
+(21, (SELECT Id FROM Equipments WHERE Name = 'Sauteuse')),
+(21, (SELECT Id FROM Equipments WHERE Name = 'Couteau de cuisine')),
+(21, (SELECT Id FROM Equipments WHERE Name = 'Planche à découper'));
 
 
 -- =====================================================
@@ -666,12 +702,12 @@ INSERT INTO Comments (Id, RecipeId, UserId, ParentCommentId, Rating, Comment, Cr
 (1,  1, 3, NULL, 5, 'Testés hier soir pour l''apéro, ils ont été dévorés en 5 minutes ! J''ai ajouté un peu de paprika fumé, c''était encore meilleur.', '2024-10-08 19:30:00', NULL, NULL, NULL, NULL),
 (2,  1, 4, NULL, 4, 'Très bien, j''ai remplacé la feta par du chèvre, ça marche aussi.', '2024-10-09 10:15:00', NULL, NULL, NULL, NULL),
 (3,  1, 5, 1, NULL, 'Super idée le paprika fumé, je vais essayer !', '2024-10-09 11:00:00', NULL, NULL, NULL, NULL),
--- Commentaire supprimé soft (spam)
-(4,  1, 7, NULL, 1, 'Achetez mes produits miracle sur www.spam-link.fr !!!', '2024-10-10 08:00:00', NULL, NULL, '2024-10-10 08:30:00', 1),
+-- Commentaire modéré (spam)
+(4,  1, 7, NULL, 1, 'Achetez mes produits miracle sur www.spam-link.fr !!!', '2024-10-10 08:00:00', '2024-10-10 08:30:00', 1, NULL, NULL),
 
 -- Recette 2 : Poulet coco curry
 (5,  2, 4, NULL, 5, 'Recette incroyable ! Je fais du curry depuis des années mais celui-là est vraiment exceptionnel. Le secret c''est bien le lait de coco de qualité.', '2024-10-14 20:00:00', NULL, NULL, NULL, NULL),
-(6,  2, 5, NULL, 4, 'Bon équilibre des épices. J''ai ajouté un peu de gingembre frais râpé et une touche de citronnelle, ça apporte beaucoup de fraîcheur.', '2024-10-15 12:30:00', NULL, NULL, NULL, NULL),
+(6,  2, 5, NULL, 4, 'Bon équilibre des épices. J''ai ajouté un peu de gingembre frais râpé et une touche de citronnelle, ça apporte beaucoup de fraîcheur.', '2024-10-15 12:30:00', NULL, NULL, '2024-10-15 13:00:00', 5),
 (7,  2, 4, 5, NULL, 'Oh oui la citronnelle c''est une excellente idée, je note !', '2024-10-15 14:00:00', NULL, NULL, NULL, NULL),
 -- Commentaire modéré (hors-sujet agressif)
 (8,  2, 7, NULL, 1, 'NAZE. Le curry c''est une honte culinaire, les gens qui font ça sont des ignorants !!!', '2024-10-16 09:00:00', '2024-10-16 10:00:00', 1, NULL, NULL),
