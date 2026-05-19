@@ -2,7 +2,7 @@
 # Health
 # ============================================
 
-@baseUrl = http://localhost:3000
+@baseUrl = http://localhost:3000/api/v1
 @adminJwt = PASTE_ADMIN_JWT_HERE
 
 ### Health live

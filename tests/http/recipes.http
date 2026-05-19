@@ -2,7 +2,7 @@
 # Recipes
 # ============================================
 
-@baseUrl = http://localhost:3000
+@baseUrl = http://localhost:3000/api/v1
 @jwt = PASTE_JWT_HERE
 @recipeId = 1
 @recipeSlug = cake-marbre-maison

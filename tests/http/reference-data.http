@@ -2,7 +2,7 @@
 # Reference data
 # ============================================
 
-@baseUrl = http://localhost:3000
+@baseUrl = http://localhost:3000/api/v1
 @jwt = PASTE_JWT_HERE
 @categoryId = 1
 @equipmentId = 1

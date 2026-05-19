@@ -2,7 +2,7 @@
 # Auth
 # ============================================
 
-@baseUrl = http://localhost:3000
+@baseUrl = http://localhost:3000/api/v1
 @mail = test@example.com
 @username = testuser
 @password = Password123!

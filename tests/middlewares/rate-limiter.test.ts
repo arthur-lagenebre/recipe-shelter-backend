@@ -13,7 +13,7 @@ type MockResponse = Pick<Response, 'json' | 'setHeader' | 'status'> & {
 
 function createRequest(path: string, ip = '127.0.0.1'): Request {
     return {
-        baseUrl: '/auth',
+        baseUrl: '/api/v1/auth',
         ip,
         method: 'POST',
         path

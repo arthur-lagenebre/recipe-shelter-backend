@@ -122,21 +122,21 @@ export function createApp() {
   const tagController = createTagsController(tagService);
   const usersController = createUsersController(usersService);
 
-  app.use('/admin/comments', createAdminCommentsRouter(adminCommentsController));
-  app.use('/admin/recipes', createAdminRecipesRouter(adminRecipesController));
-  app.use('/admin/users', createAdminUsersRouter(adminUsersController));
-  app.use('/auth', createAuthRouter(authController));
-  app.use('/categories', createCategoryRouter(categoryController));
-  app.use('/comments', createCommentsRouter(commentsController));
-  app.use('/contact', createContactRouter(contactController));
-  app.use('/equipments', createEquipmentsRouter(equipmentsController));
-  app.use('/favorites', createFavoritesRouter(favoritesController));
-  app.use('/health', createHealthRouter(healthController));
-  app.use('/ingredients', createIngredientsRouter(ingredientsController));
-  app.use('/recipes/:recipeId/comments', createRecipeCommentsRouter(commentsController));
-  app.use('/recipes', createRecipesRouter(recipesController));
-  app.use('/tags', createTagssRouter(tagController));
-  app.use('/users', createUsersRouter(usersController));
+  app.use('/api/v1/admin/comments', createAdminCommentsRouter(adminCommentsController));
+  app.use('/api/v1/admin/recipes', createAdminRecipesRouter(adminRecipesController));
+  app.use('/api/v1/admin/users', createAdminUsersRouter(adminUsersController));
+  app.use('/api/v1/auth', createAuthRouter(authController));
+  app.use('/api/v1/categories', createCategoryRouter(categoryController));
+  app.use('/api/v1/comments', createCommentsRouter(commentsController));
+  app.use('/api/v1/contact', createContactRouter(contactController));
+  app.use('/api/v1/equipments', createEquipmentsRouter(equipmentsController));
+  app.use('/api/v1/favorites', createFavoritesRouter(favoritesController));
+  app.use('/api/v1/health', createHealthRouter(healthController));
+  app.use('/api/v1/ingredients', createIngredientsRouter(ingredientsController));
+  app.use('/api/v1/recipes/:recipeId/comments', createRecipeCommentsRouter(commentsController));
+  app.use('/api/v1/recipes', createRecipesRouter(recipesController));
+  app.use('/api/v1/tags', createTagssRouter(tagController));
+  app.use('/api/v1/users', createUsersRouter(usersController));
 
   app.use(notFound);
   app.use(errorHandler);
