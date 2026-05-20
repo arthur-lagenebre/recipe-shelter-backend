@@ -11,10 +11,10 @@ export interface PasswordResetRow {
 }
 
 export class PasswordResetRepositoryMysql implements PasswordResetRepository {
-    constructor(private readonly pool: Pool) { }
+    constructor(private readonly db: Pool) { }
 
     async create(input: PasswordResetCreateInput): Promise<void> {
-        await this.pool.query(
+        await this.db.execute(
             `INSERT INTO PasswordResets (UserId, TokenHash, ExpiresAt)
             VALUES (?, ?, DATE_ADD(NOW(), INTERVAL ? MINUTE))`,
             [input.userId, input.tokenHash, input.expiresInMinutes]
@@ -22,7 +22,7 @@ export class PasswordResetRepositoryMysql implements PasswordResetRepository {
     }
 
     async invalidateAllForUser(userId: number): Promise<void> {
-        await this.pool.query(
+        await this.db.execute(
             `UPDATE PasswordResets
             SET UsedAt = NOW()
             WHERE UserId = ?
@@ -33,7 +33,7 @@ export class PasswordResetRepositoryMysql implements PasswordResetRepository {
     }
 
     async findValidByTokenHash(tokenHash: string): Promise<PasswordResetRow | null> {
-        const [rows] = await this.pool.query(
+        const [rows] = await this.db.execute(
             `SELECT Id, UserId, TokenHash, ExpiresAt, UsedAt, CreatedAt
             FROM PasswordResets
             WHERE TokenHash = ?
@@ -49,7 +49,7 @@ export class PasswordResetRepositoryMysql implements PasswordResetRepository {
     }
 
     async markUsed(id: number): Promise<void> {
-        await this.pool.query(
+        await this.db.execute(
             `UPDATE PasswordResets
             SET UsedAt = NOW()
             WHERE Id = ?`,

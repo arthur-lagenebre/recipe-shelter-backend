@@ -11,10 +11,10 @@ export interface EmailValidationRow {
 }
 
 export class EmailValidationRepositoryMysql implements EmailValidationRepository {
-    constructor(private readonly pool: Pool) { }
+    constructor(private readonly db: Pool) { }
 
     async create(input: EmailValidationCreateInput): Promise<void> {
-        await this.pool.query(
+        await this.db.execute(
             `INSERT INTO EmailValidations (UserId, TokenHash, ExpiresAt)
              VALUES (?, ?, DATE_ADD(NOW(), INTERVAL ? MINUTE))`,
             [input.userId, input.tokenHash, input.expiresInMinutes]
@@ -22,7 +22,7 @@ export class EmailValidationRepositoryMysql implements EmailValidationRepository
     }
 
     async invalidateAllForUser(userId: number): Promise<void> {
-        await this.pool.query(
+        await this.db.execute(
             `UPDATE EmailValidations
              SET UsedAt = NOW()
              WHERE UserId = ?
@@ -33,7 +33,7 @@ export class EmailValidationRepositoryMysql implements EmailValidationRepository
     }
 
     async findByTokenHash(tokenHash: string): Promise<EmailValidationRecord | null> {
-        const [rows] = await this.pool.query(
+        const [rows] = await this.db.execute(
             `SELECT Id, UserId, TokenHash, ExpiresAt, UsedAt, CreatedAt
              FROM EmailValidations
              WHERE TokenHash = ?
@@ -47,7 +47,7 @@ export class EmailValidationRepositoryMysql implements EmailValidationRepository
     }
 
     async markUsed(id: number): Promise<void> {
-        await this.pool.query(
+        await this.db.execute(
             `UPDATE EmailValidations
              SET UsedAt = NOW()
              WHERE Id = ?`,
