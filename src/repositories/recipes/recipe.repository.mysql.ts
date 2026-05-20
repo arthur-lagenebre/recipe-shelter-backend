@@ -222,8 +222,6 @@ export class RecipeRepositoryMysql implements RecipeRepository {
         const [countRows] = await this.db.execute(
             `SELECT COUNT(*) AS Count
              FROM Recipes AS r
-             LEFT JOIN RecipeCategories AS rc ON rc.Id = r.CategoryId
-             INNER JOIN Users AS u ON u.Id = r.UserId
              WHERE ${where.clause}`,
             where.params
         );
@@ -342,7 +340,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
         const params: Array<string | number> = [];
 
         if (filters.q) {
-            whereClauses.push('r.Title LIKE ?');
+            whereClauses.push('MATCH(r.Title) AGAINST(? IN BOOLEAN MODE)');
             params.push(`%${filters.q}%`);
         }
 

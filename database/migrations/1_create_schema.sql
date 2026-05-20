@@ -135,6 +135,7 @@ CREATE TABLE Recipes (
   KEY idx_recipes_category_id (CategoryId),
   KEY idx_recipes_status (Status),
   KEY idx_recipes_moderated_by_user_id (ModeratedByUserId),
+  FULLTEXT INDEX ft_recipes_title (Title),
   CONSTRAINT recipes_user_FK
     FOREIGN KEY (UserId) REFERENCES Users(Id)
     ON UPDATE CASCADE
@@ -277,6 +278,7 @@ CREATE TABLE Comments (
   KEY idx_comments_user_id (UserId),
   KEY idx_comments_parent_comment_id (ParentCommentId),
   KEY idx_comments_deleted_at (DeletedAt),
+  KEY idx_comments_moderated_at (ModeratedAt),
   CONSTRAINT comments_recipe_FK
     FOREIGN KEY (RecipeId) REFERENCES Recipes(Id)
     ON UPDATE CASCADE

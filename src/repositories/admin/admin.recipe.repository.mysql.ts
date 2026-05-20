@@ -69,25 +69,25 @@ export class AdminRecipeRepositoryMysql implements AdminRecipeRepository {
     }
 
     async publish(id: number, moderatedByUserId: number): Promise<boolean> {
-        await this.db.execute(
+        const [result] = await this.db.execute<ResultSetHeader>(
             `UPDATE Recipes
                  SET Status = ?, PublishedAt = CURRENT_TIMESTAMP, ModeratedByUserId = ?
                  WHERE Id = ?`,
             ['published', moderatedByUserId, id]
         );
 
-        return true;
+        return result.affectedRows > 0;
     }
 
     async reject(id: number, moderatedByUserId: number, rejectionReason: string): Promise<boolean> {
-        await this.db.execute(
+        const [result] = await this.db.execute<ResultSetHeader>(
             `UPDATE Recipes
                  SET Status = ?, ModeratedAt = CURRENT_TIMESTAMP, ModeratedByUserId = ?, RejectionReason = ?
                  WHERE Id = ?`,
             ['rejected', moderatedByUserId, rejectionReason, id]
         );
 
-        return true;
+        return result.affectedRows > 0;
     }
 
     async delete(id: number): Promise<boolean> {
