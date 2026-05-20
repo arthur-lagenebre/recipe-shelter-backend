@@ -136,32 +136,33 @@ Après `npm run dev`, testez un endpoint public.
 Sur Windows PowerShell :
 
 ```powershell
-Invoke-RestMethod http://localhost:3000/recipes
+Invoke-RestMethod http://localhost:3000/api/v1/recipes
 ```
 
 Sur macOS/Linux :
 
 ```bash
-curl http://localhost:3000/recipes
+curl http://localhost:3000/api/v1/recipes
 ```
 
 Une réponse JSON indique que le serveur et la connexion MySQL fonctionnent. Avec `npm run db:reset`, la liste peut être vide. Avec `npm run db:reset:demo`, elle contient des recettes de démonstration.
 
-Les routes sont exposées directement depuis la racine du serveur, sans préfixe `/api`.
+Les routes HTTP sont exposées avec le préfixe `/api/v1`.
 
 Exemples :
 
-- `GET /recipes`
-- `GET /recipes/recent`
-- `POST /auth/login`
-- `POST /auth/register`
-- `GET /categories`
-- `GET /ingredients`
-- `GET /tags`
+- `GET /api/v1/recipes`
+- `GET /api/v1/recipes/recent`
+- `POST /api/v1/auth/login`
+- `POST /api/v1/auth/register`
+- `GET /api/v1/categories`
+- `GET /api/v1/ingredients`
+- `GET /api/v1/tags`
+- `GET /api/v1/equipments`
 
 Des exemples de requêtes sont disponibles dans `tests/http/`.
 
-Les routes `/admin/*` et `/health/*` demandent un JWT d'administrateur. Pour une première vérification sans authentification, utilisez plutôt `GET /recipes`, `GET /categories`, `GET /ingredients` ou `GET /tags`.
+Les routes `/api/v1/admin/*` et `/api/v1/health/*` demandent un JWT d'administrateur. Pour une première vérification sans authentification, utilisez plutôt `GET /api/v1/recipes`, `GET /api/v1/categories`, `GET /api/v1/ingredients` ou `GET /api/v1/tags`.
 
 ## Variables d'environnement
 
@@ -169,7 +170,7 @@ Les valeurs par défaut sont définies dans `.env.example`.
 
 | Variable | Obligatoire | Description |
 | --- | --- | --- |
-| `NODE_ENV` | Non | Environnement d'execution, par exemple `development`. |
+| `NODE_ENV` | Non | Environnement d'exécution, par exemple `development`. |
 | `PORT` | Non | Port HTTP du serveur. Défaut : `3000`. |
 | `DB_HOST` | Oui | Hôte MySQL. |
 | `DB_PORT` | Oui | Port MySQL. Défaut : `3306`. |
@@ -179,10 +180,10 @@ Les valeurs par défaut sont définies dans `.env.example`.
 | `DB_CONNECTION_LIMIT` | Non | Nombre maximal de connexions MySQL dans le pool. |
 | `JWT_SECRET` | Oui | Secret utilisé pour signer les tokens JWT. |
 | `JWT_EXPIRES_IN` | Non | Durée de validité des JWT. Défaut : `7d`. |
-| `BCRYPT_COST` | Non | Cout bcrypt pour le hash des mots de passe. Défaut : `12`. |
-| `AUTH_DEFAULT_ROLE_NAME` | Non | Role attribue aux nouveaux comptes. Défaut : `user`. |
+| `BCRYPT_COST` | Non | Coût bcrypt pour le hash des mots de passe. Défaut : `12`. |
+| `AUTH_DEFAULT_ROLE_NAME` | Non | Rôle attribué aux nouveaux comptes. Défaut : `user`. |
 | `AUTH_RATE_LIMIT_MAX_ATTEMPTS` | Non | Nombre maximal de tentatives sur les routes auth limitées. |
-| `AUTH_RATE_LIMIT_WINDOW_MS` | Non | Fenetre du rate limit en millisecondes. |
+| `AUTH_RATE_LIMIT_WINDOW_MS` | Non | Fenêtre du rate limit en millisecondes. |
 | `CORS_ALLOWED_ORIGINS` | Non | Origines frontend autorisées, séparées par des virgules. |
 | `FRONTEND_BASE_URL` | Non | URL du frontend utilisée dans les liens d'email. |
 | `SMTP_HOST` | Selon usage | Serveur SMTP pour validation email, reset password et contact. |
@@ -193,7 +194,7 @@ Les valeurs par défaut sont définies dans `.env.example`.
 | `SMTP_FROM` | Selon usage | Adresse expéditeur des emails applicatifs. |
 | `CONTACT_RECIPIENT_EMAIL` | Selon usage | Adresse qui reçoit les messages du formulaire de contact. |
 
-Les routes publiques de lecture peuvent fonctionner sans SMTP réel. Les routes `POST /auth/register`, `POST /auth/resend-validation-email`, `POST /auth/forgot-password` et `POST /contact` ont besoin d'une configuration SMTP valide pour envoyer des emails.
+Les routes publiques de lecture peuvent fonctionner sans SMTP réel. Les routes `POST /api/v1/auth/register`, `POST /api/v1/auth/resend-validation-email`, `POST /api/v1/auth/forgot-password` et `POST /api/v1/contact` ont besoin d'une configuration SMTP valide pour envoyer des emails.
 
 ## Scripts utiles
 
@@ -245,7 +246,7 @@ npm run db:reset:demo
 
 Réinitialise la base locale avec les données minimales et les données de démonstration.
 
-## Depannage
+## Dépannage
 
 ### `JWT_SECRET is required`
 
