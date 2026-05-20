@@ -1,4 +1,4 @@
-import type { RatedRecipeListItem, RatedRecipeListItemRow, Recipe, RecipeDetail, RecipeDetailComment, RecipeDetailCommentRow, RecipeDetailEquipment, RecipeDetailIngredient, RecipeDetailIngredientRow, RecipeDetailRow, RecipeDetailStep, RecipeDetailStepRow, RecipeDetailTag, RecipeDetailTagRow, RecipeDetailEquipmentRow, RecipeIngredient, RecipeIngredientRow, RecipeListItem, RecipeListItemRow, RecipeRow, RecipeStep, RecipeStepRow, RecipeSummary, RecipeEquipment, RecipeEquipmentRow } from './recipe.types.js';
+import type { Recipe, RecipeDetail, RecipeDetailComment, RecipeDetailCommentRow, RecipeDetailEquipment, RecipeDetailIngredient, RecipeDetailIngredientRow, RecipeDetailRow, RecipeDetailStep, RecipeDetailStepRow, RecipeDetailTag, RecipeDetailTagRow, RecipeDetailEquipmentRow, RecipeIngredient, RecipeIngredientRow, RecipeListItem, RecipeListItemRow, RecipeRow, RecipeStep, RecipeStepRow, RecipeSummary, RecipeEquipment, RecipeEquipmentRow } from './recipe.types.js';
 
 export function mapRecipe(row: RecipeRow): Recipe {
     return {
@@ -82,14 +82,6 @@ export function mapRecipeListItem(row: RecipeListItemRow): RecipeListItem {
         authorUsername: row.AuthorUsername,
         publishedAt: row.PublishedAt,
         isFavorite: Boolean(row.IsFavorite)
-    };
-}
-
-export function mapRatedRecipeListItem(row: RatedRecipeListItemRow): RatedRecipeListItem {
-    return {
-        ...mapRecipeListItem(row),
-        averageRating: Number(row.AverageRating),
-        ratingsCount: Number(row.RatingsCount)
     };
 }
 

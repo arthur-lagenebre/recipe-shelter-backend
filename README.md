@@ -153,7 +153,6 @@ Exemples :
 
 - `GET /recipes`
 - `GET /recipes/recent`
-- `GET /recipes/top-rated`
 - `POST /auth/login`
 - `POST /auth/register`
 - `GET /categories`

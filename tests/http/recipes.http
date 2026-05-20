@@ -28,13 +28,6 @@ GET {{baseUrl}}/recipes/search?q=porc&categoryId=3&page=1&limit=12
 ### Recent published recipes - public
 GET {{baseUrl}}/recipes/recent?limit=12
 
-### Top-rated published recipes - public
-GET {{baseUrl}}/recipes/top-rated?limit=12
-
-### Top-rated published recipes - with optional auth, includes isFavorite for current user
-GET {{baseUrl}}/recipes/top-rated?limit=20
-Authorization: Bearer {{jwt}}
-
 ### Published recipes - filter by tags
 GET {{baseUrl}}/recipes/search?tagIds=1,2
 

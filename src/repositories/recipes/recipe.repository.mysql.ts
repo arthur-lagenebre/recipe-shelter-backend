@@ -1,9 +1,9 @@
-import { mapRecipe, mapRecipeDetail, mapRecipeDetailComments, mapRecipeDetailIngredient, mapRecipeDetailStep, mapRecipeDetailTag, mapRecipeDetailEquipment, mapRecipeIngredient, mapRecipeListItem, mapRatedRecipeListItem, mapRecipeStep, mapRecipeSummary, mapRecipeEquipment } from './recipe.mapper.js';
+import { mapRecipe, mapRecipeDetail, mapRecipeDetailComments, mapRecipeDetailIngredient, mapRecipeDetailStep, mapRecipeDetailTag, mapRecipeDetailEquipment, mapRecipeIngredient, mapRecipeListItem, mapRecipeStep, mapRecipeSummary, mapRecipeEquipment } from './recipe.mapper.js';
 import { firstOrNull } from '../../utils/array.js';
 import { createPaginatedResult, formatLimitOffsetClause } from '../../utils/pagination.js';
 
 import type { RecipeRepository } from "./recipe.repository.interface.js";
-import type { RatedRecipeListItem, RatedRecipeListItemRow, Recipe, RecipeDetail, RecipeDetailCommentRow, RecipeDetailCommentStatsRow, RecipeDetailIngredientRow, RecipeDetailRow, RecipeDetailStepRow, RecipeDetailTagRow, RecipeDetailEquipmentRow, RecipeIngredientRow, RecipeInput, RecipeListItem, RecipeListItemRow, RecipeRow, RecipeStepRow, RecipeSummary, RecipeTagRow, RecipeEquipmentRow, RecipeSearchFilters, UpdateRecipeInput } from "./recipe.types.js";
+import type { Recipe, RecipeDetail, RecipeDetailCommentRow, RecipeDetailCommentStatsRow, RecipeDetailIngredientRow, RecipeDetailRow, RecipeDetailStepRow, RecipeDetailTagRow, RecipeDetailEquipmentRow, RecipeIngredientRow, RecipeInput, RecipeListItem, RecipeListItemRow, RecipeRow, RecipeStepRow, RecipeSummary, RecipeTagRow, RecipeEquipmentRow, RecipeSearchFilters, UpdateRecipeInput } from "./recipe.types.js";
 import type { PaginatedResult, PaginationOptions } from '../../utils/pagination.js';
 import type { ResultSetHeader } from 'mysql2';
 import type { Pool, PoolConnection } from 'mysql2/promise';
@@ -272,30 +272,6 @@ export class RecipeRepositoryMysql implements RecipeRepository {
         );
 
         return (rows as RecipeListItemRow[]).map(mapRecipeListItem);
-    }
-
-    async findTopRatedPublished(userId: number | null, limit: number): Promise<RatedRecipeListItem[]> {
-        const limitOffsetClause = formatLimitOffsetClause({ page: 1, limit, offset: 0 });
-
-        const [rows] = await this.db.execute(
-            `SELECT r.Id, r.Title, r.Slug, r.Description, r.RecipeCoverImage, rc.Name AS Category, r.PrepTimeMinutes, r.RestTimeMinutes, r.CookTimeMinutes, r.Servings, u.Username AS AuthorUsername, r.PublishedAt, rating_stats.AverageRating, rating_stats.RatingsCount, CASE WHEN ? IS NULL THEN FALSE ELSE f.UserId IS NOT NULL END AS IsFavorite
-             FROM Recipes AS r
-             INNER JOIN (
-                SELECT RecipeId, AVG(Rating) AS AverageRating, COUNT(*) AS RatingsCount
-                FROM Comments
-                WHERE DeletedAt IS NULL AND ModeratedAt IS NULL AND Rating IS NOT NULL
-                GROUP BY RecipeId
-             ) AS rating_stats ON rating_stats.RecipeId = r.Id
-             LEFT JOIN RecipeCategories AS rc ON rc.Id = r.CategoryId
-             INNER JOIN Users AS u ON u.Id = r.UserId
-             LEFT JOIN Favorites AS f ON f.RecipeId = r.Id AND f.UserId = ?
-             WHERE r.Status = 'published'
-             ORDER BY rating_stats.AverageRating DESC, rating_stats.RatingsCount DESC, r.PublishedAt DESC, r.Id DESC
-             ${limitOffsetClause}`,
-            [userId, userId]
-        );
-
-        return (rows as RatedRecipeListItemRow[]).map(mapRatedRecipeListItem);
     }
 
     async findPublishedBySlug(userId: number | null, slug: string): Promise<RecipeDetail | null> {

@@ -55,13 +55,6 @@ export function createRecipesController(recipeService: RecipeService) {
             res.status(200).json(result);
         }),
 
-        getTopRatedRecipes: asyncHandler(async (req, res) => {
-            const limit = parseRecipeFeedLimitQuery(req.query);
-            const result = await recipeService.getTopRatedPublished(req.auth?.userId ?? null, limit);
-
-            res.status(200).json(result);
-        }),
-
         getRecipeBySlug: asyncHandler(async (req, res) => {
             const recipeSlug = parseRecipeSlugParam(req.params.slug);
             const result = await recipeService.getBySlug(req.auth?.userId ?? null, recipeSlug);

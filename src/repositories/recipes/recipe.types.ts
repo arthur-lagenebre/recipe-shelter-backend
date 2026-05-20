@@ -120,11 +120,6 @@ export interface RecipeListItem {
     isFavorite: boolean;
 }
 
-export interface RatedRecipeListItem extends RecipeListItem {
-    averageRating: number;
-    ratingsCount: number;
-}
-
 export interface RecipeDetail extends Omit<RecipeListItem, 'authorUsername'> {
     author: PublicAuthorDto;
     ingredients: RecipeDetailIngredient[];
@@ -246,11 +241,6 @@ export type RecipeListItemRow = RowDataPacket & {
 
 export type RecipeDetailRow = RecipeListItemRow & {
     AuthorId: number;
-};
-
-export type RatedRecipeListItemRow = RecipeListItemRow & {
-    AverageRating: number | string;
-    RatingsCount: number | string;
 };
 
 export type RecipeDetailIngredientRow = RowDataPacket & {
