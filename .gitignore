@@ -25,5 +25,3 @@ coverage/
 Thumbs.db
 .vscode/
 .idea/
-tests/postman/*
-docs/*
