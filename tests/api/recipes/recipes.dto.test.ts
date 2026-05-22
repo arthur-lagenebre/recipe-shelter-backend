@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { parseRecipeFeedLimitQuery, parseRecipeSearchQuery } from '../../../src/api/recipes/recipes.dto.js';
+import { parseCreateRecipeBody, parseRecipeFeedLimitQuery, parseRecipeIdParam, parseRecipeSearchQuery, parseRecipeSlugParam, parseUpdateRecipeBody } from '../../../src/api/recipes/recipes.dto.js';
 import { HttpError } from '../../../src/utils/errors.js';
 
 function assertHttpError(error: unknown, code: string, status: number): void {
@@ -11,6 +11,136 @@ function assertHttpError(error: unknown, code: string, status: number): void {
 }
 
 describe('recipes.dto', () => {
+    it('parses a complete create recipe body', () => {
+        const result = parseCreateRecipeBody({
+            categoryId: 2,
+            title: '  Tarte aux pommes  ',
+            description: '  Simple et bonne.  ',
+            coverImageUrl: '  https://example.test/tarte.jpg  ',
+            prepTimeMinutes: 20,
+            restTimeMinutes: null,
+            cookTimeMinutes: 35,
+            servings: 6,
+            tagIds: [1, 2],
+            ingredients: [{ ingredientId: 7, quantity: 2, unit: ' pcs ', note: '  golden  ', sortOrder: 3 }],
+            steps: [{ description: '  Couper les pommes.  ' }],
+            equipments: [{ equipmentId: 4 }]
+        });
+
+        assert.deepEqual(result, {
+            categoryId: 2,
+            title: 'Tarte aux pommes',
+            description: 'Simple et bonne.',
+            coverImageUrl: 'https://example.test/tarte.jpg',
+            prepTimeMinutes: 20,
+            restTimeMinutes: null,
+            cookTimeMinutes: 35,
+            servings: 6,
+            tagIds: [1, 2],
+            ingredients: [{ ingredientId: 7, quantity: 2, unit: 'pcs', note: 'golden', sortOrder: 3 }],
+            steps: [{ stepNumber: undefined, description: 'Couper les pommes.' }],
+            equipments: [{ equipmentId: 4 }]
+        });
+    });
+
+    it('parses an update recipe body with nullable fields', () => {
+        const result = parseUpdateRecipeBody({
+            title: '  Soupe maison  ',
+            categoryId: null,
+            coverImageUrl: null,
+            tagIds: null,
+            ingredients: null
+        });
+
+        assert.deepEqual(result, {
+            categoryId: null,
+            title: 'Soupe maison',
+            description: undefined,
+            coverImageUrl: null,
+            prepTimeMinutes: undefined,
+            restTimeMinutes: undefined,
+            cookTimeMinutes: undefined,
+            servings: undefined,
+            tagIds: undefined,
+            ingredients: undefined,
+            steps: undefined,
+            equipments: undefined
+        });
+    });
+
+    it('rejects invalid recipe content bodies', () => {
+        assert.throws(
+            () => parseCreateRecipeBody(null),
+            (error) => {
+                assertHttpError(error, 'RECIPES_CREATE_BAD_BODY', 400);
+                return true;
+            }
+        );
+
+        assert.throws(
+            () => parseCreateRecipeBody({ title: 'Tiny' }),
+            (error) => {
+                assertHttpError(error, 'RECIPES_CREATE_WEAK_TITLE', 400);
+                return true;
+            }
+        );
+
+        assert.throws(
+            () => parseUpdateRecipeBody({ title: 'Valid title', tagIds: [1, 0] }),
+            (error) => {
+                assertHttpError(error, 'RECIPES_CREATE_BAD_TAG_ID', 400);
+                return true;
+            }
+        );
+    });
+
+    it('rejects invalid nested recipe arrays', () => {
+        assert.throws(
+            () => parseCreateRecipeBody({ title: 'Valid title', ingredients: ['flour'] }),
+            (error) => {
+                assertHttpError(error, 'RECIPES_CREATE_BAD_INGREDIENT', 400);
+                return true;
+            }
+        );
+
+        assert.throws(
+            () => parseCreateRecipeBody({ title: 'Valid title', steps: [{ description: '' }] }),
+            (error) => {
+                assertHttpError(error, 'RECIPES_CREATE_BAD_STEP_DESCRIPTION', 400);
+                return true;
+            }
+        );
+
+        assert.throws(
+            () => parseCreateRecipeBody({ title: 'Valid title', equipments: [{ equipmentId: '4' }] }),
+            (error) => {
+                assertHttpError(error, 'RECIPES_CREATE_BAD_EQUIPMENT_ID', 400);
+                return true;
+            }
+        );
+    });
+
+    it('parses and validates recipe id and slug params', () => {
+        assert.equal(parseRecipeIdParam('42'), 42);
+        assert.equal(parseRecipeSlugParam('  tarte-aux-pommes  '), 'tarte-aux-pommes');
+
+        assert.throws(
+            () => parseRecipeIdParam('0'),
+            (error) => {
+                assertHttpError(error, 'RECIPES_BAD_ID', 400);
+                return true;
+            }
+        );
+
+        assert.throws(
+            () => parseRecipeSlugParam(' '),
+            (error) => {
+                assertHttpError(error, 'RECIPES_BAD_SLUG', 400);
+                return true;
+            }
+        );
+    });
+
     it('uses the default feed limit when omitted', () => {
         assert.equal(parseRecipeFeedLimitQuery({}), 12);
     });

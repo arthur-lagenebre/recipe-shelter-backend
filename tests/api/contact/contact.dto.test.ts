@@ -73,4 +73,34 @@ describe('contact.dto', () => {
             }
         );
     });
+
+    it('rejects fields that are too long', () => {
+        assert.throws(
+            () => parseContactMessageBody({
+                name: 'J'.repeat(101),
+                email: 'john@example.com',
+                subject: 'Question',
+                message: 'Bonjour, je voudrais en savoir plus.'
+            }),
+            (error) => {
+                assertHttpError(error, 'CONTACT_NAME_TOO_LONG', 400);
+
+                return true;
+            }
+        );
+
+        assert.throws(
+            () => parseContactMessageBody({
+                name: 'John Doe',
+                email: 'john@example.com',
+                subject: 'Q'.repeat(151),
+                message: 'Bonjour, je voudrais en savoir plus.'
+            }),
+            (error) => {
+                assertHttpError(error, 'CONTACT_SUBJECT_TOO_LONG', 400);
+
+                return true;
+            }
+        );
+    });
 });

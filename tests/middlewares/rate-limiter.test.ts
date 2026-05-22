@@ -88,4 +88,26 @@ describe('rateLimiter', () => {
         assert.equal(blocked.nextCalled, false);
         assert.equal(blocked.res.statusCode, 429);
     });
+
+    it('resets buckets after the rate limit window expires', () => {
+        const originalNow = Date.now;
+        let now = 1_000;
+        Date.now = () => now;
+
+        try {
+            const limiter = rateLimiter(1, 1_000);
+            const req = createRequest('/login', '127.0.0.3');
+
+            assert.equal(runLimiter(limiter, req).nextCalled, true);
+            now = 2_001;
+
+            const afterReset = runLimiter(limiter, req);
+
+            assert.equal(afterReset.nextCalled, true);
+            assert.equal(afterReset.res.statusCode, undefined);
+            assert.equal(afterReset.res.headers['RateLimit-Remaining'], '0');
+        } finally {
+            Date.now = originalNow;
+        }
+    });
 });

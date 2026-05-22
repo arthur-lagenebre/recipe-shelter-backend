@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { parseCreateCommentBody, parseUpdateCommentBody } from '../../../src/api/comments/comments.dto.js';
+import { parseCommentIdParam, parseCreateCommentBody, parseRecipeIdParam, parseUpdateCommentBody } from '../../../src/api/comments/comments.dto.js';
 import { HttpError } from '../../../src/utils/errors.js';
 
 function assertHttpError(error: unknown, code: string, status: number): void {
@@ -66,6 +66,26 @@ describe('comments.dto', () => {
         );
     });
 
+    it('rejects invalid create bodies and parent ids', () => {
+        assert.throws(
+            () => parseCreateCommentBody(null),
+            (error) => {
+                assertHttpError(error, 'COMMENTS_CREATE_BAD_BODY', 400);
+
+                return true;
+            }
+        );
+
+        assert.throws(
+            () => parseCreateCommentBody({ parentCommentId: 0, comment: 'Thanks' }),
+            (error) => {
+                assertHttpError(error, 'COMMENTS_CREATE_BAD_PARENT_COMMENT_ID', 400);
+
+                return true;
+            }
+        );
+    });
+
     it('parses an update body', () => {
         const result = parseUpdateCommentBody({
             rating: null,
@@ -76,5 +96,48 @@ describe('comments.dto', () => {
             rating: null,
             comment: 'Updated comment'
         });
+    });
+
+    it('rejects invalid update bodies', () => {
+        assert.throws(
+            () => parseUpdateCommentBody(null),
+            (error) => {
+                assertHttpError(error, 'COMMENTS_UPDATE_BAD_BODY', 400);
+
+                return true;
+            }
+        );
+
+        assert.throws(
+            () => parseUpdateCommentBody({ rating: 4 }),
+            (error) => {
+                assertHttpError(error, 'COMMENTS_UPDATE_MISSING_COMMENT', 400);
+
+                return true;
+            }
+        );
+    });
+
+    it('parses and validates comment and recipe params', () => {
+        assert.equal(parseCommentIdParam('8'), 8);
+        assert.equal(parseRecipeIdParam('12'), 12);
+
+        assert.throws(
+            () => parseCommentIdParam('0'),
+            (error) => {
+                assertHttpError(error, 'COMMENTS_BAD_ID', 400);
+
+                return true;
+            }
+        );
+
+        assert.throws(
+            () => parseRecipeIdParam('abc'),
+            (error) => {
+                assertHttpError(error, 'COMMENTS_BAD_RECIPE_ID', 400);
+
+                return true;
+            }
+        );
     });
 });

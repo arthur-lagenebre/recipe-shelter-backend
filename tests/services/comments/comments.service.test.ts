@@ -43,9 +43,14 @@ class FakeCommentRepository implements CommentRepository {
     updatedInput: UpdateCommentInput | null = null;
     deletedInput: { id: number; userId: number } | null = null;
     comment: Comment | null = baseComment;
+    createResult: PublicComment | null = basePublicComment;
+    commentsForRecipe: PublicComment[] | null = [basePublicComment];
 
     async create(input: CreateCommentInput): Promise<PublicComment> {
         this.createdInput = input;
+
+        if (this.createResult === null)
+            return null as never;
 
         return {
             ...basePublicComment,
@@ -90,7 +95,7 @@ class FakeCommentRepository implements CommentRepository {
     }
 
     async findByRecipeId(): Promise<PublicComment[]> {
-        return this.comment ? [basePublicComment] : [];
+        return this.commentsForRecipe as never;
     }
 }
 
@@ -158,6 +163,38 @@ describe('CommentService', () => {
             }
         );
         assert.equal(repository.createdInput, null);
+    });
+
+    it('rejects creation when the parent comment does not exist or creation fails', async () => {
+        repository.comment = null;
+
+        await assert.rejects(
+            () => service.createComment({
+                recipeId: 10,
+                userId: 20,
+                parentCommentId: 1,
+                comment: 'Missing parent'
+            }),
+            (error) => {
+                assertHttpError(error, 'COMMENTS_PARENT_NOT_FOUND', 404);
+                return true;
+            }
+        );
+
+        repository.comment = baseComment;
+        repository.createResult = null;
+
+        await assert.rejects(
+            () => service.createComment({
+                recipeId: 10,
+                userId: 20,
+                comment: 'Create fails'
+            }),
+            (error) => {
+                assertHttpError(error, 'COMMENT_CANNOT_BE_CREATED', 500);
+                return true;
+            }
+        );
     });
 
     it('updates an owned comment', async () => {
@@ -241,5 +278,18 @@ describe('CommentService', () => {
             }
         );
         assert.equal(repository.deletedInput, null);
+    });
+
+    it('finds comments for a recipe and rejects missing repository results', async () => {
+        assert.deepEqual(await service.findCommentsForRecipe(10), [basePublicComment]);
+
+        repository.commentsForRecipe = null;
+        await assert.rejects(
+            () => service.findCommentsForRecipe(10),
+            (error) => {
+                assertHttpError(error, 'COMMENTS_NOT_FOUND', 404);
+                return true;
+            }
+        );
     });
 });
