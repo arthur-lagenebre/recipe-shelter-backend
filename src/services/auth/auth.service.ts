@@ -8,13 +8,14 @@ import { normalizeEmail } from '../../utils/string.js';
 
 import type { EmailValidationService } from './email-validation.service.js';
 import type { UserRepository } from '../../repositories/users/user.repository.interface.js';
-import type { User } from '../../repositories/users/user.types.js';
+import type { User, UserStatus } from '../../repositories/users/user.types.js';
 import type { Secret, SignOptions } from 'jsonwebtoken';
 
 export type AuthTokenPayload = {
   sub: number;
   username: string;
   roleId: number;
+  status: UserStatus;
 };
 
 export class AuthService {
@@ -24,7 +25,8 @@ export class AuthService {
     const payload: AuthTokenPayload = {
       sub: user.id,
       username: user.username,
-      roleId: user.roleId
+      roleId: user.roleId,
+      status: user.status
     };
     const secret: Secret = env.auth.jwtSecret;
     const options: SignOptions = {

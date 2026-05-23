@@ -36,8 +36,8 @@ const baseRecipe: Recipe = {
     equipments: []
 };
 
-const auth: AuthContext = { userId: 2, username: 'owner', roleId: 2 };
-const adminAuth: AuthContext = { userId: 1, username: 'admin', roleId: 1 };
+const auth: AuthContext = { userId: 2, username: 'owner', roleId: 2, status: 'active' };
+const adminAuth: AuthContext = { userId: 1, username: 'admin', roleId: 1, status: 'active' };
 const pagination: PaginationOptions = { page: 1, limit: 12, offset: 0 };
 
 class FakeRecipeRepository implements RecipeRepository {

@@ -3,7 +3,7 @@
 # ============================================
 
 @baseUrl = http://localhost:3000/api/v1
-@jwt = PASTE_JWT_HERE
+@sessionCookie = PASTE_RS_SESSION_COOKIE_HERE
 @recipeId = 1
 @recipeSlug = cake-marbre-maison
 
@@ -42,11 +42,11 @@ GET {{baseUrl}}/recipes/search?q=porc&categoryId=3&tagIds=1,2&ingredientIds=18,1
 
 ### Published recipes - with optional auth, includes isFavorite for current user
 GET {{baseUrl}}/recipes
-Authorization: Bearer {{jwt}}
+Cookie: rs_session={{sessionCookie}}
 
 ### Published recipe detail by slug
 GET {{baseUrl}}/recipes/{{recipeSlug}}
-Authorization: Bearer {{jwt}}
+Cookie: rs_session={{sessionCookie}}
 
 # Expected response includes:
 # {
@@ -128,12 +128,12 @@ Authorization: Bearer {{jwt}}
 
 ### My recipes
 GET {{baseUrl}}/recipes/me?page=1&limit=10
-Authorization: Bearer {{jwt}}
+Cookie: rs_session={{sessionCookie}}
 
 ### Create recipe draft - minimal
 POST {{baseUrl}}/recipes
 Content-Type: application/json
-Authorization: Bearer {{jwt}}
+Cookie: rs_session={{sessionCookie}}
 
 {
   "title": "Tarte aux pommes"
@@ -142,7 +142,7 @@ Authorization: Bearer {{jwt}}
 ### Create recipe draft - full body
 POST {{baseUrl}}/recipes
 Content-Type: application/json
-Authorization: Bearer {{jwt}}
+Cookie: rs_session={{sessionCookie}}
 
 {
   "title": "Cake marbre maison",
@@ -196,7 +196,7 @@ Content-Type: application/json
 ### Create recipe draft - missing title
 POST {{baseUrl}}/recipes
 Content-Type: application/json
-Authorization: Bearer {{jwt}}
+Cookie: rs_session={{sessionCookie}}
 
 {
   "description": "Pas de titre"
@@ -205,7 +205,7 @@ Authorization: Bearer {{jwt}}
 ### Create recipe draft - title too short
 POST {{baseUrl}}/recipes
 Content-Type: application/json
-Authorization: Bearer {{jwt}}
+Cookie: rs_session={{sessionCookie}}
 
 {
   "title": "Cake"
@@ -214,7 +214,7 @@ Authorization: Bearer {{jwt}}
 ### Create recipe draft - invalid servings type
 POST {{baseUrl}}/recipes
 Content-Type: application/json
-Authorization: Bearer {{jwt}}
+Cookie: rs_session={{sessionCookie}}
 
 {
   "title": "Cake au citron",
@@ -223,12 +223,12 @@ Authorization: Bearer {{jwt}}
 
 ### Get my recipe by id
 GET {{baseUrl}}/recipes/me/{{recipeId}}
-Authorization: Bearer {{jwt}}
+Cookie: rs_session={{sessionCookie}}
 
 ### Update recipe draft
 PATCH {{baseUrl}}/recipes/me/{{recipeId}}
 Content-Type: application/json
-Authorization: Bearer {{jwt}}
+Cookie: rs_session={{sessionCookie}}
 
 {
   "title": "Cake marbre maison v2",
@@ -257,8 +257,8 @@ Authorization: Bearer {{jwt}}
 
 ### Submit recipe draft
 POST {{baseUrl}}/recipes/me/{{recipeId}}/submit
-Authorization: Bearer {{jwt}}
+Cookie: rs_session={{sessionCookie}}
 
 ### Archive my recipe
 POST {{baseUrl}}/recipes/me/{{recipeId}}/archive
-Authorization: Bearer {{jwt}}
+Cookie: rs_session={{sessionCookie}}

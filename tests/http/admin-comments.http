@@ -3,41 +3,41 @@
 # ============================================
 
 @baseUrl = http://localhost:3000/api/v1
-@adminJwt = PASTE_ADMIN_JWT_HERE
+@adminSessionCookie = PASTE_ADMIN_RS_SESSION_COOKIE_HERE
 @commentId = 1
 
 ### Moderated comments
 GET {{baseUrl}}/admin/comments/moderated
-Authorization: Bearer {{adminJwt}}
+Cookie: rs_session={{adminSessionCookie}}
 
 ### Moderated comments count
 GET {{baseUrl}}/admin/comments/moderated/count
-Authorization: Bearer {{adminJwt}}
+Cookie: rs_session={{adminSessionCookie}}
 
 ### Soft deleted comments
 GET {{baseUrl}}/admin/comments/soft-deleted
-Authorization: Bearer {{adminJwt}}
+Cookie: rs_session={{adminSessionCookie}}
 
 ### Soft deleted comments count
 GET {{baseUrl}}/admin/comments/soft-deleted/count
-Authorization: Bearer {{adminJwt}}
+Cookie: rs_session={{adminSessionCookie}}
 
 ### Hide comment as admin
 POST {{baseUrl}}/admin/comments/{{commentId}}/hide
-Authorization: Bearer {{adminJwt}}
+Cookie: rs_session={{adminSessionCookie}}
 
 ### Remove moderation from comment as admin
 POST {{baseUrl}}/admin/comments/{{commentId}}/unmoderate
-Authorization: Bearer {{adminJwt}}
+Cookie: rs_session={{adminSessionCookie}}
 
 ### Restore soft deleted comment as admin
 POST {{baseUrl}}/admin/comments/{{commentId}}/restore
-Authorization: Bearer {{adminJwt}}
+Cookie: rs_session={{adminSessionCookie}}
 
 ### Update comment as admin
 PATCH {{baseUrl}}/admin/comments/{{commentId}}
 Content-Type: application/json
-Authorization: Bearer {{adminJwt}}
+Cookie: rs_session={{adminSessionCookie}}
 
 {
   "rating": null,
@@ -47,7 +47,7 @@ Authorization: Bearer {{adminJwt}}
 ### Update comment as admin - invalid rating
 PATCH {{baseUrl}}/admin/comments/{{commentId}}
 Content-Type: application/json
-Authorization: Bearer {{adminJwt}}
+Cookie: rs_session={{adminSessionCookie}}
 
 {
   "rating": 6,
@@ -56,4 +56,4 @@ Authorization: Bearer {{adminJwt}}
 
 ### Delete comment as admin - hard delete
 DELETE {{baseUrl}}/admin/comments/{{commentId}}
-Authorization: Bearer {{adminJwt}}
+Cookie: rs_session={{adminSessionCookie}}

@@ -3,24 +3,24 @@
 # ============================================
 
 @baseUrl = http://localhost:3000/api/v1
-@adminJwt = PASTE_ADMIN_JWT_HERE
+@adminSessionCookie = PASTE_ADMIN_RS_SESSION_COOKIE_HERE
 @userId = 2
 
 ### Banned users
 GET {{baseUrl}}/admin/users/banned
-Authorization: Bearer {{adminJwt}}
+Cookie: rs_session={{adminSessionCookie}}
 
 ### Banned users count
 GET {{baseUrl}}/admin/users/banned/count
-Authorization: Bearer {{adminJwt}}
+Cookie: rs_session={{adminSessionCookie}}
 
 ### Admin user profile
 GET {{baseUrl}}/admin/users/{{userId}}
-Authorization: Bearer {{adminJwt}}
+Cookie: rs_session={{adminSessionCookie}}
 
 ### Ban user
 POST {{baseUrl}}/admin/users/{{userId}}/ban
-Authorization: Bearer {{adminJwt}}
+Cookie: rs_session={{adminSessionCookie}}
 Content-Type: application/json
 
 {
@@ -29,7 +29,7 @@ Content-Type: application/json
 
 ### Unban user
 POST {{baseUrl}}/admin/users/{{userId}}/unban
-Authorization: Bearer {{adminJwt}}
+Cookie: rs_session={{adminSessionCookie}}
 Content-Type: application/json
 
 {

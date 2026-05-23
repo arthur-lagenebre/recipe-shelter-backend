@@ -28,7 +28,48 @@ function readString(value: string | undefined, fallback: string): string {
   return value && value.trim() ? value.trim() : fallback;
 }
 
+function readOptionalString(value: string | undefined): string | undefined {
+  return value && value.trim() ? value.trim() : undefined;
+}
+
+function readSameSite(value: string | undefined, fallback: 'strict' | 'lax' | 'none'): 'strict' | 'lax' | 'none' {
+  const normalizedValue = value?.trim().toLowerCase();
+
+  if (normalizedValue === 'strict' || normalizedValue === 'lax' || normalizedValue === 'none')
+    return normalizedValue;
+
+  return fallback;
+}
+
+function readDurationMs(value: string, fallback: number): number {
+  const match = value.trim().match(/^(\d+)(ms|s|m|h|d)?$/i);
+
+  if (!match)
+    return fallback;
+
+  const amount = Number(match[1]);
+  const unit = match[2]?.toLowerCase() ?? 's';
+  const multipliers: Record<string, number> = {
+    ms: 1,
+    s: 1000,
+    m: 60000,
+    h: 3600000,
+    d: 86400000
+  };
+  const multiplier = multipliers[unit];
+
+  if (!Number.isFinite(amount) || !multiplier)
+    return fallback;
+
+  return amount * multiplier;
+}
+
+const nodeEnv = readString(process.env.NODE_ENV, 'development');
+const jwtExpiresIn = readString(process.env.JWT_EXPIRES_IN, '7d');
+const defaultSessionCookieMaxAgeMs = readDurationMs(jwtExpiresIn, 604800000);
+
 export const env = {
+  nodeEnv,
   port: readNumber(process.env.PORT, 3000),
 
   http: {
@@ -47,7 +88,12 @@ export const env = {
 
   auth: {
     jwtSecret: process.env.JWT_SECRET ?? (() => { throw new Error('JWT_SECRET is required'); })(),
-    jwtExpiresIn: readString(process.env.JWT_EXPIRES_IN, '7d'),
+    jwtExpiresIn,
+    sessionCookieName: readString(process.env.AUTH_SESSION_COOKIE_NAME, 'rs_session'),
+    sessionCookieDomain: readOptionalString(process.env.AUTH_SESSION_COOKIE_DOMAIN),
+    sessionCookieSameSite: readSameSite(process.env.AUTH_SESSION_COOKIE_SAME_SITE, 'lax'),
+    sessionCookieSecure: readBoolean(process.env.AUTH_SESSION_COOKIE_SECURE, nodeEnv === 'production'),
+    sessionCookieMaxAgeMs: readNumber(process.env.AUTH_SESSION_COOKIE_MAX_AGE_MS, defaultSessionCookieMaxAgeMs),
     defaultRoleName: readString(process.env.AUTH_DEFAULT_ROLE_NAME, 'user'),
     bcryptCost: readNumber(process.env.BCRYPT_COST, 12),
     rateLimitMaxAttempts: readNumber(process.env.AUTH_RATE_LIMIT_MAX_ATTEMPTS, 5),

@@ -6,6 +6,7 @@ import jwt from 'jsonwebtoken';
 import { configureAuthUserRepository, optionalAuth, requireAuth } from '../../src/middlewares/require-auth.js';
 import { env } from '../../src/utils/env.js';
 import { HttpError } from '../../src/utils/errors.js';
+import { sessionCookieName } from '../../src/utils/session-cookie.js';
 
 import type { User } from '../../src/repositories/users/user.types.js';
 
@@ -43,10 +44,10 @@ describe('requireAuth', () => {
         configureAuthUserRepository(users);
     });
 
-    it('requires a bearer token', async () => {
+    it('requires a session cookie', async () => {
         let nextError: unknown;
 
-        await requireAuth({ headers: {} } as never, null as never, (error) => {
+        await requireAuth({ cookies: {} } as never, null as never, (error) => {
             nextError = error;
         });
 
@@ -55,16 +56,16 @@ describe('requireAuth', () => {
     });
 
     it('sets active auth from a valid token and repository user', async () => {
-        const req = { headers: { authorization: `Bearer ${createToken()}` } };
+        const req = { cookies: { [sessionCookieName]: createToken() } };
 
         await requireAuth(req as never, null as never, () => undefined);
 
-        assert.deepEqual(req.auth, { userId: 2, username: 'active-user', roleId: 2 });
+        assert.deepEqual(req.auth, { userId: 2, username: 'active-user', roleId: 2, status: 'active' });
     });
 
     it('rejects invalid payloads and inactive users', async () => {
         let nextError: unknown;
-        await requireAuth({ headers: { authorization: `Bearer ${createToken({ sub: 2, username: '', roleId: 2 })}` } } as never, null as never, (error) => {
+        await requireAuth({ cookies: { [sessionCookieName]: createToken({ sub: 2, username: '', roleId: 2 }) } } as never, null as never, (error) => {
             nextError = error;
         });
         assert.ok(nextError instanceof HttpError);
@@ -72,7 +73,7 @@ describe('requireAuth', () => {
 
         users.user = { ...activeUser, status: 'banned' };
         nextError = undefined;
-        await requireAuth({ headers: { authorization: `Bearer ${createToken()}` } } as never, null as never, (error) => {
+        await requireAuth({ cookies: { [sessionCookieName]: createToken() } } as never, null as never, (error) => {
             nextError = error;
         });
         assert.ok(nextError instanceof HttpError);
@@ -80,13 +81,13 @@ describe('requireAuth', () => {
     });
 
     it('lets optional auth ignore missing or invalid tokens', async () => {
-        const req = { headers: {} };
+        const req = { cookies: {} };
         let nextCalls = 0;
 
         await optionalAuth(req as never, null as never, () => {
             nextCalls += 1;
         });
-        await optionalAuth({ headers: { authorization: 'Bearer bad-token' } } as never, null as never, () => {
+        await optionalAuth({ cookies: { [sessionCookieName]: 'bad-token' } } as never, null as never, () => {
             nextCalls += 1;
         });
 
@@ -95,10 +96,10 @@ describe('requireAuth', () => {
     });
 
     it('sets auth for optional valid tokens', async () => {
-        const req = { headers: { authorization: `Bearer ${createToken()}` } };
+        const req = { cookies: { [sessionCookieName]: createToken() } };
 
         await optionalAuth(req as never, null as never, () => undefined);
 
-        assert.deepEqual(req.auth, { userId: 2, username: 'active-user', roleId: 2 });
+        assert.deepEqual(req.auth, { userId: 2, username: 'active-user', roleId: 2, status: 'active' });
     });
 });

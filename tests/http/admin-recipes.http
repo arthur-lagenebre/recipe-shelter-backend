@@ -3,29 +3,29 @@
 # ============================================
 
 @baseUrl = http://localhost:3000/api/v1
-@adminJwt = PASTE_ADMIN_JWT_HERE
+@adminSessionCookie = PASTE_ADMIN_RS_SESSION_COOKIE_HERE
 @recipeId = 1
 
 ### Pending recipes
 GET {{baseUrl}}/admin/recipes/pending
-Authorization: Bearer {{adminJwt}}
+Cookie: rs_session={{adminSessionCookie}}
 
 ### Pending recipes count
 GET {{baseUrl}}/admin/recipes/pending/count
-Authorization: Bearer {{adminJwt}}
+Cookie: rs_session={{adminSessionCookie}}
 
 ### Admin recipe detail
 GET {{baseUrl}}/admin/recipes/{{recipeId}}
-Authorization: Bearer {{adminJwt}}
+Cookie: rs_session={{adminSessionCookie}}
 
 ### Approve recipe
 POST {{baseUrl}}/admin/recipes/{{recipeId}}/approve
-Authorization: Bearer {{adminJwt}}
+Cookie: rs_session={{adminSessionCookie}}
 
 ### Reject recipe
 POST {{baseUrl}}/admin/recipes/{{recipeId}}/reject
 Content-Type: application/json
-Authorization: Bearer {{adminJwt}}
+Cookie: rs_session={{adminSessionCookie}}
 
 {
   "rejectionReason": "La recette doit etre completee avant publication."
@@ -33,8 +33,8 @@ Authorization: Bearer {{adminJwt}}
 
 ### Archive recipe as admin
 POST {{baseUrl}}/admin/recipes/{{recipeId}}/archive
-Authorization: Bearer {{adminJwt}}
+Cookie: rs_session={{adminSessionCookie}}
 
 ### Delete recipe as admin
 DELETE {{baseUrl}}/admin/recipes/{{recipeId}}
-Authorization: Bearer {{adminJwt}}
+Cookie: rs_session={{adminSessionCookie}}

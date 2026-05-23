@@ -121,6 +121,7 @@ describe('AuthService', () => {
         assert.equal(payload.sub, 2);
         assert.equal(payload.username, 'testuser');
         assert.equal(payload.roleId, 2);
+        assert.equal(payload.status, 'active');
     });
 
     it('rejects invalid login states', async () => {

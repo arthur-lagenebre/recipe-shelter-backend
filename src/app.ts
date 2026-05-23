@@ -1,3 +1,4 @@
+import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express from 'express';
 
@@ -68,9 +69,16 @@ import { env } from './utils/env.js';
 export function createApp() {
   const app = express();
 
-  const origins = env.http.corsAllowedOrigins.split(',');
+  const origins = env.http.corsAllowedOrigins
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
 
-  app.use(cors({ origin: origins }));
+  if (origins.includes('*'))
+    throw new Error('CORS_ALLOWED_ORIGINS must list explicit origins when credentials are enabled');
+
+  app.use(cors({ credentials: true, origin: origins }));
+  app.use(cookieParser());
   app.use(express.json());
 
   const mailer = new SmtpMailService(env.smtp);

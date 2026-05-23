@@ -3,16 +3,16 @@
 # ============================================
 
 @baseUrl = http://localhost:3000/api/v1
-@adminJwt = PASTE_ADMIN_JWT_HERE
+@adminSessionCookie = PASTE_ADMIN_RS_SESSION_COOKIE_HERE
 
 ### Health live
 GET {{baseUrl}}/health/live
-Authorization: Bearer {{adminJwt}}
+Cookie: rs_session={{adminSessionCookie}}
 
 ### Health ready
 GET {{baseUrl}}/health/ready
-Authorization: Bearer {{adminJwt}}
+Cookie: rs_session={{adminSessionCookie}}
 
 ### Health
 GET {{baseUrl}}/health
-Authorization: Bearer {{adminJwt}}
+Cookie: rs_session={{adminSessionCookie}}

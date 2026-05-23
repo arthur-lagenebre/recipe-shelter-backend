@@ -10,6 +10,7 @@ type AuthController = {
   register: RequestHandler;
   login: RequestHandler;
   me: RequestHandler;
+  logout: RequestHandler;
   forgotPassword: RequestHandler;
   resetPassword: RequestHandler;
   validateEmail: RequestHandler;
@@ -23,6 +24,7 @@ export function createAuthRouter(controller: AuthController) {
   router.post('/register', authRateLimiter, controller.register);
   router.post('/login', authRateLimiter, controller.login);
   router.get('/me', requireAuth, controller.me);
+  router.post('/logout', controller.logout);
   router.post('/validate-email', authRateLimiter, controller.validateEmail);
   router.post('/resend-validation-email', authRateLimiter, controller.resendValidationEmail);
   router.post('/forgot-password', authRateLimiter, controller.forgotPassword);

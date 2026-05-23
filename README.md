@@ -8,7 +8,7 @@ Backend Node.js/Express de **Recipe Shelter**, un projet de formation autour d'u
 - Express
 - TypeScript
 - MySQL
-- JWT
+- JWT stocké en cookie HttpOnly
 
 ## Prérequis
 
@@ -154,15 +154,20 @@ Exemples :
 - `GET /api/v1/recipes`
 - `GET /api/v1/recipes/recent`
 - `POST /api/v1/auth/login`
+- `POST /api/v1/auth/logout`
 - `POST /api/v1/auth/register`
 - `GET /api/v1/categories`
 - `GET /api/v1/ingredients`
 - `GET /api/v1/tags`
 - `GET /api/v1/equipments`
 
+`POST /api/v1/auth/login` pose le cookie HttpOnly `rs_session` et ne renvoie pas le JWT dans le JSON. Les routes authentifiées lisent ensuite ce cookie.
+
+La configuration par défaut utilise `SameSite=lax`, adaptée à un front et une API sur le même site, par exemple `recipe-shelter.fr` et `api.recipe-shelter.fr`. Si vous passez en `SameSite=none` pour un vrai contexte cross-site, ajoutez une protection CSRF côté API.
+
 Des exemples de requêtes sont disponibles dans `tests/http/`.
 
-Les routes `/api/v1/admin/*` et `/api/v1/health/*` demandent un JWT d'administrateur. Pour une première vérification sans authentification, utilisez plutôt `GET /api/v1/recipes`, `GET /api/v1/categories`, `GET /api/v1/ingredients` ou `GET /api/v1/tags`.
+Les routes `/api/v1/admin/*` et `/api/v1/health/*` demandent une session administrateur. Pour une première vérification sans authentification, utilisez plutôt `GET /api/v1/recipes`, `GET /api/v1/categories`, `GET /api/v1/ingredients` ou `GET /api/v1/tags`.
 
 ## Variables d'environnement
 
@@ -180,11 +185,16 @@ Les valeurs par défaut sont définies dans `.env.example`.
 | `DB_CONNECTION_LIMIT` | Non | Nombre maximal de connexions MySQL dans le pool. |
 | `JWT_SECRET` | Oui | Secret utilisé pour signer les tokens JWT. |
 | `JWT_EXPIRES_IN` | Non | Durée de validité des JWT. Défaut : `7d`. |
+| `AUTH_SESSION_COOKIE_NAME` | Non | Nom du cookie de session. Défaut : `rs_session`. |
+| `AUTH_SESSION_COOKIE_SAME_SITE` | Non | Politique SameSite du cookie : `lax`, `strict` ou `none`. Défaut : `lax`. |
+| `AUTH_SESSION_COOKIE_SECURE` | Non | Force le flag `Secure`. Défaut : `true` en production, sinon `false`. |
+| `AUTH_SESSION_COOKIE_DOMAIN` | Non | Domaine du cookie si nécessaire, par exemple `.recipe-shelter.fr`. Défaut : non défini. |
+| `AUTH_SESSION_COOKIE_MAX_AGE_MS` | Non | Durée de vie du cookie en millisecondes. Défaut : dérivé de `JWT_EXPIRES_IN`. |
 | `BCRYPT_COST` | Non | Coût bcrypt pour le hash des mots de passe. Défaut : `12`. |
 | `AUTH_DEFAULT_ROLE_NAME` | Non | Rôle attribué aux nouveaux comptes. Défaut : `user`. |
 | `AUTH_RATE_LIMIT_MAX_ATTEMPTS` | Non | Nombre maximal de tentatives sur les routes auth limitées. |
 | `AUTH_RATE_LIMIT_WINDOW_MS` | Non | Fenêtre du rate limit en millisecondes. |
-| `CORS_ALLOWED_ORIGINS` | Non | Origines frontend autorisées, séparées par des virgules. |
+| `CORS_ALLOWED_ORIGINS` | Non | Origines frontend autorisées, séparées par des virgules. Les credentials CORS sont activés, donc `*` n'est pas accepté. |
 | `FRONTEND_BASE_URL` | Non | URL du frontend utilisée dans les liens d'email. |
 | `SMTP_HOST` | Selon usage | Serveur SMTP pour validation email, reset password et contact. |
 | `SMTP_PORT` | Selon usage | Port SMTP. |
