@@ -62,63 +62,63 @@ VALUES
 (1, 8, 1, 'Feuilletés apéritif chorizo feta',
  'feuilletes-aperitif-chorizo-feta',
  'Des petits feuilletés croustillants garnis de chorizo et de feta, parfaits pour l''apéritif. Rapides à préparer et irrésistibles, ils disparaissent en quelques minutes !',
- 'https://placehold.co/1200x800/f97316/111827?text=Feuilletes+chorizo+feta',
+ 'https://assets.afcdn.com/recipe/20201009/114701_w1024h768c1cx241cy329cxt0cyt0cxb525cyb700.jpg',
  15, NULL, 20, 6, 'published', '2024-10-05 18:00:00', '2024-10-06 09:00:00', 3, '2024-10-06 09:30:00'),
 
 -- 2. Poulet au coco et curry
 (2, 8, 6, 'Poulet au coco et curry',
  'poulet-au-coco-et-curry',
  'Un plat parfumé et crémeux qui mêle la douceur du lait de coco à la chaleur du curry. Un voyage savoureux en une seule casserole.',
- 'https://placehold.co/1200x800/fbbf24/111827?text=Poulet+coco+curry',
+ 'https://www.healthyfoodcreation.fr/wp-content/uploads/2026/01/pouletcurrycoco-4.jpg',
  15, NULL, 30, 4, 'published', '2024-10-10 12:00:00', '2024-10-11 08:00:00', 3, '2024-10-11 08:30:00'),
 
 -- 3. Soupe d'asperges blanches
 (3, 4, 4, 'Soupe d''asperges blanches',
  'soupe-asperges-blanches',
  'Une soupe veloutée et délicate à base d''asperges blanches fraîches, légèrement crémée. Idéale en entrée pour un repas printanier.',
- 'https://placehold.co/1200x800/a7f3d0/064e3b?text=Soupe+asperges+blanches',
+ 'https://img.cuisineaz.com/660x495/2013/12/20/i47876-veloute-d-asperge.jpg',
  20, NULL, 25, 4, 'published', '2024-10-15 11:00:00', '2024-10-16 09:00:00', 3, '2024-10-16 09:30:00'),
 
 -- 4. Tarte chocolat orange
 (4, 5, 3, 'Tarte chocolat orange',
  'tarte-chocolat-orange',
  'Une tarte gourmande alliant l''intensité du chocolat noir à la fraîcheur de l''orange. Un dessert élégant qui épatera vos convives.',
- 'https://placehold.co/1200x800/7f1d1d/fef3c7?text=Tarte+chocolat+orange',
+ 'https://www.soy.fr/wp-content/uploads/2024/02/tarte-chocolat-orange.png',
  30, 60, 15, 8, 'published', '2024-10-20 16:00:00', '2024-10-21 10:00:00', 3, '2024-10-21 10:30:00'),
 
 -- 5. Omelette norvégienne facile
 (5, 5, 3, 'Omelette norvégienne facile',
  'omelette-norvegienne-facile',
  'Le grand classique des desserts festifs : une génoise, une glace et une meringue flambée. Plus simple qu''il n''y paraît !',
- 'https://placehold.co/1200x800/f9a8d4/831843?text=Omelette+norvegienne',
+ NULL,
  40, 120, 10, 8, 'published', '2024-10-25 14:00:00', '2024-10-26 09:00:00', 3, '2024-10-26 09:30:00'),
 
 -- 6. Figues confites au vin rouge
 (6, 4, 3, 'Figues confites au vin rouge',
  'figues-confites-au-vin-rouge',
  'Des figues fondantes pochées dans un vin rouge épicé au miel et aux aromates. Un dessert ou un accompagnement de fromages raffiné.',
- 'https://placehold.co/1200x800/581c87/fdf4ff?text=Figues+vin+rouge',
+ NULL,
  10, NULL, 40, 4, 'published', '2024-11-01 10:00:00', '2024-11-02 09:00:00', 3, '2024-11-02 09:30:00'),
 
 -- 7. Tataki de thon
 (7, 8, 4, 'Tataki de thon',
  'tataki-de-thon',
  'Une entrée japonaise sophistiquée : le thon est saisi quelques secondes, tranché fin et servi avec une sauce soja citronnée au gingembre.',
- 'https://placehold.co/1200x800/0f766e/ecfeff?text=Tataki+de+thon',
+ NULL,
  15, 30, 5, 4, 'published', '2024-11-05 12:00:00', '2024-11-06 09:00:00', 3, '2024-11-06 09:30:00'),
 
 -- 8. Œufs mollet de grand-mère
 (8, 5, 4, 'Œufs mollet de grand-mère',
  'oeufs-mollet-grand-mere',
  'Des œufs mollets servis sur une sauce aux champignons et lardons, sur toast. Un plat de bistrot réconfortant et plein de saveurs.',
- 'https://placehold.co/1200x800/fde68a/713f12?text=Oeufs+mollet+grand-mere',
+ NULL,
  10, NULL, 15, 2, 'published', '2024-11-10 11:00:00', '2024-11-11 09:00:00', 3, '2024-11-11 09:30:00'),
 
 -- 9. Soupe aux 7 légumes
 (9, 4, 4, 'Soupe aux 7 légumes',
  'soupe-aux-7-legumes',
  'Une soupe nourrissante et colorée qui réunit sept légumes de saison. Simple, économique et délicieuse, elle réchauffe les longues soirées d''hiver.',
- 'https://placehold.co/1200x800/86efac/14532d?text=Soupe+aux+7+legumes',
+ NULL,
  20, NULL, 35, 6, 'published', '2024-11-15 10:00:00', '2024-11-16 09:00:00', 3, '2024-11-16 09:30:00'),
 
 -- 10. Soupe au chou vert
@@ -132,7 +132,7 @@ VALUES
 (11, 5, 1, 'Croissants pesto jambon',
  'croissants-pesto-jambon',
  'Des croissants feuilletés garnis d''une généreuse couche de pesto et de jambon. Parfaits pour un apéritif dînatoire ou un brunch gourmand.',
- 'https://placehold.co/1200x800/b45309/fff7ed?text=Croissants+pesto+jambon',
+ 'https://cahierdegourmandises.fr/mywordpress/wp-content/uploads/medias_DC/2014/Croissants_Pesto_Jambon.jpg',
  15, NULL, 20, 8, 'published', '2024-11-25 14:00:00', '2024-11-26 09:00:00', 3, '2024-11-26 09:30:00'),
 
 -- 12. Galette des rois salée façon couronne
@@ -181,21 +181,21 @@ VALUES
 (18, 4, 2, 'Cocktail à l''ouzo',
  'cocktail-a-l-ouzo',
  'Un cocktail frais et anisé inspiré de la Grèce, mêlant l''ouzo au jus de citron vert, au sirop de miel et à l''eau pétillante.',
- 'https://placehold.co/1200x800/38bdf8/082f49?text=Cocktail+a+l-ouzo',
+ 'https://assets.afcdn.com/recipe/20210517/120347_w1024h768c1cx707cy1060cxt0cyt0cxb1414cyb2121.jpg',
  5, NULL, NULL, 2, 'published', '2025-01-10 15:00:00', '2025-01-11 09:00:00', 3, '2025-01-11 09:30:00'),
 
 -- 19. Mojito à la bière
 (19, 8, 2, 'Mojito à la bière',
  'mojito-a-la-biere',
  'Une version festive et originale du mojito classique : la bière blonde remplace le soda pour une boisson désaltérante et légèrement amère.',
- 'https://placehold.co/1200x800/22c55e/052e16?text=Mojito+a+la+biere',
+ NULL,
  10, NULL, NULL, 4, 'published', '2025-01-15 16:00:00', '2025-01-16 09:00:00', 3, '2025-01-16 09:30:00'),
 
 -- 20. Le vrai chocolat chaud maison
 (20, 5, 2, 'Le vrai chocolat chaud maison',
  'le-vrai-chocolat-chaud-maison',
  'Un chocolat chaud épais et velouté, préparé avec du vrai chocolat noir de qualité. Bien loin des poudres industrielles, c''est la perfection dans une tasse.',
- 'https://placehold.co/1200x800/78350f/fef3c7?text=Chocolat+chaud+maison',
+ 'https://img-3.journaldesfemmes.fr/6Lh_d4t6Iy2ykpxq7P1EfoZZ6lc=/750x500/19425952369046cebb80a8ec458bf505/ccmcms-jdf/39919459.jpg',
  5, NULL, 10, 2, 'published', '2025-01-20 17:00:00', '2025-01-21 09:00:00', 3, '2025-01-21 09:30:00'),
 
 -- 21. Dahl de lentilles corail (en validation)
