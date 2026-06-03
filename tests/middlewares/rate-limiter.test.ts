@@ -5,10 +5,13 @@ import { rateLimiter } from '../../src/middlewares/rate-limiter.js';
 
 import type { NextFunction, Request, Response } from 'express';
 
-type MockResponse = Pick<Response, 'json' | 'setHeader' | 'status'> & {
+type MockResponse = {
     body?: unknown;
     headers: Record<string, string>;
     statusCode?: number;
+    json(body: unknown): MockResponse;
+    setHeader(name: string, value: number | string | readonly string[]): MockResponse;
+    status(statusCode: number): MockResponse;
 };
 
 function createRequest(path: string, ip = '127.0.0.1'): Request {
@@ -26,17 +29,17 @@ function createResponse(): MockResponse {
         json(body: unknown) {
             response.body = body;
 
-            return response as Response;
+            return response;
         },
         setHeader(name: string, value: number | string | readonly string[]) {
             response.headers[name] = String(value);
 
-            return response as Response;
+            return response;
         },
         status(statusCode: number) {
             response.statusCode = statusCode;
 
-            return response as Response;
+            return response;
         }
     };
 
@@ -50,7 +53,7 @@ function runLimiter(limiter: ReturnType<typeof rateLimiter>, req: Request): { ne
         nextCalled = true;
     };
 
-    limiter(req, res as Response, next);
+    limiter(req, res as unknown as Response, next);
 
     return { nextCalled, res };
 }

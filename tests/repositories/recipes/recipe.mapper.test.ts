@@ -121,7 +121,7 @@ describe('recipe.mapper', () => {
     });
 
     it('maps recipe detail nested rows', () => {
-        assert.deepEqual(mapRecipeDetailIngredient({ IngredientId: 7, Name: 'Farine', Slug: 'farine', Quantity: '250', Unit: 'g', Note: 'T55', SortOrder: 1 } as RecipeDetailIngredientRow), {
+        assert.deepEqual(mapRecipeDetailIngredient({ Id: 7, IngredientId: 7, Name: 'Farine', Slug: 'farine', Quantity: '250', Unit: 'g', Note: 'T55', SortOrder: 1 } as RecipeDetailIngredientRow), {
             id: 7,
             name: 'Farine',
             slug: 'farine',

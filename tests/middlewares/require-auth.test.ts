@@ -10,6 +10,13 @@ import { sessionCookieName } from '../../src/utils/session-cookie.js';
 
 import type { User } from '../../src/repositories/users/user.types.js';
 
+type AuthPayload = { userId: number; username: string; roleId: number; status: string };
+
+type MockRequest = {
+    cookies: Record<string, string>;
+    auth?: AuthPayload;
+};
+
 const activeUser: User = {
     id: 2,
     mail: 'user@example.com',
@@ -56,7 +63,7 @@ describe('requireAuth', () => {
     });
 
     it('sets active auth from a valid token and repository user', async () => {
-        const req = { cookies: { [sessionCookieName]: createToken() } };
+        const req: MockRequest = { cookies: { [sessionCookieName]: createToken() } };
 
         await requireAuth(req as never, null as never, () => undefined);
 
@@ -81,7 +88,7 @@ describe('requireAuth', () => {
     });
 
     it('lets optional auth ignore missing or invalid tokens', async () => {
-        const req = { cookies: {} };
+        const req: MockRequest = { cookies: {} };
         let nextCalls = 0;
 
         await optionalAuth(req as never, null as never, () => {
@@ -96,7 +103,7 @@ describe('requireAuth', () => {
     });
 
     it('sets auth for optional valid tokens', async () => {
-        const req = { cookies: { [sessionCookieName]: createToken() } };
+        const req: MockRequest = { cookies: { [sessionCookieName]: createToken() } };
 
         await optionalAuth(req as never, null as never, () => undefined);
 
