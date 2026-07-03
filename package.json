@@ -14,7 +14,6 @@
     "test": "node --import tsx --test \"tests/**/*.test.ts\"",
     "start": "node dist/server.js",
     "db:reset": "mysql -u root -p < database/reset.sql",
-    "db:reset:demo": "mysql -u root -p < database/reset_demo.sql",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "prepare": "husky"
