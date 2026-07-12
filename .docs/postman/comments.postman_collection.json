@@ -1,0 +1,717 @@
+{
+  "info": {
+    "name": "Recipe Shelter - Comments",
+    "description": "Postman collection for testing comments routes. Set collection variables before running authenticated requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "sessionCookie",
+      "value": "PASTE_RS_SESSION_COOKIE_HERE"
+    },
+    {
+      "key": "recipeId",
+      "value": "1"
+    },
+    {
+      "key": "commentId",
+      "value": "1"
+    },
+    {
+      "key": "parentCommentId",
+      "value": "1"
+    },
+    {
+      "key": "recipeSlug",
+      "value": "cake-marbre-maison"
+    }
+  ],
+  "item": [
+    {
+      "name": "Recipe comments - public",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes/{{recipeId}}/comments",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes",
+            "{{recipeId}}",
+            "comments"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', () => {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('response is an array', () => {",
+              "  pm.expect(pm.response.json()).to.be.an('array');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Published recipe detail with comment tree - public",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes/{{recipeSlug}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes",
+            "{{recipeSlug}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Recipe comments - bad recipe id",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes/abc/comments",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes",
+            "abc",
+            "comments"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 400', () => {",
+              "  pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test('error code is COMMENTS_BAD_RECIPE_ID', () => {",
+              "  pm.expect(pm.response.json().code).to.eql('COMMENTS_BAD_RECIPE_ID');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create root comment with rating",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "rs_session={{sessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes/{{recipeId}}/comments",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes",
+            "{{recipeId}}",
+            "comments"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"rating\": 5,\n  \"comment\": \"Super recette, facile a suivre.\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 201', () => {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test('response contains created comment', () => {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.id).to.exist;",
+              "  pm.expect(json.recipeId).to.eql(Number(pm.collectionVariables.get('recipeId')));",
+              "  pm.expect(json.rating).to.eql(5);",
+              "  pm.expect(json.comment).to.eql('Super recette, facile a suivre.');",
+              "});",
+              "",
+              "pm.test('save comment id', () => {",
+              "  const json = pm.response.json();",
+              "  if (json.id) pm.collectionVariables.set('commentId', String(json.id));",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create reply without rating",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "rs_session={{sessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes/{{recipeId}}/comments",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes",
+            "{{recipeId}}",
+            "comments"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"parentCommentId\": {{parentCommentId}},\n  \"comment\": \"Merci pour l'astuce.\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 201', () => {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test('response contains reply', () => {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.parentCommentId).to.eql(Number(pm.collectionVariables.get('parentCommentId')));",
+              "  pm.expect(json.comment).to.eql(\"Merci pour l'astuce.\");",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create comment - missing auth",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes/{{recipeId}}/comments",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes",
+            "{{recipeId}}",
+            "comments"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"rating\": 4,\n  \"comment\": \"Je teste sans token.\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 401', () => {",
+              "  pm.response.to.have.status(401);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create comment - missing comment",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "rs_session={{sessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes/{{recipeId}}/comments",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes",
+            "{{recipeId}}",
+            "comments"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"rating\": 5\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 400', () => {",
+              "  pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test('error code is COMMENTS_CREATE_MISSING_COMMENT', () => {",
+              "  pm.expect(pm.response.json().code).to.eql('COMMENTS_CREATE_MISSING_COMMENT');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create comment - invalid rating",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "rs_session={{sessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes/{{recipeId}}/comments",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes",
+            "{{recipeId}}",
+            "comments"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"rating\": 6,\n  \"comment\": \"Note invalide.\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 400', () => {",
+              "  pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test('error code is COMMENTS_CREATE_BAD_RATING', () => {",
+              "  pm.expect(pm.response.json().code).to.eql('COMMENTS_CREATE_BAD_RATING');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create reply - rating not allowed",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "rs_session={{sessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes/{{recipeId}}/comments",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes",
+            "{{recipeId}}",
+            "comments"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"parentCommentId\": {{parentCommentId}},\n  \"rating\": 4,\n  \"comment\": \"Une reponse ne peut pas noter la recette.\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 400', () => {",
+              "  pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test('error code is COMMENTS_CREATE_REPLY_WITH_RATING', () => {",
+              "  pm.expect(pm.response.json().code).to.eql('COMMENTS_CREATE_REPLY_WITH_RATING');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create nested reply - not allowed",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "rs_session={{sessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes/{{recipeId}}/comments",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes",
+            "{{recipeId}}",
+            "comments"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"parentCommentId\": {{parentCommentId}},\n  \"comment\": \"Une reponse a une reponse doit etre refusee.\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Update my comment",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "rs_session={{sessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/comments/{{commentId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "comments",
+            "{{commentId}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"rating\": 4,\n  \"comment\": \"Commentaire mis a jour.\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', () => {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('response contains updated comment', () => {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.id).to.eql(Number(pm.collectionVariables.get('commentId')));",
+              "  pm.expect(json.rating).to.eql(4);",
+              "  pm.expect(json.comment).to.eql('Commentaire mis a jour.');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Update my comment - remove rating",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "rs_session={{sessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/comments/{{commentId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "comments",
+            "{{commentId}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"rating\": null,\n  \"comment\": \"Commentaire mis a jour sans note.\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', () => {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('response contains updated comment without rating', () => {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.rating).to.eql(null);",
+              "  pm.expect(json.comment).to.eql('Commentaire mis a jour sans note.');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Update comment - bad comment id",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "rs_session={{sessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/comments/abc",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "comments",
+            "abc"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"rating\": 4,\n  \"comment\": \"Identifiant invalide.\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 400', () => {",
+              "  pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test('error code is COMMENTS_BAD_ID', () => {",
+              "  pm.expect(pm.response.json().code).to.eql('COMMENTS_BAD_ID');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Update comment - missing auth",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/comments/{{commentId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "comments",
+            "{{commentId}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"rating\": 4,\n  \"comment\": \"Je teste sans token.\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 401', () => {",
+              "  pm.response.to.have.status(401);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Delete my comment - soft delete",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "rs_session={{sessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/comments/{{commentId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "comments",
+            "{{commentId}}"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', () => {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('response is ok', () => {",
+              "  pm.expect(pm.response.json().ok).to.eql(true);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Delete comment - missing auth",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/comments/{{commentId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "comments",
+            "{{commentId}}"
+          ]
+        }
+      }
+    }
+  ]
+}

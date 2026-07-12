@@ -171,13 +171,32 @@ CREATE TABLE Equipments (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------- Tag catalogue ----------
+CREATE TABLE TagGroups (
+  Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  Name VARCHAR(100) NOT NULL,
+  Slug VARCHAR(100) NOT NULL,
+  SortOrder INT NOT NULL DEFAULT 1,
+  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (Id),
+  UNIQUE KEY tag_groups_name_UK (Name),
+  UNIQUE KEY tag_groups_slug_UK (Slug),
+  KEY idx_tag_groups_sort_order (SortOrder)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE Tags (
   Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  GroupId BIGINT UNSIGNED NOT NULL,
   Name VARCHAR(255) NOT NULL,
   Slug VARCHAR(255) NOT NULL,
   PRIMARY KEY (Id),
+  KEY idx_tags_group_id (GroupId),
   UNIQUE KEY tags_name_UK (Name),
-  UNIQUE KEY tags_slug_UK (Slug)
+  UNIQUE KEY tags_slug_UK (Slug),
+  CONSTRAINT tags_group_FK
+    FOREIGN KEY (GroupId) REFERENCES TagGroups(Id)
+    ON UPDATE CASCADE
+    ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------- Recipe content ----------

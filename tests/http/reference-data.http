@@ -37,6 +37,19 @@ Cookie: rs_session={{sessionCookie}}
 GET {{baseUrl}}/tags
 Cookie: rs_session={{sessionCookie}}
 
+# Expected response items include:
+# {
+#   "id": 1,
+#   "name": "Végétarien",
+#   "slug": "vegetarien",
+#   "group": {
+#     "id": 1,
+#     "name": "Régimes alimentaires",
+#     "slug": "regimes-alimentaires",
+#     "sortOrder": 1
+#   }
+# }
+
 ### Tag by id
 GET {{baseUrl}}/tags/{{tagId}}
 Cookie: rs_session={{sessionCookie}}

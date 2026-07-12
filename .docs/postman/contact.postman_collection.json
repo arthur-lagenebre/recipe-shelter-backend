@@ -1,0 +1,114 @@
+{
+  "info": {
+    "name": "Recipe Shelter - Contact",
+    "description": "Postman collection for the public contact route.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "contactEmail",
+      "value": "visitor@example.com"
+    }
+  ],
+  "item": [
+    {
+      "name": "Send contact message",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Recipe Shelter Visitor\",\n  \"email\": \"{{contactEmail}}\",\n  \"subject\": \"Question sur Recipe Shelter\",\n  \"message\": \"Bonjour, je souhaite obtenir plus d'informations sur Recipe Shelter.\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/contact",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "contact"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('message confirms delivery', () => {",
+              "  pm.expect(pm.response.json().message).to.eql('Contact message sent');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Send contact message - invalid email",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Recipe Shelter Visitor\",\n  \"email\": \"invalid-email\",\n  \"subject\": \"Question sur Recipe Shelter\",\n  \"message\": \"Bonjour, je teste la validation du formulaire de contact.\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/contact",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "contact"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Send contact message - missing fields",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"\",\n  \"email\": \"{{contactEmail}}\",\n  \"subject\": \"\",\n  \"message\": \"\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/contact",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "contact"
+          ]
+        }
+      }
+    }
+  ]
+}

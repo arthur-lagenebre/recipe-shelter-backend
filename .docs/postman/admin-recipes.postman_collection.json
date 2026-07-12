@@ -1,0 +1,210 @@
+{
+  "info": {
+    "name": "Recipe Shelter - Admin Recipes",
+    "description": "Postman collection for admin recipe moderation routes.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "adminSessionCookie",
+      "value": "PASTE_ADMIN_RS_SESSION_COOKIE_HERE"
+    },
+    {
+      "key": "recipeId",
+      "value": "1"
+    }
+  ],
+  "item": [
+    {
+      "name": "Pending recipes",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "rs_session={{adminSessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/admin/recipes/pending",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "admin",
+            "recipes",
+            "pending"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Pending recipes count",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "rs_session={{adminSessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/admin/recipes/pending/count",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "admin",
+            "recipes",
+            "pending",
+            "count"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Admin recipe detail",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "rs_session={{adminSessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/admin/recipes/{{recipeId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "admin",
+            "recipes",
+            "{{recipeId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Approve recipe",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "rs_session={{adminSessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/admin/recipes/{{recipeId}}/approve",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "admin",
+            "recipes",
+            "{{recipeId}}",
+            "approve"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Reject recipe",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "rs_session={{adminSessionCookie}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"rejectionReason\": \"La recette doit etre completee avant publication.\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/admin/recipes/{{recipeId}}/reject",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "admin",
+            "recipes",
+            "{{recipeId}}",
+            "reject"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Archive recipe as admin",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "rs_session={{adminSessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/admin/recipes/{{recipeId}}/archive",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "admin",
+            "recipes",
+            "{{recipeId}}",
+            "archive"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Delete recipe as admin",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "rs_session={{adminSessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/admin/recipes/{{recipeId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "admin",
+            "recipes",
+            "{{recipeId}}"
+          ]
+        }
+      }
+    }
+  ]
+}

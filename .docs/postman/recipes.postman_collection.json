@@ -1,0 +1,752 @@
+{
+  "info": {
+    "name": "Recipe Shelter - Recipes",
+    "description": "Postman collection for public and authenticated recipe routes.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "sessionCookie",
+      "value": "PASTE_RS_SESSION_COOKIE_HERE"
+    },
+    {
+      "key": "recipeId",
+      "value": "1"
+    },
+    {
+      "key": "recipeSlug",
+      "value": "cake-marbre-maison"
+    }
+  ],
+  "item": [
+    {
+      "name": "Published recipes - public",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Published recipes - public paginated",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes?page=1&limit=12",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes"
+          ],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "12"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Published recipes - search by title",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes?q=porc&page=1&limit=12",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes"
+          ],
+          "query": [
+            {
+              "key": "q",
+              "value": "porc"
+            },
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "12"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Published recipes - filter by category",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes?categoryId=3&page=1&limit=12",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes"
+          ],
+          "query": [
+            {
+              "key": "categoryId",
+              "value": "3"
+            },
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "12"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Published recipes - search by title and category",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes?q=porc&categoryId=3&page=2&limit=12",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes"
+          ],
+          "query": [
+            {
+              "key": "q",
+              "value": "porc"
+            },
+            {
+              "key": "categoryId",
+              "value": "3"
+            },
+            {
+              "key": "page",
+              "value": "2"
+            },
+            {
+              "key": "limit",
+              "value": "12"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Published recipes - legacy search route",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes/search?q=porc&categoryId=3&page=1&limit=12",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes",
+            "search"
+          ],
+          "query": [
+            {
+              "key": "q",
+              "value": "porc"
+            },
+            {
+              "key": "categoryId",
+              "value": "3"
+            },
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "12"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Recent published recipes - public",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes/recent?limit=12",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes",
+            "recent"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "12"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Published recipes - filter by tags",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes/search?tagIds=1,2",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes",
+            "search"
+          ],
+          "query": [
+            {
+              "key": "tagIds",
+              "value": "1,2"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Published recipes - filter by ingredients",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes/search?ingredientIds=18,103",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes",
+            "search"
+          ],
+          "query": [
+            {
+              "key": "ingredientIds",
+              "value": "18,103"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Published recipes - filter by max total time",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes/search?maxTotalTimeMinutes=45",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes",
+            "search"
+          ],
+          "query": [
+            {
+              "key": "maxTotalTimeMinutes",
+              "value": "45"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Published recipes - search with all filters",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes/search?q=porc&categoryId=3&tagIds=1,2&ingredientIds=18,103&maxTotalTimeMinutes=60",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes",
+            "search"
+          ],
+          "query": [
+            {
+              "key": "q",
+              "value": "porc"
+            },
+            {
+              "key": "categoryId",
+              "value": "3"
+            },
+            {
+              "key": "tagIds",
+              "value": "1,2"
+            },
+            {
+              "key": "ingredientIds",
+              "value": "18,103"
+            },
+            {
+              "key": "maxTotalTimeMinutes",
+              "value": "60"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Published recipes - with optional auth, includes isFavorite for current user",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "rs_session={{sessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Published recipe detail by slug",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "rs_session={{sessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes/{{recipeSlug}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes",
+            "{{recipeSlug}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "My recipes",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "rs_session={{sessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes/me?page=1&limit=10",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes",
+            "me"
+          ],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Create recipe draft - minimal",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "rs_session={{sessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Tarte aux pommes\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('save recipe id when present', () => {",
+              "  const json = pm.response.json();",
+              "  if (json.id) pm.collectionVariables.set('recipeId', String(json.id));",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create recipe draft - full body",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "rs_session={{sessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Cake marbre maison\",\n  \"categoryId\": 2,\n  \"description\": \"Version brouillon pour test HTTP\",\n  \"coverImageUrl\": null,\n  \"prepTimeMinutes\": 15,\n  \"restTimeMinutes\": null,\n  \"cookTimeMinutes\": 45,\n  \"servings\": 6,\n  \"tagIds\": [1, 2],\n  \"ingredients\": [\n    {\n      \"ingredientId\": 18,\n      \"quantity\": 200,\n      \"unit\": \"g\",\n      \"note\": \"Tamisee\"\n    },\n    {\n      \"ingredientId\": 103,\n      \"quantity\": 3,\n      \"unit\": \"piece\"\n    }\n  ],\n  \"steps\": [\n    {\n      \"description\": \"Prechauffer le four a 180 degres.\"\n    },\n    {\n      \"description\": \"Melanger les ingredients puis verser dans un moule.\"\n    }\n  ],\n  \"equipments\": [\n    {\n      \"equipmentId\": 1\n    },\n    {\n      \"equipmentId\": 2\n    }\n  ]\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('save recipe id when present', () => {",
+              "  const json = pm.response.json();",
+              "  if (json.id) pm.collectionVariables.set('recipeId', String(json.id));",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create recipe draft - missing auth",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Soupe du soir\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Create recipe draft - missing title",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "rs_session={{sessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"description\": \"Pas de titre\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Create recipe draft - title too short",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "rs_session={{sessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Cake\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Create recipe draft - invalid servings type",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "rs_session={{sessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Cake au citron\",\n  \"servings\": \"6\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Get my recipe by id",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "rs_session={{sessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes/me/{{recipeId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes",
+            "me",
+            "{{recipeId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Update recipe draft",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "rs_session={{sessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes/me/{{recipeId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes",
+            "me",
+            "{{recipeId}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Cake marbre maison v2\",\n  \"description\": \"Version mise a jour pour test HTTP\",\n  \"ingredients\": [\n    {\n      \"ingredientId\": 18,\n      \"quantity\": 250,\n      \"unit\": \"g\"\n    }\n  ],\n  \"steps\": [\n    {\n      \"description\": \"Prechauffer le four.\"\n    },\n    {\n      \"description\": \"Cuire pendant 45 minutes.\"\n    }\n  ],\n  \"equipments\": [\n    {\n      \"equipmentId\": 1\n    }\n  ]\n}"
+        }
+      }
+    },
+    {
+      "name": "Submit recipe draft",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "rs_session={{sessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes/me/{{recipeId}}/submit",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes",
+            "me",
+            "{{recipeId}}",
+            "submit"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Archive my recipe",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "rs_session={{sessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes/me/{{recipeId}}/archive",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes",
+            "me",
+            "{{recipeId}}",
+            "archive"
+          ]
+        }
+      }
+    }
+  ]
+}

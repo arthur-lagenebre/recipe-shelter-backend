@@ -1,0 +1,1908 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Recipe Shelter API Routes</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f8fb;
+      --surface: #ffffff;
+      --surface-2: #eef2f7;
+      --text: #18202d;
+      --muted: #5a6575;
+      --line: #d8dee8;
+      --accent: #22745d;
+      --accent-2: #9f5f00;
+      --danger: #a73535;
+      --info: #245fa8;
+      --shadow: 0 14px 35px rgba(23, 31, 42, 0.08);
+      --radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+    }
+
+    header {
+      background: #1f2937;
+      color: #ffffff;
+      padding: 36px 24px 28px;
+    }
+
+    main,
+    .header-inner {
+      width: min(1180px, calc(100vw - 32px));
+      margin: 0 auto;
+    }
+
+    h1,
+    h2,
+    h3 {
+      margin: 0;
+      line-height: 1.15;
+      letter-spacing: 0;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 3vw, 3rem);
+      font-weight: 760;
+    }
+
+    h2 {
+      margin-top: 34px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+      font-size: 1.45rem;
+    }
+
+    h3 {
+      margin-top: 20px;
+      font-size: 1.05rem;
+    }
+
+    p {
+      margin: 8px 0 0;
+    }
+
+    a {
+      color: var(--info);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    code,
+    pre {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+
+    pre {
+      margin: 12px 0 0;
+      overflow-x: auto;
+      background: #141b26;
+      color: #eff4fb;
+      border-radius: var(--radius);
+      padding: 14px;
+      font-size: 0.88rem;
+      line-height: 1.45;
+    }
+
+    .subtitle {
+      max-width: 760px;
+      color: #d8e0eb;
+      font-size: 1.02rem;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 999px;
+      padding: 5px 10px;
+      background: rgba(255, 255, 255, 0.08);
+      color: #ffffff;
+      font-size: 0.88rem;
+    }
+
+    main {
+      padding: 26px 0 44px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin: 22px 0;
+    }
+
+    .summary-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .summary-card strong {
+      display: block;
+      font-size: 1.65rem;
+      line-height: 1;
+    }
+
+    .summary-card span {
+      display: block;
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .toc {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 18px 0 8px;
+    }
+
+    .toc a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 32px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 5px 10px;
+      background: var(--surface);
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+
+    .note {
+      border-left: 4px solid var(--accent);
+      background: #edf7f3;
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      color: #214b3e;
+      margin: 16px 0;
+    }
+
+    .section-intro {
+      color: var(--muted);
+      max-width: 860px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      margin-top: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 760px;
+    }
+
+    th,
+    td {
+      padding: 11px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+      font-size: 0.94rem;
+    }
+
+    th {
+      background: var(--surface-2);
+      color: #283241;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    td code {
+      color: #10243f;
+      background: #eef3f9;
+      border-radius: 5px;
+      padding: 2px 5px;
+      white-space: nowrap;
+    }
+
+    .method {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 64px;
+      height: 26px;
+      border-radius: 5px;
+      padding: 0 8px;
+      color: #ffffff;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0;
+    }
+
+    .get {
+      background: var(--info);
+    }
+
+    .post {
+      background: var(--accent);
+    }
+
+    .patch {
+      background: var(--accent-2);
+    }
+
+    .delete {
+      background: var(--danger);
+    }
+
+    .auth {
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      border-radius: 5px;
+      padding: 2px 8px;
+      background: #f4f7fb;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.84rem;
+      white-space: nowrap;
+    }
+
+    .auth.public {
+      color: #275f4f;
+      background: #ecf7f2;
+      border-color: #c7e7db;
+    }
+
+    .auth.admin {
+      color: #763a12;
+      background: #fff4e8;
+      border-color: #f0d1ab;
+    }
+
+    .schema-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 14px;
+    }
+
+    .schema {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    .schema h3 {
+      margin-top: 0;
+      font-size: 1rem;
+    }
+
+    .schema p {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    footer {
+      width: min(1180px, calc(100vw - 32px));
+      margin: 0 auto 30px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 900px) {
+      .summary-grid,
+      .schema-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 620px) {
+      header {
+        padding: 28px 16px 24px;
+      }
+
+      main,
+      .header-inner,
+      footer {
+        width: min(100% - 24px, 1180px);
+      }
+
+      .summary-grid,
+      .schema-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+      }
+
+      header {
+        background: #ffffff;
+        color: #111827;
+        padding: 0 0 16px;
+      }
+
+      .subtitle,
+      .pill {
+        color: #374151;
+      }
+
+      .summary-card,
+      .table-wrap,
+      .schema {
+        box-shadow: none;
+      }
+
+      .toc {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <h1>Recipe Shelter API Routes</h1>
+      <p class="subtitle">Documentation statique des endpoints Express disponibles dans le backend Recipe Shelter.</p>
+      <div class="meta">
+        <span class="pill">Base URL: <code>http://localhost:3000</code></span>
+        <span class="pill">Préfixe API: <code>/api/v1</code></span>
+        <span class="pill">Mise à jour: 2026-05-23</span>
+        <span class="pill">Routes documentées: 63</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section aria-labelledby="overview">
+      <h2 id="overview">Vue d’ensemble</h2>
+      <div class="summary-grid">
+        <div class="summary-card">
+          <strong>15</strong>
+          <span>Domaines de routes montés dans <code>src/app.ts</code></span>
+        </div>
+        <div class="summary-card">
+          <strong>63</strong>
+          <span>Endpoints HTTP actifs</span>
+        </div>
+        <div class="summary-card">
+          <strong>21</strong>
+          <span>Routes admin protégées</span>
+        </div>
+        <div class="summary-card">
+          <strong>Cookie</strong>
+          <span>Session via <code>rs_session</code> HttpOnly</span>
+        </div>
+      </div>
+
+      <nav class="toc" aria-label="Sommaire">
+        <a href="#conventions">Conventions</a>
+        <a href="#auth">Auth</a>
+        <a href="#users">Users</a>
+        <a href="#recipes">Recipes</a>
+        <a href="#comments">Comments</a>
+        <a href="#favorites">Favorites</a>
+        <a href="#reference-data">Données de référence</a>
+        <a href="#contact">Contact</a>
+        <a href="#health">Health</a>
+        <a href="#admin-recipes">Admin recipes</a>
+        <a href="#admin-comments">Admin comments</a>
+        <a href="#admin-users">Admin users</a>
+      </nav>
+
+      <p class="note">Les routes marquées "Auth optionnelle" acceptent le cookie de session <code>rs_session</code> mais fonctionnent aussi sans session. Quand la session est valide, certaines réponses ajoutent des informations propres à l'utilisateur, par exemple <code>isFavorite</code>.</p>
+    </section>
+
+    <section aria-labelledby="conventions">
+      <h2 id="conventions">Conventions</h2>
+      <div class="schema-grid">
+        <article class="schema">
+          <h3>Erreur standard</h3>
+          <p>Toutes les erreurs HTTP passent par le middleware central.</p>
+          <pre><code>{
+  "error": {
+    "message": "Route not found",
+    "code": "ROUTE_NOT_FOUND"
+  }
+}</code></pre>
+        </article>
+        <article class="schema">
+          <h3>Pagination standard</h3>
+          <p><code>page</code> et <code>limit</code> sont des entiers positifs. La limite générale est plafonnée à 50.</p>
+          <pre><code>{
+  "items": [],
+  "pagination": {
+    "page": 1,
+    "limit": 12,
+    "totalItems": 0,
+    "totalPages": 0,
+    "hasNextPage": false,
+    "hasPreviousPage": false
+  }
+}</code></pre>
+        </article>
+      </div>
+
+      <div class="schema-grid">
+        <article class="schema">
+          <h3>Types communs</h3>
+          <p>Formats réutilisés par plusieurs endpoints.</p>
+          <pre><code>type ISODateString = string;
+type UserStatus = "inactive" | "active" | "banned";
+type UserModerationAction = "ban" | "unban";
+
+type PublicAuthorDto = {
+  id: number;
+  username: string;
+};
+
+type OkResponse = {
+  ok: boolean;
+};
+
+type MessageResponse = {
+  ok?: boolean;
+  message: string;
+};</code></pre>
+        </article>
+
+        <article class="schema">
+          <h3>ErrorResponse</h3>
+          <p>Format renvoyé par le middleware d’erreur.</p>
+          <pre><code>type ErrorResponse = {
+  error: {
+    message: string;
+    code: string;
+  };
+};</code></pre>
+        </article>
+
+        <article class="schema">
+          <h3>Pagination</h3>
+          <p>Utilisée par les listes paginées.</p>
+          <pre><code>type PaginationQuery = {
+  page?: number;
+  limit?: number;
+};
+
+type PaginationMetadata = {
+  page: number;
+  limit: number;
+  totalItems: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+};
+
+type PaginatedResult&lt;T&gt; = {
+  items: T[];
+  pagination: PaginationMetadata;
+};</code></pre>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="auth">
+      <h2 id="auth">Auth</h2>
+      <p class="section-intro">Inscription, connexion, déconnexion, session courante, validation e-mail et reset de mot de passe. Les routes sensibles sont limitées par le rate limiter auth. <code>POST /api/v1/auth/login</code> pose le cookie HttpOnly <code>rs_session</code>; les routes protégées lisent ensuite ce cookie.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Méthode</th>
+              <th>Route</th>
+              <th>Auth</th>
+              <th>Body / Query</th>
+              <th>Réponse</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/auth/register</code></td>
+              <td><span class="auth public">Public</span></td>
+              <td><code>mail</code>, <code>username</code>, <code>password</code>. Password min 8 caractères, username min 3.</td>
+              <td><code>201</code> <code>{ "user": ..., "message": "..." }</code>.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/auth/login</code></td>
+              <td><span class="auth public">Public</span></td>
+              <td><code>mail</code>, <code>password</code>.</td>
+              <td><code>200</code> <code>{ "user": ... }</code> + <code>Set-Cookie: rs_session=...</code>.</td>
+            </tr>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/auth/me</code></td>
+              <td><span class="auth">Session</span></td>
+              <td>Aucun.</td>
+              <td><code>200</code> <code>{ "auth": ... }</code>.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/auth/logout</code></td>
+              <td><span class="auth public">Public</span></td>
+              <td>Cookie de session optionnel. Supprime <code>rs_session</code> s'il est présent.</td>
+              <td><code>200</code> <code>{ "ok": true }</code>.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/auth/validate-email</code></td>
+              <td><span class="auth public">Public</span></td>
+              <td><code>token</code>.</td>
+              <td><code>200</code> <code>{ "ok": true, "message": "...", "user": ... }</code>.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/auth/resend-validation-email</code></td>
+              <td><span class="auth public">Public</span></td>
+              <td><code>mail</code>.</td>
+              <td><code>200</code> message générique.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/auth/forgot-password</code></td>
+              <td><span class="auth public">Public</span></td>
+              <td><code>mail</code>.</td>
+              <td><code>200</code> message générique.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/auth/reset-password</code></td>
+              <td><span class="auth public">Public</span></td>
+              <td><code>token</code>, <code>password</code>. Alias accepté: <code>newPassword</code>.</td>
+              <td><code>200</code> confirmation.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="schema-grid">
+        <article class="schema">
+          <h3>AuthContext</h3>
+          <p>Payload applicatif extrait du cookie de session.</p>
+          <pre><code>type AuthContext = {
+  userId: number;
+  username: string;
+  roleId: number;
+  status: UserStatus;
+};
+
+type AuthTokenPayload = {
+  sub: number;
+  username: string;
+  roleId: number;
+  status: UserStatus;
+};
+
+type AuthMeResponse = {
+  auth: AuthContext;
+};</code></pre>
+        </article>
+
+        <article class="schema">
+          <h3>User</h3>
+          <p>Utilisateur complet côté API auth/admin.</p>
+          <pre><code>type User = {
+  id: number;
+  mail: string;
+  username: string;
+  roleId: number;
+  status: UserStatus;
+  emailValidatedAt: ISODateString | null;
+  bannedByUserId: number | null;
+  bannedReason: string | null;
+  bannedAt: ISODateString | null;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+};</code></pre>
+        </article>
+
+        <article class="schema">
+          <h3>Auth requests</h3>
+          <p>Corps des routes <code>/api/v1/auth/*</code>.</p>
+          <pre><code>type RegisterRequest = {
+  mail: string;
+  username: string;
+  password: string;
+};
+
+type LoginRequest = {
+  mail: string;
+  password: string;
+};
+
+type ValidateEmailRequest = {
+  token: string;
+};
+
+type ResendValidationEmailRequest = {
+  mail: string;
+};
+
+type ForgotPasswordRequest = {
+  mail: string;
+};
+
+type ResetPasswordRequest = {
+  token: string;
+  password: string;
+  newPassword?: string;
+};</code></pre>
+        </article>
+
+        <article class="schema">
+          <h3>Auth responses</h3>
+          <p>Réponses principales des routes d’authentification.</p>
+          <pre><code>type RegisterResponse = {
+  user: User;
+  message: string;
+};
+
+type LoginResponse = {
+  user: User;
+};
+
+type LogoutResponse = OkResponse;
+
+type ValidateEmailResponse = {
+  ok: true;
+  message: string;
+  user: User;
+};
+
+type ResendValidationEmailResponse = MessageResponse;
+type ForgotPasswordResponse = MessageResponse;
+type ResetPasswordResponse = MessageResponse;</code></pre>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="users">
+      <h2 id="users">Users</h2>
+      <p class="section-intro">Profil utilisateur courant, profil public d’un auteur et modification des identifiants. Les routes <code>/api/v1/users/me</code> exigent une session active ; <code>/api/v1/users/:username</code> accepte une authentification optionnelle.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Méthode</th>
+              <th>Route</th>
+              <th>Auth</th>
+              <th>Body / Query</th>
+              <th>Réponse</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/users/me</code></td>
+              <td><span class="auth">Session</span></td>
+              <td>Aucun.</td>
+              <td><code>200</code> profil utilisateur.</td>
+            </tr>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/users/:username</code></td>
+              <td><span class="auth public">Auth optionnelle</span></td>
+              <td><code>username</code> dans le chemin.</td>
+              <td><code>200</code> profil public avec recettes publiées, ou <code>404 USER_NOT_FOUND</code>.</td>
+            </tr>
+            <tr>
+              <td><span class="method patch">PATCH</span></td>
+              <td><code>/api/v1/users/me/email</code></td>
+              <td><span class="auth">Session</span></td>
+              <td><code>newEmail</code>, <code>currentPassword</code>.</td>
+              <td><code>200</code> <code>{ "ok": true, "message": "...", "user": ... }</code>.</td>
+            </tr>
+            <tr>
+              <td><span class="method patch">PATCH</span></td>
+              <td><code>/api/v1/users/me/username</code></td>
+              <td><span class="auth">Session</span></td>
+              <td><code>newUsername</code>, <code>currentPassword</code>.</td>
+              <td><code>200</code> <code>{ "ok": true, "message": "...", "user": ... }</code>.</td>
+            </tr>
+            <tr>
+              <td><span class="method patch">PATCH</span></td>
+              <td><code>/api/v1/users/me/password</code></td>
+              <td><span class="auth">Session</span></td>
+              <td><code>currentPassword</code>, <code>newPassword</code>.</td>
+              <td><code>200</code> confirmation.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="schema-grid">
+        <article class="schema">
+          <h3>PublicUserProfile</h3>
+          <p>Profil renvoyé par <code>/api/v1/users/me</code> et les mises à jour de profil.</p>
+          <pre><code>type PublicUserProfile = {
+  id: number;
+  mail: string;
+  username: string;
+  roleId: number;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+};</code></pre>
+        </article>
+
+        <article class="schema">
+          <h3>PublicUserWithPublishedRecipes</h3>
+          <p>Profil public renvoyé par <code>GET /api/v1/users/:username</code>. Les informations privées du compte ne sont pas exposées.</p>
+          <pre><code>type PublicUserWithPublishedRecipes = {
+  id: number;
+  username: string;
+  publishedRecipes: RecipeListItem[];
+};
+
+type PublicUserResponse = PublicUserWithPublishedRecipes;</code></pre>
+        </article>
+
+        <article class="schema">
+          <h3>User update requests</h3>
+          <p>Corps des routes <code>PATCH /api/v1/users/me/*</code>.</p>
+          <pre><code>type UpdateEmailRequest = {
+  newEmail: string;
+  currentPassword: string;
+};
+
+type UpdateUsernameRequest = {
+  newUsername: string;
+  currentPassword: string;
+};
+
+type UpdatePasswordRequest = {
+  currentPassword: string;
+  newPassword: string;
+};</code></pre>
+        </article>
+
+        <article class="schema">
+          <h3>User update responses</h3>
+          <p>Réponses des routes de mise à jour utilisateur.</p>
+          <pre><code>type UpdateProfileResponse = {
+  ok: true;
+  message: string;
+  user: PublicUserProfile;
+};
+
+type UpdatePasswordResponse = {
+  ok: true;
+  message: string;
+};</code></pre>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="recipes">
+      <h2 id="recipes">Recipes</h2>
+      <p class="section-intro">Lecture publique des recettes publiées, création de brouillons et cycle de vie des recettes de l’utilisateur connecté.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Méthode</th>
+              <th>Route</th>
+              <th>Auth</th>
+              <th>Body / Query</th>
+              <th>Réponse</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/recipes</code></td>
+              <td><span class="auth public">Auth optionnelle</span></td>
+              <td><code>page</code>, <code>limit</code>, <code>q</code>, <code>categoryId</code>, <code>tagIds</code>, <code>ingredientIds</code>, <code>maxTotalTimeMinutes</code>.</td>
+              <td><code>200</code> résultat paginé des recettes publiées.</td>
+            </tr>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/recipes/search</code></td>
+              <td><span class="auth public">Auth optionnelle</span></td>
+              <td>Mêmes filtres que <code>/api/v1/recipes</code>. <code>tagIds</code> et <code>ingredientIds</code> sont des listes séparées par des virgules.</td>
+              <td><code>200</code> résultat paginé.</td>
+            </tr>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/recipes/recent</code></td>
+              <td><span class="auth public">Auth optionnelle</span></td>
+              <td><code>limit</code> optionnel, défaut 12, maximum 20.</td>
+              <td><code>200</code> liste des recettes récentes.</td>
+            </tr>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/recipes/:slug</code></td>
+              <td><span class="auth public">Auth optionnelle</span></td>
+              <td><code>slug</code> requis.</td>
+              <td><code>200</code> détail recette, ou <code>404 NOT_FOUND</code>.</td>
+            </tr>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/recipes/me</code></td>
+              <td><span class="auth">Session</span></td>
+              <td><code>page</code>, <code>limit</code>. Défaut limit 10, maximum 50.</td>
+              <td><code>200</code> recettes de l’utilisateur.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/recipes</code></td>
+              <td><span class="auth">Session</span></td>
+              <td>Body recette. <code>title</code> requis, min 5 caractères.</td>
+              <td><code>201</code> brouillon créé.</td>
+            </tr>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/recipes/me/:id</code></td>
+              <td><span class="auth">Session</span></td>
+              <td><code>id</code> entier positif.</td>
+              <td><code>200</code> détail de la recette de l’utilisateur.</td>
+            </tr>
+            <tr>
+              <td><span class="method patch">PATCH</span></td>
+              <td><code>/api/v1/recipes/me/:id</code></td>
+              <td><span class="auth">Session</span></td>
+              <td>Body recette. <code>title</code> requis, min 5 caractères.</td>
+              <td><code>200</code> brouillon mis à jour.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/recipes/me/:id/submit</code></td>
+              <td><span class="auth">Session</span></td>
+              <td><code>id</code> entier positif.</td>
+              <td><code>200</code> résultat de soumission.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/recipes/me/:id/archive</code></td>
+              <td><span class="auth">Session</span></td>
+              <td><code>id</code> entier positif.</td>
+              <td><code>200</code> <code>{ "ok": true }</code>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="schema-grid">
+        <article class="schema">
+          <h3>Recipe request body</h3>
+          <p>Corps de création et mise à jour d’une recette.</p>
+          <pre><code>type RecipeBody = {
+  categoryId?: number | null;
+  title: string;
+  description?: string;
+  coverImageUrl?: string | null;
+  prepTimeMinutes?: number;
+  restTimeMinutes?: number | null;
+  cookTimeMinutes?: number | null;
+  servings?: number;
+  tagIds?: number[];
+  ingredients?: RecipeIngredientInput[];
+  steps?: RecipeStepInput[];
+  equipments?: RecipeEquipmentInput[];
+};
+
+type CreateRecipeBody = RecipeBody;
+type UpdateRecipeBody = RecipeBody;</code></pre>
+        </article>
+
+        <article class="schema">
+          <h3>Recipe nested inputs</h3>
+          <p>Sous-objets acceptés dans <code>RecipeBody</code>.</p>
+          <pre><code>type RecipeIngredientInput = {
+  ingredientId: number;
+  quantity: number;
+  unit?: string | null;
+  note?: string | null;
+  sortOrder?: number;
+};
+
+type RecipeStepInput = {
+  stepNumber?: number;
+  description: string;
+};
+
+type RecipeEquipmentInput = {
+  equipmentId: number;
+};</code></pre>
+        </article>
+
+        <article class="schema">
+          <h3>RecipeSearchQuery</h3>
+          <p>Filtres de recherche des recettes publiées.</p>
+          <pre><code>type RecipeSearchQuery = PaginationQuery &amp; {
+  q?: string;
+  categoryId?: number;
+  tagIds?: string; // ex: "1,2"
+  ingredientIds?: string; // ex: "18,103"
+  maxTotalTimeMinutes?: number;
+};
+
+type RecipeFeedQuery = {
+  limit?: number; // défaut 12, maximum 20
+};</code></pre>
+        </article>
+
+        <article class="schema">
+          <h3>Recipe</h3>
+          <p>Recette complète côté espace utilisateur.</p>
+          <pre><code>type Recipe = {
+  id: number;
+  userId: number;
+  categoryId: number | null;
+  title: string;
+  slug: string;
+  description: string;
+  coverImageUrl: string | null;
+  prepTimeMinutes: number;
+  restTimeMinutes: number | null;
+  cookTimeMinutes: number | null;
+  servings: number;
+  status: string;
+  createdAt: ISODateString;
+  submittedAt: ISODateString | null;
+  moderatedAt: ISODateString | null;
+  moderatedByUserId: number | null;
+  publishedAt: ISODateString | null;
+  archivedAt: ISODateString | null;
+  rejectionReason: string | null;
+  updatedAt: ISODateString;
+  tagIds: number[];
+  ingredients: RecipeIngredient[];
+  steps: RecipeStep[];
+  equipments: RecipeEquipment[];
+};</code></pre>
+        </article>
+
+        <article class="schema">
+          <h3>Recipe nested outputs</h3>
+          <p>Sous-objets présents dans <code>Recipe</code>.</p>
+          <pre><code>type RecipeIngredient = {
+  ingredientId: number;
+  quantity: number;
+  unit: string | null;
+  note: string | null;
+  sortOrder: number;
+};
+
+type RecipeStep = {
+  stepNumber: number;
+  description: string;
+};
+
+type RecipeEquipment = {
+  equipmentId: number;
+};</code></pre>
+        </article>
+
+        <article class="schema">
+          <h3>RecipeSummary</h3>
+          <p>Élément de <code>GET /api/v1/recipes/me</code>.</p>
+          <pre><code>type RecipeSummary = {
+  id: number;
+  title: string;
+  slug: string;
+  description: string;
+  status: string;
+  createdAt: ISODateString;
+  submittedAt: ISODateString | null;
+  updatedAt: ISODateString;
+  publishedAt: ISODateString | null;
+  rejectionReason: string | null;
+};
+
+type MyRecipesResponse = PaginatedResult&lt;RecipeSummary&gt;;</code></pre>
+        </article>
+
+        <article class="schema">
+          <h3>RecipeListItem</h3>
+          <p>Élément des listes publiques, recherches, recettes récentes, favoris et profils publics d’auteur.</p>
+          <pre><code>type RecipeListItem = {
+  id: number;
+  title: string;
+  slug: string;
+  description: string | null;
+  category: string | null;
+  coverImageUrl: string | null;
+  prepTimeMinutes: number | null;
+  cookTimeMinutes: number | null;
+  restTimeMinutes: number | null;
+  servings: number | null;
+  authorUsername: string;
+  publishedAt: ISODateString;
+  isFavorite: boolean;
+};
+
+type RecipeListResponse = PaginatedResult&lt;RecipeListItem&gt;;
+type RecentRecipesResponse = RecipeListItem[];</code></pre>
+        </article>
+
+        <article class="schema">
+          <h3>RecipeDetail</h3>
+          <p>Détail public renvoyé par <code>GET /api/v1/recipes/:slug</code>.</p>
+          <pre><code>type RecipeDetail = Omit&lt;RecipeListItem, "authorUsername"&gt; &amp; {
+  author: PublicAuthorDto;
+  ingredients: RecipeDetailIngredient[];
+  steps: RecipeDetailStep[];
+  equipments: RecipeDetailEquipment[];
+  tags: RecipeDetailTag[];
+  comments: RecipeDetailComment[];
+  commentsCount: number;
+  averageRating: number | null;
+  ratingsCount: number;
+};</code></pre>
+        </article>
+
+        <article class="schema">
+          <h3>RecipeDetail children</h3>
+          <p>Sous-objets du détail public d’une recette.</p>
+          <pre><code>type RecipeDetailIngredient = {
+  id: number;
+  name: string;
+  slug: string;
+  quantity: number;
+  unit: string | null;
+  note: string | null;
+  sortOrder: number;
+};
+
+type RecipeDetailStep = {
+  stepNumber: number;
+  description: string;
+};
+
+type RecipeDetailEquipment = {
+  id: number;
+  name: string;
+  slug: string;
+};
+
+type RecipeDetailTag = {
+  id: number;
+  name: string;
+  slug: string;
+};</code></pre>
+        </article>
+
+                <article class="schema">
+          <h3>RecipeDetailComment</h3>
+          <p>Arbre de commentaires inclus dans le détail public d’une recette.</p>
+          <pre><code>type RecipeDetailComment = {
+  id: number;
+  isModerated: boolean;
+  isDeleted: boolean;
+  author: PublicAuthorDto;
+  parentCommentId: number | null;
+  moderatedAt: ISODateString | null;
+  rating: number | null;
+  comment: string;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+  children: RecipeDetailComment[];
+};</code></pre>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="comments">
+      <h2 id="comments">Comments</h2>
+      <p class="section-intro">Lecture publique de l’arbre de commentaires et actions utilisateur sur ses propres commentaires.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Méthode</th>
+              <th>Route</th>
+              <th>Auth</th>
+              <th>Body / Query</th>
+              <th>Réponse</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/recipes/:recipeId/comments</code></td>
+              <td><span class="auth public">Public</span></td>
+              <td><code>recipeId</code> entier positif.</td>
+              <td><code>200</code> arbre de commentaires.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/recipes/:recipeId/comments</code></td>
+              <td><span class="auth">Session</span></td>
+              <td><code>comment</code> requis, <code>rating</code> 1..5 optionnel, <code>parentCommentId</code> optionnel. Une réponse ne peut pas avoir de note.</td>
+              <td><code>201</code> commentaire créé.</td>
+            </tr>
+            <tr>
+              <td><span class="method patch">PATCH</span></td>
+              <td><code>/api/v1/comments/:id</code></td>
+              <td><span class="auth">Session</span></td>
+              <td><code>comment</code> requis, <code>rating</code> 1..5 ou <code>null</code>.</td>
+              <td><code>200</code> commentaire mis à jour.</td>
+            </tr>
+            <tr>
+              <td><span class="method delete">DELETE</span></td>
+              <td><code>/api/v1/comments/:id</code></td>
+              <td><span class="auth">Session</span></td>
+              <td><code>id</code> entier positif.</td>
+              <td><code>200</code> <code>{ "ok": true }</code>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="schema-grid">
+        <article class="schema">
+          <h3>Comment requests</h3>
+          <p>Corps de création et mise à jour des commentaires.</p>
+          <pre><code>type CreateCommentBody = {
+  parentCommentId?: number | null;
+  rating?: number | null; // 1..5, seulement sur commentaire racine
+  comment: string;
+};
+
+type UpdateCommentBody = {
+  rating?: number | null; // 1..5 ou null
+  comment: string;
+};</code></pre>
+        </article>
+
+                <article class="schema">
+          <h3>PublicComment</h3>
+          <p>Objet renvoyé par les routes publiques de commentaires et par la création/mise à jour d’un commentaire.</p>
+          <pre><code>type PublicComment = {
+  id: number;
+  recipeId: number;
+  author: PublicAuthorDto;
+  parentCommentId?: number | null;
+  moderatedAt?: ISODateString | null;
+  deletedAt?: ISODateString | null;
+  rating?: number | null;
+  comment: string;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+  children?: PublicComment[];
+};
+
+type RecipeCommentsResponse = PublicComment[];
+type CreateCommentResponse = PublicComment;
+type UpdateCommentResponse = PublicComment;
+type DeleteCommentResponse = OkResponse;</code></pre>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="favorites">
+      <h2 id="favorites">Favorites</h2>
+      <p class="section-intro">Gestion des recettes favorites pour l’utilisateur connecté.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Méthode</th>
+              <th>Route</th>
+              <th>Auth</th>
+              <th>Body / Query</th>
+              <th>Réponse</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/favorites/:recipeId</code></td>
+              <td><span class="auth">Session</span></td>
+              <td><code>recipeId</code> entier positif.</td>
+              <td><code>200</code> favori créé.</td>
+            </tr>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/favorites/me</code></td>
+              <td><span class="auth">Session</span></td>
+              <td><code>page</code>, <code>limit</code>. Défaut limit 12, maximum 50.</td>
+              <td><code>200</code> résultat paginé des favoris.</td>
+            </tr>
+            <tr>
+              <td><span class="method delete">DELETE</span></td>
+              <td><code>/api/v1/favorites/:recipeId</code></td>
+              <td><span class="auth">Session</span></td>
+              <td><code>recipeId</code> entier positif.</td>
+              <td><code>200</code> <code>{ "ok": true }</code>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="schema-grid">
+        <article class="schema">
+          <h3>Favorite</h3>
+          <p>Gestion des favoris.</p>
+          <pre><code>type Favorite = {
+  userId: number;
+  recipeId: number;
+  createdAt: ISODateString;
+};
+
+type AddFavoriteResponse = Favorite;
+type FavoriteRecipesResponse = PaginatedResult&lt;RecipeListItem&gt;;
+type DeleteFavoriteResponse = OkResponse;</code></pre>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="reference-data">
+      <h2 id="reference-data">Données de référence</h2>
+      <p class="section-intro">Données de référence lues sans middleware d’authentification: catégories, équipements, ingrédients et tags.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Méthode</th>
+              <th>Route</th>
+              <th>Auth</th>
+              <th>Body / Query</th>
+              <th>Réponse</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/categories</code></td>
+              <td><span class="auth public">Public</span></td>
+              <td>Aucun.</td>
+              <td><code>200</code> liste des catégories.</td>
+            </tr>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/categories/:id</code></td>
+              <td><span class="auth public">Public</span></td>
+              <td><code>id</code> entier positif.</td>
+              <td><code>200</code> catégorie.</td>
+            </tr>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/equipments</code></td>
+              <td><span class="auth public">Public</span></td>
+              <td>Aucun.</td>
+              <td><code>200</code> liste des équipements.</td>
+            </tr>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/equipments/:id</code></td>
+              <td><span class="auth public">Public</span></td>
+              <td><code>id</code> entier positif.</td>
+              <td><code>200</code> équipement.</td>
+            </tr>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/ingredients</code></td>
+              <td><span class="auth public">Public</span></td>
+              <td>Aucun.</td>
+              <td><code>200</code> liste des ingrédients.</td>
+            </tr>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/ingredients/:id</code></td>
+              <td><span class="auth public">Public</span></td>
+              <td><code>id</code> entier positif.</td>
+              <td><code>200</code> ingrédient.</td>
+            </tr>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/tags</code></td>
+              <td><span class="auth public">Public</span></td>
+              <td>Aucun.</td>
+              <td><code>200</code> liste des tags avec leur groupe.</td>
+            </tr>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/tags/:id</code></td>
+              <td><span class="auth public">Public</span></td>
+              <td><code>id</code> entier positif.</td>
+              <td><code>200</code> tag avec son groupe.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="schema-grid">
+        <article class="schema">
+          <h3>Reference data</h3>
+          <p>Objets renvoyés par les routes catégories, équipements, ingrédients et tags. Les tags incluent leur groupe.</p>
+          <pre><code>type Category = {
+  id: number;
+  name: string;
+  slug: string;
+  iconName: string;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+};
+
+type Equipment = {
+  id: number;
+  name: string;
+  slug: string;
+};
+
+type Ingredient = {
+  id: number;
+  name: string;
+  slug: string;
+};
+
+type Tag = {
+  id: number;
+  name: string;
+  slug: string;
+  group: TagGroup;
+};
+
+type TagGroup = {
+  id: number;
+  name: string;
+  slug: string;
+  sortOrder: number;
+};</code></pre>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="contact">
+      <h2 id="contact">Contact</h2>
+      <p class="section-intro">Envoi d’un message de contact via SMTP. L’endpoint est limité à 5 tentatives par heure.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Méthode</th>
+              <th>Route</th>
+              <th>Auth</th>
+              <th>Body / Query</th>
+              <th>Réponse</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/contact</code></td>
+              <td><span class="auth public">Public</span></td>
+              <td><code>name</code> 2..100, <code>email</code> valide, <code>subject</code> 3..150, <code>message</code> 10..5000.</td>
+              <td><code>200</code> résultat d’envoi.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="schema-grid">
+        <article class="schema">
+          <h3>Contact</h3>
+          <p>Formulaire de contact.</p>
+          <pre><code>type ContactMessageRequest = {
+  name: string; // 2..100
+  email: string; // email valide
+  subject: string; // 3..150
+  message: string; // 10..5000
+};
+
+type ContactMessageResponse = {
+  message: "Contact message sent";
+};</code></pre>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="health">
+      <h2 id="health">Health</h2>
+      <p class="section-intro">Contrôle de santé réservé aux administrateurs.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Méthode</th>
+              <th>Route</th>
+              <th>Auth</th>
+              <th>Body / Query</th>
+              <th>Réponse</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/health/live</code></td>
+              <td><span class="auth admin">Admin</span></td>
+              <td>Aucun.</td>
+              <td><code>200</code> statut live.</td>
+            </tr>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/health/ready</code></td>
+              <td><span class="auth admin">Admin</span></td>
+              <td>Aucun.</td>
+              <td><code>200</code> statut ready.</td>
+            </tr>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/health</code></td>
+              <td><span class="auth admin">Admin</span></td>
+              <td>Aucun.</td>
+              <td><code>200</code> statut global.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="schema-grid">
+        <article class="schema">
+          <h3>Health</h3>
+          <p>Réponses des routes <code>/api/v1/health</code>.</p>
+          <pre><code>type HealthLiveResponse = {
+  ok: true;
+};
+
+type HealthReadyResponse = {
+  ok: boolean;
+  checks: {
+    db: boolean;
+  };
+};</code></pre>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="admin-recipes">
+      <h2 id="admin-recipes">Admin recipes</h2>
+      <p class="section-intro">Modération et administration des recettes. Toutes les routes exigent une session admin (<code>roleId === 1</code>).</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Méthode</th>
+              <th>Route</th>
+              <th>Auth</th>
+              <th>Body / Query</th>
+              <th>Réponse</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/admin/recipes/pending</code></td>
+              <td><span class="auth admin">Admin</span></td>
+              <td>Aucun.</td>
+              <td><code>200</code> recettes en attente.</td>
+            </tr>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/admin/recipes/pending/count</code></td>
+              <td><span class="auth admin">Admin</span></td>
+              <td>Aucun.</td>
+              <td><code>200</code> <code>{ "pendingRecipes": number }</code>.</td>
+            </tr>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/admin/recipes/:id</code></td>
+              <td><span class="auth admin">Admin</span></td>
+              <td><code>id</code> entier positif.</td>
+              <td><code>200</code> détail admin de la recette.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/admin/recipes/:id/approve</code></td>
+              <td><span class="auth admin">Admin</span></td>
+              <td><code>id</code> entier positif.</td>
+              <td><code>200</code> <code>{ "ok": true }</code>.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/admin/recipes/:id/reject</code></td>
+              <td><span class="auth admin">Admin</span></td>
+              <td><code>rejectionReason</code> requis.</td>
+              <td><code>200</code> <code>{ "ok": true }</code>.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/admin/recipes/:id/archive</code></td>
+              <td><span class="auth admin">Admin</span></td>
+              <td><code>id</code> entier positif.</td>
+              <td><code>200</code> <code>{ "ok": true }</code>.</td>
+            </tr>
+            <tr>
+              <td><span class="method delete">DELETE</span></td>
+              <td><code>/api/v1/admin/recipes/:id</code></td>
+              <td><span class="auth admin">Admin</span></td>
+              <td><code>id</code> entier positif.</td>
+              <td><code>200</code> <code>{ "ok": true }</code>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="schema-grid">
+        <article class="schema">
+          <h3>Admin recipe list</h3>
+          <p>Recette en attente de modération.</p>
+          <pre><code>type RecipePending = {
+  id: number;
+  user: string;
+  category: string | null;
+  title: string;
+  slug: string;
+  description: string;
+  submittedAt: ISODateString;
+};
+
+type PendingRecipesResponse = RecipePending[];
+type PendingRecipesCountResponse = {
+  pendingRecipes: number;
+};</code></pre>
+        </article>
+
+        <article class="schema">
+          <h3>Admin recipe detail</h3>
+          <p>Détail admin renvoyé par <code>GET /api/v1/admin/recipes/:id</code>.</p>
+          <pre><code>type RecipeAdmin = {
+  id: number;
+  user: string;
+  category: string | null;
+  title: string;
+  slug: string;
+  description: string;
+  prepTimeMinutes: number;
+  restTimeMinutes: number | null;
+  cookTimeMinutes: number | null;
+  servings: number;
+  status: string;
+  createdAt: ISODateString;
+  submittedAt: ISODateString | null;
+  moderatedAt: ISODateString | null;
+  moderatedByUserId: number | null;
+  publishedAt: ISODateString | null;
+  archivedAt: ISODateString | null;
+  rejectionReason: string | null;
+  updatedAt: ISODateString;
+  tags: AdminRecipeTag[];
+  ingredients: AdminRecipeIngredient[];
+  steps: AdminRecipeStep[];
+  equipments: AdminRecipeEquipment[];
+};</code></pre>
+        </article>
+
+        <article class="schema">
+          <h3>Admin recipe children</h3>
+          <p>Sous-objets du détail admin d’une recette.</p>
+          <pre><code>type AdminRecipeIngredient = {
+  id: number;
+  name: string;
+  quantity: number;
+  unit: string | null;
+  note: string | null;
+  sortOrder: number;
+};
+
+type AdminRecipeStep = {
+  stepNumber: number;
+  description: string;
+};
+
+type AdminRecipeTag = {
+  id: number;
+  name: string;
+};
+
+type AdminRecipeEquipment = {
+  id: number;
+  name: string;
+};</code></pre>
+        </article>
+
+        <article class="schema">
+          <h3>Admin recipe actions</h3>
+          <p>Rejet, approbation, archivage et suppression admin.</p>
+          <pre><code>type RejectRecipeRequest = {
+  rejectionReason: string;
+};
+
+type ApproveRecipeResponse = OkResponse;
+type RejectRecipeResponse = OkResponse;
+type ArchiveRecipeAdminResponse = OkResponse;
+type DeleteRecipeAdminResponse = OkResponse;</code></pre>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="admin-comments">
+      <h2 id="admin-comments">Admin comments</h2>
+      <p class="section-intro">Modération des commentaires: commentaires masqués, supprimés souplement, restauration et suppression définitive.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Méthode</th>
+              <th>Route</th>
+              <th>Auth</th>
+              <th>Body / Query</th>
+              <th>Réponse</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/admin/comments/moderated</code></td>
+              <td><span class="auth admin">Admin</span></td>
+              <td>Aucun.</td>
+              <td><code>200</code> commentaires modérés.</td>
+            </tr>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/admin/comments/moderated/count</code></td>
+              <td><span class="auth admin">Admin</span></td>
+              <td>Aucun.</td>
+              <td><code>200</code> <code>{ "moderatedComments": number }</code>.</td>
+            </tr>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/admin/comments/soft-deleted</code></td>
+              <td><span class="auth admin">Admin</span></td>
+              <td>Aucun.</td>
+              <td><code>200</code> commentaires soft-deleted.</td>
+            </tr>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/admin/comments/soft-deleted/count</code></td>
+              <td><span class="auth admin">Admin</span></td>
+              <td>Aucun.</td>
+              <td><code>200</code> <code>{ "softDeletedComments": number }</code>.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/admin/comments/:id/hide</code></td>
+              <td><span class="auth admin">Admin</span></td>
+              <td><code>id</code> entier positif.</td>
+              <td><code>200</code> <code>{ "ok": true }</code>.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/admin/comments/:id/unmoderate</code></td>
+              <td><span class="auth admin">Admin</span></td>
+              <td><code>id</code> entier positif.</td>
+              <td><code>200</code> <code>{ "ok": true }</code>.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/admin/comments/:id/restore</code></td>
+              <td><span class="auth admin">Admin</span></td>
+              <td><code>id</code> entier positif.</td>
+              <td><code>200</code> <code>{ "ok": true }</code>.</td>
+            </tr>
+            <tr>
+              <td><span class="method patch">PATCH</span></td>
+              <td><code>/api/v1/admin/comments/:id</code></td>
+              <td><span class="auth admin">Admin</span></td>
+              <td><code>comment</code> requis, <code>rating</code> 1..5 ou <code>null</code>.</td>
+              <td><code>200</code> commentaire mis à jour.</td>
+            </tr>
+            <tr>
+              <td><span class="method delete">DELETE</span></td>
+              <td><code>/api/v1/admin/comments/:id</code></td>
+              <td><span class="auth admin">Admin</span></td>
+              <td><code>id</code> entier positif.</td>
+              <td><code>200</code> <code>{ "ok": true }</code>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="schema-grid">
+        <article class="schema">
+          <h3>AdminComment</h3>
+          <p>Commentaire visible dans les listes de modération.</p>
+          <pre><code>type AdminComment = {
+  id: number;
+  recipeId: number;
+  recipeTitle: string;
+  recipeSlug: string;
+  userId: number;
+  username: string;
+  parentCommentId: number | null;
+  moderatedAt: ISODateString | null;
+  moderatedByUserId: number | null;
+  moderatedByUsername: string | null;
+  deletedAt: ISODateString | null;
+  deletedByUserId: number | null;
+  deletedByUsername: string | null;
+  rating: number | null;
+  comment: string;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+};</code></pre>
+        </article>
+
+        <article class="schema">
+          <h3>Admin comment actions</h3>
+          <p>Mise à jour et compteurs admin des commentaires.</p>
+          <pre><code>type AdminUpdateCommentBody = {
+  rating?: number | null;
+  comment: string;
+};
+
+type ModeratedCommentsResponse = AdminComment[];
+type SoftDeletedCommentsResponse = AdminComment[];
+type ModeratedCommentsCountResponse = {
+  moderatedComments: number;
+};
+type SoftDeletedCommentsCountResponse = {
+  softDeletedComments: number;
+};
+
+type HideCommentResponse = OkResponse;
+type UnmoderateCommentResponse = OkResponse;
+type RestoreCommentResponse = OkResponse;
+type DeleteCommentAdminResponse = OkResponse;</code></pre>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="admin-users">
+      <h2 id="admin-users">Admin users</h2>
+      <p class="section-intro">Administration des utilisateurs bannis, profil admin et journal de modération. Toutes les routes exigent une session admin.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Méthode</th>
+              <th>Route</th>
+              <th>Auth</th>
+              <th>Body / Query</th>
+              <th>Réponse</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/admin/users/banned</code></td>
+              <td><span class="auth admin">Admin</span></td>
+              <td>Aucun.</td>
+              <td><code>200</code> utilisateurs bannis.</td>
+            </tr>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/admin/users/banned/count</code></td>
+              <td><span class="auth admin">Admin</span></td>
+              <td>Aucun.</td>
+              <td><code>200</code> <code>{ "bannedUsers": number }</code>.</td>
+            </tr>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/admin/users/:id</code></td>
+              <td><span class="auth admin">Admin</span></td>
+              <td><code>id</code> entier positif.</td>
+              <td><code>200</code> profil admin avec <code>moderationLogs</code>, ou <code>404 USER_NOT_FOUND</code>.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/admin/users/:id/ban</code></td>
+              <td><span class="auth admin">Admin</span></td>
+              <td><code>reason</code> requis, 10..1000 caractères. Un admin ne peut pas se bannir lui-même.</td>
+              <td><code>200</code> <code>{ "ok": true }</code>.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/admin/users/:id/unban</code></td>
+              <td><span class="auth admin">Admin</span></td>
+              <td><code>reason</code> requis, 10..1000 caractères.</td>
+              <td><code>200</code> <code>{ "ok": true }</code>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="schema-grid">
+        <article class="schema">
+          <h3>BannedUser</h3>
+          <p>Élément de <code>GET /api/v1/admin/users/banned</code>.</p>
+          <pre><code>type BannedUser = {
+  id: number;
+  username: string;
+  mail: string;
+  status: UserStatus;
+  bannedAt: ISODateString | null;
+  bannedReason: string | null;
+  bannedByUsername: string | null;
+};
+
+type BannedUsersResponse = BannedUser[];
+type BannedUsersCountResponse = {
+  bannedUsers: number;
+};</code></pre>
+        </article>
+
+        <article class="schema">
+          <h3>AdminUserProfile</h3>
+          <p>Profil admin renvoyé par <code>GET /api/v1/admin/users/:id</code>.</p>
+          <pre><code>type AdminUserDetails = {
+  id: number;
+  username: string;
+  email: string;
+  status: UserStatus;
+  banReason: string | null;
+  bannedAt: ISODateString | null;
+  bannedByUserId: number | null;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+};
+
+type AdminUserModerationLog = {
+  id: number;
+  action: UserModerationAction;
+  reason: string;
+  adminId: number;
+  adminUsername?: string;
+  createdAt: ISODateString;
+};
+
+type AdminUserProfile = AdminUserDetails &amp; {
+  moderationLogs: AdminUserModerationLog[];
+};</code></pre>
+        </article>
+
+        <article class="schema">
+          <h3>Admin user actions</h3>
+          <p>Bannissement et débannissement d’un utilisateur.</p>
+          <pre><code>type BanUserRequest = {
+  reason: string; // 10..1000 caractères
+};
+
+type UnbanUserRequest = {
+  reason: string; // 10..1000 caractères
+};
+
+type BanUserResponse = OkResponse;
+type UnbanUserResponse = OkResponse;</code></pre>
+        </article>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    Sources locales: <code>src/app.ts</code>, <code>src/api/**/*.routes.ts</code>, <code>src/api/**/*.dto.ts</code> et <code>tests/http/*.http</code>.
+  </footer>
+</body>
+</html>

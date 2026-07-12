@@ -19,15 +19,7 @@ ON DUPLICATE KEY UPDATE Name = new_roles.Name;
 
 -- Admin
 INSERT INTO Users (Id, Mail, Username, Password, RoleId, Status, EmailValidatedAt)
-VALUES (
-  1,
-  'admin@recipe-shelter.fr',
-  'Admin',
-  '$2b$12$zrX5iMCRel.f0GtuWfc2J.w8rq7bSuNnFnpd6.ODVPEGhgZlygfBW',
-  1,
-  'active',
-  CURRENT_TIMESTAMP
-) AS new_admin
+VALUES (1, 'admin@recipe-shelter.fr', 'Admin', '$2b$12$zrX5iMCRel.f0GtuWfc2J.w8rq7bSuNnFnpd6.ODVPEGhgZlygfBW', 1, 'active', CURRENT_TIMESTAMP) AS new_admin
 ON DUPLICATE KEY UPDATE
   Username  = new_admin.Username,
   Password  = new_admin.Password,
@@ -37,15 +29,7 @@ ON DUPLICATE KEY UPDATE
 
 -- Anonyme
 INSERT INTO Users (Id, Mail, Username, Password, RoleId, Status, EmailValidatedAt)
-VALUES (
-  2,
-  'anonyme@recipe-shelter.fr',
-  'Anonyme',
-  '$2b$12$BY86H8oVSASAM7V0RJKO3e10vL7kebIc7jrxNX5TR1cJSlCrDBEq6',
-  2,
-  'active',
-  CURRENT_TIMESTAMP
-) AS new_anonyme
+VALUES (2, 'anonyme@recipe-shelter.fr', 'Anonyme', '$2b$12$BY86H8oVSASAM7V0RJKO3e10vL7kebIc7jrxNX5TR1cJSlCrDBEq6', 2, 'active', CURRENT_TIMESTAMP) AS new_anonyme
 ON DUPLICATE KEY UPDATE
   Username  = new_anonyme.Username,
   RoleId    = new_anonyme.RoleId,
@@ -68,7 +52,7 @@ ON DUPLICATE KEY UPDATE
   IconName = new_cats.IconName;
 
 -- =====================================================
--- Ingredients (276)
+-- Ingrédients
 -- =====================================================
 INSERT INTO Ingredients (Name, Slug) VALUES
 ('Abondance', 'abondance'),
@@ -350,107 +334,113 @@ INSERT INTO Ingredients (Name, Slug) VALUES
 AS new_row ON DUPLICATE KEY UPDATE Slug = new_row.Slug;
 
 -- =====================================================
--- Tags (87)
+-- Tag groups
 -- =====================================================
-INSERT INTO Tags (Name, Slug) VALUES
--- Régimes alimentaires
-('Végétarien', 'vegetarien'),
-('Vegan', 'vegan'),
-('Sans gluten', 'sans-gluten'),
-('Sans lactose', 'sans-lactose'),
-('Sans sucre ajouté', 'sans-sucre-ajoute'),
-('Cétogène', 'cetogene'),
-('Halal', 'halal'),
-('Casher', 'casher'),
-('Sans noix', 'sans-noix'),
-('Sans oeuf', 'sans-oeuf'),
-('Sans porc', 'sans-porc'),
-('Paléo', 'paleo'),
-('Cru', 'cru'),
--- Nutrition
-('Healthy', 'healthy'),
-('Light', 'light'),
-('Protéiné', 'proteine'),
-('Riche en fibres', 'riche-fibres'),
-('Faible en calories', 'faible-calories'),
-('Riche en fer', 'riche-fer'),
-('Riche en oméga-3', 'riche-omega-3'),
-('Anti-inflammatoire', 'anti-inflammatoire'),
--- Difficulté
-('Facile', 'facile'),
-('Intermédiaire', 'intermediaire'),
-('Difficile', 'difficile'),
--- Temps
-('Très rapide', 'tres-rapide'),
-('Rapide', 'rapide'),
-('Longue cuisson', 'longue-cuisson'),
-('Marinade', 'marinade'),
-('Sans cuisson', 'sans-cuisson'),
-('Une seule casserole', 'une-seule-casserole'),
--- Type de plat
-('Entrée', 'entree'),
-('Plat principal', 'plat-principal'),
-('Dessert', 'dessert'),
-('Accompagnement', 'accompagnement'),
-('Sauce', 'sauce'),
-('Soupe', 'soupe'),
-('Salade', 'salade'),
-('Snack', 'snack'),
-('Apéritif', 'aperitif'),
-('Petit-déjeuner', 'petit-dejeuner'),
-('Boisson', 'boisson'),
-('Pain & Viennoiserie', 'pain-viennoiserie'),
-('Confiture & Conserve', 'confiture-conserve'),
--- Occasion
-('Anniversaire', 'anniversaire'),
-('Noël', 'noel'),
-('Pâques', 'paques'),
-('Saint-Valentin', 'saint-valentin'),
-('Repas de fête', 'repas-fete'),
-('Brunch', 'brunch'),
-('Barbecue', 'barbecue'),
-('Pique-nique', 'pique-nique'),
-('Repas enfants', 'repas-enfants'),
-('Ramadan', 'ramadan'),
-('Halloween', 'halloween'),
-('Nouvel An', 'nouvel-an'),
--- Ambiance / Style
-('Comfort food', 'comfort-food'),
-('Fait maison', 'fait-maison'),
-('Économique', 'economique'),
-('Batch cooking', 'batch-cooking'),
-('Cuisine de saison', 'cuisine-saison'),
-('Recette de grand-mère', 'recette-grand-mere'),
--- Technique
-('Mijoté', 'mijote'),
-('Grillé', 'grille'),
-('Frit', 'frit'),
-('Vapeur', 'vapeur'),
-('Cuit au four', 'cuit-au-four'),
-('Fermenté', 'fermente'),
-('Fumé', 'fume'),
--- Cuisines du monde
-('Cuisine française', 'cuisine-francaise'),
-('Cuisine italienne', 'cuisine-italienne'),
-('Cuisine asiatique', 'cuisine-asiatique'),
-('Cuisine japonaise', 'cuisine-japonaise'),
-('Cuisine chinoise', 'cuisine-chinoise'),
-('Cuisine thaïlandaise', 'cuisine-thailandaise'),
-('Cuisine indienne', 'cuisine-indienne'),
-('Cuisine libanaise', 'cuisine-libanaise'),
-('Cuisine mexicaine', 'cuisine-mexicaine'),
-('Cuisine orientale', 'cuisine-orientale'),
-('Cuisine méditerranéenne', 'cuisine-mediterraneenne'),
-('Cuisine grecque', 'cuisine-grecque'),
-('Cuisine espagnole', 'cuisine-espagnole'),
-('Cuisine américaine', 'cuisine-americaine'),
-('Cuisine africaine', 'cuisine-africaine'),
-('Cuisine antillaise', 'cuisine-antillaise'),
-('Cuisine brésilienne', 'cuisine-bresilienne')
-AS new_row ON DUPLICATE KEY UPDATE Slug = new_row.Slug;
+INSERT INTO TagGroups (Id, Name, Slug, SortOrder) VALUES
+(1, 'Régimes alimentaires', 'regimes-alimentaires', 1),
+(2, 'Nutrition', 'nutrition', 2),
+(3, 'Difficulté', 'difficulte', 3),
+(4, 'Temps', 'temps', 4),
+(5, 'Occasion', 'occasion', 5),
+(6, 'Ambiance / Style', 'ambiance-style', 6),
+(7, 'Technique', 'technique', 7),
+(8, 'Cuisines du monde', 'cuisines-du-monde', 8)
+AS new_row
+ON DUPLICATE KEY UPDATE
+  Name = new_row.Name,
+  Slug = new_row.Slug,
+  SortOrder = new_row.SortOrder;
 
 -- =====================================================
--- Equipments (83)
+-- Tags
+-- =====================================================
+INSERT INTO Tags (Name, Slug, GroupId) VALUES
+-- Régimes alimentaires
+('Végétarien', 'vegetarien', 1),
+('Vegan', 'vegan', 1),
+('Sans gluten', 'sans-gluten', 1),
+('Sans lactose', 'sans-lactose', 1),
+('Sans sucre ajouté', 'sans-sucre-ajoute', 1),
+('Cétogène', 'cetogene', 1),
+('Halal', 'halal', 1),
+('Casher', 'casher', 1),
+('Sans noix', 'sans-noix', 1),
+('Sans oeuf', 'sans-oeuf', 1),
+('Sans porc', 'sans-porc', 1),
+('Paléo', 'paleo', 1),
+('Cru', 'cru', 1),
+-- Nutrition
+('Healthy', 'healthy', 2),
+('Light', 'light', 2),
+('Protéiné', 'proteine', 2),
+('Riche en fibres', 'riche-fibres', 2),
+('Faible en calories', 'faible-calories', 2),
+('Riche en fer', 'riche-fer', 2),
+('Riche en oméga-3', 'riche-omega-3', 2),
+('Anti-inflammatoire', 'anti-inflammatoire', 2),
+-- Difficulté
+('Facile', 'facile', 3),
+('Intermédiaire', 'intermediaire', 3),
+('Difficile', 'difficile', 3),
+-- Temps
+('Très rapide', 'tres-rapide', 4),
+('Rapide', 'rapide', 4),
+('Longue cuisson', 'longue-cuisson', 4),
+('Marinade', 'marinade', 4),
+('Sans cuisson', 'sans-cuisson', 4),
+('Une seule casserole', 'une-seule-casserole', 4),
+-- Occasion
+('Anniversaire', 'anniversaire', 5),
+('Noël', 'noel', 5),
+('Pâques', 'paques', 5),
+('Saint-Valentin', 'saint-valentin', 5),
+('Repas de fête', 'repas-fete', 5),
+('Brunch', 'brunch', 5),
+('Barbecue', 'barbecue', 5),
+('Pique-nique', 'pique-nique', 5),
+('Ramadan', 'ramadan', 5),
+('Halloween', 'halloween', 5),
+('Nouvel An', 'nouvel-an', 5),
+-- Ambiance / Style
+('Comfort food', 'comfort-food', 6),
+('Fait maison', 'fait-maison', 6),
+('Économique', 'economique', 6),
+('Batch cooking', 'batch-cooking', 6),
+('Cuisine de saison', 'cuisine-saison', 6),
+('Recette de grand-mère', 'recette-grand-mere', 6),
+-- Technique
+('Mijoté', 'mijote', 7),
+('Grillé', 'grille', 7),
+('Frit', 'frit', 7),
+('Vapeur', 'vapeur', 7),
+('Cuit au four', 'cuit-au-four', 7),
+('Fermenté', 'fermente', 7),
+('Fumé', 'fume', 7),
+-- Cuisines du monde
+('Cuisine française', 'cuisine-francaise', 8),
+('Cuisine italienne', 'cuisine-italienne', 8),
+('Cuisine asiatique', 'cuisine-asiatique', 8),
+('Cuisine japonaise', 'cuisine-japonaise', 8),
+('Cuisine chinoise', 'cuisine-chinoise', 8),
+('Cuisine thaïlandaise', 'cuisine-thailandaise', 8),
+('Cuisine indienne', 'cuisine-indienne', 8),
+('Cuisine libanaise', 'cuisine-libanaise', 8),
+('Cuisine mexicaine', 'cuisine-mexicaine', 8),
+('Cuisine orientale', 'cuisine-orientale', 8),
+('Cuisine méditerranéenne', 'cuisine-mediterraneenne', 8),
+('Cuisine grecque', 'cuisine-grecque', 8),
+('Cuisine espagnole', 'cuisine-espagnole', 8),
+('Cuisine américaine', 'cuisine-americaine', 8),
+('Cuisine africaine', 'cuisine-africaine', 8),
+('Cuisine antillaise', 'cuisine-antillaise', 8),
+('Cuisine brésilienne', 'cuisine-bresilienne', 8)
+AS new_row
+ON DUPLICATE KEY UPDATE
+  Slug = new_row.Slug,
+  GroupId = new_row.GroupId;
+
+-- =====================================================
+-- Équipments
 -- =====================================================
 INSERT INTO Equipments (Name, Slug) VALUES
 ('Aiguille à brider', 'aiguille-a-brider'),

@@ -82,7 +82,7 @@ Ce script :
 
 - supprime la base `recipe_shelter` si elle existe ;
 - recrée le schéma ;
-- insère les données de référence minimales : rôles, catégories, ingrédients, tags et ustensiles.
+- insère les données de référence minimales : rôles, catégories, ingrédients, groupes de tags, tags et ustensiles.
 
 Pour charger aussi des recettes, commentaires et favoris de démonstration :
 
@@ -160,6 +160,22 @@ Exemples :
 - `GET /api/v1/ingredients`
 - `GET /api/v1/tags`
 - `GET /api/v1/equipments`
+
+Les tags sont rattachés à un groupe. Les réponses `GET /api/v1/tags` et `GET /api/v1/tags/:id` incluent donc un objet `group` :
+
+```json
+{
+  "id": 1,
+  "name": "Végétarien",
+  "slug": "vegetarien",
+  "group": {
+    "id": 1,
+    "name": "Régimes alimentaires",
+    "slug": "regimes-alimentaires",
+    "sortOrder": 1
+  }
+}
+```
 
 `POST /api/v1/auth/login` pose le cookie HttpOnly `rs_session` et ne renvoie pas le JWT dans le JSON. Les routes authentifiées lisent ensuite ce cookie.
 
