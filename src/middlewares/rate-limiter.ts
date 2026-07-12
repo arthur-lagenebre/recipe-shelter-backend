@@ -1,7 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
 
-const attempts = new Map<string, { count: number; resetAt: number }>();
-
 function getRequestKey(req: Request): string {
   return [
     req.ip ?? 'unknown',
@@ -22,6 +20,8 @@ function setRateLimitHeaders(res: Response, limit: number, remaining: number, re
 }
 
 export function rateLimiter(max: number, windowMs: number) {
+  const attempts = new Map<string, { count: number; resetAt: number }>();
+
   return (req: Request, res: Response, next: NextFunction) => {
     const key = getRequestKey(req);
     const now = Date.now();

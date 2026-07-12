@@ -50,12 +50,12 @@ class FakeRecipeRepository implements RecipeRepository {
 
     async create(input: RecipeInput): Promise<Recipe> {
         this.createdInput = input;
-        return { ...baseRecipe, ...input, id: 99, status: 'draft', createdAt: baseRecipe.createdAt, updatedAt: baseRecipe.updatedAt, submittedAt: null, moderatedAt: null, moderatedByUserId: null, publishedAt: null, archivedAt: null, rejectionReason: null, tagIds: [], ingredients: [], steps: [], equipments: [] };
+        return { ...baseRecipe, id: 99, userId: input.userId, title: input.title, slug: input.slug };
     }
 
     async updateDraft(input: UpdateRecipeInput): Promise<Recipe> {
         this.updatedInput = input;
-        return { ...baseRecipe, ...input };
+        return { ...baseRecipe, id: input.id, userId: input.userId, title: input.title, slug: input.slug };
     }
 
     async submit(id: number, slug: string): Promise<Recipe> {
@@ -73,16 +73,16 @@ class FakeRecipeRepository implements RecipeRepository {
     }
 
     async findByUserId(): Promise<PaginatedResult<RecipeSummary>> {
-        return { items: [], pagination: { page: 1, limit: 12, offset: 0, totalItems: 0, totalPages: 0, hasNextPage: false, hasPreviousPage: false } };
+        return { items: [], pagination: { page: 1, limit: 12, totalItems: 0, totalPages: 0, hasNextPage: false, hasPreviousPage: false } };
     }
 
     async findPublished(): Promise<PaginatedResult<RecipeListItem>> {
-        return { items: [], pagination: { page: 1, limit: 12, offset: 0, totalItems: 0, totalPages: 0, hasNextPage: false, hasPreviousPage: false } };
+        return { items: [], pagination: { page: 1, limit: 12, totalItems: 0, totalPages: 0, hasNextPage: false, hasPreviousPage: false } };
     }
 
     async searchPublished(userId: number | null, filters: RecipeSearchFilters, page: PaginationOptions): Promise<PaginatedResult<RecipeListItem>> {
         this.publishedFilters = { userId, filters, pagination: page };
-        return { items: [], pagination: { page: 1, limit: 12, offset: 0, totalItems: 0, totalPages: 0, hasNextPage: false, hasPreviousPage: false } };
+        return { items: [], pagination: { page: 1, limit: 12, totalItems: 0, totalPages: 0, hasNextPage: false, hasPreviousPage: false } };
     }
 
     async findPublishedByAuthorId(): Promise<RecipeListItem[]> {

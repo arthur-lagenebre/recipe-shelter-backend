@@ -66,21 +66,28 @@ import { TagService } from './services/tag/tags.service.js';
 import { UserService } from './services/users/users.service.js';
 import { env } from './utils/env.js';
 
-export function createApp() {
-  const app = express();
+import type { UserRepository } from './repositories/users/user.repository.interface.js';
 
-  const origins = env.http.corsAllowedOrigins
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean);
+export type AppDependencies = {
+  adminCommentService: AdminCommentService;
+  adminRecipeService: AdminRecipeService;
+  adminUserService: AdminUserService;
+  authService: AuthService;
+  authUserRepository: Pick<UserRepository, 'findById'>;
+  categoryService: CategoryService;
+  commentService: CommentService;
+  contactService: ContactService;
+  emailValidationService: EmailValidationService;
+  equipmentService: EquipmentService;
+  favoriteService: FavoriteService;
+  ingredientService: IngredientService;
+  passwordResetService: PasswordResetService;
+  recipeService: RecipeService;
+  tagService: TagService;
+  usersService: UserService;
+};
 
-  if (origins.includes('*'))
-    throw new Error('CORS_ALLOWED_ORIGINS must list explicit origins when credentials are enabled');
-
-  app.use(cors({ credentials: true, origin: origins }));
-  app.use(cookieParser());
-  app.use(express.json());
-
+function createDefaultDependencies(): AppDependencies {
   const mailer = new SmtpMailService(env.smtp);
 
   const adminCommentRepository = new AdminCommentRepositoryMysql(pool);
@@ -97,38 +104,61 @@ export function createApp() {
   const tagRepository = new TagRepositoryMysql(pool);
   const userRepository = new UserRepositoryMysql(pool);
 
-  configureAuthUserRepository(userRepository);
-
-  const adminCommentService = new AdminCommentService(adminCommentRepository);
-  const adminRecipeService = new AdminRecipeService(recipeRepository, adminRecipeRepository);
-  const adminUserService = new AdminUserService(userRepository, adminUserRepository);
   const emailValidationService = new EmailValidationService(userRepository, emailValidationRepository, mailer, env.http.frontendBaseUrl);
-  const authService = new AuthService(userRepository, emailValidationService);
-  const categoryService = new CategoryService(categoryRepository);
-  const commentService = new CommentService(commentRepository);
-  const contactService = new ContactService(mailer);
-  const equipmentService = new EquipmentService(equipmentRepository);
-  const favoriteService = new FavoriteService(favoriteRepository);
-  const ingredientService = new IngredientService(ingredientRepository);
-  const passwordResetService = new PasswordResetService(userRepository, passwordResetRepository, mailer, env.http.frontendBaseUrl);
   const recipeSlugService = new RecipeSlugService(recipeRepository);
-  const recipeService = new RecipeService(recipeRepository, recipeSlugService);
-  const tagService = new TagService(tagRepository);
-  const usersService = new UserService(userRepository, recipeRepository);
 
-  const adminCommentsController = createAdminCommentsController(adminCommentService);
-  const adminRecipesController = createAdminRecipesController(adminRecipeService);
-  const adminUsersController = createAdminUsersController(adminUserService);
-  const authController = createAuthController(authService, passwordResetService, emailValidationService);
-  const categoryController = createCategoryController(categoryService);
-  const commentsController = createCommentsController(commentService);
-  const contactController = createContactController(contactService);
-  const equipmentsController = createEquipmentsController(equipmentService);
-  const favoritesController = createFavoritesController(favoriteService);
-  const ingredientsController = createIngredientsController(ingredientService);
-  const recipesController = createRecipesController(recipeService);
-  const tagController = createTagsController(tagService);
-  const usersController = createUsersController(usersService);
+  return {
+    adminCommentService: new AdminCommentService(adminCommentRepository),
+    adminRecipeService: new AdminRecipeService(recipeRepository, adminRecipeRepository),
+    adminUserService: new AdminUserService(userRepository, adminUserRepository),
+    authService: new AuthService(userRepository, emailValidationService),
+    authUserRepository: userRepository,
+    categoryService: new CategoryService(categoryRepository),
+    commentService: new CommentService(commentRepository),
+    contactService: new ContactService(mailer),
+    emailValidationService,
+    equipmentService: new EquipmentService(equipmentRepository),
+    favoriteService: new FavoriteService(favoriteRepository),
+    ingredientService: new IngredientService(ingredientRepository),
+    passwordResetService: new PasswordResetService(userRepository, passwordResetRepository, mailer, env.http.frontendBaseUrl),
+    recipeService: new RecipeService(recipeRepository, recipeSlugService),
+    tagService: new TagService(tagRepository),
+    usersService: new UserService(userRepository, recipeRepository)
+  };
+}
+
+export function createApp(overrides: Partial<AppDependencies> = {}) {
+  const app = express();
+
+  const origins = env.http.corsAllowedOrigins
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  if (origins.includes('*'))
+    throw new Error('CORS_ALLOWED_ORIGINS must list explicit origins when credentials are enabled');
+
+  app.use(cors({ credentials: true, origin: origins }));
+  app.use(cookieParser());
+  app.use(express.json());
+
+  const dependencies = { ...createDefaultDependencies(), ...overrides };
+
+  configureAuthUserRepository(dependencies.authUserRepository);
+
+  const adminCommentsController = createAdminCommentsController(dependencies.adminCommentService);
+  const adminRecipesController = createAdminRecipesController(dependencies.adminRecipeService);
+  const adminUsersController = createAdminUsersController(dependencies.adminUserService);
+  const authController = createAuthController(dependencies.authService, dependencies.passwordResetService, dependencies.emailValidationService);
+  const categoryController = createCategoryController(dependencies.categoryService);
+  const commentsController = createCommentsController(dependencies.commentService);
+  const contactController = createContactController(dependencies.contactService);
+  const equipmentsController = createEquipmentsController(dependencies.equipmentService);
+  const favoritesController = createFavoritesController(dependencies.favoriteService);
+  const ingredientsController = createIngredientsController(dependencies.ingredientService);
+  const recipesController = createRecipesController(dependencies.recipeService);
+  const tagController = createTagsController(dependencies.tagService);
+  const usersController = createUsersController(dependencies.usersService);
 
   app.use('/api/v1/admin/comments', createAdminCommentsRouter(adminCommentsController));
   app.use('/api/v1/admin/recipes', createAdminRecipesRouter(adminRecipesController));

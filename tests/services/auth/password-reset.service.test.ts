@@ -86,7 +86,7 @@ describe('PasswordResetService', () => {
         users = new FakeUsers();
         resets = new FakeResets();
         mailer = new FakeMailer();
-        service = new PasswordResetService(users, resets, mailer as Mailer, 'https://front.example');
+        service = new PasswordResetService(users, resets, mailer as unknown as Mailer, 'https://front.example');
     });
 
     it('ignores blank and unknown reset requests', async () => {
@@ -117,11 +117,7 @@ describe('PasswordResetService', () => {
     it('resets a password and marks the token as used', async () => {
         resets.validReset = {
             Id: 9,
-            UserId: 2,
-            TokenHash: hashResetToken('token'),
-            ExpiresAt: new Date('2026-05-09T10:00:00.000Z'),
-            UsedAt: null,
-            CreatedAt: new Date('2026-05-09T09:00:00.000Z')
+            UserId: 2
         };
 
         await service.resetPassword(' token ', 'NewPass42');

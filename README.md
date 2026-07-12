@@ -249,6 +249,31 @@ npm run test
 Exécute les tests Node.js du dossier `tests/`.
 
 ```bash
+npm run test:typecheck
+npm run test:coverage
+```
+
+Vérifie le typage strict des tests puis leur couverture minimale (80 % des lignes, 90 % des branches et 70 % des fonctions).
+
+```bash
+npm run test:integration
+```
+
+Exécute les tests d’intégration HTTP (routes, middlewares, contrôleurs et services).
+
+```bash
+npm run test:e2e
+```
+
+Exécute le parcours E2E critique : connexion, session, création et soumission d’une recette, modération, publication, favoris, commentaires et déconnexion. Ces tests lancent l’application Express sur un port éphémère et utilisent des adaptateurs en mémoire ; ils ne modifient pas la base MySQL locale et n’envoient aucun email.
+
+```bash
+npm run test:mysql
+```
+
+Exécute les tests des dépôts avec une vraie base MySQL isolée. Définissez auparavant `TEST_DB_NAME` avec un nom différent de `DB_NAME` et contenant `test`. La base dédiée est créée au début de la suite puis supprimée à la fin.
+
+```bash
 npm run lint
 ```
 

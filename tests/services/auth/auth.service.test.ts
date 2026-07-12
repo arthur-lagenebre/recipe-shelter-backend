@@ -81,7 +81,7 @@ describe('AuthService', () => {
         env.auth.bcryptCost = 4;
         users = new FakeUserRepository();
         emailValidation = new FakeEmailValidationService();
-        service = new AuthService(users as UserRepository, emailValidation as unknown as EmailValidationService);
+        service = new AuthService(users as unknown as UserRepository, emailValidation as unknown as EmailValidationService);
     });
 
     it('registers inactive users and sends a validation email', async () => {

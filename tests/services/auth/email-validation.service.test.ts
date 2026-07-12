@@ -95,7 +95,7 @@ describe('EmailValidationService', () => {
         users = new FakeUsers();
         validations = new FakeValidations();
         mailer = new FakeMailer();
-        service = new EmailValidationService(users, validations, mailer as Mailer, 'https://front.example');
+        service = new EmailValidationService(users, validations, mailer as unknown as Mailer, 'https://front.example');
     });
 
     it('creates and sends validation emails', async () => {
@@ -129,10 +129,8 @@ describe('EmailValidationService', () => {
         validations.validation = {
             Id: 4,
             UserId: 2,
-            TokenHash: hashResetToken('token'),
             ExpiresAt: new Date(Date.now() + 60_000),
-            UsedAt: null,
-            CreatedAt: new Date('2026-05-09T10:00:00.000Z')
+            UsedAt: null
         };
         users.userById = baseUser;
 
@@ -148,7 +146,7 @@ describe('EmailValidationService', () => {
         await assert.rejects(() => service.validateEmail(' '), (error) => assertHttpError(error, 'AUTH_EMAIL_VALIDATION_MISSING_TOKEN', 400));
         await assert.rejects(() => service.validateEmail('token'), (error) => assertHttpError(error, 'AUTH_EMAIL_VALIDATION_INVALID_TOKEN', 400));
 
-        validations.validation = { Id: 4, UserId: 2, TokenHash: 'hash', ExpiresAt: new Date(Date.now() + 60_000), UsedAt: new Date(), CreatedAt: new Date() };
+        validations.validation = { Id: 4, UserId: 2, ExpiresAt: new Date(Date.now() + 60_000), UsedAt: new Date() };
         await assert.rejects(() => service.validateEmail('token'), (error) => assertHttpError(error, 'AUTH_EMAIL_VALIDATION_TOKEN_USED', 400));
 
         validations.validation = { ...validations.validation, UsedAt: null, ExpiresAt: new Date(Date.now() - 60_000) };

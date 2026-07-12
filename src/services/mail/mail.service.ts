@@ -17,10 +17,10 @@ export type SmtpConfig = {
 };
 
 export class SmtpMailService implements Mailer {
-  private readonly transporter: Transporter;
+  private readonly transporter: Pick<Transporter, 'sendMail'>;
 
-  constructor(private readonly config: SmtpConfig) {
-    this.transporter = nodemailer.createTransport({
+  constructor(private readonly config: SmtpConfig, transporter?: Pick<Transporter, 'sendMail'>) {
+    this.transporter = transporter ?? nodemailer.createTransport({
       host: config.host,
       port: config.port,
       secure: config.secure,

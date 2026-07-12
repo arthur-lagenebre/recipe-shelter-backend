@@ -130,7 +130,7 @@ describe('AdminRecipeService', () => {
     beforeEach(() => {
         recipes = new FakeRecipeRepository();
         adminRecipes = new FakeAdminRecipeRepository();
-        service = new AdminRecipeService(recipes as RecipeRepository, adminRecipes);
+        service = new AdminRecipeService(recipes as unknown as RecipeRepository, adminRecipes);
     });
 
     it('lists, counts and gets recipes for admin', async () => {

@@ -11,8 +11,8 @@ type HealthResponse = {
   };
 };
 
-async function buildHealthResponse(): Promise<HealthResponse> {
-  const dbOk = await dbHealth();
+async function buildHealthResponse(checkDb: () => Promise<boolean>): Promise<HealthResponse> {
+  const dbOk = await checkDb();
 
   return {
     status: dbOk ? 200 : 503,
@@ -23,15 +23,17 @@ async function buildHealthResponse(): Promise<HealthResponse> {
   };
 }
 
-export const live = asyncHandler(async (_req, res) => {
-  res.status(200).json({ ok: true });
-});
+export function createHealthController(checkDb: () => Promise<boolean> = dbHealth) {
+  const live = asyncHandler(async (_req, res) => {
+    res.status(200).json({ ok: true });
+  });
 
-export const ready = asyncHandler(async (_req, res) => {
-  const result = await buildHealthResponse();
-  res.status(result.status).json(result.body);
-});
+  const ready = asyncHandler(async (_req, res) => {
+    const result = await buildHealthResponse(checkDb);
+    res.status(result.status).json(result.body);
+  });
 
-export const health = ready;
+  return { live, ready, health: ready };
+}
 
-export const healthController = { live, ready, health };
+export const healthController = createHealthController();
