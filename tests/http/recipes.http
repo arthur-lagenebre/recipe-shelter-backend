@@ -31,14 +31,20 @@ GET {{baseUrl}}/recipes/recent?limit=12
 ### Published recipes - filter by tags
 GET {{baseUrl}}/recipes/search?tagIds=1,2
 
+### Published recipes - exclude tags
+GET {{baseUrl}}/recipes/search?excludedTagIds=8,9
+
 ### Published recipes - filter by ingredients
 GET {{baseUrl}}/recipes/search?ingredientIds=18,103
+
+### Published recipes - exclude ingredients
+GET {{baseUrl}}/recipes/search?excludedIngredientIds=10,11
 
 ### Published recipes - filter by max total time
 GET {{baseUrl}}/recipes/search?maxTotalTimeMinutes=45
 
 ### Published recipes - search with all filters
-GET {{baseUrl}}/recipes/search?q=porc&categoryId=3&tagIds=1,2&ingredientIds=18,103&maxTotalTimeMinutes=60
+GET {{baseUrl}}/recipes/search?q=porc&categoryId=3&tagIds=1,2&excludedTagIds=8&ingredientIds=18,103&excludedIngredientIds=10,11&maxTotalTimeMinutes=60&page=1&limit=12
 
 ### Published recipes - with optional auth, includes isFavorite for current user
 GET {{baseUrl}}/recipes

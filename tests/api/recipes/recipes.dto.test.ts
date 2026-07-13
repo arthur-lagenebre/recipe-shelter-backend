@@ -188,16 +188,25 @@ describe('recipes.dto', () => {
         assert.deepEqual(parseRecipeSearchQuery({ ingredientIds: '18, 103,18' }), { ingredientIds: [18, 103] });
     });
 
+    it('parses and deduplicates comma-separated exclusion filters', () => {
+        assert.deepEqual(parseRecipeSearchQuery({ excludedTagIds: '8, 9,8', excludedIngredientIds: '10, 11,10' }), {
+            excludedTagIds: [8, 9],
+            excludedIngredientIds: [10, 11]
+        });
+    });
+
     it('parses a max total time filter', () => {
         assert.deepEqual(parseRecipeSearchQuery({ maxTotalTimeMinutes: '45' }), { maxTotalTimeMinutes: 45 });
     });
 
-    it('combines title search, category, tag, ingredient and total time filters', () => {
-        assert.deepEqual(parseRecipeSearchQuery({ q: 'porc', categoryId: '3', tagIds: '1,2', ingredientIds: '18,103', maxTotalTimeMinutes: '60' }), {
+    it('combines title search, category, included and excluded relations, and total time filters', () => {
+        assert.deepEqual(parseRecipeSearchQuery({ q: 'porc', categoryId: '3', tagIds: '1,2', excludedTagIds: '8', ingredientIds: '18,103', excludedIngredientIds: '10,11', maxTotalTimeMinutes: '60' }), {
             q: 'porc',
             categoryId: 3,
             tagIds: [1, 2],
+            excludedTagIds: [8],
             ingredientIds: [18, 103],
+            excludedIngredientIds: [10, 11],
             maxTotalTimeMinutes: 60
         });
     });
@@ -255,6 +264,59 @@ describe('recipes.dto', () => {
             () => parseRecipeSearchQuery({ ingredientIds: ['18', '103'] }),
             (error) => {
                 assertHttpError(error, 'RECIPES_SEARCH_BAD_INGREDIENTS', 400);
+
+                return true;
+            }
+        );
+    });
+
+    it('rejects malformed or non-positive exclusion lists', () => {
+        assert.throws(
+            () => parseRecipeSearchQuery({ excludedTagIds: '8,,9' }),
+            (error) => {
+                assertHttpError(error, 'RECIPES_SEARCH_BAD_EXCLUDED_TAGS', 400);
+
+                return true;
+            }
+        );
+
+        assert.throws(
+            () => parseRecipeSearchQuery({ excludedIngredientIds: '0,11' }),
+            (error) => {
+                assertHttpError(error, 'RECIPES_SEARCH_BAD_EXCLUDED_INGREDIENTS', 400);
+
+                return true;
+            }
+        );
+    });
+
+    it('rejects malformed inclusion lists instead of silently discarding empty entries', () => {
+        assert.throws(
+            () => parseRecipeSearchQuery({ tagIds: '1,' }),
+            (error) => {
+                assertHttpError(error, 'RECIPES_SEARCH_BAD_TAGS', 400);
+
+                return true;
+            }
+        );
+    });
+
+    it('rejects tag ids that are both included and excluded', () => {
+        assert.throws(
+            () => parseRecipeSearchQuery({ tagIds: '1,2', excludedTagIds: '8,2' }),
+            (error) => {
+                assertHttpError(error, 'RECIPES_SEARCH_TAG_FILTER_CONFLICT', 400);
+
+                return true;
+            }
+        );
+    });
+
+    it('rejects ingredient ids that are both included and excluded', () => {
+        assert.throws(
+            () => parseRecipeSearchQuery({ ingredientIds: '4,5', excludedIngredientIds: '5,10' }),
+            (error) => {
+                assertHttpError(error, 'RECIPES_SEARCH_INGREDIENT_FILTER_CONFLICT', 400);
 
                 return true;
             }

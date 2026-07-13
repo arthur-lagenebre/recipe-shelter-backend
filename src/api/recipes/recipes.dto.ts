@@ -144,27 +144,46 @@ function parseCommaSeparatedPositiveIntegerQueryValue(value: unknown, message: s
     if (typeof value !== 'string')
         throw badRequest(message, code);
 
-    const values: number[] = [];
+    const values = new Set<number>();
 
-    const parts = value.split(',').map((part) => part.trim()).filter(Boolean);
-    for (const part of parts) {
-        const parsedValue = Number(part);
-        if (!Number.isInteger(parsedValue) || parsedValue <= 0)
+    for (const rawPart of value.split(',')) {
+        const part = rawPart.trim();
+        if (!/^[1-9]\d*$/.test(part))
             throw badRequest(message, code);
 
-        if (!values.includes(parsedValue))
-            values.push(parsedValue);
+        const parsedValue = Number(part);
+        if (!Number.isSafeInteger(parsedValue))
+            throw badRequest(message, code);
+
+        values.add(parsedValue);
     }
 
-    return values;
+    return [...values];
 }
 
 function parseTagIdsQueryValue(value: unknown): number[] {
     return parseCommaSeparatedPositiveIntegerQueryValue(value, 'Tag ids must be a comma-separated list of positive integers', 'RECIPES_SEARCH_BAD_TAGS');
 }
 
+function parseExcludedTagIdsQueryValue(value: unknown): number[] {
+    return parseCommaSeparatedPositiveIntegerQueryValue(value, 'Excluded tag ids must be a comma-separated list of positive integers', 'RECIPES_SEARCH_BAD_EXCLUDED_TAGS');
+}
+
 function parseIngredientIdsQueryValue(value: unknown): number[] {
     return parseCommaSeparatedPositiveIntegerQueryValue(value, 'Ingredient ids must be a comma-separated list of positive integers', 'RECIPES_SEARCH_BAD_INGREDIENTS');
+}
+
+function parseExcludedIngredientIdsQueryValue(value: unknown): number[] {
+    return parseCommaSeparatedPositiveIntegerQueryValue(value, 'Excluded ingredient ids must be a comma-separated list of positive integers', 'RECIPES_SEARCH_BAD_EXCLUDED_INGREDIENTS');
+}
+
+function assertNoSearchFilterConflict(includedIds: number[] | undefined, excludedIds: number[] | undefined, message: string, code: string): void {
+    if (!includedIds?.length || !excludedIds?.length)
+        return;
+
+    const excludedIdSet = new Set(excludedIds);
+    if (includedIds.some((id) => excludedIdSet.has(id)))
+        throw badRequest(message, code);
 }
 
 export function parseRecipeSearchQuery(query: unknown): RecipeSearchQuery {
@@ -191,11 +210,26 @@ export function parseRecipeSearchQuery(query: unknown): RecipeSearchQuery {
             filters.tagIds = tagIds;
     }
 
+    if (query.excludedTagIds !== undefined) {
+        const excludedTagIds = parseExcludedTagIdsQueryValue(query.excludedTagIds);
+        if (excludedTagIds.length)
+            filters.excludedTagIds = excludedTagIds;
+    }
+
     if (query.ingredientIds !== undefined) {
         const ingredientIds = parseIngredientIdsQueryValue(query.ingredientIds);
         if (ingredientIds.length)
             filters.ingredientIds = ingredientIds;
     }
+
+    if (query.excludedIngredientIds !== undefined) {
+        const excludedIngredientIds = parseExcludedIngredientIdsQueryValue(query.excludedIngredientIds);
+        if (excludedIngredientIds.length)
+            filters.excludedIngredientIds = excludedIngredientIds;
+    }
+
+    assertNoSearchFilterConflict(filters.tagIds, filters.excludedTagIds, 'A tag id cannot be both included and excluded', 'RECIPES_SEARCH_TAG_FILTER_CONFLICT');
+    assertNoSearchFilterConflict(filters.ingredientIds, filters.excludedIngredientIds, 'An ingredient id cannot be both included and excluded', 'RECIPES_SEARCH_INGREDIENT_FILTER_CONFLICT');
 
     if (query.maxTotalTimeMinutes !== undefined)
         filters.maxTotalTimeMinutes = parsePositiveIntegerQueryValue(query.maxTotalTimeMinutes, 'Total time must be a positive integer', 'RECIPES_SEARCH_BAD_TOTAL_TIME');

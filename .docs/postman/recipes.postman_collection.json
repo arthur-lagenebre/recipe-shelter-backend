@@ -307,12 +307,12 @@
       }
     },
     {
-      "name": "Published recipes - search with all filters",
+      "name": "Published recipes - search with inclusive and exclusive filters",
       "request": {
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{baseUrl}}/api/v1/recipes/search?q=porc&categoryId=3&tagIds=1,2&ingredientIds=18,103&maxTotalTimeMinutes=60",
+          "raw": "{{baseUrl}}/api/v1/recipes/search?q=porc&categoryId=3&tagIds=1,2&excludedTagIds=8&ingredientIds=18,103&excludedIngredientIds=10,11&maxTotalTimeMinutes=60&page=1&limit=12",
           "host": [
             "{{baseUrl}}"
           ],
@@ -336,12 +336,28 @@
               "value": "1,2"
             },
             {
+              "key": "excludedTagIds",
+              "value": "8"
+            },
+            {
               "key": "ingredientIds",
               "value": "18,103"
             },
             {
+              "key": "excludedIngredientIds",
+              "value": "10,11"
+            },
+            {
               "key": "maxTotalTimeMinutes",
               "value": "60"
+            },
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "12"
             }
           ]
         }

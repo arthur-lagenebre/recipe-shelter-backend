@@ -216,8 +216,12 @@ describe('RecipeService', () => {
     });
 
     it('delegates published searches', async () => {
-        await service.searchPublished(2, { q: 'cake' }, pagination);
+        await service.searchPublished(2, { q: 'cake', excludedTagIds: [8], excludedIngredientIds: [10, 11] }, pagination);
 
-        assert.deepEqual(repository.publishedFilters, { userId: 2, filters: { q: 'cake' }, pagination });
+        assert.deepEqual(repository.publishedFilters, {
+            userId: 2,
+            filters: { q: 'cake', excludedTagIds: [8], excludedIngredientIds: [10, 11] },
+            pagination
+        });
     });
 });

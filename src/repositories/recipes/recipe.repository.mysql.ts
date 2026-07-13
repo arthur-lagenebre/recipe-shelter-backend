@@ -337,6 +337,17 @@ export class RecipeRepositoryMysql implements RecipeRepository {
             params.push(...filters.tagIds, filters.tagIds.length);
         }
 
+        if (filters.excludedTagIds?.length) {
+            const placeholders = filters.excludedTagIds.map(() => '?').join(', ');
+            whereClauses.push(`NOT EXISTS (
+                SELECT 1
+                FROM RecipeTags AS excluded_rt
+                WHERE excluded_rt.RecipeId = r.Id
+                  AND excluded_rt.TagId IN (${placeholders})
+            )`);
+            params.push(...filters.excludedTagIds);
+        }
+
         if (filters.ingredientIds?.length) {
             const placeholders = filters.ingredientIds.map(() => '?').join(', ');
             whereClauses.push(`r.Id IN (
@@ -347,6 +358,17 @@ export class RecipeRepositoryMysql implements RecipeRepository {
                 HAVING COUNT(DISTINCT ri.IngredientId) = ?
             )`);
             params.push(...filters.ingredientIds, filters.ingredientIds.length);
+        }
+
+        if (filters.excludedIngredientIds?.length) {
+            const placeholders = filters.excludedIngredientIds.map(() => '?').join(', ');
+            whereClauses.push(`NOT EXISTS (
+                SELECT 1
+                FROM RecipeIngredients AS excluded_ri
+                WHERE excluded_ri.RecipeId = r.Id
+                  AND excluded_ri.IngredientId IN (${placeholders})
+            )`);
+            params.push(...filters.excludedIngredientIds);
         }
 
         if (filters.maxTotalTimeMinutes !== undefined) {

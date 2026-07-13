@@ -68,11 +68,50 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
             INSERT INTO Users (Id, Mail, Username, Password, RoleId, Status, EmailValidatedAt) VALUES
                 (1, 'admin@test.local', 'admin', 'hash', 1, 'active', CURRENT_TIMESTAMP),
                 (2, 'reader@test.local', 'reader', 'hash', 2, 'active', CURRENT_TIMESTAMP);
-            INSERT INTO RecipeCategories (Id, Name, Slug, IconName) VALUES (1, 'Main', 'main', 'dish');
-            INSERT INTO Ingredients (Id, Name, Slug) VALUES (1, 'Pasta', 'pasta');
+            INSERT INTO RecipeCategories (Id, Name, Slug, IconName) VALUES
+                (1, 'Main', 'main', 'dish'),
+                (2, 'Search fixtures', 'search-fixtures', 'search');
+            INSERT INTO Ingredients (Id, Name, Slug) VALUES
+                (1, 'Pasta', 'pasta'),
+                (10, 'Search base', 'search-base'),
+                (11, 'Search required', 'search-required'),
+                (12, 'Search blocked', 'search-blocked'),
+                (13, 'Search other blocked', 'search-other-blocked');
             INSERT INTO Equipments (Id, Name, Slug) VALUES (1, 'Pot', 'pot');
             INSERT INTO TagGroups (Id, Name, Slug, SortOrder) VALUES (1, 'Time', 'time', 1);
-            INSERT INTO Tags (Id, GroupId, Name, Slug) VALUES (1, 1, 'Quick', 'quick');
+            INSERT INTO Tags (Id, GroupId, Name, Slug) VALUES
+                (1, 1, 'Quick', 'quick'),
+                (10, 1, 'Search base', 'search-base'),
+                (11, 1, 'Search required', 'search-required'),
+                (12, 1, 'Search blocked', 'search-blocked'),
+                (13, 1, 'Search other blocked', 'search-other-blocked');
+
+            INSERT INTO Recipes (Id, UserId, CategoryId, Title, Slug, Description, PrepTimeMinutes, RestTimeMinutes, CookTimeMinutes, Servings, Status, PublishedAt) VALUES
+                (100, 2, 2, 'Filterfixture alpha', 'filterfixture-alpha', 'Search fixture', 5, NULL, 5, 2, 'published', '2026-07-07 10:00:00'),
+                (101, 2, 2, 'Filterfixture beta', 'filterfixture-beta', 'Search fixture', 10, NULL, 10, 2, 'published', '2026-07-06 10:00:00'),
+                (102, 2, 2, 'Filterfixture gamma', 'filterfixture-gamma', 'Search fixture', 10, 5, 15, 2, 'published', '2026-07-05 10:00:00'),
+                (103, 2, 1, 'Filterfixture delta', 'filterfixture-delta', 'Search fixture', 5, NULL, 10, 2, 'published', '2026-07-04 10:00:00'),
+                (104, 2, 2, 'Filterfixture epsilon', 'filterfixture-epsilon', 'Search fixture', 20, 20, 30, 2, 'published', '2026-07-03 10:00:00'),
+                (105, 2, 2, 'Filterfixture draft', 'filterfixture-draft', 'Search fixture', 5, NULL, 5, 2, 'draft', NULL),
+                (106, 2, 1, 'Filterfixture duplicate ingredient', 'filterfixture-duplicate-ingredient', 'Search fixture', 6, NULL, 6, 2, 'published', '2026-07-02 10:00:00');
+
+            INSERT INTO RecipeTags (RecipeId, TagId) VALUES
+                (100, 10), (100, 11),
+                (101, 10), (101, 11), (101, 12),
+                (102, 10), (102, 11), (102, 13),
+                (103, 10),
+                (104, 10), (104, 11),
+                (105, 10), (105, 11),
+                (106, 10);
+
+            INSERT INTO RecipeIngredients (RecipeId, IngredientId, Quantity, SortOrder) VALUES
+                (100, 10, 1, 1), (100, 11, 1, 2),
+                (101, 10, 1, 1), (101, 11, 1, 2), (101, 12, 1, 3),
+                (102, 10, 1, 1), (102, 11, 1, 2), (102, 13, 1, 3),
+                (103, 10, 1, 1),
+                (104, 10, 1, 1), (104, 11, 1, 2),
+                (105, 10, 1, 1), (105, 11, 1, 2),
+                (106, 10, 1, 1), (106, 10, 2, 2);
         `);
     });
 
@@ -174,5 +213,93 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
             ingredients: [{ ingredientId: 999_999, quantity: 1 }]
         }));
         assert.equal(await recipes.existsBySlug('rollback-recipe'), false);
+    });
+
+    it('searches published recipes with inclusive and exclusive tag and ingredient filters', async () => {
+        const recipes = new RecipeRepositoryMysql(pool);
+        const pagination = { page: 1, limit: 50, offset: 0 };
+        const fixtureQuery = { q: 'filterfixture' };
+        const ids = (result: Awaited<ReturnType<RecipeRepositoryMysql['searchPublished']>>) => result.items.map((item) => item.id);
+
+        const inclusions = await recipes.searchPublished(null, {
+            ...fixtureQuery,
+            tagIds: [10, 11],
+            ingredientIds: [10, 11]
+        }, pagination);
+        assert.deepEqual(ids(inclusions), [100, 101, 102, 104]);
+        assert.equal(inclusions.pagination.totalItems, 4);
+        assert.ok(!ids(inclusions).includes(105), 'draft recipes must not be returned');
+
+        const excludedByTag = await recipes.searchPublished(null, {
+            ...fixtureQuery,
+            excludedTagIds: [12]
+        }, pagination);
+        assert.deepEqual(ids(excludedByTag), [100, 102, 103, 104, 106]);
+
+        const excludedByIngredient = await recipes.searchPublished(null, {
+            ...fixtureQuery,
+            excludedIngredientIds: [12]
+        }, pagination);
+        assert.deepEqual(ids(excludedByIngredient), [100, 102, 103, 104, 106]);
+
+        const includedAndExcluded = await recipes.searchPublished(null, {
+            ...fixtureQuery,
+            tagIds: [10, 11],
+            excludedTagIds: [12],
+            ingredientIds: [10, 11],
+            excludedIngredientIds: [12]
+        }, pagination);
+        assert.deepEqual(ids(includedAndExcluded), [100, 102, 104]);
+
+        const severalExclusions = await recipes.searchPublished(null, {
+            ...fixtureQuery,
+            excludedTagIds: [12, 999_999]
+        }, pagination);
+        assert.deepEqual(ids(severalExclusions), [100, 102, 103, 104, 106]);
+
+        const unknownExclusion = await recipes.searchPublished(null, {
+            ...fixtureQuery,
+            excludedTagIds: [999_999],
+            excludedIngredientIds: [999_999]
+        }, pagination);
+        assert.deepEqual(ids(unknownExclusion), [100, 101, 102, 103, 104, 106]);
+
+        const unknownInclusion = await recipes.searchPublished(null, {
+            ...fixtureQuery,
+            tagIds: [999_999]
+        }, pagination);
+        assert.deepEqual(ids(unknownInclusion), []);
+        assert.equal(unknownInclusion.pagination.totalItems, 0);
+
+        const combinedFilters = await recipes.searchPublished(null, {
+            ...fixtureQuery,
+            categoryId: 2,
+            excludedTagIds: [12],
+            maxTotalTimeMinutes: 25
+        }, pagination);
+        assert.deepEqual(ids(combinedFilters), [100]);
+
+        const exactPage = await recipes.searchPublished(null, {
+            ...fixtureQuery,
+            tagIds: [10],
+            excludedTagIds: [12]
+        }, { page: 1, limit: 2, offset: 0 });
+        assert.deepEqual(ids(exactPage), [100, 102]);
+        assert.deepEqual(exactPage.pagination, {
+            page: 1,
+            limit: 2,
+            totalItems: 5,
+            totalPages: 3,
+            hasNextPage: true,
+            hasPreviousPage: false
+        });
+
+        const duplicateIngredientRows = await recipes.searchPublished(null, {
+            ...fixtureQuery,
+            ingredientIds: [10]
+        }, pagination);
+        assert.equal(duplicateIngredientRows.items.length, 6);
+        assert.equal(new Set(ids(duplicateIngredientRows)).size, duplicateIngredientRows.items.length);
+        assert.equal(duplicateIngredientRows.pagination.totalItems, 6);
     });
 });

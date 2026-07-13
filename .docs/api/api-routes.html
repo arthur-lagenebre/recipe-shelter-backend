@@ -831,14 +831,14 @@ type UpdatePasswordResponse = {
               <td><span class="method get">GET</span></td>
               <td><code>/api/v1/recipes</code></td>
               <td><span class="auth public">Auth optionnelle</span></td>
-              <td><code>page</code>, <code>limit</code>, <code>q</code>, <code>categoryId</code>, <code>tagIds</code>, <code>ingredientIds</code>, <code>maxTotalTimeMinutes</code>.</td>
+              <td><code>page</code>, <code>limit</code>, <code>q</code>, <code>categoryId</code>, <code>tagIds</code>, <code>excludedTagIds</code>, <code>ingredientIds</code>, <code>excludedIngredientIds</code>, <code>maxTotalTimeMinutes</code>.</td>
               <td><code>200</code> résultat paginé des recettes publiées.</td>
             </tr>
             <tr>
               <td><span class="method get">GET</span></td>
               <td><code>/api/v1/recipes/search</code></td>
               <td><span class="auth public">Auth optionnelle</span></td>
-              <td>Mêmes filtres que <code>/api/v1/recipes</code>. <code>tagIds</code> et <code>ingredientIds</code> sont des listes séparées par des virgules.</td>
+              <td>Mêmes filtres que <code>/api/v1/recipes</code>. Les quatre listes d'identifiants sont séparées par des virgules et dédupliquées. Une recette doit posséder tous les <code>tagIds</code> et <code>ingredientIds</code>, et elle est écartée dès qu'elle possède un <code>excludedTagIds</code> ou <code>excludedIngredientIds</code>. Un identifiant ne peut pas être à la fois inclus et exclu dans une même famille.</td>
               <td><code>200</code> résultat paginé.</td>
             </tr>
             <tr>
@@ -952,7 +952,9 @@ type RecipeEquipmentInput = {
   q?: string;
   categoryId?: number;
   tagIds?: string; // ex: "1,2"
+  excludedTagIds?: string; // ex: "8"
   ingredientIds?: string; // ex: "18,103"
+  excludedIngredientIds?: string; // ex: "10,11"
   maxTotalTimeMinutes?: number;
 };
 
