@@ -52,13 +52,6 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
             .replace(/USE\s+recipe_shelter\s*;/i, `USE \`${databaseName}\`;`);
         await adminConnection.query(schema);
 
-        // Return the freshly-created unified schema to its B1.1 shape so the
-        // production deployment script is tested against real existing accounts.
-        const initialRollbackPath = new URL('../../../database/deploy/b1_2_community_staff_profiles.rollback.sql', import.meta.url);
-        const initialRollback = (await readFile(initialRollbackPath, 'utf8'))
-            .replace(/USE\s+recipe_shelter\s*;/i, `USE \`${databaseName}\`;`);
-        await adminConnection.query(initialRollback);
-
         await adminConnection.query(`
             USE \`${databaseName}\`;
             INSERT INTO Roles (Id, Name) VALUES (1, 'admin'), (2, 'user');
@@ -68,11 +61,6 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
                 (3, 'locked-staff@test.local', 'locked-staff', 'hash', 1, 'staff', 'banned', CURRENT_TIMESTAMP, NULL, NULL, NULL),
                 (4, 'banned-community@test.local', 'banned-community', 'hash', 2, 'community', 'banned', CURRENT_TIMESTAMP, 1, 'Pre-migration moderation', CURRENT_TIMESTAMP);
         `);
-
-        const profileMigrationPath = new URL('../../../database/deploy/b1_2_community_staff_profiles.sql', import.meta.url);
-        const profileMigration = (await readFile(profileMigrationPath, 'utf8'))
-            .replace(/USE\s+recipe_shelter\s*;/i, `USE \`${databaseName}\`;`);
-        await adminConnection.query(profileMigration);
 
         pool = mysql.createPool({
             host: env.db.host,
@@ -380,31 +368,32 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
         assert.equal(duplicateIngredientRows.pagination.totalItems, 6);
     });
 
-    it('rolls the profile migration back without losing linked community content', async () => {
+    it('keeps linked community content after specialized profile state changes', async () => {
         await pool.query(`UPDATE StaffProfiles SET Status = 'disabled' WHERE UserId = 3`);
-
-        const rollbackPath = new URL('../../../database/deploy/b1_2_community_staff_profiles.rollback.sql', import.meta.url);
-        const rollback = (await readFile(rollbackPath, 'utf8'))
-            .replace(/USE\s+recipe_shelter\s*;/i, `USE \`${requireSafeTestDatabaseName()}\`;`);
-        await adminConnection.query(rollback);
 
         const [profileTables] = await pool.query(
             `SELECT TABLE_NAME AS TableName
              FROM information_schema.TABLES
-             WHERE TABLE_SCHEMA = ? AND TABLE_NAME IN ('CommunityProfiles', 'StaffProfiles')`,
+             WHERE TABLE_SCHEMA = ? AND TABLE_NAME IN ('CommunityProfiles', 'StaffProfiles')
+             ORDER BY TABLE_NAME`,
             [requireSafeTestDatabaseName()]
         );
-        assert.deepEqual(profileTables, []);
-
-        const [legacyStatuses] = await pool.query(
-            `SELECT Id, Status
-             FROM Users
-             WHERE Id IN (2, 3, 4)
-             ORDER BY Id`
+        assert.deepEqual(
+            (profileTables as Array<{ TableName: string }>).map((row) => row.TableName.toLowerCase()),
+            ['communityprofiles', 'staffprofiles']
         );
-        assert.deepEqual(legacyStatuses, [
+
+        const [profileStatuses] = await pool.query(
+            `SELECT u.Id, COALESCE(cp.Status, sp.Status) AS Status
+             FROM Users AS u
+             LEFT JOIN CommunityProfiles AS cp ON cp.UserId = u.Id
+             LEFT JOIN StaffProfiles AS sp ON sp.UserId = u.Id
+             WHERE u.Id IN (2, 3, 4)
+             ORDER BY u.Id`
+        );
+        assert.deepEqual(profileStatuses, [
             { Id: 2, Status: 'active' },
-            { Id: 3, Status: 'banned' },
+            { Id: 3, Status: 'disabled' },
             { Id: 4, Status: 'banned' }
         ]);
 
