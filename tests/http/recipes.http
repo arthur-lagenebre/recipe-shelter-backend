@@ -154,7 +154,6 @@ Cookie: rs_session={{sessionCookie}}
   "title": "Cake marbre maison",
   "categoryId": 2,
   "description": "Version brouillon pour test HTTP",
-  "coverImageUrl": null,
   "prepTimeMinutes": 15,
   "restTimeMinutes": null,
   "cookTimeMinutes": 45,
@@ -267,4 +266,25 @@ Cookie: rs_session={{sessionCookie}}
 
 ### Archive my recipe
 POST {{baseUrl}}/recipes/me/{{recipeId}}/archive
+Cookie: rs_session={{sessionCookie}}
+
+### Replace recipe cover image
+# Replace ./fixtures/cover.jpg with an existing local JPEG, PNG or WebP file.
+PUT {{baseUrl}}/recipes/{{recipeId}}/cover-image
+Cookie: rs_session={{sessionCookie}}
+Content-Type: multipart/form-data; boundary=RecipeShelterBoundary
+
+--RecipeShelterBoundary
+Content-Disposition: form-data; name="altText"
+
+Photo du plat terminé
+--RecipeShelterBoundary
+Content-Disposition: form-data; name="image"; filename="cover.jpg"
+Content-Type: image/jpeg
+
+< ./fixtures/cover.jpg
+--RecipeShelterBoundary--
+
+### Delete recipe cover image
+DELETE {{baseUrl}}/recipes/{{recipeId}}/cover-image
 Cookie: rs_session={{sessionCookie}}

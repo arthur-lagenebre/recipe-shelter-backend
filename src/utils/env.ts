@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import path from 'node:path';
 
 function readNumber(value: string | undefined, fallback: number): number {
   if (!value?.trim())
@@ -30,6 +31,24 @@ function readString(value: string | undefined, fallback: string): string {
 
 function readOptionalString(value: string | undefined): string | undefined {
   return value && value.trim() ? value.trim() : undefined;
+}
+
+function readImageStorageDriver(value: string | undefined): 'local' | 's3' {
+  const driver = readString(value, 'local').toLowerCase();
+
+  if (driver === 'local' || driver === 's3')
+    return driver;
+
+  throw new Error(`Unknown IMAGE_STORAGE_DRIVER: ${driver}`);
+}
+
+function requireImageStorageValue(name: string, value: string | undefined, driver: 'local' | 's3'): string {
+  const normalized = value?.trim();
+
+  if (driver === 's3' && !normalized)
+    throw new Error(`${name} is required when IMAGE_STORAGE_DRIVER=s3`);
+
+  return normalized ?? '';
 }
 
 function readSameSite(value: string | undefined, fallback: 'strict' | 'lax' | 'none'): 'strict' | 'lax' | 'none' {
@@ -65,12 +84,17 @@ function readDurationMs(value: string, fallback: number): number {
 }
 
 const nodeEnv = readString(process.env.NODE_ENV, 'development');
+const port = readNumber(process.env.PORT, 3000);
 const jwtExpiresIn = readString(process.env.JWT_EXPIRES_IN, '7d');
 const defaultSessionCookieMaxAgeMs = readDurationMs(jwtExpiresIn, 604800000);
+const imageStorageDriver = readImageStorageDriver(process.env.IMAGE_STORAGE_DRIVER);
+const imagePublicBaseUrl = imageStorageDriver === 's3'
+  ? requireImageStorageValue('IMAGE_PUBLIC_BASE_URL', process.env.IMAGE_PUBLIC_BASE_URL, imageStorageDriver)
+  : readString(process.env.IMAGE_PUBLIC_BASE_URL, `http://localhost:${port}/media`);
 
 export const env = {
   nodeEnv,
-  port: readNumber(process.env.PORT, 3000),
+  port,
 
   http: {
     corsAllowedOrigins: readString(process.env.CORS_ALLOWED_ORIGINS, 'http://localhost:4200,http://127.0.0.1:4200'),
@@ -108,5 +132,18 @@ export const env = {
     password: readString(process.env.SMTP_PASSWORD, ''),
     from: readString(process.env.SMTP_FROM, ''),
     contactRecipientEmail: readString(process.env.CONTACT_RECIPIENT_EMAIL, '')
+  },
+
+  imageStorage: {
+    driver: imageStorageDriver,
+    localRoot: path.resolve(process.cwd(), readString(process.env.IMAGE_LOCAL_ROOT, './var/uploads')),
+    publicBaseUrl: imagePublicBaseUrl,
+    s3: {
+      endpoint: requireImageStorageValue('IMAGE_S3_ENDPOINT', process.env.IMAGE_S3_ENDPOINT, imageStorageDriver),
+      region: readString(process.env.IMAGE_S3_REGION, 'auto'),
+      bucket: requireImageStorageValue('IMAGE_S3_BUCKET', process.env.IMAGE_S3_BUCKET, imageStorageDriver),
+      accessKeyId: requireImageStorageValue('IMAGE_S3_ACCESS_KEY_ID', process.env.IMAGE_S3_ACCESS_KEY_ID, imageStorageDriver),
+      secretAccessKey: requireImageStorageValue('IMAGE_S3_SECRET_ACCESS_KEY', process.env.IMAGE_S3_SECRET_ACCESS_KEY, imageStorageDriver)
+    }
   }
 };

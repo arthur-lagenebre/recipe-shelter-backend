@@ -31,7 +31,7 @@ describe('recipes search HTTP integration', () => {
                     slug: 'filter-fixture',
                     description: 'Fixture',
                     category: 'Main',
-                    coverImageUrl: null,
+                    coverImage: null,
                     prepTimeMinutes: 10,
                     restTimeMinutes: null,
                     cookTimeMinutes: 20,
@@ -45,7 +45,8 @@ describe('recipes search HTTP integration', () => {
         const app = express();
 
         app.use(cookieParser());
-        app.use('/api/v1/recipes', createRecipesRouter(createRecipesController(recipeService)));
+        const recipeImageService = { replace: async () => { throw new Error('Not used'); }, delete: async () => { throw new Error('Not used'); } };
+        app.use('/api/v1/recipes', createRecipesRouter(createRecipesController(recipeService, recipeImageService as never)));
         app.use(notFound);
         app.use(errorHandler);
 

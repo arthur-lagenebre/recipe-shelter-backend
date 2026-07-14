@@ -929,7 +929,7 @@ type UpdateRecipeBody = RecipeBody;</code></pre>
           <p>Sous-objets acceptés dans <code>RecipeBody</code>.</p>
           <pre><code>type RecipeIngredientInput = {
   ingredientId: number;
-  quantity: number;
+  quantity?: number | null;
   unit?: string | null;
   note?: string | null;
   sortOrder?: number;
@@ -999,7 +999,7 @@ type RecipeFeedQuery = {
           <p>Sous-objets présents dans <code>Recipe</code>.</p>
           <pre><code>type RecipeIngredient = {
   ingredientId: number;
-  quantity: number;
+  quantity: number | null;
   unit: string | null;
   note: string | null;
   sortOrder: number;
@@ -1080,7 +1080,7 @@ type RecentRecipesResponse = RecipeListItem[];</code></pre>
   id: number;
   name: string;
   slug: string;
-  quantity: number;
+  quantity: number | null;
   unit: string | null;
   note: string | null;
   sortOrder: number;
@@ -1612,7 +1612,7 @@ type PendingRecipesCountResponse = {
           <pre><code>type AdminRecipeIngredient = {
   id: number;
   name: string;
-  quantity: number;
+  quantity: number | null;
   unit: string | null;
   note: string | null;
   sortOrder: number;

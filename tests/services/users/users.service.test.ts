@@ -31,7 +31,7 @@ const baseRecipe: RecipeListItem = {
     slug: 'published-recipe',
     description: 'A public recipe.',
     category: 'Dinner',
-    coverImageUrl: null,
+    coverImage: null,
     prepTimeMinutes: 15,
     cookTimeMinutes: 25,
     restTimeMinutes: null,

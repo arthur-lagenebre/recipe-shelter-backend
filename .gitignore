@@ -20,6 +20,9 @@ coverage/
 .tmp/
 *.tsbuildinfo
 
+# local image uploads
+var/uploads/
+
 # OS / editor
 .DS_Store
 Thumbs.db

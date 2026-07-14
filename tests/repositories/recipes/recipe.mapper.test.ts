@@ -10,7 +10,13 @@ const listRow = {
     Title: 'Cake maison',
     Slug: 'cake-maison',
     Description: 'Simple et bon',
-    RecipeCoverImage: null,
+    CoverImageId: null,
+    CoverImageLargeStorageKey: null,
+    CoverImageMediumStorageKey: null,
+    CoverImageThumbnailStorageKey: null,
+    CoverImageWidth: null,
+    CoverImageHeight: null,
+    CoverImageAltText: null,
     Category: 'Dessert',
     PrepTimeMinutes: 15,
     RestTimeMinutes: null,
@@ -28,7 +34,13 @@ const recipeRow = {
     Title: 'Cake maison',
     Slug: 'cake-maison',
     Description: 'Simple et bon',
-    RecipeCoverImage: null,
+    CoverImageId: null,
+    CoverImageLargeStorageKey: null,
+    CoverImageMediumStorageKey: null,
+    CoverImageThumbnailStorageKey: null,
+    CoverImageWidth: null,
+    CoverImageHeight: null,
+    CoverImageAltText: null,
     PrepTimeMinutes: 15,
     RestTimeMinutes: null,
     CookTimeMinutes: 45,
@@ -55,7 +67,7 @@ describe('recipe.mapper', () => {
             title: 'Cake maison',
             slug: 'cake-maison',
             description: 'Simple et bon',
-            coverImageUrl: null,
+            coverImage: null,
             prepTimeMinutes: 15,
             restTimeMinutes: null,
             cookTimeMinutes: 45,
@@ -82,6 +94,7 @@ describe('recipe.mapper', () => {
             title: 'Cake maison',
             slug: 'cake-maison',
             description: 'Simple et bon',
+            coverImage: null,
             status: 'draft',
             createdAt: recipeRow.CreatedAt,
             submittedAt: null,
@@ -103,6 +116,11 @@ describe('recipe.mapper', () => {
         assert.deepEqual(mapRecipeEquipment({ EquipmentId: 4 } as RecipeEquipmentRow), { equipmentId: 4 });
     });
 
+    it('preserves an absent ingredient quantity as null', () => {
+        assert.equal(mapRecipeIngredient({ IngredientId: 7, Quantity: null, Unit: null, Note: null, SortOrder: 1 } as RecipeIngredientRow).quantity, null);
+        assert.equal(mapRecipeDetailIngredient({ Id: 7, IngredientId: 7, Name: 'Eau', Slug: 'eau', Quantity: null, Unit: null, Note: null, SortOrder: 1 } as RecipeDetailIngredientRow).quantity, null);
+    });
+
     it('keeps recipe list items unchanged', () => {
         const result = mapRecipeListItem(listRow);
 
@@ -118,6 +136,31 @@ describe('recipe.mapper', () => {
 
         assert.deepEqual(result.author, { id: 12, username: 'arthur' });
         assert.equal(Object.hasOwn(result, 'authorUsername'), false);
+    });
+
+    it('maps public image URLs without exposing storage keys or the removed URL field', () => {
+        const result = mapRecipeListItem({
+            ...listRow,
+            CoverImageId: 'image-id',
+            CoverImageLargeStorageKey: 'recipes/1/image-id/large.webp',
+            CoverImageMediumStorageKey: 'recipes/1/image-id/medium.webp',
+            CoverImageThumbnailStorageKey: 'recipes/1/image-id/thumbnail.webp',
+            CoverImageWidth: 1200,
+            CoverImageHeight: 800,
+            CoverImageAltText: 'Cake'
+        }, (key) => `https://images.example.test/${key}`);
+
+        assert.deepEqual(result.coverImage, {
+            id: 'image-id',
+            largeUrl: 'https://images.example.test/recipes/1/image-id/large.webp',
+            mediumUrl: 'https://images.example.test/recipes/1/image-id/medium.webp',
+            thumbnailUrl: 'https://images.example.test/recipes/1/image-id/thumbnail.webp',
+            width: 1200,
+            height: 800,
+            altText: 'Cake'
+        });
+        assert.equal(Object.hasOwn(result, 'coverImageUrl'), false);
+        assert.equal(JSON.stringify(result).includes('StorageKey'), false);
     });
 
     it('maps recipe detail nested rows', () => {

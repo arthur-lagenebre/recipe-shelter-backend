@@ -2,9 +2,10 @@ import { parseCreateRecipeBody, parseRecipeFeedLimitQuery, parseRecipeSlugParam,
 import { parsePaginationQuery } from '../../utils/pagination.js';
 import { asyncHandler } from '../http/async-handler.js';
 
+import type { RecipeImageService } from '../../services/recipes/recipe-image.service.js';
 import type { RecipeService } from '../../services/recipes/recipes.services.js';
 
-export function createRecipesController(recipeService: RecipeService) {
+export function createRecipesController(recipeService: RecipeService, recipeImageService: RecipeImageService) {
     return {
         getMyRecipes: asyncHandler(async (req, res) => {
             if (!req.auth) {
@@ -120,6 +121,35 @@ export function createRecipesController(recipeService: RecipeService) {
             const result = await recipeService.archive(recipeId, req.auth);
 
             res.status(200).json({ "ok": result });
+        }),
+
+        replaceCoverImage: asyncHandler(async (req, res) => {
+            if (!req.auth) {
+                res.status(401).json({ error: { message: 'Unauthorized', code: 'AUTH_UNAUTHORIZED' } });
+                return;
+            }
+
+            const recipeId = parseRecipeIdParam(req.params.recipeId);
+            const result = await recipeImageService.replace(
+                recipeId,
+                req.auth,
+                req.file ? { buffer: req.file.buffer, size: req.file.size } : undefined,
+                req.body?.altText
+            );
+
+            res.status(200).json(result);
+        }),
+
+        deleteCoverImage: asyncHandler(async (req, res) => {
+            if (!req.auth) {
+                res.status(401).json({ error: { message: 'Unauthorized', code: 'AUTH_UNAUTHORIZED' } });
+                return;
+            }
+
+            const recipeId = parseRecipeIdParam(req.params.recipeId);
+            await recipeImageService.delete(recipeId, req.auth);
+
+            res.status(204).send();
         }),
 
     };

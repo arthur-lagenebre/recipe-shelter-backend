@@ -1,12 +1,19 @@
 import { forbidden, notFound } from '../../utils/errors.js';
+import { canArchiveRecipe } from '../recipes/recipe-permissions.js';
 
 import type { AdminRecipeRepository } from "../../repositories/admin/admin.recipe.repository.interface.js";
 import type { RecipeAdmin, RecipePending } from "../../repositories/admin/admin.recipe.types.js";
+import type { RecipeImage } from '../../repositories/recipe-images/recipe-image.types.js';
 import type { RecipeRepository } from '../../repositories/recipes/recipe.repository.interface.js';
 import type { Recipe } from '../../repositories/recipes/recipe.types.js';
 
+type RecipeImageCleanup = {
+    findForCleanup(recipeId: number): Promise<RecipeImage | null>;
+    cleanupAfterRecipeDeletion(image: RecipeImage): Promise<void>;
+};
+
 export class AdminRecipeService {
-    constructor(private readonly recipeRepository: RecipeRepository, private readonly adminRecipeRepository: AdminRecipeRepository) { }
+    constructor(private readonly recipeRepository: RecipeRepository, private readonly adminRecipeRepository: AdminRecipeRepository, private readonly recipeImageCleanup?: RecipeImageCleanup) { }
 
     async getPendingRecipesForAdmin(): Promise<RecipePending[]> {
         return this.adminRecipeRepository.findPendingForAdmin();
@@ -43,7 +50,7 @@ export class AdminRecipeService {
         if (!recipe)
             throw notFound('Recipe not found', 'RECIPES_NOT_FOUND');
 
-        if (!this.canArchiveRecipe(recipe))
+        if (!canArchiveRecipe(recipe))
             throw forbidden('Recipe cannot be archived', 'RECIPES_ARCHIVE_FORBIDDEN');
 
         return this.recipeRepository.archive(recipeId);
@@ -55,7 +62,13 @@ export class AdminRecipeService {
         if (!recipe)
             throw notFound('Recipe not found', 'RECIPES_NOT_FOUND');
 
-        return this.adminRecipeRepository.delete(recipeId);
+        const image = await this.recipeImageCleanup?.findForCleanup(recipeId) ?? null;
+        const deleted = await this.adminRecipeRepository.delete(recipeId);
+
+        if (deleted && image)
+            await this.recipeImageCleanup?.cleanupAfterRecipeDeletion(image);
+
+        return deleted;
     }
 
     private async requireModeratableRecipe(recipeId: number): Promise<Recipe> {
@@ -70,7 +83,4 @@ export class AdminRecipeService {
         return recipe;
     }
 
-    private canArchiveRecipe(recipe: Recipe): boolean {
-        return recipe.status === 'published' || recipe.status === 'rejected';
-    }
 }

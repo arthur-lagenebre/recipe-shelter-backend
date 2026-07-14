@@ -1,6 +1,13 @@
-import type { Recipe, RecipeDetail, RecipeDetailComment, RecipeDetailCommentRow, RecipeDetailEquipment, RecipeDetailIngredient, RecipeDetailIngredientRow, RecipeDetailRow, RecipeDetailStep, RecipeDetailStepRow, RecipeDetailTag, RecipeDetailTagRow, RecipeDetailEquipmentRow, RecipeIngredient, RecipeIngredientRow, RecipeListItem, RecipeListItemRow, RecipeRow, RecipeStep, RecipeStepRow, RecipeSummary, RecipeEquipment, RecipeEquipmentRow } from './recipe.types.js';
+import { mapJoinedRecipeCoverImage } from '../recipe-images/recipe-image.mapper.js';
 
-export function mapRecipe(row: RecipeRow): Recipe {
+import type { Recipe, RecipeDetail, RecipeDetailComment, RecipeDetailCommentRow, RecipeDetailEquipment, RecipeDetailIngredient, RecipeDetailIngredientRow, RecipeDetailRow, RecipeDetailStep, RecipeDetailStepRow, RecipeDetailTag, RecipeDetailTagRow, RecipeDetailEquipmentRow, RecipeIngredient, RecipeIngredientRow, RecipeListItem, RecipeListItemRow, RecipeRow, RecipeStep, RecipeStepRow, RecipeSummary, RecipeEquipment, RecipeEquipmentRow } from './recipe.types.js';
+import type { PublicImageUrlBuilder } from '../recipe-images/recipe-image.types.js';
+
+const missingPublicImageUrlBuilder: PublicImageUrlBuilder = () => {
+    throw new Error('A public image URL builder is required to map recipe images');
+};
+
+export function mapRecipe(row: RecipeRow, getPublicUrl: PublicImageUrlBuilder = missingPublicImageUrlBuilder): Recipe {
     return {
         id: row.Id,
         userId: row.UserId,
@@ -8,7 +15,7 @@ export function mapRecipe(row: RecipeRow): Recipe {
         title: row.Title,
         slug: row.Slug,
         description: row.Description,
-        coverImageUrl: row.RecipeCoverImage,
+        coverImage: mapJoinedRecipeCoverImage(row, getPublicUrl),
         prepTimeMinutes: row.PrepTimeMinutes,
         restTimeMinutes: row.RestTimeMinutes,
         cookTimeMinutes: row.CookTimeMinutes,
@@ -29,12 +36,13 @@ export function mapRecipe(row: RecipeRow): Recipe {
     };
 }
 
-export function mapRecipeSummary(row: RecipeRow): RecipeSummary {
+export function mapRecipeSummary(row: RecipeRow, getPublicUrl: PublicImageUrlBuilder = missingPublicImageUrlBuilder): RecipeSummary {
     return {
         id: row.Id,
         title: row.Title,
         slug: row.Slug,
         description: row.Description,
+        coverImage: mapJoinedRecipeCoverImage(row, getPublicUrl),
         status: row.Status,
         createdAt: row.CreatedAt,
         submittedAt: row.SubmittedAt,
@@ -47,7 +55,7 @@ export function mapRecipeSummary(row: RecipeRow): RecipeSummary {
 export function mapRecipeIngredient(row: RecipeIngredientRow): RecipeIngredient {
     return {
         ingredientId: row.IngredientId,
-        quantity: Number(row.Quantity),
+        quantity: row.Quantity === null ? null : Number(row.Quantity),
         unit: row.Unit,
         note: row.Note,
         sortOrder: row.SortOrder
@@ -67,14 +75,14 @@ export function mapRecipeEquipment(row: RecipeEquipmentRow): RecipeEquipment {
     };
 }
 
-export function mapRecipeListItem(row: RecipeListItemRow): RecipeListItem {
+export function mapRecipeListItem(row: RecipeListItemRow, getPublicUrl: PublicImageUrlBuilder = missingPublicImageUrlBuilder): RecipeListItem {
     return {
         id: row.Id,
         title: row.Title,
         slug: row.Slug,
         description: row.Description,
         category: row.Category,
-        coverImageUrl: row.RecipeCoverImage,
+        coverImage: mapJoinedRecipeCoverImage(row, getPublicUrl),
         prepTimeMinutes: row.PrepTimeMinutes,
         cookTimeMinutes: row.CookTimeMinutes,
         restTimeMinutes: row.RestTimeMinutes,
@@ -85,14 +93,14 @@ export function mapRecipeListItem(row: RecipeListItemRow): RecipeListItem {
     };
 }
 
-export function mapRecipeDetail(row: RecipeDetailRow): RecipeDetail {
+export function mapRecipeDetail(row: RecipeDetailRow, getPublicUrl: PublicImageUrlBuilder = missingPublicImageUrlBuilder): RecipeDetail {
     return {
         id: row.Id,
         title: row.Title,
         slug: row.Slug,
         description: row.Description,
         category: row.Category,
-        coverImageUrl: row.RecipeCoverImage,
+        coverImage: mapJoinedRecipeCoverImage(row, getPublicUrl),
         prepTimeMinutes: row.PrepTimeMinutes,
         cookTimeMinutes: row.CookTimeMinutes,
         restTimeMinutes: row.RestTimeMinutes,
@@ -119,7 +127,7 @@ export function mapRecipeDetailIngredient(row: RecipeDetailIngredientRow): Recip
         id: row.IngredientId,
         name: row.Name,
         slug: row.Slug,
-        quantity: Number(row.Quantity),
+        quantity: row.Quantity === null ? null : Number(row.Quantity),
         unit: row.Unit,
         note: row.Note,
         sortOrder: row.SortOrder

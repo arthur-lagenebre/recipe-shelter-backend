@@ -1,9 +1,10 @@
 import type { PublicAuthorDto } from '../public-author.types.js';
+import type { RecipeCoverImageDto, RecipeImageJoinedRow } from '../recipe-images/recipe-image.types.js';
 import type { RowDataPacket } from 'mysql2';
 
 export type RecipeIngredientInput = {
     ingredientId: number;
-    quantity: number;
+    quantity?: number | null;
     unit?: string | null;
     note?: string | null;
     sortOrder?: number;
@@ -24,7 +25,6 @@ export type RecipeInput = {
     title: string;
     slug: string;
     description?: string;
-    coverImageUrl?: string | null;
     prepTimeMinutes?: number;
     restTimeMinutes?: number | null;
     cookTimeMinutes?: number | null;
@@ -51,7 +51,7 @@ export type UpdateRecipeInput = RecipeInput & {
 
 export type RecipeIngredient = {
     ingredientId: number;
-    quantity: number;
+    quantity: number | null;
     unit: string | null;
     note: string | null;
     sortOrder: number;
@@ -73,7 +73,7 @@ export type Recipe = {
     title: string;
     slug: string;
     description: string;
-    coverImageUrl: string | null;
+    coverImage: RecipeCoverImageDto | null;
     prepTimeMinutes: number;
     restTimeMinutes: number | null;
     cookTimeMinutes: number | null;
@@ -98,6 +98,7 @@ export type RecipeSummary = {
     title: string;
     slug: string;
     description: string;
+    coverImage: RecipeCoverImageDto | null;
     status: string;
     createdAt: Date;
     submittedAt: Date | null;
@@ -112,7 +113,7 @@ export interface RecipeListItem {
     slug: string;
     description: string | null;
     category: string | null;
-    coverImageUrl: string | null;
+    coverImage: RecipeCoverImageDto | null;
     prepTimeMinutes: number | null;
     cookTimeMinutes: number | null;
     restTimeMinutes: number | null;
@@ -138,7 +139,7 @@ export type RecipeDetailIngredient = {
     id: number;
     name: string;
     slug: string;
-    quantity: number;
+    quantity: number | null;
     unit: string | null;
     note: string | null;
     sortOrder: number;
@@ -175,14 +176,13 @@ export type RecipeDetailComment = {
     children: RecipeDetailComment[];
 };
 
-export type RecipeRow = RowDataPacket & {
+export type RecipeRow = RowDataPacket & RecipeImageJoinedRow & {
     Id: number;
     UserId: number;
     CategoryId: number | null;
     Title: string;
     Slug: string;
     Description: string;
-    RecipeCoverImage: string | null;
     PrepTimeMinutes: number;
     RestTimeMinutes: number | null;
     CookTimeMinutes: number | null;
@@ -206,7 +206,7 @@ export type RecipeDetailCommentStatsRow = RowDataPacket & {
 
 export type RecipeIngredientRow = RowDataPacket & {
     IngredientId: number;
-    Quantity: number | string;
+    Quantity: number | string | null;
     Unit: string | null;
     Note: string | null;
     SortOrder: number;
@@ -225,12 +225,11 @@ export type RecipeTagRow = RowDataPacket & {
     TagId: number;
 };
 
-export type RecipeListItemRow = RowDataPacket & {
+export type RecipeListItemRow = RowDataPacket & RecipeImageJoinedRow & {
     Id: number;
     Title: string;
     Slug: string;
     Description: string;
-    RecipeCoverImage: string | null;
     Category: string | null;
     PrepTimeMinutes: number;
     RestTimeMinutes: number | null;
@@ -249,7 +248,7 @@ export type RecipeDetailIngredientRow = RowDataPacket & {
     Id: number;
     Name: string;
     Slug: string;
-    Quantity: number | string;
+    Quantity: number | string | null;
     Unit: string | null;
     Note: string | null;
     SortOrder: number;

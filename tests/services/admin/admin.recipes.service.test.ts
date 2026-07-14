@@ -6,6 +6,7 @@ import { HttpError } from '../../../src/utils/errors.js';
 
 import type { AdminRecipeRepository } from '../../../src/repositories/admin/admin.recipe.repository.interface.js';
 import type { RecipeAdmin, RecipePending } from '../../../src/repositories/admin/admin.recipe.types.js';
+import type { RecipeImage } from '../../../src/repositories/recipe-images/recipe-image.types.js';
 import type { RecipeRepository } from '../../../src/repositories/recipes/recipe.repository.interface.js';
 import type { Recipe } from '../../../src/repositories/recipes/recipe.types.js';
 
@@ -16,7 +17,7 @@ const baseRecipe: Recipe = {
     title: 'Cake',
     slug: 'cake',
     description: 'Good',
-    coverImageUrl: null,
+    coverImage: null,
     prepTimeMinutes: 15,
     restTimeMinutes: null,
     cookTimeMinutes: 45,
@@ -48,6 +49,7 @@ const pendingRecipe: RecipePending = {
 
 const adminRecipe: RecipeAdmin = {
     ...pendingRecipe,
+    coverImage: null,
     prepTimeMinutes: 15,
     restTimeMinutes: null,
     cookTimeMinutes: 45,
@@ -172,5 +174,41 @@ describe('AdminRecipeService', () => {
 
         recipes.recipe = null;
         await assert.rejects(() => service.delete(99), (error) => assertHttpError(error, 'RECIPES_NOT_FOUND', 404));
+    });
+
+    it('cleans image objects only after a physical recipe deletion', async () => {
+        const events: string[] = [];
+        const image = {
+            id: 'image-id',
+            recipeId: 10,
+            largeStorageKey: 'recipes/10/image-id/large.webp',
+            mediumStorageKey: 'recipes/10/image-id/medium.webp',
+            thumbnailStorageKey: 'recipes/10/image-id/thumbnail.webp',
+            originalWidth: 100,
+            originalHeight: 50,
+            largeWidth: 100,
+            largeHeight: 50,
+            largeSizeBytes: 10,
+            altText: null,
+            createdAt: new Date(),
+            updatedAt: new Date()
+        } satisfies RecipeImage;
+        const cleanup = {
+            async findForCleanup() {
+                events.push('image:read');
+                return image;
+            },
+            async cleanupAfterRecipeDeletion() {
+                events.push('storage:delete');
+            }
+        };
+        adminRecipes.delete = async () => {
+            events.push('db:delete');
+            return true;
+        };
+        service = new AdminRecipeService(recipes as unknown as RecipeRepository, adminRecipes, cleanup);
+
+        assert.equal(await service.delete(10), true);
+        assert.deepEqual(events, ['image:read', 'db:delete', 'storage:delete']);
     });
 });

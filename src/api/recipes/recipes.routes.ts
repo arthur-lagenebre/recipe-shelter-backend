@@ -1,5 +1,6 @@
 import { Router } from 'express';
 
+import { uploadRecipeImage } from '../../middlewares/recipe-image-upload.js';
 import { optionalAuth, requireAuth } from '../../middlewares/require-auth.js';
 
 import type { RequestHandler } from 'express';
@@ -15,6 +16,8 @@ type RecipesController = {
   updateRecipe: RequestHandler;
   submitRecipe: RequestHandler;
   archiveRecipe: RequestHandler;
+  replaceCoverImage: RequestHandler;
+  deleteCoverImage: RequestHandler;
 };
 
 export function createRecipesRouter(controller: RecipesController) {
@@ -25,6 +28,8 @@ export function createRecipesRouter(controller: RecipesController) {
   router.get('/', optionalAuth, controller.getRecipes);
   router.get('/search', optionalAuth, controller.searchRecipes);
   router.get('/recent', optionalAuth, controller.getRecentRecipes);
+  router.put('/:recipeId/cover-image', requireAuth, uploadRecipeImage, controller.replaceCoverImage);
+  router.delete('/:recipeId/cover-image', requireAuth, controller.deleteCoverImage);
   router.get('/:slug', optionalAuth, controller.getRecipeBySlug)
   router.get('/me/:id', requireAuth, controller.getRecipe)
   router.patch('/me/:id', requireAuth, controller.updateRecipe);

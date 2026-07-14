@@ -21,7 +21,7 @@ const recipe: RecipeListItem = {
     slug: 'summer-salad',
     description: 'Fresh and quick',
     category: 'Salads',
-    coverImageUrl: null,
+    coverImage: null,
     prepTimeMinutes: 10,
     cookTimeMinutes: null,
     restTimeMinutes: null,

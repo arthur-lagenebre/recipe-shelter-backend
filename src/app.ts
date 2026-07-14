@@ -44,6 +44,7 @@ import { CommentRepositoryMysql } from './repositories/comments/comments.reposit
 import { EquipmentRepositoryMysql } from './repositories/equipments/equipment.repository.mysql.js';
 import { FavoriteRepositoryMysql } from './repositories/favorites/favorites.repository.mysql.js';
 import { IngredientRepositoryMysql } from './repositories/ingredients/ingredient.repository.mysql.js';
+import { RecipeImageRepositoryMysql } from './repositories/recipe-images/recipe-image.repository.mysql.js';
 import { RecipeRepositoryMysql } from './repositories/recipes/recipe.repository.mysql.js';
 import { TagRepositoryMysql } from './repositories/tag/tag.repository.mysql.js';
 import { UserRepositoryMysql } from './repositories/users/user.repository.mysql.js';
@@ -60,13 +61,18 @@ import { EquipmentService } from './services/equipments/equipments.service.js';
 import { FavoriteService } from './services/favorites/favorites.service.js';
 import { IngredientService } from './services/ingredients/ingredients.service.js';
 import { SmtpMailService } from './services/mail/mail.service.js';
+import { RecipeImageProcessor } from './services/recipes/recipe-image.processor.js';
+import { RecipeImageService } from './services/recipes/recipe-image.service.js';
 import { RecipeSlugService } from './services/recipes/recipe-slug.service.js';
 import { RecipeService } from './services/recipes/recipes.services.js';
 import { TagService } from './services/tag/tags.service.js';
 import { UserService } from './services/users/users.service.js';
+import { createImageStorage } from './storage/image-storage.factory.js';
+import { createLocalMediaMiddleware } from './storage/local-media.middleware.js';
 import { env } from './utils/env.js';
 
 import type { UserRepository } from './repositories/users/user.repository.interface.js';
+import type { ImageStorage } from './storage/image-storage.interface.js';
 
 export type AppDependencies = {
   adminCommentService: AdminCommentService;
@@ -81,7 +87,9 @@ export type AppDependencies = {
   equipmentService: EquipmentService;
   favoriteService: FavoriteService;
   ingredientService: IngredientService;
+  imageStorage: ImageStorage;
   passwordResetService: PasswordResetService;
+  recipeImageService: RecipeImageService;
   recipeService: RecipeService;
   tagService: TagService;
   usersService: UserService;
@@ -89,27 +97,31 @@ export type AppDependencies = {
 
 function createDefaultDependencies(): AppDependencies {
   const mailer = new SmtpMailService(env.smtp);
+  const imageStorage = createImageStorage(env.imageStorage);
+  const getPublicImageUrl = (key: string) => imageStorage.getPublicUrl(key);
 
   const adminCommentRepository = new AdminCommentRepositoryMysql(pool);
-  const adminRecipeRepository = new AdminRecipeRepositoryMysql(pool);
+  const adminRecipeRepository = new AdminRecipeRepositoryMysql(pool, getPublicImageUrl);
   const adminUserRepository = new AdminUserRepositoryMysql(pool);
   const categoryRepository = new CategoryRepositoryMysql(pool);
   const commentRepository = new CommentRepositoryMysql(pool);
   const equipmentRepository = new EquipmentRepositoryMysql(pool);
-  const favoriteRepository = new FavoriteRepositoryMysql(pool);
+  const favoriteRepository = new FavoriteRepositoryMysql(pool, getPublicImageUrl);
   const ingredientRepository = new IngredientRepositoryMysql(pool);
   const emailValidationRepository = new EmailValidationRepositoryMysql(pool);
   const passwordResetRepository = new PasswordResetRepositoryMysql(pool);
-  const recipeRepository = new RecipeRepositoryMysql(pool);
+  const recipeRepository = new RecipeRepositoryMysql(pool, getPublicImageUrl);
+  const recipeImageRepository = new RecipeImageRepositoryMysql(pool);
   const tagRepository = new TagRepositoryMysql(pool);
   const userRepository = new UserRepositoryMysql(pool);
 
   const emailValidationService = new EmailValidationService(userRepository, emailValidationRepository, mailer, env.http.frontendBaseUrl);
   const recipeSlugService = new RecipeSlugService(recipeRepository);
+  const recipeImageService = new RecipeImageService(recipeRepository, recipeImageRepository, new RecipeImageProcessor(), imageStorage);
 
   return {
     adminCommentService: new AdminCommentService(adminCommentRepository),
-    adminRecipeService: new AdminRecipeService(recipeRepository, adminRecipeRepository),
+    adminRecipeService: new AdminRecipeService(recipeRepository, adminRecipeRepository, recipeImageService),
     adminUserService: new AdminUserService(userRepository, adminUserRepository),
     authService: new AuthService(userRepository, emailValidationService),
     authUserRepository: userRepository,
@@ -119,8 +131,10 @@ function createDefaultDependencies(): AppDependencies {
     emailValidationService,
     equipmentService: new EquipmentService(equipmentRepository),
     favoriteService: new FavoriteService(favoriteRepository),
+    imageStorage,
     ingredientService: new IngredientService(ingredientRepository),
     passwordResetService: new PasswordResetService(userRepository, passwordResetRepository, mailer, env.http.frontendBaseUrl),
+    recipeImageService,
     recipeService: new RecipeService(recipeRepository, recipeSlugService),
     tagService: new TagService(tagRepository),
     usersService: new UserService(userRepository, recipeRepository)
@@ -129,6 +143,7 @@ function createDefaultDependencies(): AppDependencies {
 
 export function createApp(overrides: Partial<AppDependencies> = {}) {
   const app = express();
+  const dependencies = { ...createDefaultDependencies(), ...overrides };
 
   const origins = env.http.corsAllowedOrigins
     .split(',')
@@ -140,9 +155,12 @@ export function createApp(overrides: Partial<AppDependencies> = {}) {
 
   app.use(cors({ credentials: true, origin: origins }));
   app.use(cookieParser());
-  app.use(express.json());
 
-  const dependencies = { ...createDefaultDependencies(), ...overrides };
+  const localMediaMiddleware = createLocalMediaMiddleware(dependencies.imageStorage);
+  if (localMediaMiddleware)
+    app.use('/media', localMediaMiddleware);
+  
+  app.use(express.json());
 
   configureAuthUserRepository(dependencies.authUserRepository);
 
@@ -156,7 +174,7 @@ export function createApp(overrides: Partial<AppDependencies> = {}) {
   const equipmentsController = createEquipmentsController(dependencies.equipmentService);
   const favoritesController = createFavoritesController(dependencies.favoriteService);
   const ingredientsController = createIngredientsController(dependencies.ingredientService);
-  const recipesController = createRecipesController(dependencies.recipeService);
+  const recipesController = createRecipesController(dependencies.recipeService, dependencies.recipeImageService);
   const tagController = createTagsController(dependencies.tagService);
   const usersController = createUsersController(dependencies.usersService);
 

@@ -8,6 +8,8 @@ Backend Node.js/Express de **Recipe Shelter**, un projet de formation autour d'u
 - Express
 - TypeScript
 - MySQL
+- Multer et Sharp pour les images de couverture
+- Stockage local ou S3 compatible Cloudflare R2
 - JWT stocké en cookie HttpOnly
 
 ## Prérequis
@@ -62,6 +64,9 @@ DB_USER=root
 DB_PASSWORD=your_database_password
 
 JWT_SECRET=your_long_random_jwt_secret
+IMAGE_STORAGE_DRIVER=local
+IMAGE_LOCAL_ROOT=./var/uploads
+IMAGE_PUBLIC_BASE_URL=http://localhost:3000/media
 ```
 
 Pour générer une valeur locale de `JWT_SECRET` :
@@ -78,17 +83,21 @@ Vérifiez que MySQL est démarré, puis créez la base locale avec l'un des scri
 npm run db:reset
 ```
 
+Cette commande recrée aussi la table `RecipeImages`. Pour repartir d'un stockage local totalement vide, arrêtez l'API puis supprimez explicitement `var/uploads` :
+
+```powershell
+Remove-Item -LiteralPath .\var\uploads -Recurse -Force -ErrorAction SilentlyContinue
+```
+
+```bash
+rm -rf -- ./var/uploads
+```
+
 Ce script :
 
 - supprime la base `recipe_shelter` si elle existe ;
 - recrée le schéma ;
 - insère les données de référence minimales : rôles, catégories, ingrédients, groupes de tags, tags et ustensiles.
-
-Pour charger aussi des recettes, commentaires et favoris de démonstration :
-
-```bash
-npm run db:reset:demo
-```
 
 Les scripts npm utilisent `mysql -u root -p`. Si vous utilisez un autre utilisateur MySQL, lancez le script SQL directement.
 
@@ -145,7 +154,7 @@ Sur macOS/Linux :
 curl http://localhost:3000/api/v1/recipes
 ```
 
-Une réponse JSON indique que le serveur et la connexion MySQL fonctionnent. Avec `npm run db:reset`, la liste peut être vide. Avec `npm run db:reset:demo`, elle contient des recettes de démonstration.
+Une réponse JSON indique que le serveur et la connexion MySQL fonctionnent. Avec `npm run db:reset`, la liste peut être vide.
 
 Les routes HTTP sont exposées avec le préfixe `/api/v1`.
 
@@ -160,6 +169,22 @@ Exemples :
 - `GET /api/v1/ingredients`
 - `GET /api/v1/tags`
 - `GET /api/v1/equipments`
+- `PUT /api/v1/recipes/:recipeId/cover-image` (session requise, `multipart/form-data`)
+- `DELETE /api/v1/recipes/:recipeId/cover-image` (session requise)
+
+L'upload de couverture attend exactement un fichier dans le champ `image` et accepte un champ texte facultatif `altText`. Les entrées JPEG, PNG et WebP sont décodées puis normalisées en trois variantes WebP (1600, 800 et 400 pixels maximum). La taille d'entrée est limitée à 10 Mo. Les réponses de recette exposent `coverImage: null` ou l'objet suivant ; aucune clé interne de stockage n'est renvoyée :
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "largeUrl": "http://localhost:3000/media/recipes/1/550e8400-e29b-41d4-a716-446655440000/large.webp",
+  "mediumUrl": "http://localhost:3000/media/recipes/1/550e8400-e29b-41d4-a716-446655440000/medium.webp",
+  "thumbnailUrl": "http://localhost:3000/media/recipes/1/550e8400-e29b-41d4-a716-446655440000/thumbnail.webp",
+  "width": 1600,
+  "height": 1067,
+  "altText": "Tarte aux pommes"
+}
+```
 
 Les tags sont rattachés à un groupe. Les réponses `GET /api/v1/tags` et `GET /api/v1/tags/:id` incluent donc un objet `group` :
 
@@ -212,6 +237,14 @@ Les valeurs par défaut sont définies dans `.env.example`.
 | `AUTH_RATE_LIMIT_WINDOW_MS` | Non | Fenêtre du rate limit en millisecondes. |
 | `CORS_ALLOWED_ORIGINS` | Non | Origines frontend autorisées, séparées par des virgules. Les credentials CORS sont activés, donc `*` n'est pas accepté. |
 | `FRONTEND_BASE_URL` | Non | URL du frontend utilisée dans les liens d'email. |
+| `IMAGE_STORAGE_DRIVER` | Non | Stockage des images : `local` (défaut) ou `s3`. Toute autre valeur bloque le démarrage. |
+| `IMAGE_LOCAL_ROOT` | En mode local | Répertoire racine résolu pour les uploads. Défaut : `./var/uploads`. |
+| `IMAGE_PUBLIC_BASE_URL` | Oui en mode S3 | Base publique ajoutée aux clés, par exemple `http://localhost:3000/media` ou un domaine R2 public. |
+| `IMAGE_S3_ENDPOINT` | En mode S3 | Endpoint privé S3/R2, par exemple `https://<account-id>.r2.cloudflarestorage.com`. |
+| `IMAGE_S3_REGION` | En mode S3 | Région S3. Utiliser `auto` pour Cloudflare R2. |
+| `IMAGE_S3_BUCKET` | En mode S3 | Bucket privé contenant les variantes d'image. |
+| `IMAGE_S3_ACCESS_KEY_ID` | En mode S3 | Identifiant d'accès serveur, jamais transmis au frontend. |
+| `IMAGE_S3_SECRET_ACCESS_KEY` | En mode S3 | Secret d'accès serveur, jamais transmis au frontend. |
 | `SMTP_HOST` | Selon usage | Serveur SMTP pour validation email, reset password et contact. |
 | `SMTP_PORT` | Selon usage | Port SMTP. |
 | `SMTP_SECURE` | Selon usage | `true` pour TLS direct, sinon `false`. |
@@ -221,6 +254,12 @@ Les valeurs par défaut sont définies dans `.env.example`.
 | `CONTACT_RECIPIENT_EMAIL` | Selon usage | Adresse qui reçoit les messages du formulaire de contact. |
 
 Les routes publiques de lecture peuvent fonctionner sans SMTP réel. Les routes `POST /api/v1/auth/register`, `POST /api/v1/auth/resend-validation-email`, `POST /api/v1/auth/forgot-password` et `POST /api/v1/contact` ont besoin d'une configuration SMTP valide pour envoyer des emails.
+
+### Stockage des images en production
+
+Le mode local ne demande aucun service externe. Les fichiers sont servis uniquement sous `/media` depuis `IMAGE_LOCAL_ROOT`. Dans Docker, montez ce répertoire sur un volume persistant, par exemple `recipe-images:/app/var/uploads`, et configurez `IMAGE_LOCAL_ROOT=/app/var/uploads`; sans volume, les images disparaissent avec le conteneur.
+
+Pour Cloudflare R2, utilisez `IMAGE_STORAGE_DRIVER=s3`, gardez le bucket non modifiable publiquement et configurez `IMAGE_PUBLIC_BASE_URL` avec le domaine public de lecture. L'endpoint et les identifiants R2 restent exclusivement côté backend. L'upload transite toujours par l'API ; aucune URL présignée n'est utilisée.
 
 ## Scripts utiles
 
@@ -291,12 +330,6 @@ npm run db:reset
 
 Réinitialise la base locale avec les données minimales.
 
-```bash
-npm run db:reset:demo
-```
-
-Réinitialise la base locale avec les données minimales et les données de démonstration.
-
 ## Dépannage
 
 ### `JWT_SECRET is required`
@@ -317,7 +350,7 @@ MySQL n'est pas démarré ou n'écoute pas sur le port configuré. Démarrez MyS
 
 ### `Unknown collation: utf8mb4_0900_ai_ci`
 
-Votre serveur n'est probablement pas MySQL 8. Utilisez MySQL 8.x ou adaptez la collation dans `database/reset.sql` et `database/reset_demo.sql`.
+Votre serveur n'est probablement pas MySQL 8. Utilisez MySQL 8.x ou adaptez la collation dans `database/reset.sql`.
 
 ### `MAIL_SEND_FAILED` ou `CONTACT_SEND_FAILED`
 

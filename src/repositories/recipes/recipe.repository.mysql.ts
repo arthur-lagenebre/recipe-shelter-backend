@@ -5,6 +5,7 @@ import { createPaginatedResult, formatLimitOffsetClause } from '../../utils/pagi
 import type { RecipeRepository } from "./recipe.repository.interface.js";
 import type { Recipe, RecipeDetail, RecipeDetailCommentRow, RecipeDetailCommentStatsRow, RecipeDetailIngredientRow, RecipeDetailRow, RecipeDetailStepRow, RecipeDetailTagRow, RecipeDetailEquipmentRow, RecipeIngredientRow, RecipeInput, RecipeListItem, RecipeListItemRow, RecipeRow, RecipeStepRow, RecipeSummary, RecipeTagRow, RecipeEquipmentRow, RecipeSearchFilters, UpdateRecipeInput } from "./recipe.types.js";
 import type { PaginatedResult, PaginationOptions } from '../../utils/pagination.js';
+import type { PublicImageUrlBuilder } from '../recipe-images/recipe-image.types.js';
 import type { ResultSetHeader } from 'mysql2';
 import type { Pool, PoolConnection } from 'mysql2/promise';
 
@@ -17,8 +18,20 @@ type PublishedWhere = {
     params: Array<string | number>;
 };
 
+const COVER_IMAGE_SELECT = `ri.Id AS CoverImageId,
+    ri.LargeStorageKey AS CoverImageLargeStorageKey,
+    ri.MediumStorageKey AS CoverImageMediumStorageKey,
+    ri.ThumbnailStorageKey AS CoverImageThumbnailStorageKey,
+    ri.LargeWidth AS CoverImageWidth,
+    ri.LargeHeight AS CoverImageHeight,
+    ri.AltText AS CoverImageAltText`;
+
+const missingPublicImageUrlBuilder: PublicImageUrlBuilder = () => {
+    throw new Error('RecipeRepositoryMysql requires a public image URL builder when an image exists');
+};
+
 export class RecipeRepositoryMysql implements RecipeRepository {
-    constructor(private readonly db: Pool) { }
+    constructor(private readonly db: Pool, private readonly getPublicImageUrl: PublicImageUrlBuilder = missingPublicImageUrlBuilder) { }
 
     async create(input: RecipeInput): Promise<Recipe> {
         const connection = await this.db.getConnection();
@@ -27,9 +40,9 @@ export class RecipeRepositoryMysql implements RecipeRepository {
             await connection.beginTransaction();
 
             const [result] = await connection.execute<ResultSetHeader>(
-                `INSERT INTO Recipes (UserId, CategoryId, Title, Slug, Description, RecipeCoverImage, PrepTimeMinutes, RestTimeMinutes, CookTimeMinutes, Servings, Status)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                [input.userId, input.categoryId ?? null, input.title, input.slug, input.description ?? '', input.coverImageUrl ?? null, input.prepTimeMinutes ?? 0, input.restTimeMinutes ?? null, input.cookTimeMinutes ?? null, input.servings ?? 1, 'draft']
+                `INSERT INTO Recipes (UserId, CategoryId, Title, Slug, Description, PrepTimeMinutes, RestTimeMinutes, CookTimeMinutes, Servings, Status)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [input.userId, input.categoryId ?? null, input.title, input.slug, input.description ?? '', input.prepTimeMinutes ?? 0, input.restTimeMinutes ?? null, input.cookTimeMinutes ?? null, input.servings ?? 1, 'draft']
             );
 
             const recipeId = Number(result.insertId);
@@ -77,11 +90,6 @@ export class RecipeRepositoryMysql implements RecipeRepository {
             if (input.description !== undefined) {
                 updateFields.push('Description = ?');
                 updateValues.push(input.description);
-            }
-
-            if (input.coverImageUrl !== undefined) {
-                updateFields.push('RecipeCoverImage = ?');
-                updateValues.push(input.coverImageUrl);
             }
 
             if (input.prepTimeMinutes !== undefined) {
@@ -182,9 +190,11 @@ export class RecipeRepositoryMysql implements RecipeRepository {
 
     async findById(id: number): Promise<Recipe | null> {
         return this.findOne(
-            `SELECT Id, UserId, CategoryId, Title, Slug, Description, RecipeCoverImage, PrepTimeMinutes, RestTimeMinutes, CookTimeMinutes, Servings, Status, CreatedAt, SubmittedAt, ModeratedAt, ModeratedByUserId, PublishedAt, ArchivedAt, RejectionReason, UpdatedAt
-             FROM Recipes
-             WHERE Id = ?`,
+            `SELECT r.Id, r.UserId, r.CategoryId, r.Title, r.Slug, r.Description, r.PrepTimeMinutes, r.RestTimeMinutes, r.CookTimeMinutes, r.Servings, r.Status, r.CreatedAt, r.SubmittedAt, r.ModeratedAt, r.ModeratedByUserId, r.PublishedAt, r.ArchivedAt, r.RejectionReason, r.UpdatedAt,
+                    ${COVER_IMAGE_SELECT}
+             FROM Recipes AS r
+             LEFT JOIN RecipeImages AS ri ON ri.RecipeId = r.Id
+             WHERE r.Id = ?`,
             [id]
         );
     }
@@ -200,15 +210,17 @@ export class RecipeRepositoryMysql implements RecipeRepository {
         );
 
         const [rows] = await this.db.execute(
-            `SELECT Id, Title, Slug, Description, Status, CreatedAt, SubmittedAt, PublishedAt, RejectionReason, UpdatedAt
-             FROM Recipes
-             WHERE UserId = ?
-             ORDER BY UpdatedAt DESC, Id DESC
+            `SELECT r.Id, r.Title, r.Slug, r.Description, r.Status, r.CreatedAt, r.SubmittedAt, r.PublishedAt, r.RejectionReason, r.UpdatedAt,
+                    ${COVER_IMAGE_SELECT}
+             FROM Recipes AS r
+             LEFT JOIN RecipeImages AS ri ON ri.RecipeId = r.Id
+             WHERE r.UserId = ?
+             ORDER BY r.UpdatedAt DESC, r.Id DESC
              ${limitOffsetClause}`,
             [userId]
         );
 
-        return createPaginatedResult((rows as RecipeRow[]).map(mapRecipeSummary), this.mapCount(countRows), pagination);
+        return createPaginatedResult((rows as RecipeRow[]).map((row) => mapRecipeSummary(row, this.getPublicImageUrl)), this.mapCount(countRows), pagination);
     }
 
     async findPublished(userId: number | null, pagination: PaginationOptions): Promise<PaginatedResult<RecipeListItem>> {
@@ -227,60 +239,68 @@ export class RecipeRepositoryMysql implements RecipeRepository {
         );
 
         const [rows] = await this.db.execute(
-            `SELECT r.Id, r.Title, r.Slug, r.Description, r.RecipeCoverImage, rc.Name AS Category, r.PrepTimeMinutes, r.RestTimeMinutes, r.CookTimeMinutes, r.Servings, u.Username AS AuthorUsername, r.PublishedAt, CASE WHEN ? IS NULL THEN FALSE ELSE f.UserId IS NOT NULL END AS IsFavorite
+            `SELECT r.Id, r.Title, r.Slug, r.Description, rc.Name AS Category, r.PrepTimeMinutes, r.RestTimeMinutes, r.CookTimeMinutes, r.Servings, u.Username AS AuthorUsername, r.PublishedAt, CASE WHEN ? IS NULL THEN FALSE ELSE f.UserId IS NOT NULL END AS IsFavorite,
+                    ${COVER_IMAGE_SELECT}
              FROM Recipes AS r
              LEFT JOIN RecipeCategories AS rc ON rc.Id = r.CategoryId
              INNER JOIN Users AS u ON u.Id = r.UserId
              LEFT JOIN Favorites AS f ON f.RecipeId = r.Id AND f.UserId = ?
+             LEFT JOIN RecipeImages AS ri ON ri.RecipeId = r.Id
              WHERE ${where.clause}
              ORDER BY r.PublishedAt DESC, r.Id DESC
              ${limitOffsetClause}`,
             [userId, userId, ...where.params]
         );
 
-        return createPaginatedResult((rows as RecipeListItemRow[]).map(mapRecipeListItem), this.mapCount(countRows), pagination);
+        return createPaginatedResult((rows as RecipeListItemRow[]).map((row) => mapRecipeListItem(row, this.getPublicImageUrl)), this.mapCount(countRows), pagination);
     }
 
     async findPublishedByAuthorId(viewerUserId: number | null, authorUserId: number): Promise<RecipeListItem[]> {
         const [rows] = await this.db.execute(
-            `SELECT r.Id, r.Title, r.Slug, r.Description, r.RecipeCoverImage, rc.Name AS Category, r.PrepTimeMinutes, r.RestTimeMinutes, r.CookTimeMinutes, r.Servings, u.Username AS AuthorUsername, r.PublishedAt, CASE WHEN ? IS NULL THEN FALSE ELSE f.UserId IS NOT NULL END AS IsFavorite
+            `SELECT r.Id, r.Title, r.Slug, r.Description, rc.Name AS Category, r.PrepTimeMinutes, r.RestTimeMinutes, r.CookTimeMinutes, r.Servings, u.Username AS AuthorUsername, r.PublishedAt, CASE WHEN ? IS NULL THEN FALSE ELSE f.UserId IS NOT NULL END AS IsFavorite,
+                    ${COVER_IMAGE_SELECT}
              FROM Recipes AS r
              LEFT JOIN RecipeCategories AS rc ON rc.Id = r.CategoryId
              INNER JOIN Users AS u ON u.Id = r.UserId
              LEFT JOIN Favorites AS f ON f.RecipeId = r.Id AND f.UserId = ?
+             LEFT JOIN RecipeImages AS ri ON ri.RecipeId = r.Id
              WHERE r.Status = 'published' AND r.UserId = ?
              ORDER BY r.PublishedAt DESC, r.Id DESC`,
             [viewerUserId, viewerUserId, authorUserId]
         );
 
-        return (rows as RecipeListItemRow[]).map(mapRecipeListItem);
+        return (rows as RecipeListItemRow[]).map((row) => mapRecipeListItem(row, this.getPublicImageUrl));
     }
 
     async findRecentPublished(userId: number | null, limit: number): Promise<RecipeListItem[]> {
         const limitOffsetClause = formatLimitOffsetClause({ page: 1, limit, offset: 0 });
 
         const [rows] = await this.db.execute(
-            `SELECT r.Id, r.Title, r.Slug, r.Description, r.RecipeCoverImage, rc.Name AS Category, r.PrepTimeMinutes, r.RestTimeMinutes, r.CookTimeMinutes, r.Servings, u.Username AS AuthorUsername, r.PublishedAt, CASE WHEN ? IS NULL THEN FALSE ELSE f.UserId IS NOT NULL END AS IsFavorite
+            `SELECT r.Id, r.Title, r.Slug, r.Description, rc.Name AS Category, r.PrepTimeMinutes, r.RestTimeMinutes, r.CookTimeMinutes, r.Servings, u.Username AS AuthorUsername, r.PublishedAt, CASE WHEN ? IS NULL THEN FALSE ELSE f.UserId IS NOT NULL END AS IsFavorite,
+                    ${COVER_IMAGE_SELECT}
              FROM Recipes AS r
              LEFT JOIN RecipeCategories AS rc ON rc.Id = r.CategoryId
              INNER JOIN Users AS u ON u.Id = r.UserId
              LEFT JOIN Favorites AS f ON f.RecipeId = r.Id AND f.UserId = ?
+             LEFT JOIN RecipeImages AS ri ON ri.RecipeId = r.Id
              WHERE r.Status = 'published'
              ORDER BY r.PublishedAt DESC, r.Id DESC
              ${limitOffsetClause}`,
             [userId, userId]
         );
 
-        return (rows as RecipeListItemRow[]).map(mapRecipeListItem);
+        return (rows as RecipeListItemRow[]).map((row) => mapRecipeListItem(row, this.getPublicImageUrl));
     }
 
     async findPublishedBySlug(userId: number | null, slug: string): Promise<RecipeDetail | null> {
         const [rows] = await this.db.execute(
-            `SELECT r.Id, r.Title, r.Slug, r.Description, r.RecipeCoverImage, rc.Name AS Category, r.PrepTimeMinutes, r.RestTimeMinutes, r.CookTimeMinutes, r.Servings, u.Id AS AuthorId, u.Username AS AuthorUsername, r.PublishedAt, CASE WHEN ? IS NULL THEN FALSE ELSE f.UserId IS NOT NULL END AS IsFavorite
+            `SELECT r.Id, r.Title, r.Slug, r.Description, rc.Name AS Category, r.PrepTimeMinutes, r.RestTimeMinutes, r.CookTimeMinutes, r.Servings, u.Id AS AuthorId, u.Username AS AuthorUsername, r.PublishedAt, CASE WHEN ? IS NULL THEN FALSE ELSE f.UserId IS NOT NULL END AS IsFavorite,
+                    ${COVER_IMAGE_SELECT}
              FROM Recipes AS r
              INNER JOIN RecipeCategories AS rc ON rc.Id = r.CategoryId
              INNER JOIN Users AS u ON u.Id = r.UserId
              LEFT JOIN Favorites AS f ON f.RecipeId = r.Id AND f.UserId = ?
+             LEFT JOIN RecipeImages AS ri ON ri.RecipeId = r.Id
              WHERE r.Status = 'published' AND r.Slug = ?`,
             [userId, userId, slug]
         );
@@ -289,7 +309,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
         if (!row)
             return null;
 
-        const recipe = mapRecipeDetail(row);
+        const recipe = mapRecipeDetail(row, this.getPublicImageUrl);
         const [ingredientRows, stepRows, equipmentRows, tagRows, commentRows, commentStats] = await Promise.all([
             this.findDetailIngredientsByRecipeId(recipe.id),
             this.findDetailStepsByRecipeId(recipe.id),
@@ -395,7 +415,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
         if (!row)
             return null;
 
-        const recipe = mapRecipe(row);
+        const recipe = mapRecipe(row, this.getPublicImageUrl);
         const [ingredientRows, stepRows, equipmentRows, tagIds] = await Promise.all([
             this.findIngredientsByRecipeId(recipe.id),
             this.findStepsByRecipeId(recipe.id),
@@ -418,7 +438,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
         await connection.query(
             `INSERT INTO RecipeIngredients (RecipeId, IngredientId, Quantity, Unit, Note, SortOrder)
              VALUES ?`,
-            [input.ingredients.map((ingredient) => [recipeId, ingredient.ingredientId, ingredient.quantity, ingredient.unit, ingredient.note ?? null, ingredient.sortOrder ?? 1])]
+            [input.ingredients.map((ingredient) => [recipeId, ingredient.ingredientId, ingredient.quantity ?? null, ingredient.unit, ingredient.note ?? null, ingredient.sortOrder ?? 1])]
         );
     }
 
@@ -468,7 +488,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
         await connection.query(
             `INSERT INTO RecipeIngredients (RecipeId, IngredientId, Quantity, Unit, Note, SortOrder)
              VALUES ?`,
-            [input.ingredients.map((ingredient) => [recipeId, ingredient.ingredientId, ingredient.quantity, ingredient.unit, ingredient.note ?? null, ingredient.sortOrder ?? 1])]
+            [input.ingredients.map((ingredient) => [recipeId, ingredient.ingredientId, ingredient.quantity ?? null, ingredient.unit, ingredient.note ?? null, ingredient.sortOrder ?? 1])]
         );
     }
 

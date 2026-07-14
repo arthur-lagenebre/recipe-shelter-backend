@@ -8,7 +8,6 @@ export type RecipeBody = {
     categoryId?: number | null;
     title: string;
     description?: string;
-    coverImageUrl?: string | null;
     prepTimeMinutes?: number;
     restTimeMinutes?: number | null;
     cookTimeMinutes?: number | null;
@@ -37,7 +36,7 @@ function parseIngredient(item: unknown, index: number): RecipeIngredientInput {
 
     return {
         ingredientId: getRequiredNumber(item.ingredientId, 'IngredientId must be a number', 'RECIPES_CREATE_BAD_INGREDIENT_ID'),
-        quantity: getRequiredNumber(item.quantity, 'Ingredient quantity must be a number', 'RECIPES_CREATE_BAD_INGREDIENT_QUANTITY'),
+        quantity: getOptionalNullableNumber(item.quantity, 'Ingredient quantity must be a number or null', 'RECIPES_CREATE_BAD_INGREDIENT_QUANTITY'),
         unit,
         note,
         sortOrder
@@ -78,7 +77,6 @@ function parseRecipeContentBody(body: unknown, codePrefix: 'RECIPES_CREATE' | 'R
 
     const categoryId = getOptionalNullableNumber(body.categoryId, 'Category must be a number', `${codePrefix}_BAD_CATEGORY`);
     const description = getOptionalString(body.description, 'Description must be a string', `${codePrefix}_BAD_DESCRIPTION`);
-    const coverImageUrl = getOptionalNullableString(body.coverImageUrl, 'Cover image URL must be a string or null', `${codePrefix}_BAD_COVER_IMAGE_URL`);
     const prepTimeMinutes = getOptionalNumber(body.prepTimeMinutes, 'Prep time must be a number', `${codePrefix}_BAD_PREP_TIME`);
     const restTimeMinutes = getOptionalNullableNumber(body.restTimeMinutes, 'Rest time must be a number', `${codePrefix}_BAD_REST_TIME`);
     const cookTimeMinutes = getOptionalNullableNumber(body.cookTimeMinutes, 'Cook time must be a number', `${codePrefix}_BAD_COOK_TIME`);
@@ -88,7 +86,7 @@ function parseRecipeContentBody(body: unknown, codePrefix: 'RECIPES_CREATE' | 'R
     const steps = getOptionalArray(body.steps, parseStep, 'Steps must be an array', `${codePrefix}_BAD_STEPS`);
     const equipments = getOptionalArray(body.equipments, parseEquipment, 'Equipments must be an array', `${codePrefix}_BAD_EQUIPMENTS`);
 
-    return { categoryId, title, description, coverImageUrl, prepTimeMinutes, restTimeMinutes, cookTimeMinutes, servings, tagIds, ingredients, steps, equipments };
+    return { categoryId, title, description, prepTimeMinutes, restTimeMinutes, cookTimeMinutes, servings, tagIds, ingredients, steps, equipments };
 }
 
 export function parseCreateRecipeBody(body: unknown): CreateRecipeBody {

@@ -1,3 +1,4 @@
+import type { RecipeCoverImageDto, RecipeImageJoinedRow } from '../recipe-images/recipe-image.types.js';
 import type { RowDataPacket } from 'mysql2';
 
 export type RecipePending = {
@@ -17,6 +18,7 @@ export type RecipeAdmin = {
     title: string;
     slug: string;
     description: string;
+    coverImage: RecipeCoverImageDto | null;
     prepTimeMinutes: number;
     restTimeMinutes: number | null;
     cookTimeMinutes: number | null;
@@ -39,7 +41,7 @@ export type RecipeAdmin = {
 export type AdminRecipeIngredient = {
     id: number;
     name: string;
-    quantity: number;
+    quantity: number | null;
     unit: string | null;
     note: string | null;
     sortOrder: number;
@@ -63,7 +65,7 @@ export type AdminRecipeEquipment = {
 export type RecipeIngredientRow = RowDataPacket & {
     Id: number;
     Name: string;
-    Quantity: number;
+    Quantity: number | string | null;
     Unit: string | null;
     Note: string | null;
     SortOrder: number;
@@ -94,14 +96,13 @@ export type RecipePendingRow = RowDataPacket & {
     SubmittedAt: Date;
 };
 
-export type RecipeAdminRow = RowDataPacket & {
+export type RecipeAdminRow = RowDataPacket & RecipeImageJoinedRow & {
     Id: number;
     UserId: number;
     CategoryId: number | null;
     Title: string;
     Slug: string;
     Description: string;
-    RecipeCoverImage: string | null;
     PrepTimeMinutes: number;
     RestTimeMinutes: number | null;
     CookTimeMinutes: number | null;

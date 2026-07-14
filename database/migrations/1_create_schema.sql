@@ -115,7 +115,6 @@ CREATE TABLE Recipes (
   Title VARCHAR(255) NOT NULL,
   Slug VARCHAR(255) NOT NULL,
   Description TEXT NOT NULL,
-  RecipeCoverImage VARCHAR(2048) NULL,
   PrepTimeMinutes INT NOT NULL,
   RestTimeMinutes INT NULL,
   CookTimeMinutes INT NULL,
@@ -148,6 +147,29 @@ CREATE TABLE Recipes (
     FOREIGN KEY (ModeratedByUserId) REFERENCES Users(Id)
     ON UPDATE CASCADE
     ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------- Recipe images ----------
+CREATE TABLE RecipeImages (
+  Id CHAR(36) NOT NULL,
+  RecipeId BIGINT UNSIGNED NOT NULL,
+  LargeStorageKey VARCHAR(512) NOT NULL,
+  MediumStorageKey VARCHAR(512) NOT NULL,
+  ThumbnailStorageKey VARCHAR(512) NOT NULL,
+  OriginalWidth INT UNSIGNED NOT NULL,
+  OriginalHeight INT UNSIGNED NOT NULL,
+  LargeWidth INT UNSIGNED NOT NULL,
+  LargeHeight INT UNSIGNED NOT NULL,
+  LargeSizeBytes BIGINT UNSIGNED NOT NULL,
+  AltText VARCHAR(255) NULL,
+  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (Id),
+  UNIQUE KEY recipe_images_recipe_id_UK (RecipeId),
+  CONSTRAINT recipe_images_recipe_FK
+    FOREIGN KEY (RecipeId) REFERENCES Recipes(Id)
+    ON UPDATE CASCADE
+    ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------- Ingredient catalogue ----------
@@ -215,7 +237,7 @@ CREATE TABLE RecipeIngredients (
   Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   RecipeId BIGINT UNSIGNED NOT NULL,
   IngredientId BIGINT UNSIGNED NOT NULL,
-  Quantity DECIMAL(10,3) NOT NULL,
+  Quantity DECIMAL(10,3) NULL,
   Unit VARCHAR(64) NULL,
   Note VARCHAR(255) NULL,
   SortOrder INT NOT NULL DEFAULT 1,

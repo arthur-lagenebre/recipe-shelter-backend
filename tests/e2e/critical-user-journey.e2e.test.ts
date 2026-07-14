@@ -69,7 +69,7 @@ class CriticalFlowRecipeRepository implements Partial<RecipeRepository> {
             title: input.title,
             slug: input.slug,
             description: input.description ?? '',
-            coverImageUrl: input.coverImageUrl ?? null,
+            coverImage: null,
             prepTimeMinutes: input.prepTimeMinutes ?? 0,
             restTimeMinutes: input.restTimeMinutes ?? null,
             cookTimeMinutes: input.cookTimeMinutes ?? null,
@@ -86,7 +86,7 @@ class CriticalFlowRecipeRepository implements Partial<RecipeRepository> {
             tagIds: input.tagIds ?? [],
             ingredients: (input.ingredients ?? []).map((ingredient, index) => ({
                 ingredientId: ingredient.ingredientId,
-                quantity: ingredient.quantity,
+                quantity: ingredient.quantity ?? null,
                 unit: ingredient.unit ?? null,
                 note: ingredient.note ?? null,
                 sortOrder: ingredient.sortOrder ?? index + 1
@@ -109,7 +109,6 @@ class CriticalFlowRecipeRepository implements Partial<RecipeRepository> {
             categoryId: input.categoryId === undefined ? current.categoryId : input.categoryId,
             title: input.title,
             description: input.description ?? current.description,
-            coverImageUrl: input.coverImageUrl === undefined ? current.coverImageUrl : input.coverImageUrl,
             prepTimeMinutes: input.prepTimeMinutes ?? current.prepTimeMinutes,
             restTimeMinutes: input.restTimeMinutes === undefined ? current.restTimeMinutes : input.restTimeMinutes,
             cookTimeMinutes: input.cookTimeMinutes === undefined ? current.cookTimeMinutes : input.cookTimeMinutes,
@@ -117,7 +116,7 @@ class CriticalFlowRecipeRepository implements Partial<RecipeRepository> {
             tagIds: input.tagIds ?? current.tagIds,
             ingredients: input.ingredients?.map((ingredient, index) => ({
                 ingredientId: ingredient.ingredientId,
-                quantity: ingredient.quantity,
+                quantity: ingredient.quantity ?? null,
                 unit: ingredient.unit ?? null,
                 note: ingredient.note ?? null,
                 sortOrder: ingredient.sortOrder ?? index + 1
@@ -214,7 +213,7 @@ class CriticalFlowRecipeRepository implements Partial<RecipeRepository> {
             slug: recipe.slug,
             description: recipe.description,
             category: null,
-            coverImageUrl: recipe.coverImageUrl,
+            coverImage: recipe.coverImage,
             prepTimeMinutes: recipe.prepTimeMinutes,
             restTimeMinutes: recipe.restTimeMinutes,
             cookTimeMinutes: recipe.cookTimeMinutes,
@@ -256,7 +255,7 @@ class CriticalFlowFavoriteRepository implements FavoriteRepository {
                     slug: recipe.slug,
                     description: recipe.description,
                     category: null,
-                    coverImageUrl: recipe.coverImageUrl,
+                    coverImage: recipe.coverImage,
                     prepTimeMinutes: recipe.prepTimeMinutes,
                     restTimeMinutes: recipe.restTimeMinutes,
                     cookTimeMinutes: recipe.cookTimeMinutes,

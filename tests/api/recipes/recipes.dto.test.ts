@@ -16,7 +16,6 @@ describe('recipes.dto', () => {
             categoryId: 2,
             title: '  Tarte aux pommes  ',
             description: '  Simple et bonne.  ',
-            coverImageUrl: '  https://example.test/tarte.jpg  ',
             prepTimeMinutes: 20,
             restTimeMinutes: null,
             cookTimeMinutes: 35,
@@ -31,7 +30,6 @@ describe('recipes.dto', () => {
             categoryId: 2,
             title: 'Tarte aux pommes',
             description: 'Simple et bonne.',
-            coverImageUrl: 'https://example.test/tarte.jpg',
             prepTimeMinutes: 20,
             restTimeMinutes: null,
             cookTimeMinutes: 35,
@@ -47,7 +45,6 @@ describe('recipes.dto', () => {
         const result = parseUpdateRecipeBody({
             title: '  Soupe maison  ',
             categoryId: null,
-            coverImageUrl: null,
             tagIds: null,
             ingredients: null
         });
@@ -56,7 +53,6 @@ describe('recipes.dto', () => {
             categoryId: null,
             title: 'Soupe maison',
             description: undefined,
-            coverImageUrl: null,
             prepTimeMinutes: undefined,
             restTimeMinutes: undefined,
             cookTimeMinutes: undefined,
@@ -193,6 +189,32 @@ describe('recipes.dto', () => {
             excludedTagIds: [8, 9],
             excludedIngredientIds: [10, 11]
         });
+    });
+
+    it('accepts an omitted or null ingredient quantity', () => {
+        assert.deepEqual(
+            parseCreateRecipeBody({
+                title: 'Thé maison',
+                ingredients: [
+                    { ingredientId: 7 },
+                    { ingredientId: 8, quantity: null }
+                ]
+            }).ingredients,
+            [
+                { ingredientId: 7, quantity: undefined, unit: undefined, note: undefined, sortOrder: undefined },
+                { ingredientId: 8, quantity: null, unit: undefined, note: undefined, sortOrder: undefined }
+            ]
+        );
+    });
+
+    it('rejects a non-numeric ingredient quantity', () => {
+        assert.throws(
+            () => parseCreateRecipeBody({ title: 'Thé maison', ingredients: [{ ingredientId: 7, quantity: 'two' }] }),
+            (error) => {
+                assertHttpError(error, 'RECIPES_CREATE_BAD_INGREDIENT_QUANTITY', 400);
+                return true;
+            }
+        );
     });
 
     it('parses a max total time filter', () => {

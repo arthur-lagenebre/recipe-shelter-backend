@@ -159,11 +159,15 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
             cookTimeMinutes: 10,
             servings: 2,
             tagIds: [1],
-            ingredients: [{ ingredientId: 1, quantity: 200, unit: 'g', note: null, sortOrder: 1 }],
+            ingredients: [
+                { ingredientId: 1, quantity: 200, unit: 'g', note: null, sortOrder: 1 },
+                { ingredientId: 10, note: 'to taste', sortOrder: 2 }
+            ],
             steps: [{ stepNumber: 1, description: 'Cook the pasta.' }],
             equipments: [{ equipmentId: 1 }]
         });
         assert.equal(recipe.ingredients[0]?.quantity, 200);
+        assert.equal(recipe.ingredients[1]?.quantity, null);
         assert.deepEqual(recipe.tagIds, [1]);
         assert.deepEqual(recipe.equipments, [{ equipmentId: 1 }]);
 

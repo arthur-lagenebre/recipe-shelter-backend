@@ -4,11 +4,12 @@ import { mapRecipe } from '../recipes/recipe.mapper.js';
 
 import type { AdminRecipeRepository } from "./admin.recipe.repository.interface.js";
 import type { RecipeAdmin, RecipeAdminRow, RecipeIngredientRow, RecipePending, RecipePendingRow, RecipeStepRow, RecipeTagRow, RecipeEquipmentRow } from './admin.recipe.types.js';
+import type { PublicImageUrlBuilder } from '../recipe-images/recipe-image.types.js';
 import type { ResultSetHeader } from 'mysql2';
 import type { Pool } from 'mysql2/promise';
 
 export class AdminRecipeRepositoryMysql implements AdminRecipeRepository {
-    constructor(private readonly db: Pool) { }
+    constructor(private readonly db: Pool, private readonly getPublicImageUrl: PublicImageUrlBuilder = missingPublicImageUrlBuilder) { }
 
     async findPendingForAdmin(): Promise<RecipePending[]> {
         const [rows] = await this.db.execute(
@@ -35,10 +36,18 @@ export class AdminRecipeRepositoryMysql implements AdminRecipeRepository {
 
     async findByIdForAdmin(id: number): Promise<RecipeAdmin | null> {
         const [rows] = await this.db.execute(
-            `SELECT r.Id, r.UserId, u.Username, r.CategoryId, rc.Name AS Category, r.Title, r.Slug, r.Description, r.RecipeCoverImage, r.PrepTimeMinutes, r.RestTimeMinutes, r.CookTimeMinutes, r.Servings, r.Status, r.CreatedAt, r.SubmittedAt, r.ModeratedAt, r.ModeratedByUserId, r.PublishedAt, r.ArchivedAt, r.RejectionReason, r.UpdatedAt
+            `SELECT r.Id, r.UserId, u.Username, r.CategoryId, rc.Name AS Category, r.Title, r.Slug, r.Description, r.PrepTimeMinutes, r.RestTimeMinutes, r.CookTimeMinutes, r.Servings, r.Status, r.CreatedAt, r.SubmittedAt, r.ModeratedAt, r.ModeratedByUserId, r.PublishedAt, r.ArchivedAt, r.RejectionReason, r.UpdatedAt,
+                    ri.Id AS CoverImageId,
+                    ri.LargeStorageKey AS CoverImageLargeStorageKey,
+                    ri.MediumStorageKey AS CoverImageMediumStorageKey,
+                    ri.ThumbnailStorageKey AS CoverImageThumbnailStorageKey,
+                    ri.LargeWidth AS CoverImageWidth,
+                    ri.LargeHeight AS CoverImageHeight,
+                    ri.AltText AS CoverImageAltText
              FROM Recipes AS r
              INNER JOIN Users AS u ON r.UserId = u.Id
              LEFT JOIN RecipeCategories AS rc ON r.CategoryId = rc.Id
+             LEFT JOIN RecipeImages AS ri ON ri.RecipeId = r.Id
              WHERE r.Id = ?`,
             [id]
         );
@@ -47,7 +56,7 @@ export class AdminRecipeRepositoryMysql implements AdminRecipeRepository {
         if (!row)
             return null;
 
-        const recipe = mapRecipe(row);
+        const recipe = mapRecipe(row, this.getPublicImageUrl);
         const [ingredientRows, stepRows, equipmentRows, tagRows] = await Promise.all([
             this.findIngredientsByRecipeId(recipe.id),
             this.findStepsByRecipeId(recipe.id),
@@ -148,3 +157,7 @@ export class AdminRecipeRepositoryMysql implements AdminRecipeRepository {
         return rows as RecipeTagRow[];
     }
 }
+
+const missingPublicImageUrlBuilder: PublicImageUrlBuilder = () => {
+    throw new Error('AdminRecipeRepositoryMysql requires a public image URL builder when an image exists');
+};

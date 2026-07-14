@@ -16,7 +16,7 @@ const baseRecipe: Recipe = {
     title: 'Cake',
     slug: 'cake-draft',
     description: 'Good',
-    coverImageUrl: null,
+    coverImage: null,
     prepTimeMinutes: 15,
     restTimeMinutes: null,
     cookTimeMinutes: 45,
@@ -133,9 +133,11 @@ describe('RecipeService', () => {
             categoryId: undefined,
             title: '  Cake maison  ',
             description: '  Good  ',
-            coverImageUrl: '   ',
             tagIds: [1, 1, 2],
-            ingredients: [{ ingredientId: 7, quantity: 2, unit: '  ', note: '  note  ' }],
+            ingredients: [
+                { ingredientId: 7, quantity: 2, unit: '  ', note: '  note  ' },
+                { ingredientId: 8 }
+            ],
             steps: [{ description: '  Bake  ' }],
             equipments: [{ equipmentId: 4 }]
         });
@@ -146,13 +148,15 @@ describe('RecipeService', () => {
             title: 'Cake maison',
             slug: 'draft-2',
             description: 'Good',
-            coverImageUrl: null,
             prepTimeMinutes: 0,
             restTimeMinutes: null,
             cookTimeMinutes: null,
             servings: 1,
             tagIds: [1, 2],
-            ingredients: [{ ingredientId: 7, quantity: 2, unit: null, note: 'note', sortOrder: 1 }],
+            ingredients: [
+                { ingredientId: 7, quantity: 2, unit: null, note: 'note', sortOrder: 1 },
+                { ingredientId: 8, quantity: null, unit: null, note: null, sortOrder: 2 }
+            ],
             steps: [{ stepNumber: 1, description: 'Bake' }],
             equipments: [{ equipmentId: 4 }]
         });
@@ -172,7 +176,6 @@ describe('RecipeService', () => {
             categoryId: undefined,
             title: 'New cake',
             description: undefined,
-            coverImageUrl: undefined,
             prepTimeMinutes: undefined,
             restTimeMinutes: undefined,
             cookTimeMinutes: undefined,
