@@ -69,6 +69,9 @@ export class AdminUserService {
         if (!user)
             throw notFound('User not found', 'USER_NOT_FOUND');
 
+        if (user.accountType !== 'community')
+            throw forbidden('Staff accounts cannot be community-moderated', 'ADMIN_USERS_STAFF_MODERATION_FORBIDDEN');
+
         return this.adminUsers.ban(userId, adminUserId, cleanReason);
     }
 
@@ -79,6 +82,9 @@ export class AdminUserService {
 
         if (!user)
             throw notFound('User not found', 'USER_NOT_FOUND');
+
+        if (user.accountType !== 'community')
+            throw forbidden('Staff accounts cannot be community-moderated', 'ADMIN_USERS_STAFF_MODERATION_FORBIDDEN');
 
         return this.adminUsers.unban(userId, adminUserId, cleanReason);
     }

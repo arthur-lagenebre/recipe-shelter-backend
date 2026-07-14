@@ -1,10 +1,12 @@
-import type { CreateUserInput, User, UserWithPassword } from './user.types.js';
+import type { CommunityProfile, CreateUserInput, StaffProfile, User, UserWithPassword } from './user.types.js';
 
 export interface UserRepository {
     create(input: CreateUserInput): Promise<User>;
     findById(id: number): Promise<User | null>;
     findByEmail(mail: string): Promise<User | null>;
     findByUsername(username: string): Promise<User | null>;
+    findCommunityProfileByUserId(userId: number): Promise<CommunityProfile | null>;
+    findStaffProfileByUserId(userId: number): Promise<StaffProfile | null>;
     findAuthByEmail(mail: string): Promise<UserWithPassword | null>;
     findWithPasswordById(id: number): Promise<UserWithPassword | null>;
     getRoleIdByName(roleName: string): Promise<number | null>;

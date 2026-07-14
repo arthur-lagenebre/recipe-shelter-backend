@@ -1,9 +1,58 @@
-import { assertAccountType } from './user.types.js';
+import { assertAccountType, assertCommunityStatus, assertStaffStatus } from './user.types.js';
 
-import type { User, UserRow, UserWithPassword, UserWithPasswordRow } from './user.types.js';
+import type {
+  CommunityProfile,
+  CommunityProfileRow,
+  StaffProfile,
+  StaffProfileRow,
+  User,
+  UserRow,
+  UserWithPassword,
+  UserWithPasswordRow
+} from './user.types.js';
+
+export function mapCommunityProfile(row: CommunityProfileRow): CommunityProfile {
+  assertCommunityStatus(row.Status);
+
+  return {
+    userId: row.UserId,
+    status: row.Status,
+    bannedByUserId: row.BannedByUserId,
+    bannedReason: row.BannedReason,
+    bannedAt: row.BannedAt,
+    createdAt: row.CreatedAt,
+    updatedAt: row.UpdatedAt
+  };
+}
+
+export function mapStaffProfile(row: StaffProfileRow): StaffProfile {
+  assertStaffStatus(row.Status);
+
+  return {
+    userId: row.UserId,
+    status: row.Status,
+    createdAt: row.CreatedAt,
+    updatedAt: row.UpdatedAt
+  };
+}
 
 export function mapUser(row: UserRow): User {
   assertAccountType(row.AccountType);
+
+  let status: User['status'];
+  if (row.AccountType === 'community') {
+    if (row.CommunityProfileUserId !== row.Id || row.StaffProfileUserId !== null)
+      throw new TypeError(`Invalid profile assignment for community user: ${row.Id}`);
+
+    assertCommunityStatus(row.CommunityStatus);
+    status = row.CommunityStatus;
+  } else {
+    if (row.StaffProfileUserId !== row.Id || row.CommunityProfileUserId !== null)
+      throw new TypeError(`Invalid profile assignment for staff user: ${row.Id}`);
+
+    assertStaffStatus(row.StaffStatus);
+    status = row.StaffStatus;
+  }
 
   return {
     id: row.Id,
@@ -11,11 +60,11 @@ export function mapUser(row: UserRow): User {
     username: row.Username,
     roleId: row.RoleId,
     accountType: row.AccountType,
-    status: row.Status,
+    status,
     emailValidatedAt: row.EmailValidatedAt,
-    bannedByUserId: row.BannedByUserId,
-    bannedReason: row.BannedReason,
-    bannedAt: row.BannedAt,
+    bannedByUserId: row.AccountType === 'community' ? row.BannedByUserId : null,
+    bannedReason: row.AccountType === 'community' ? row.BannedReason : null,
+    bannedAt: row.AccountType === 'community' ? row.BannedAt : null,
     createdAt: row.CreatedAt,
     updatedAt: row.UpdatedAt
   };

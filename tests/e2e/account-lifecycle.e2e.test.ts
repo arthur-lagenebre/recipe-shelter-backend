@@ -12,7 +12,7 @@ import { startHttpTestServer } from '../helpers/http-test-server.js';
 import type { EmailValidationCreateInput, EmailValidationRecord, EmailValidationRepository } from '../../src/repositories/auth/email-validation.repository.interface.js';
 import type { PasswordResetCreateInput, PasswordResetRecord, PasswordResetRepository } from '../../src/repositories/auth/password-reset.repository.interface.js';
 import type { UserRepository } from '../../src/repositories/users/user.repository.interface.js';
-import type { CreateUserInput, User, UserWithPassword } from '../../src/repositories/users/user.types.js';
+import type { CommunityProfile, CreateUserInput, StaffProfile, User, UserWithPassword } from '../../src/repositories/users/user.types.js';
 import type { RecipeRepository } from '../../src/repositories/recipes/recipe.repository.interface.js';
 import type { EmailValidationMailInput, Mailer, PasswordChangedMailInput, PasswordResetMailInput } from '../../src/services/mail/mail.types.js';
 import type { HttpTestServer } from '../helpers/http-test-server.js';
@@ -30,7 +30,7 @@ class AccountUserRepository implements UserRepository {
             passwordHash: input.passwordHash,
             roleId: input.roleId,
             accountType: input.accountType,
-            status: input.status ?? 'inactive',
+            status: input.status ?? (input.accountType === 'community' ? 'inactive' : 'invited'),
             emailValidatedAt: null,
             bannedByUserId: null,
             bannedReason: null,
@@ -55,6 +55,33 @@ class AccountUserRepository implements UserRepository {
     async findByUsername(username: string): Promise<User | null> {
         const user = [...this.users.values()].find((candidate) => candidate.username === username);
         return user ? this.withoutPassword(user) : null;
+    }
+
+    async findCommunityProfileByUserId(userId: number): Promise<CommunityProfile | null> {
+        const user = this.users.get(userId);
+        if (!user || user.accountType !== 'community')
+            return null;
+        return {
+            userId,
+            status: user.status === 'inactive' || user.status === 'active' || user.status === 'banned' ? user.status : 'inactive',
+            bannedByUserId: user.bannedByUserId,
+            bannedReason: user.bannedReason,
+            bannedAt: user.bannedAt,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt
+        };
+    }
+
+    async findStaffProfileByUserId(userId: number): Promise<StaffProfile | null> {
+        const user = this.users.get(userId);
+        if (!user || user.accountType !== 'staff')
+            return null;
+        return {
+            userId,
+            status: user.status === 'invited' || user.status === 'active' || user.status === 'locked' || user.status === 'disabled' ? user.status : 'invited',
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt
+        };
     }
 
     async findAuthByEmail(mail: string): Promise<UserWithPassword | null> {

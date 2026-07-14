@@ -29,6 +29,7 @@ CREATE TABLE Users (
   PRIMARY KEY (Id),
   UNIQUE KEY users_mail_UK (Mail),
   UNIQUE KEY users_username_UK (Username),
+  UNIQUE KEY users_id_account_type_UK (Id, AccountType),
   KEY idx_users_role_id (RoleId),
   KEY idx_users_status (Status),
   KEY idx_users_banned_by_user_id (BannedByUserId),
@@ -41,6 +42,105 @@ CREATE TABLE Users (
     ON UPDATE CASCADE
     ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE StaffProfiles (
+  UserId BIGINT UNSIGNED NOT NULL,
+  AccountType ENUM('community', 'staff') NOT NULL DEFAULT 'staff',
+  Status ENUM('invited', 'active', 'locked', 'disabled') NOT NULL DEFAULT 'invited',
+  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (UserId),
+  KEY idx_staff_profiles_status (Status),
+  CONSTRAINT staff_profiles_account_type_CK CHECK (AccountType = 'staff'),
+  CONSTRAINT staff_profiles_user_account_type_FK
+    FOREIGN KEY (UserId, AccountType) REFERENCES Users(Id, AccountType)
+    ON UPDATE RESTRICT
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE CommunityProfiles (
+  UserId BIGINT UNSIGNED NOT NULL,
+  AccountType ENUM('community', 'staff') NOT NULL DEFAULT 'community',
+  Status ENUM('inactive', 'active', 'banned') NOT NULL DEFAULT 'inactive',
+  BannedByUserId BIGINT UNSIGNED NULL,
+  BannedReason TEXT NULL,
+  BannedAt DATETIME NULL,
+  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (UserId),
+  KEY idx_community_profiles_status (Status),
+  KEY idx_community_profiles_banned_by_user_id (BannedByUserId),
+  CONSTRAINT community_profiles_account_type_CK CHECK (AccountType = 'community'),
+  CONSTRAINT community_profiles_user_account_type_FK
+    FOREIGN KEY (UserId, AccountType) REFERENCES Users(Id, AccountType)
+    ON UPDATE RESTRICT
+    ON DELETE CASCADE,
+  CONSTRAINT community_profiles_banned_by_user_FK
+    FOREIGN KEY (BannedByUserId) REFERENCES Users(Id)
+    ON UPDATE CASCADE
+    ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TRIGGER users_community_profile_AI
+AFTER INSERT ON Users
+FOR EACH ROW
+INSERT INTO CommunityProfiles (
+  UserId,
+  AccountType,
+  Status,
+  BannedByUserId,
+  BannedReason,
+  BannedAt,
+  CreatedAt,
+  UpdatedAt
+)
+SELECT NEW.Id,
+       'community',
+       NEW.Status,
+       NEW.BannedByUserId,
+       NEW.BannedReason,
+       NEW.BannedAt,
+       NEW.CreatedAt,
+       NEW.UpdatedAt
+FROM DUAL
+WHERE NEW.AccountType = 'community';
+
+CREATE TRIGGER users_staff_profile_AI
+AFTER INSERT ON Users
+FOR EACH ROW
+INSERT INTO StaffProfiles (UserId, AccountType, Status, CreatedAt, UpdatedAt)
+SELECT NEW.Id,
+       'staff',
+       CASE NEW.Status
+         WHEN 'active' THEN 'active'
+         WHEN 'banned' THEN 'locked'
+         ELSE 'invited'
+       END,
+       NEW.CreatedAt,
+       NEW.UpdatedAt
+FROM DUAL
+WHERE NEW.AccountType = 'staff';
+
+CREATE TRIGGER users_community_profile_AU
+AFTER UPDATE ON Users
+FOR EACH ROW
+UPDATE CommunityProfiles
+SET Status = NEW.Status,
+    BannedByUserId = NEW.BannedByUserId,
+    BannedReason = NEW.BannedReason,
+    BannedAt = NEW.BannedAt
+WHERE UserId = NEW.Id AND NEW.AccountType = 'community';
+
+CREATE TRIGGER users_staff_profile_AU
+AFTER UPDATE ON Users
+FOR EACH ROW
+UPDATE StaffProfiles
+SET Status = CASE NEW.Status
+               WHEN 'active' THEN 'active'
+               WHEN 'banned' THEN 'locked'
+               ELSE 'invited'
+             END
+WHERE UserId = NEW.Id AND NEW.AccountType = 'staff';
 
 CREATE TABLE UserModerationLogs (
   Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,

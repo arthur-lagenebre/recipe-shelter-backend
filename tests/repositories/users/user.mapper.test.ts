@@ -1,37 +1,105 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { mapUser } from '../../../src/repositories/users/user.mappers.js';
+import { mapCommunityProfile, mapStaffProfile, mapUser } from '../../../src/repositories/users/user.mappers.js';
 
-import type { UserRow } from '../../../src/repositories/users/user.types.js';
+import type { CommunityProfileRow, StaffProfileRow, UserRow } from '../../../src/repositories/users/user.types.js';
 
+const now = new Date('2026-07-14T10:00:00.000Z');
 const baseRow = {
     Id: 2,
     Mail: 'user@example.com',
     Username: 'testuser',
     RoleId: 2,
-    Status: 'active',
-    EmailValidatedAt: new Date('2026-07-14T10:00:00.000Z'),
+    EmailValidatedAt: now,
     BannedByUserId: null,
     BannedReason: null,
     BannedAt: null,
-    CreatedAt: new Date('2026-07-14T10:00:00.000Z'),
-    UpdatedAt: new Date('2026-07-14T10:00:00.000Z')
+    CreatedAt: now,
+    UpdatedAt: now
 } as const;
 
 describe('user mapper', () => {
-    it('maps every supported account type', () => {
-        for (const accountType of ['community', 'staff'] as const) {
-            const user = mapUser({ ...baseRow, AccountType: accountType } as unknown as UserRow);
+    it('maps community users only from their community profile', () => {
+        const user = mapUser({
+            ...baseRow,
+            AccountType: 'community',
+            CommunityProfileUserId: 2,
+            CommunityStatus: 'banned',
+            StaffProfileUserId: null,
+            StaffStatus: null,
+            BannedByUserId: 1,
+            BannedReason: 'Community moderation',
+            BannedAt: now
+        } as unknown as UserRow);
 
-            assert.equal(user.accountType, accountType);
+        assert.equal(user.accountType, 'community');
+        assert.equal(user.status, 'banned');
+        assert.equal(user.bannedByUserId, 1);
+    });
+
+    it('maps every staff status without community moderation data', () => {
+        for (const status of ['invited', 'active', 'locked', 'disabled'] as const) {
+            const user = mapUser({
+                ...baseRow,
+                AccountType: 'staff',
+                CommunityProfileUserId: null,
+                CommunityStatus: null,
+                StaffProfileUserId: 2,
+                StaffStatus: status,
+                BannedByUserId: 1,
+                BannedReason: 'Must not leak',
+                BannedAt: now
+            } as unknown as UserRow);
+
+            assert.equal(user.accountType, 'staff');
+            assert.equal(user.status, status);
+            assert.equal(user.bannedByUserId, null);
+            assert.equal(user.bannedReason, null);
+            assert.equal(user.bannedAt, null);
         }
     });
 
-    it('rejects an unsupported account type returned by persistence', () => {
+    it('maps specialized profile records', () => {
+        const community = mapCommunityProfile({
+            UserId: 2,
+            Status: 'active',
+            BannedByUserId: null,
+            BannedReason: null,
+            BannedAt: null,
+            CreatedAt: now,
+            UpdatedAt: now
+        } as CommunityProfileRow);
+        const staff = mapStaffProfile({
+            UserId: 1,
+            Status: 'locked',
+            CreatedAt: now,
+            UpdatedAt: now
+        } as StaffProfileRow);
+
+        assert.equal(community.status, 'active');
+        assert.equal(staff.status, 'locked');
+    });
+
+    it('rejects unsupported statuses and cross-profile assignments', () => {
         assert.throws(
             () => mapUser({ ...baseRow, AccountType: 'partner' } as unknown as UserRow),
             { name: 'TypeError', message: 'Invalid account type: partner' }
+        );
+        assert.throws(
+            () => mapUser({
+                ...baseRow,
+                AccountType: 'staff',
+                CommunityProfileUserId: 2,
+                CommunityStatus: 'active',
+                StaffProfileUserId: 2,
+                StaffStatus: 'active'
+            } as unknown as UserRow),
+            { name: 'TypeError', message: 'Invalid profile assignment for staff user: 2' }
+        );
+        assert.throws(
+            () => mapStaffProfile({ UserId: 1, Status: 'banned', CreatedAt: now, UpdatedAt: now } as StaffProfileRow),
+            { name: 'TypeError', message: 'Invalid staff status: banned' }
         );
     });
 });

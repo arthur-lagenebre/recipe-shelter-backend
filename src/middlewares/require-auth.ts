@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 
-import { assertAccountType } from '../repositories/users/user.types.js';
+import { assertAccountType, COMMUNITY_STATUSES, STAFF_STATUSES } from '../repositories/users/user.types.js';
 import { env } from '../utils/env.js';
 import { unauthorized } from '../utils/errors.js';
 import { sessionCookieName } from '../utils/session-cookie.js';
@@ -26,7 +26,7 @@ export function configureAuthUserRepository(repository: AuthUserRepository): voi
 }
 
 function isUserStatus(value: unknown): value is UserStatus {
-  return value === 'inactive' || value === 'active' || value === 'banned';
+  return COMMUNITY_STATUSES.some((status) => status === value) || STAFF_STATUSES.some((status) => status === value);
 }
 
 function getSessionToken(req: Request): string | null {
@@ -68,8 +68,13 @@ function parseAuthPayload(payload: unknown): ParsedAuthContext | null {
 }
 
 async function resolveActiveAuth(auth: ParsedAuthContext): Promise<AuthContext | null> {
-  if (!authUserRepository)
-    return { ...auth, accountType: auth.accountType ?? 'community', status: auth.status ?? 'active' };
+  if (!authUserRepository) {
+    const status = auth.status ?? 'active';
+    if (status !== 'active')
+      return null;
+
+    return { ...auth, accountType: auth.accountType ?? 'community', status };
+  }
 
   const user = await authUserRepository.findById(auth.userId);
 

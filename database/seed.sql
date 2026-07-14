@@ -38,6 +38,14 @@ ON DUPLICATE KEY UPDATE
   Status    = new_anonyme.Status,
   EmailValidatedAt = COALESCE(Users.EmailValidatedAt, new_anonyme.EmailValidatedAt);
 
+INSERT INTO StaffProfiles (UserId, AccountType, Status)
+VALUES
+  (1, 'staff', 'active'),
+  (2, 'staff', 'active') AS new_staff
+ON DUPLICATE KEY UPDATE
+  AccountType = new_staff.AccountType,
+  Status = new_staff.Status;
+
 -- =====================================================
 -- Recipe Categories
 -- =====================================================

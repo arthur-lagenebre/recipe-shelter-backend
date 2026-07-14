@@ -126,6 +126,22 @@ describe('EmailValidationService', () => {
         await assert.rejects(() => service.resendValidationEmail(' '), (error) => assertHttpError(error, 'AUTH_VALIDATION_RESEND_MISSING_EMAIL', 400));
     });
 
+    it('does not issue community validation emails for staff accounts', async () => {
+        const staff = { ...baseUser, accountType: 'staff', status: 'invited' } as const;
+
+        await assert.rejects(
+            () => service.sendValidationEmailForUser(staff),
+            (error) => assertHttpError(error, 'AUTH_EMAIL_VALIDATION_NOT_ALLOWED', 400)
+        );
+
+        users.userByEmail = staff;
+        await assert.rejects(
+            () => service.resendValidationEmail(staff.mail),
+            (error) => assertHttpError(error, 'AUTH_VALIDATION_RESEND_NOT_ALLOWED', 400)
+        );
+        assert.equal(validations.createdInput, null);
+    });
+
     it('validates a token and returns the refreshed user', async () => {
         validations.validation = {
             Id: 4,
@@ -156,5 +172,8 @@ describe('EmailValidationService', () => {
         validations.validation = { ...validations.validation, ExpiresAt: new Date(Date.now() + 60_000) };
         users.userById = { ...baseUser, status: 'banned' };
         await assert.rejects(() => service.validateEmail('token'), (error) => assertHttpError(error, 'USER_BANNED', 403));
+
+        users.userById = { ...baseUser, accountType: 'staff', status: 'invited' };
+        await assert.rejects(() => service.validateEmail('token'), (error) => assertHttpError(error, 'AUTH_EMAIL_VALIDATION_NOT_ALLOWED', 403));
     });
 });

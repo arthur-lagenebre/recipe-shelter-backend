@@ -84,11 +84,20 @@ export class AuthService {
     if (!ok)
       throw unauthorized('Invalid credentials', 'AUTH_INVALID_CREDENTIALS');
 
-    if (authUser.status === 'inactive')
-      throw unauthorized('Email is not validated', 'EMAIL_NOT_VALIDATED');
+    if (authUser.accountType === 'community') {
+      if (authUser.status === 'inactive')
+        throw unauthorized('Email is not validated', 'EMAIL_NOT_VALIDATED');
 
-    if (authUser.status === 'banned')
-      throw unauthorized('User is banned', 'USER_BANNED');
+      if (authUser.status === 'banned')
+        throw unauthorized('User is banned', 'USER_BANNED');
+    } else {
+      if (authUser.status === 'invited')
+        throw unauthorized('Staff invitation is not active', 'STAFF_INVITED');
+      if (authUser.status === 'locked')
+        throw unauthorized('Staff account is locked', 'STAFF_LOCKED');
+      if (authUser.status === 'disabled')
+        throw unauthorized('Staff account is disabled', 'STAFF_DISABLED');
+    }
 
     const { passwordHash: _ph, ...user } = authUser;
     const token = this.signToken(user);

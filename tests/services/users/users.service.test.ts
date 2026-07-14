@@ -156,6 +156,19 @@ describe('UserService', () => {
         assert.equal(recipes.authorUserIdInput, null);
     });
 
+    it('does not expose a public community profile for staff accounts', async () => {
+        users.user = { ...baseUser, accountType: 'staff', status: 'active' };
+
+        await assert.rejects(
+            () => service.getUser('testuser'),
+            (error) => {
+                assertHttpError(error, 'USER_NOT_FOUND', 404);
+                return true;
+            }
+        );
+        assert.equal(recipes.authorUserIdInput, null);
+    });
+
     it('gets the current user without exposing moderation-only fields', async () => {
         const result = await service.getMe(2);
 

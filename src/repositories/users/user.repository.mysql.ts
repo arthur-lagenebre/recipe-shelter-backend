@@ -1,20 +1,44 @@
-import { mapUser, mapUserWithPassword } from './user.mappers.js';
-import { assertAccountType } from './user.types.js';
+import { mapCommunityProfile, mapStaffProfile, mapUser, mapUserWithPassword } from './user.mappers.js';
+import { assertAccountType, assertCommunityStatus, assertStaffStatus } from './user.types.js';
 import { firstOrNull } from '../../utils/array.js';
 
 import type { UserRepository } from './user.repository.interface.js';
-import type { CreateUserInput, ExistsRow, RoleRow, User, UserRow, UserWithPassword, UserWithPasswordRow } from './user.types.js';
+import type {
+    CommunityProfile,
+    CommunityProfileRow,
+    CommunityStatus,
+    CreateUserInput,
+    ExistsRow,
+    RoleRow,
+    StaffProfile,
+    StaffProfileRow,
+    StaffStatus,
+    User,
+    UserRow,
+    UserWithPassword,
+    UserWithPasswordRow
+} from './user.types.js';
 import type { ResultSetHeader } from 'mysql2';
 import type { Pool } from 'mysql2/promise';
+
+const USER_SELECT = `u.Id, u.Mail, u.Username, u.RoleId, u.AccountType, u.EmailValidatedAt,
+                     cp.UserId AS CommunityProfileUserId, cp.Status AS CommunityStatus,
+                     cp.BannedByUserId, cp.BannedReason, cp.BannedAt,
+                     sp.UserId AS StaffProfileUserId, sp.Status AS StaffStatus,
+                     u.CreatedAt, u.UpdatedAt`;
+
+const USER_PROFILE_JOINS = `LEFT JOIN CommunityProfiles AS cp ON cp.UserId = u.Id
+                            LEFT JOIN StaffProfiles AS sp ON sp.UserId = u.Id`;
 
 export class UserRepositoryMysql implements UserRepository {
     constructor(private readonly db: Pool) { }
 
     async findById(id: number): Promise<User | null> {
         const [rows] = await this.db.execute(
-            `SELECT Id, Mail, Username, RoleId, AccountType, Status, EmailValidatedAt, BannedByUserId, BannedReason, BannedAt, CreatedAt, UpdatedAt
-             FROM Users
-             WHERE Id = ?`,
+            `SELECT ${USER_SELECT}
+             FROM Users AS u
+             ${USER_PROFILE_JOINS}
+             WHERE u.Id = ?`,
             [id]
         );
 
@@ -24,9 +48,10 @@ export class UserRepositoryMysql implements UserRepository {
 
     async findByEmail(mail: string): Promise<User | null> {
         const [rows] = await this.db.execute(
-            `SELECT Id, Mail, Username, RoleId, AccountType, Status, EmailValidatedAt, BannedByUserId, BannedReason, BannedAt, CreatedAt, UpdatedAt
-             FROM Users
-             WHERE Mail = ?`,
+            `SELECT ${USER_SELECT}
+             FROM Users AS u
+             ${USER_PROFILE_JOINS}
+             WHERE u.Mail = ?`,
             [mail]
         );
 
@@ -36,9 +61,10 @@ export class UserRepositoryMysql implements UserRepository {
 
     async findAuthByEmail(mail: string): Promise<UserWithPassword | null> {
         const [rows] = await this.db.execute(
-            `SELECT Id, Mail, Username, Password, RoleId, AccountType, Status, EmailValidatedAt, BannedByUserId, BannedReason, BannedAt, CreatedAt, UpdatedAt
-             FROM Users
-             WHERE Mail = ?`,
+            `SELECT ${USER_SELECT}, u.Password
+             FROM Users AS u
+             ${USER_PROFILE_JOINS}
+             WHERE u.Mail = ?`,
             [mail]
         );
 
@@ -48,9 +74,10 @@ export class UserRepositoryMysql implements UserRepository {
 
     async findByUsername(username: string): Promise<User | null> {
         const [rows] = await this.db.execute(
-            `SELECT Id, Mail, Username, RoleId, AccountType, Status, EmailValidatedAt, BannedByUserId, BannedReason, BannedAt, CreatedAt, UpdatedAt
-             FROM Users
-             WHERE Username = ?`,
+            `SELECT ${USER_SELECT}
+             FROM Users AS u
+             ${USER_PROFILE_JOINS}
+             WHERE u.Username = ?`,
             [username]
         );
 
@@ -58,11 +85,36 @@ export class UserRepositoryMysql implements UserRepository {
         return row ? mapUser(row) : null;
     }
 
+    async findCommunityProfileByUserId(userId: number): Promise<CommunityProfile | null> {
+        const [rows] = await this.db.execute(
+            `SELECT UserId, Status, BannedByUserId, BannedReason, BannedAt, CreatedAt, UpdatedAt
+             FROM CommunityProfiles
+             WHERE UserId = ?`,
+            [userId]
+        );
+
+        const row = firstOrNull(rows as CommunityProfileRow[]);
+        return row ? mapCommunityProfile(row) : null;
+    }
+
+    async findStaffProfileByUserId(userId: number): Promise<StaffProfile | null> {
+        const [rows] = await this.db.execute(
+            `SELECT UserId, Status, CreatedAt, UpdatedAt
+             FROM StaffProfiles
+             WHERE UserId = ?`,
+            [userId]
+        );
+
+        const row = firstOrNull(rows as StaffProfileRow[]);
+        return row ? mapStaffProfile(row) : null;
+    }
+
     async findWithPasswordById(id: number): Promise<UserWithPassword | null> {
         const [rows] = await this.db.execute(
-            `SELECT Id, Mail, Username, Password, RoleId, AccountType, Status, EmailValidatedAt, BannedByUserId, BannedReason, BannedAt, CreatedAt, UpdatedAt
-             FROM Users
-             WHERE Id = ?`,
+            `SELECT ${USER_SELECT}, u.Password
+             FROM Users AS u
+             ${USER_PROFILE_JOINS}
+             WHERE u.Id = ?`,
             [id]
         );
 
@@ -118,14 +170,45 @@ export class UserRepositoryMysql implements UserRepository {
 
     async create(input: CreateUserInput): Promise<User> {
         assertAccountType(input.accountType);
+        const profileStatus = getProfileStatus(input);
+        const legacyStatus = getLegacyStatus(input.accountType, profileStatus);
+        const conn = await this.db.getConnection();
+        let insertId: number;
 
-        const [result] = await this.db.execute(
-            `INSERT INTO Users (Mail, Username, Password, RoleId, AccountType, Status)
-             VALUES (?, ?, ?, ?, ?, ?)`,
-            [input.mail, input.username, input.passwordHash, input.roleId, input.accountType, input.status ?? 'inactive']
-        );
+        try {
+            await conn.beginTransaction();
 
-        const insertId = Number((result as { insertId: number }).insertId);
+            const [result] = await conn.execute<ResultSetHeader>(
+                `INSERT INTO Users (Mail, Username, Password, RoleId, AccountType, Status)
+                 VALUES (?, ?, ?, ?, ?, ?)`,
+                [input.mail, input.username, input.passwordHash, input.roleId, input.accountType, legacyStatus]
+            );
+            insertId = Number(result.insertId);
+
+            if (input.accountType === 'community') {
+                await conn.execute(
+                    `INSERT INTO CommunityProfiles (UserId, AccountType, Status)
+                     VALUES (?, 'community', ?)
+                     ON DUPLICATE KEY UPDATE Status = ?`,
+                    [insertId, profileStatus, profileStatus]
+                );
+            } else {
+                await conn.execute(
+                    `INSERT INTO StaffProfiles (UserId, AccountType, Status)
+                     VALUES (?, 'staff', ?)
+                     ON DUPLICATE KEY UPDATE Status = ?`,
+                    [insertId, profileStatus, profileStatus]
+                );
+            }
+
+            await conn.commit();
+        } catch (error) {
+            await conn.rollback();
+            throw error;
+        } finally {
+            conn.release();
+        }
+
         const created = await this.findById(insertId);
 
         if (!created)
@@ -135,14 +218,34 @@ export class UserRepositoryMysql implements UserRepository {
     }
 
     async markEmailValidated(userId: number): Promise<boolean> {
-        const [result] = await this.db.execute<ResultSetHeader>(
-            `UPDATE Users
-             SET Status = 'active', EmailValidatedAt = CURRENT_TIMESTAMP
-             WHERE Id = ?`,
-            [userId]
-        );
+        const conn = await this.db.getConnection();
 
-        return result.affectedRows > 0;
+        try {
+            await conn.beginTransaction();
+            const [profileResult] = await conn.execute<ResultSetHeader>(
+                `UPDATE CommunityProfiles
+                 SET Status = 'active'
+                 WHERE UserId = ? AND Status = 'inactive'`,
+                [userId]
+            );
+
+            if (profileResult.affectedRows > 0) {
+                await conn.execute(
+                    `UPDATE Users
+                     SET Status = 'active', EmailValidatedAt = CURRENT_TIMESTAMP
+                     WHERE Id = ? AND AccountType = 'community'`,
+                    [userId]
+                );
+            }
+
+            await conn.commit();
+            return profileResult.affectedRows > 0;
+        } catch (error) {
+            await conn.rollback();
+            throw error;
+        } finally {
+            conn.release();
+        }
     }
 
     async updatePassword(userId: number, passwordHash: string): Promise<void> {
@@ -162,4 +265,30 @@ export class UserRepositoryMysql implements UserRepository {
             [username, userId]
         );
     }
+}
+
+function getProfileStatus(input: CreateUserInput): CommunityStatus | StaffStatus {
+    if (input.accountType === 'community') {
+        const status = input.status ?? 'inactive';
+        assertCommunityStatus(status);
+        return status;
+    }
+
+    const status = input.status ?? 'invited';
+    assertStaffStatus(status);
+    return status;
+}
+
+function getLegacyStatus(accountType: CreateUserInput['accountType'], status: CommunityStatus | StaffStatus): CommunityStatus {
+    if (accountType === 'community') {
+        assertCommunityStatus(status);
+        return status;
+    }
+
+    assertStaffStatus(status);
+    if (status === 'invited')
+        return 'inactive';
+    if (status === 'active')
+        return 'active';
+    return 'banned';
 }

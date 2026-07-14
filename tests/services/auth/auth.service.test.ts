@@ -140,4 +140,26 @@ describe('AuthService', () => {
         users.authUser = { ...baseUser, status: 'banned', passwordHash: await bcrypt.hash('Recipe42?', 4) };
         await assert.rejects(() => service.login({ mail: 'user@example.com', password: 'Recipe42?' }), (error) => assertHttpError(error, 'USER_BANNED', 401));
     });
+
+    it('supports active staff and rejects every blocked staff lifecycle state', async () => {
+        const passwordHash = await bcrypt.hash('Recipe42?', 4);
+        users.authUser = { ...baseUser, accountType: 'staff', status: 'active', passwordHash };
+
+        const result = await service.login({ mail: 'user@example.com', password: 'Recipe42?' });
+        const payload = jwt.verify(result.token, env.auth.jwtSecret) as jwt.JwtPayload;
+        assert.equal(payload.accountType, 'staff');
+        assert.equal(payload.status, 'active');
+
+        for (const [status, code] of [
+            ['invited', 'STAFF_INVITED'],
+            ['locked', 'STAFF_LOCKED'],
+            ['disabled', 'STAFF_DISABLED']
+        ] as const) {
+            users.authUser = { ...baseUser, accountType: 'staff', status, passwordHash };
+            await assert.rejects(
+                () => service.login({ mail: 'user@example.com', password: 'Recipe42?' }),
+                (error) => assertHttpError(error, code, 401)
+            );
+        }
+    });
 });

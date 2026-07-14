@@ -99,6 +99,32 @@ Ce script :
 - recrée le schéma ;
 - insère les données de référence minimales : rôles, catégories, ingrédients, groupes de tags, tags et ustensiles.
 
+La réinitialisation crée aussi les profils spécialisés `CommunityProfiles` et
+`StaffProfiles`.
+
+### Migration B1.2 des comptes existants
+
+Le schéma d'installation est consolidé dans l'unique fichier
+`database/migrations/1_create_schema.sql`. Sur une base existante ayant déjà
+reçu le type de compte B1.1, appliquez le script d'exploitation
+`database/deploy/b1_2_community_staff_profiles.sql` avant de déployer la
+nouvelle version de l'API. Il recopie chaque compte communautaire
+dans `CommunityProfiles` et chaque compte staff dans `StaffProfiles`, sans
+modifier les identifiants `Users.Id` référencés par les recettes, commentaires
+et favoris.
+
+Des triggers de compatibilité créent et synchronisent les profils pour les
+écritures provenant encore de la version B1.1 pendant un déploiement progressif.
+Ils sont supprimés par la migration de retour arrière.
+
+Les anciennes colonnes d'état de `Users` sont conservées temporairement comme
+miroir de compatibilité et sont mises à jour dans les mêmes transactions. Pour
+revenir en arrière, redéployez d'abord l'ancienne API puis exécutez
+`database/deploy/b1_2_community_staff_profiles.rollback.sql`. Le script
+resynchronise une dernière fois les colonnes historiques avant de supprimer les
+profils. Les états staff `locked` et `disabled`, non représentables dans l'ancien
+schéma, redeviennent `banned` pendant ce retour arrière.
+
 Les scripts npm utilisent `mysql -u root -p`. Si vous utilisez un autre utilisateur MySQL, lancez le script SQL directement.
 
 Sur Windows PowerShell :

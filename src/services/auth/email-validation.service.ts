@@ -18,6 +18,9 @@ export class EmailValidationService {
     constructor(private readonly users: UserRepository, private readonly validations: EmailValidationRepository, private readonly mailer: Mailer, private readonly appBaseUrl: string) { }
 
     async sendValidationEmailForUser(user: User): Promise<void> {
+        if (user.accountType !== 'community')
+            throw badRequest('Email validation is only available to community accounts', 'AUTH_EMAIL_VALIDATION_NOT_ALLOWED');
+
         await this.createAndSendValidation(user);
     }
 
@@ -32,7 +35,7 @@ export class EmailValidationService {
         if (!user)
             return;
 
-        if (user.status !== 'inactive')
+        if (user.accountType !== 'community' || user.status !== 'inactive')
             throw badRequest('Validation email can only be resent for inactive accounts', 'AUTH_VALIDATION_RESEND_NOT_ALLOWED');
 
         await this.validations.invalidateAllForUser(user.id);
@@ -62,10 +65,16 @@ export class EmailValidationService {
         if (!user)
             throw badRequest('Invalid validation token', 'AUTH_EMAIL_VALIDATION_INVALID_TOKEN');
 
+        if (user.accountType !== 'community')
+            throw forbidden('Email validation is only available to community accounts', 'AUTH_EMAIL_VALIDATION_NOT_ALLOWED');
+
         if (user.status === 'banned')
             throw forbidden('User is banned', 'USER_BANNED');
 
-        await this.users.markEmailValidated(user.id);
+        const activated = await this.users.markEmailValidated(user.id);
+        if (!activated)
+            throw badRequest('Email validation is not available for this account', 'AUTH_EMAIL_VALIDATION_NOT_ALLOWED');
+
         await this.validations.markUsed(validation.Id);
 
         const updatedUser = await this.users.findById(user.id);

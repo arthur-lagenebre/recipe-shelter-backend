@@ -466,7 +466,9 @@
           <h3>Types communs</h3>
           <p>Formats réutilisés par plusieurs endpoints.</p>
           <pre><code>type ISODateString = string;
-type UserStatus = "inactive" | "active" | "banned";
+type CommunityStatus = "inactive" | "active" | "banned";
+type StaffStatus = "invited" | "active" | "locked" | "disabled";
+type UserStatus = CommunityStatus | StaffStatus;
 type AccountType = "community" | "staff";
 type UserModerationAction = "ban" | "unban";
 
@@ -548,7 +550,7 @@ type PaginatedResult&lt;T&gt; = {
               <td><code>/api/v1/auth/login</code></td>
               <td><span class="auth public">Public</span></td>
               <td><code>mail</code>, <code>password</code>.</td>
-              <td><code>200</code> <code>{ "user": ... }</code> + <code>Set-Cookie: rs_session=...</code>.</td>
+              <td><code>200</code> <code>{ "user": ... }</code> + <code>Set-Cookie: rs_session=...</code>. Un staff non actif renvoie <code>401 STAFF_INVITED</code>, <code>STAFF_LOCKED</code> ou <code>STAFF_DISABLED</code>.</td>
             </tr>
             <tr>
               <td><span class="method get">GET</span></td>
@@ -623,6 +625,7 @@ type AuthMeResponse = {
 
         <article class="schema">
           <h3>User</h3>
+          <p>Le statut dépend du profil spécialisé correspondant au type de compte.</p>
           <p>Utilisateur complet côté API auth/admin.</p>
           <pre><code>type User = {
   id: number;
@@ -771,11 +774,12 @@ type ResetPasswordResponse = MessageResponse;</code></pre>
 
         <article class="schema">
           <h3>PublicUserWithPublishedRecipes</h3>
+          <p>Les comptes staff ne possèdent pas ce profil public et renvoient <code>404 USER_NOT_FOUND</code>.</p>
           <p>Profil public renvoyé par <code>GET /api/v1/users/:username</code>. Les informations privées du compte ne sont pas exposées.</p>
           <pre><code>type PublicUserWithPublishedRecipes = {
   id: number;
   username: string;
-  accountType: AccountType;
+  accountType: "community";
   publishedRecipes: RecipeListItem[];
 };
 

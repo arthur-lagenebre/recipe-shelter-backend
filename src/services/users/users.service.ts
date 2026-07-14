@@ -21,7 +21,7 @@ export type PublicUserProfile = {
 export type PublicUserWithPublishedRecipes = {
     id: number;
     username: string;
-    accountType: AccountType;
+    accountType: 'community';
     publishedRecipes: RecipeListItem[];
 };
 
@@ -49,6 +49,9 @@ export class UserService {
         const user = await this.userRepository.findByUsername(username.trim());
 
         if (!user)
+            throw notFound('User not found', 'USER_NOT_FOUND');
+
+        if (user.accountType !== 'community')
             throw notFound('User not found', 'USER_NOT_FOUND');
 
         const publishedRecipes = await this.recipeRepository.findPublishedByAuthorId(viewerUserId, user.id);

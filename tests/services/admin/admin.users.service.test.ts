@@ -6,7 +6,7 @@ import { HttpError } from '../../../src/utils/errors.js';
 
 import type { AdminUserRepository } from '../../../src/repositories/admin/admin.users.repository.interface.js';
 import type { AdminUserDetails, BannedUser, UserModerationLog } from '../../../src/repositories/admin/admin.users.types.js';
-import type { CreateUserInput, User, UserWithPassword } from '../../../src/repositories/users/user.types.js';
+import type { CommunityProfile, CreateUserInput, StaffProfile, User, UserWithPassword } from '../../../src/repositories/users/user.types.js';
 import type { UserRepository } from '../../../src/repositories/users/user.repository.interface.js';
 
 const baseUser: User = {
@@ -80,6 +80,16 @@ class FakeUserRepository implements UserRepository {
     async findByUsername(username: string): Promise<User | null> {
         void username;
 
+        return null;
+    }
+
+    async findCommunityProfileByUserId(userId: number): Promise<CommunityProfile | null> {
+        void userId;
+        return null;
+    }
+
+    async findStaffProfileByUserId(userId: number): Promise<StaffProfile | null> {
+        void userId;
         return null;
     }
 
@@ -279,6 +289,27 @@ describe('AdminUserService', () => {
             }
         );
         assert.equal(adminUsers.banInput, null);
+    });
+
+    it('rejects community moderation actions for staff accounts', async () => {
+        users.user = { ...baseUser, accountType: 'staff', status: 'locked' };
+
+        await assert.rejects(
+            () => service.ban(2, 1, 'Repeated abuse of the platform rules.'),
+            (error) => {
+                assertHttpError(error, 'ADMIN_USERS_STAFF_MODERATION_FORBIDDEN', 403);
+                return true;
+            }
+        );
+        await assert.rejects(
+            () => service.unban(2, 1, 'Appeal accepted after review.'),
+            (error) => {
+                assertHttpError(error, 'ADMIN_USERS_STAFF_MODERATION_FORBIDDEN', 403);
+                return true;
+            }
+        );
+        assert.equal(adminUsers.banInput, null);
+        assert.equal(adminUsers.unbanInput, null);
     });
 
     it('unbans an existing user through the admin repository', async () => {

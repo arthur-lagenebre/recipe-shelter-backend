@@ -52,6 +52,28 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
             .replace(/USE\s+recipe_shelter\s*;/i, `USE \`${databaseName}\`;`);
         await adminConnection.query(schema);
 
+        // Return the freshly-created unified schema to its B1.1 shape so the
+        // production deployment script is tested against real existing accounts.
+        const initialRollbackPath = new URL('../../../database/deploy/b1_2_community_staff_profiles.rollback.sql', import.meta.url);
+        const initialRollback = (await readFile(initialRollbackPath, 'utf8'))
+            .replace(/USE\s+recipe_shelter\s*;/i, `USE \`${databaseName}\`;`);
+        await adminConnection.query(initialRollback);
+
+        await adminConnection.query(`
+            USE \`${databaseName}\`;
+            INSERT INTO Roles (Id, Name) VALUES (1, 'admin'), (2, 'user');
+            INSERT INTO Users (Id, Mail, Username, Password, RoleId, AccountType, Status, EmailValidatedAt, BannedByUserId, BannedReason, BannedAt) VALUES
+                (1, 'admin@test.local', 'admin', 'hash', 1, 'staff', 'active', CURRENT_TIMESTAMP, NULL, NULL, NULL),
+                (2, 'reader@test.local', 'reader', 'hash', 2, 'community', 'active', CURRENT_TIMESTAMP, NULL, NULL, NULL),
+                (3, 'locked-staff@test.local', 'locked-staff', 'hash', 1, 'staff', 'banned', CURRENT_TIMESTAMP, NULL, NULL, NULL),
+                (4, 'banned-community@test.local', 'banned-community', 'hash', 2, 'community', 'banned', CURRENT_TIMESTAMP, 1, 'Pre-migration moderation', CURRENT_TIMESTAMP);
+        `);
+
+        const profileMigrationPath = new URL('../../../database/deploy/b1_2_community_staff_profiles.sql', import.meta.url);
+        const profileMigration = (await readFile(profileMigrationPath, 'utf8'))
+            .replace(/USE\s+recipe_shelter\s*;/i, `USE \`${databaseName}\`;`);
+        await adminConnection.query(profileMigration);
+
         pool = mysql.createPool({
             host: env.db.host,
             port: env.db.port,
@@ -64,10 +86,6 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
         });
 
         await pool.query(`
-            INSERT INTO Roles (Id, Name) VALUES (1, 'admin'), (2, 'user');
-            INSERT INTO Users (Id, Mail, Username, Password, RoleId, Status, EmailValidatedAt) VALUES
-                (1, 'admin@test.local', 'admin', 'hash', 1, 'active', CURRENT_TIMESTAMP),
-                (2, 'reader@test.local', 'reader', 'hash', 2, 'active', CURRENT_TIMESTAMP);
             INSERT INTO RecipeCategories (Id, Name, Slug, IconName) VALUES
                 (1, 'Main', 'main', 'dish'),
                 (2, 'Search fixtures', 'search-fixtures', 'search');
@@ -144,8 +162,37 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
             nullable: 'NO',
             defaultValue: 'community'
         });
-        assert.equal((await users.findById(1))?.accountType, 'community');
+        const [staffStatusColumns] = await pool.query(`SHOW COLUMNS FROM StaffProfiles WHERE Field = 'Status'`);
+        assert.equal((staffStatusColumns as Array<{ Type: string }>)[0]?.Type, "enum('invited','active','locked','disabled')");
+        assert.equal((await users.findById(1))?.accountType, 'staff');
+        assert.equal((await users.findById(1))?.status, 'active');
         assert.equal((await users.findById(2))?.accountType, 'community');
+        assert.equal((await users.findById(3))?.status, 'locked');
+        assert.equal((await users.findById(4))?.status, 'banned');
+        assert.equal((await users.findById(4))?.bannedReason, 'Pre-migration moderation');
+        assert.equal(await users.findCommunityProfileByUserId(1), null);
+        assert.equal((await users.findStaffProfileByUserId(1))?.status, 'active');
+        assert.equal(await users.findStaffProfileByUserId(2), null);
+        assert.equal((await users.findCommunityProfileByUserId(2))?.status, 'active');
+
+        await assert.rejects(
+            () => pool.query(`INSERT INTO CommunityProfiles (UserId, AccountType, Status) VALUES (1, 'community', 'active')`)
+        );
+        assert.equal(await users.findCommunityProfileByUserId(1), null);
+
+        const [legacyInsert] = await pool.query(
+            `INSERT INTO Users (Mail, Username, Password, RoleId, AccountType, Status)
+             VALUES ('rolling-community@test.local', 'rolling-community', 'hash', 2, 'community', 'inactive')`
+        );
+        const rollingCommunityId = Number((legacyInsert as { insertId: number }).insertId);
+        assert.equal((await users.findCommunityProfileByUserId(rollingCommunityId))?.status, 'inactive');
+        await pool.query(
+            `UPDATE Users
+             SET Status = 'banned', BannedByUserId = 1, BannedReason = 'Rolling deployment moderation', BannedAt = CURRENT_TIMESTAMP
+             WHERE Id = ?`,
+            [rollingCommunityId]
+        );
+        assert.equal((await users.findCommunityProfileByUserId(rollingCommunityId))?.status, 'banned');
         assert.equal(await users.getRoleIdByName('user'), 2);
         const staff = await users.create({
             mail: 'staff@test.local',
@@ -156,6 +203,8 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
             status: 'active'
         });
         assert.equal(staff.accountType, 'staff');
+        assert.equal(await users.findCommunityProfileByUserId(staff.id), null);
+        assert.equal((await users.findStaffProfileByUserId(staff.id))?.status, 'active');
         const author = await users.create({
             mail: 'author@test.local',
             username: 'author',
@@ -329,5 +378,42 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
         assert.equal(duplicateIngredientRows.items.length, 6);
         assert.equal(new Set(ids(duplicateIngredientRows)).size, duplicateIngredientRows.items.length);
         assert.equal(duplicateIngredientRows.pagination.totalItems, 6);
+    });
+
+    it('rolls the profile migration back without losing linked community content', async () => {
+        await pool.query(`UPDATE StaffProfiles SET Status = 'disabled' WHERE UserId = 3`);
+
+        const rollbackPath = new URL('../../../database/deploy/b1_2_community_staff_profiles.rollback.sql', import.meta.url);
+        const rollback = (await readFile(rollbackPath, 'utf8'))
+            .replace(/USE\s+recipe_shelter\s*;/i, `USE \`${requireSafeTestDatabaseName()}\`;`);
+        await adminConnection.query(rollback);
+
+        const [profileTables] = await pool.query(
+            `SELECT TABLE_NAME AS TableName
+             FROM information_schema.TABLES
+             WHERE TABLE_SCHEMA = ? AND TABLE_NAME IN ('CommunityProfiles', 'StaffProfiles')`,
+            [requireSafeTestDatabaseName()]
+        );
+        assert.deepEqual(profileTables, []);
+
+        const [legacyStatuses] = await pool.query(
+            `SELECT Id, Status
+             FROM Users
+             WHERE Id IN (2, 3, 4)
+             ORDER BY Id`
+        );
+        assert.deepEqual(legacyStatuses, [
+            { Id: 2, Status: 'active' },
+            { Id: 3, Status: 'banned' },
+            { Id: 4, Status: 'banned' }
+        ]);
+
+        const [contentCounts] = await pool.query(
+            `SELECT
+                (SELECT COUNT(*) FROM Recipes) AS RecipesCount,
+                (SELECT COUNT(*) FROM Comments) AS CommentsCount,
+                (SELECT COUNT(*) FROM Favorites) AS FavoritesCount`
+        );
+        assert.deepEqual(contentCounts, [{ RecipesCount: 8, CommentsCount: 2, FavoritesCount: 0 }]);
     });
 });
