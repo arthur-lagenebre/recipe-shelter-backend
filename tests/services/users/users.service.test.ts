@@ -16,6 +16,7 @@ const baseUser: User = {
     mail: 'user@example.com',
     username: 'testuser',
     roleId: 2,
+    accountType: 'community',
     status: 'banned',
     emailValidatedAt: new Date('2026-05-09T10:00:00.000Z'),
     bannedByUserId: 1,
@@ -125,6 +126,7 @@ describe('UserService', () => {
         assert.deepEqual(result, {
             id: 2,
             username: 'testuser',
+            accountType: 'community',
             publishedRecipes: [baseRecipe]
         });
 
@@ -163,6 +165,7 @@ describe('UserService', () => {
             mail: 'user@example.com',
             username: 'testuser',
             roleId: 2,
+            accountType: 'community',
             createdAt: baseUser.createdAt,
             updatedAt: baseUser.updatedAt
         });

@@ -10,7 +10,7 @@ import { sessionCookieName } from '../../src/utils/session-cookie.js';
 
 import type { User } from '../../src/repositories/users/user.types.js';
 
-type AuthPayload = { userId: number; username: string; roleId: number; status: string };
+type AuthPayload = { userId: number; username: string; roleId: number; accountType: string; status: string };
 
 type MockRequest = {
     cookies: Record<string, string>;
@@ -22,6 +22,7 @@ const activeUser: User = {
     mail: 'user@example.com',
     username: 'active-user',
     roleId: 2,
+    accountType: 'community',
     status: 'active',
     emailValidatedAt: new Date('2026-05-09T10:00:00.000Z'),
     bannedByUserId: null,
@@ -67,7 +68,7 @@ describe('requireAuth', () => {
 
         await requireAuth(req as never, null as never, () => undefined);
 
-        assert.deepEqual(req.auth, { userId: 2, username: 'active-user', roleId: 2, status: 'active' });
+        assert.deepEqual(req.auth, { userId: 2, username: 'active-user', roleId: 2, accountType: 'community', status: 'active' });
     });
 
     it('rejects invalid payloads and inactive users', async () => {
@@ -107,6 +108,6 @@ describe('requireAuth', () => {
 
         await optionalAuth(req as never, null as never, () => undefined);
 
-        assert.deepEqual(req.auth, { userId: 2, username: 'active-user', roleId: 2, status: 'active' });
+        assert.deepEqual(req.auth, { userId: 2, username: 'active-user', roleId: 2, accountType: 'community', status: 'active' });
     });
 });

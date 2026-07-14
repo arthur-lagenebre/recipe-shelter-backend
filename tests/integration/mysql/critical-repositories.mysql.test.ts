@@ -133,14 +133,38 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
         const adminRecipes = new AdminRecipeRepositoryMysql(pool);
         const adminComments = new AdminCommentRepositoryMysql(pool);
 
+        const [accountTypeColumns] = await pool.query(`SHOW COLUMNS FROM Users WHERE Field = 'AccountType'`);
+        const accountTypeColumn = (accountTypeColumns as Array<{ Type: string; Null: string; Default: string }>)[0];
+        assert.deepEqual(accountTypeColumn && {
+            type: accountTypeColumn.Type,
+            nullable: accountTypeColumn.Null,
+            defaultValue: accountTypeColumn.Default
+        }, {
+            type: "enum('community','staff')",
+            nullable: 'NO',
+            defaultValue: 'community'
+        });
+        assert.equal((await users.findById(1))?.accountType, 'community');
+        assert.equal((await users.findById(2))?.accountType, 'community');
         assert.equal(await users.getRoleIdByName('user'), 2);
+        const staff = await users.create({
+            mail: 'staff@test.local',
+            username: 'staff',
+            passwordHash: 'password-hash',
+            roleId: 2,
+            accountType: 'staff',
+            status: 'active'
+        });
+        assert.equal(staff.accountType, 'staff');
         const author = await users.create({
             mail: 'author@test.local',
             username: 'author',
             passwordHash: 'password-hash',
             roleId: 2,
+            accountType: 'community',
             status: 'active'
         });
+        assert.equal(author.accountType, 'community');
         assert.equal(await users.isEmailTaken('author@test.local'), true);
         assert.equal((await users.findAuthByEmail('author@test.local'))?.passwordHash, 'password-hash');
         assert.equal(await adminUsers.ban(author.id, 1, 'Repository integration ban.'), true);

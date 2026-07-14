@@ -6,12 +6,14 @@ import { validatePassword } from '../auth/password-policy.js';
 import type { RecipeRepository } from '../../repositories/recipes/recipe.repository.interface.js';
 import type { RecipeListItem } from '../../repositories/recipes/recipe.types.js';
 import type { UserRepository } from '../../repositories/users/user.repository.interface.js';
+import type { AccountType } from '../../repositories/users/user.types.js';
 
 export type PublicUserProfile = {
     id: number;
     mail: string;
     username: string;
     roleId: number;
+    accountType: AccountType;
     createdAt: Date;
     updatedAt: Date;
 };
@@ -19,6 +21,7 @@ export type PublicUserProfile = {
 export type PublicUserWithPublishedRecipes = {
     id: number;
     username: string;
+    accountType: AccountType;
     publishedRecipes: RecipeListItem[];
 };
 
@@ -36,6 +39,7 @@ export class UserService {
             mail: user.mail,
             username: user.username,
             roleId: user.roleId,
+            accountType: user.accountType,
             createdAt: user.createdAt,
             updatedAt: user.updatedAt
         };
@@ -52,6 +56,7 @@ export class UserService {
         return {
             id: user.id,
             username: user.username,
+            accountType: user.accountType,
             publishedRecipes
         };
     }

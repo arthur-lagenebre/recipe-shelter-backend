@@ -29,6 +29,7 @@ class AccountUserRepository implements UserRepository {
             username: input.username,
             passwordHash: input.passwordHash,
             roleId: input.roleId,
+            accountType: input.accountType,
             status: input.status ?? 'inactive',
             emailValidatedAt: null,
             bannedByUserId: null,
@@ -248,10 +249,13 @@ describe('account lifecycle E2E', () => {
         const register = await postJson(server.baseUrl, '/api/v1/auth/register', {
             mail: ' ALICE@Example.com ',
             username: 'alice',
-            password: 'InitialPass42!'
+            password: 'InitialPass42!',
+            accountType: 'staff'
         });
         assert.equal(register.status, 201);
-        assert.equal((await register.json() as { user: User }).user.status, 'inactive');
+        const registeredUser = (await register.json() as { user: User }).user;
+        assert.equal(registeredUser.status, 'inactive');
+        assert.equal(registeredUser.accountType, 'community');
         assert.equal(mailer.validationMail?.to, 'alice@example.com');
 
         const inactiveLogin = await postJson(server.baseUrl, '/api/v1/auth/login', {

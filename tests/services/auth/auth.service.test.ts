@@ -17,6 +17,7 @@ const baseUser: User = {
     mail: 'user@example.com',
     username: 'testuser',
     roleId: 2,
+    accountType: 'community',
     status: 'active',
     emailValidatedAt: new Date('2026-05-09T10:00:00.000Z'),
     bannedByUserId: null,
@@ -48,7 +49,7 @@ class FakeUserRepository implements Partial<UserRepository> {
     async create(input: CreateUserInput): Promise<User> {
         this.createdInput = input;
 
-        return { ...baseUser, mail: input.mail, username: input.username, roleId: input.roleId, status: input.status ?? 'active' };
+        return { ...baseUser, mail: input.mail, username: input.username, roleId: input.roleId, accountType: input.accountType, status: input.status ?? 'active' };
     }
 
     async findAuthByEmail(): Promise<UserWithPassword | null> {
@@ -90,6 +91,7 @@ describe('AuthService', () => {
         assert.equal(users.createdInput?.mail, 'user@example.com');
         assert.equal(users.createdInput?.username, 'testuser');
         assert.equal(users.createdInput?.roleId, 2);
+        assert.equal(users.createdInput?.accountType, 'community');
         assert.equal(users.createdInput?.status, 'inactive');
         assert.equal(await bcrypt.compare('Recipe42?', users.createdInput?.passwordHash ?? ''), true);
         assert.deepEqual(emailValidation.sentUser, result.user);
@@ -121,6 +123,7 @@ describe('AuthService', () => {
         assert.equal(payload.sub, 2);
         assert.equal(payload.username, 'testuser');
         assert.equal(payload.roleId, 2);
+        assert.equal(payload.accountType, 'community');
         assert.equal(payload.status, 'active');
     });
 

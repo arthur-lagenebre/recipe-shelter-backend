@@ -1,4 +1,5 @@
 import { mapUser, mapUserWithPassword } from './user.mappers.js';
+import { assertAccountType } from './user.types.js';
 import { firstOrNull } from '../../utils/array.js';
 
 import type { UserRepository } from './user.repository.interface.js';
@@ -11,7 +12,7 @@ export class UserRepositoryMysql implements UserRepository {
 
     async findById(id: number): Promise<User | null> {
         const [rows] = await this.db.execute(
-            `SELECT Id, Mail, Username, RoleId, Status, EmailValidatedAt, BannedByUserId, BannedReason, BannedAt, CreatedAt, UpdatedAt
+            `SELECT Id, Mail, Username, RoleId, AccountType, Status, EmailValidatedAt, BannedByUserId, BannedReason, BannedAt, CreatedAt, UpdatedAt
              FROM Users
              WHERE Id = ?`,
             [id]
@@ -23,7 +24,7 @@ export class UserRepositoryMysql implements UserRepository {
 
     async findByEmail(mail: string): Promise<User | null> {
         const [rows] = await this.db.execute(
-            `SELECT Id, Mail, Username, RoleId, Status, EmailValidatedAt, BannedByUserId, BannedReason, BannedAt, CreatedAt, UpdatedAt
+            `SELECT Id, Mail, Username, RoleId, AccountType, Status, EmailValidatedAt, BannedByUserId, BannedReason, BannedAt, CreatedAt, UpdatedAt
              FROM Users
              WHERE Mail = ?`,
             [mail]
@@ -35,7 +36,7 @@ export class UserRepositoryMysql implements UserRepository {
 
     async findAuthByEmail(mail: string): Promise<UserWithPassword | null> {
         const [rows] = await this.db.execute(
-            `SELECT Id, Mail, Username, Password, RoleId, Status, EmailValidatedAt, BannedByUserId, BannedReason, BannedAt, CreatedAt, UpdatedAt
+            `SELECT Id, Mail, Username, Password, RoleId, AccountType, Status, EmailValidatedAt, BannedByUserId, BannedReason, BannedAt, CreatedAt, UpdatedAt
              FROM Users
              WHERE Mail = ?`,
             [mail]
@@ -47,7 +48,7 @@ export class UserRepositoryMysql implements UserRepository {
 
     async findByUsername(username: string): Promise<User | null> {
         const [rows] = await this.db.execute(
-            `SELECT Id, Mail, Username, RoleId, Status, EmailValidatedAt, BannedByUserId, BannedReason, BannedAt, CreatedAt, UpdatedAt
+            `SELECT Id, Mail, Username, RoleId, AccountType, Status, EmailValidatedAt, BannedByUserId, BannedReason, BannedAt, CreatedAt, UpdatedAt
              FROM Users
              WHERE Username = ?`,
             [username]
@@ -59,7 +60,7 @@ export class UserRepositoryMysql implements UserRepository {
 
     async findWithPasswordById(id: number): Promise<UserWithPassword | null> {
         const [rows] = await this.db.execute(
-            `SELECT Id, Mail, Username, Password, RoleId, Status, EmailValidatedAt, BannedByUserId, BannedReason, BannedAt, CreatedAt, UpdatedAt
+            `SELECT Id, Mail, Username, Password, RoleId, AccountType, Status, EmailValidatedAt, BannedByUserId, BannedReason, BannedAt, CreatedAt, UpdatedAt
              FROM Users
              WHERE Id = ?`,
             [id]
@@ -116,10 +117,12 @@ export class UserRepositoryMysql implements UserRepository {
     }
 
     async create(input: CreateUserInput): Promise<User> {
+        assertAccountType(input.accountType);
+
         const [result] = await this.db.execute(
-            `INSERT INTO Users (Mail, Username, Password, RoleId, Status)
-             VALUES (?, ?, ?, ?, ?)`,
-            [input.mail, input.username, input.passwordHash, input.roleId, input.status ?? 'inactive']
+            `INSERT INTO Users (Mail, Username, Password, RoleId, AccountType, Status)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [input.mail, input.username, input.passwordHash, input.roleId, input.accountType, input.status ?? 'inactive']
         );
 
         const insertId = Number((result as { insertId: number }).insertId);

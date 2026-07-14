@@ -18,21 +18,23 @@ ON DUPLICATE KEY UPDATE Name = new_roles.Name;
 -- =====================================================
 
 -- Admin
-INSERT INTO Users (Id, Mail, Username, Password, RoleId, Status, EmailValidatedAt)
-VALUES (1, 'admin@recipe-shelter.fr', 'Admin', '$2b$12$zrX5iMCRel.f0GtuWfc2J.w8rq7bSuNnFnpd6.ODVPEGhgZlygfBW', 1, 'active', CURRENT_TIMESTAMP) AS new_admin
+INSERT INTO Users (Id, Mail, Username, Password, RoleId, AccountType, Status, EmailValidatedAt)
+VALUES (1, 'admin@recipe-shelter.fr', 'Admin', '$2b$12$zrX5iMCRel.f0GtuWfc2J.w8rq7bSuNnFnpd6.ODVPEGhgZlygfBW', 1, 'staff', 'active', CURRENT_TIMESTAMP) AS new_admin
 ON DUPLICATE KEY UPDATE
   Username  = new_admin.Username,
   Password  = new_admin.Password,
   RoleId    = new_admin.RoleId,
+  AccountType = new_admin.AccountType,
   Status    = new_admin.Status,
   EmailValidatedAt = COALESCE(Users.EmailValidatedAt, new_admin.EmailValidatedAt);
 
 -- Anonyme
-INSERT INTO Users (Id, Mail, Username, Password, RoleId, Status, EmailValidatedAt)
-VALUES (2, 'anonyme@recipe-shelter.fr', 'Anonyme', '$2b$12$BY86H8oVSASAM7V0RJKO3e10vL7kebIc7jrxNX5TR1cJSlCrDBEq6', 2, 'active', CURRENT_TIMESTAMP) AS new_anonyme
+INSERT INTO Users (Id, Mail, Username, Password, RoleId, AccountType, Status, EmailValidatedAt)
+VALUES (2, 'anonyme@recipe-shelter.fr', 'Anonyme', '$2b$12$BY86H8oVSASAM7V0RJKO3e10vL7kebIc7jrxNX5TR1cJSlCrDBEq6', 2, 'staff', 'active', CURRENT_TIMESTAMP) AS new_anonyme
 ON DUPLICATE KEY UPDATE
   Username  = new_anonyme.Username,
   RoleId    = new_anonyme.RoleId,
+  AccountType = new_anonyme.AccountType,
   Status    = new_anonyme.Status,
   EmailValidatedAt = COALESCE(Users.EmailValidatedAt, new_anonyme.EmailValidatedAt);
 

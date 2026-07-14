@@ -20,6 +20,7 @@ const admin: User = {
     mail: 'admin@example.com',
     username: 'admin',
     roleId: 1,
+    accountType: 'community',
     status: 'active',
     emailValidatedAt: new Date(),
     bannedByUserId: null,
@@ -47,6 +48,7 @@ describe('health HTTP integration', () => {
             sub: admin.id,
             username: admin.username,
             roleId: admin.roleId,
+            accountType: admin.accountType,
             status: admin.status
         }, env.auth.jwtSecret)}`;
         server = await startHttpTestServer(app);

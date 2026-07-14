@@ -26,6 +26,7 @@ function createUser(id: number, username: string, roleId: number): User {
         mail: `${username}@example.com`,
         username,
         roleId,
+        accountType: 'community',
         status: 'active',
         emailValidatedAt: createdAt,
         bannedByUserId: null,
@@ -41,6 +42,7 @@ function sessionCookie(user: User): string {
         sub: user.id,
         username: user.username,
         roleId: user.roleId,
+        accountType: user.accountType,
         status: user.status
     }, env.auth.jwtSecret);
     return `${env.auth.sessionCookieName}=${token}`;

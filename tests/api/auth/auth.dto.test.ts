@@ -15,7 +15,8 @@ describe('auth.dto', () => {
         const result = parseRegisterBody({
             mail: ' USER@Example.COM ',
             username: ' testuser ',
-            password: 'Recipe42?'
+            password: 'Recipe42?',
+            accountType: 'staff'
         });
 
         assert.deepEqual(result, {

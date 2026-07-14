@@ -26,6 +26,7 @@ const activeUser: User = {
     mail: 'owner@example.test',
     username: 'owner',
     roleId: 2,
+    accountType: 'community',
     status: 'active',
     emailValidatedAt: new Date(),
     bannedByUserId: null,

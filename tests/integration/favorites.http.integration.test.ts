@@ -27,6 +27,7 @@ const activeUser: User = {
     mail: 'alice@example.com',
     username: 'alice',
     roleId: 2,
+    accountType: 'community',
     status: 'active',
     emailValidatedAt: new Date('2026-01-01T00:00:00.000Z'),
     bannedByUserId: null,
@@ -94,6 +95,7 @@ describe('favorites HTTP integration', () => {
             sub: activeUser.id,
             username: activeUser.username,
             roleId: activeUser.roleId,
+            accountType: activeUser.accountType,
             status: activeUser.status
         }, env.auth.jwtSecret)}`;
         server = await startHttpTestServer(app);

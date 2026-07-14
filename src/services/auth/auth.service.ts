@@ -8,13 +8,14 @@ import { normalizeEmail } from '../../utils/string.js';
 
 import type { EmailValidationService } from './email-validation.service.js';
 import type { UserRepository } from '../../repositories/users/user.repository.interface.js';
-import type { User, UserStatus } from '../../repositories/users/user.types.js';
+import type { AccountType, User, UserStatus } from '../../repositories/users/user.types.js';
 import type { Secret, SignOptions } from 'jsonwebtoken';
 
 export type AuthTokenPayload = {
   sub: number;
   username: string;
   roleId: number;
+  accountType: AccountType;
   status: UserStatus;
 };
 
@@ -26,6 +27,7 @@ export class AuthService {
       sub: user.id,
       username: user.username,
       roleId: user.roleId,
+      accountType: user.accountType,
       status: user.status
     };
     const secret: Secret = env.auth.jwtSecret;
@@ -61,7 +63,7 @@ export class AuthService {
       throw badRequest(`Default role not found: ${env.auth.defaultRoleName}`, 'AUTH_ROLE_NOT_FOUND');
 
     const passwordHash = await bcrypt.hash(password, env.auth.bcryptCost);
-    const user = await this.users.create({ mail, username, passwordHash, roleId, status: 'inactive' });
+    const user = await this.users.create({ mail, username, passwordHash, roleId, accountType: 'community', status: 'inactive' });
     await this.emailValidationService.sendValidationEmailForUser(user);
 
     return { user, message: 'Account created. Please validate your email before signing in.' };

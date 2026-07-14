@@ -8,7 +8,7 @@ describe('requireAdmin', () => {
     it('allows admin users', () => {
         let called = false;
 
-        requireAdmin({ auth: { userId: 1, username: 'admin', roleId: 1, status: 'active' } } as never, null as never, () => {
+        requireAdmin({ auth: { userId: 1, username: 'admin', roleId: 1, accountType: 'community', status: 'active' } } as never, null as never, () => {
             called = true;
         });
 
@@ -18,7 +18,7 @@ describe('requireAdmin', () => {
     it('rejects non-admin users', () => {
         let nextError: unknown;
 
-        requireAdmin({ auth: { userId: 2, username: 'user', roleId: 2, status: 'active' } } as never, null as never, (error) => {
+        requireAdmin({ auth: { userId: 2, username: 'user', roleId: 2, accountType: 'community', status: 'active' } } as never, null as never, (error) => {
             nextError = error;
         });
 

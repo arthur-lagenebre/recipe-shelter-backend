@@ -467,6 +467,7 @@
           <p>Formats réutilisés par plusieurs endpoints.</p>
           <pre><code>type ISODateString = string;
 type UserStatus = "inactive" | "active" | "banned";
+type AccountType = "community" | "staff";
 type UserModerationAction = "ban" | "unban";
 
 type PublicAuthorDto = {
@@ -539,7 +540,7 @@ type PaginatedResult&lt;T&gt; = {
               <td><span class="method post">POST</span></td>
               <td><code>/api/v1/auth/register</code></td>
               <td><span class="auth public">Public</span></td>
-              <td><code>mail</code>, <code>username</code>, <code>password</code>. Password min 8 caractères, username min 3.</td>
+              <td><code>mail</code>, <code>username</code>, <code>password</code>. Password min 8 caractères, username min 3. Le serveur attribue <code>accountType: "community"</code>.</td>
               <td><code>201</code> <code>{ "user": ..., "message": "..." }</code>.</td>
             </tr>
             <tr>
@@ -603,6 +604,7 @@ type PaginatedResult&lt;T&gt; = {
   userId: number;
   username: string;
   roleId: number;
+  accountType: AccountType;
   status: UserStatus;
 };
 
@@ -610,6 +612,7 @@ type AuthTokenPayload = {
   sub: number;
   username: string;
   roleId: number;
+  accountType: AccountType;
   status: UserStatus;
 };
 
@@ -626,6 +629,7 @@ type AuthMeResponse = {
   mail: string;
   username: string;
   roleId: number;
+  accountType: AccountType;
   status: UserStatus;
   emailValidatedAt: ISODateString | null;
   bannedByUserId: number | null;
@@ -759,6 +763,7 @@ type ResetPasswordResponse = MessageResponse;</code></pre>
   mail: string;
   username: string;
   roleId: number;
+  accountType: AccountType;
   createdAt: ISODateString;
   updatedAt: ISODateString;
 };</code></pre>
@@ -770,6 +775,7 @@ type ResetPasswordResponse = MessageResponse;</code></pre>
           <pre><code>type PublicUserWithPublishedRecipes = {
   id: number;
   username: string;
+  accountType: AccountType;
   publishedRecipes: RecipeListItem[];
 };
 

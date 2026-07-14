@@ -2,11 +2,21 @@ import type { RowDataPacket } from 'mysql2';
 
 export type UserStatus = 'inactive' | 'active' | 'banned';
 
+export const ACCOUNT_TYPES = ['community', 'staff'] as const;
+
+export type AccountType = typeof ACCOUNT_TYPES[number];
+
+export function assertAccountType(value: unknown): asserts value is AccountType {
+  if (!ACCOUNT_TYPES.includes(value as AccountType))
+    throw new TypeError(`Invalid account type: ${String(value)}`);
+}
+
 export type User = {
   id: number;
   mail: string;
   username: string;
   roleId: number;
+  accountType: AccountType;
   status: UserStatus;
   emailValidatedAt: Date | null;
   bannedByUserId: number | null;
@@ -25,6 +35,7 @@ export type CreateUserInput = {
   username: string;
   passwordHash: string;
   roleId: number;
+  accountType: AccountType;
   status?: UserStatus;
 };
 
@@ -33,6 +44,7 @@ export type UserRow = RowDataPacket & {
   Mail: string;
   Username: string;
   RoleId: number;
+  AccountType: unknown;
   Status: UserStatus;
   EmailValidatedAt: Date | null;
   BannedByUserId: number | null;

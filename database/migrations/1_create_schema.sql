@@ -18,6 +18,7 @@ CREATE TABLE Users (
   Username VARCHAR(64) NOT NULL,
   Password VARCHAR(255) NOT NULL,
   RoleId BIGINT UNSIGNED NOT NULL,
+  AccountType ENUM('community', 'staff') NOT NULL DEFAULT 'community',
   Status ENUM('inactive', 'active', 'banned') NOT NULL DEFAULT 'inactive',
   EmailValidatedAt DATETIME NULL,
   BannedByUserId BIGINT UNSIGNED NULL,
