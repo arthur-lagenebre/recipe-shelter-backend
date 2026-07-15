@@ -127,10 +127,19 @@ le backend. Le catalogue initial est le suivant :
 | Staff | `staff.read`, `staff.manage` |
 | Audit | `audit.read` |
 
-`RecipeModerator`, `CommentModerator`, `UserAdmin` et `CatalogManager` ne
-reçoivent que les permissions de leur domaine. Les suppressions définitives de
-recettes et commentaires, la gestion du staff, l'audit et la santé du service
-restent réservés au rôle `SuperAdmin` dans le seed initial.
+La matrice initiale est explicite et insérée de manière idempotente par le seed :
+
+| Rôle | Permissions |
+| --- | --- |
+| `RecipeModerator` | `recipes.read`, `recipes.moderate`, `recipes.archive` |
+| `CommentModerator` | `comments.read`, `comments.moderate`, `comments.update` |
+| `UserAdmin` | `users.read`, `users.moderate` |
+| `CatalogManager` | `catalog.read`, `catalog.manage` |
+| `SuperAdmin` | Toutes les permissions listées dans le catalogue, associées explicitement |
+
+Les suppressions définitives de recettes et commentaires, la gestion du staff,
+l'audit et la santé du service restent ainsi réservés au rôle `SuperAdmin` dans
+le seed initial.
 
 Le schéma d'installation est consolidé dans l'unique fichier
 `database/migrations/1_create_schema.sql`. Les identifiants `Users.Id` restent

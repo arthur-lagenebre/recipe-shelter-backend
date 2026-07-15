@@ -7,7 +7,29 @@ import { PERMISSIONS } from '../../src/security/permissions.js';
 const schemaPath = new URL('../../database/migrations/1_create_schema.sql', import.meta.url);
 const seedPath = new URL('../../database/seed.sql', import.meta.url);
 
-describe('permission catalog', () => {
+const EXPECTED_ROLE_PERMISSIONS: Record<string, string[]> = {
+    CatalogManager: [
+        PERMISSIONS.catalogManage,
+        PERMISSIONS.catalogRead
+    ],
+    CommentModerator: [
+        PERMISSIONS.commentsModerate,
+        PERMISSIONS.commentsRead,
+        PERMISSIONS.commentsUpdate
+    ],
+    RecipeModerator: [
+        PERMISSIONS.recipesArchive,
+        PERMISSIONS.recipesModerate,
+        PERMISSIONS.recipesRead
+    ],
+    SuperAdmin: [...Object.values(PERMISSIONS)].sort(),
+    UserAdmin: [
+        PERMISSIONS.usersModerate,
+        PERMISSIONS.usersRead
+    ]
+};
+
+describe('RBAC seed catalog', () => {
     it('keeps stable application permission codes synchronized with the central seed', async () => {
         const seed = await readFile(seedPath, 'utf8');
         const permissionInsert = seed.match(/INSERT INTO Permissions[\s\S]+?(?=AS new_permissions)/)?.[0];
@@ -26,6 +48,29 @@ describe('permission catalog', () => {
             [...new Set(applicationCodes.map((code) => code.split('.')[0]))].sort(),
             ['audit', 'catalog', 'comments', 'recipes', 'staff', 'system', 'users']
         );
+    });
+
+    it('defines the validated role-permission matrix with no duplicate or unknown association', async () => {
+        const seed = await readFile(seedPath, 'utf8');
+        const rolePermissionInsert = seed.match(/INSERT INTO RolePermissions[\s\S]+?;/)?.[0];
+
+        assert.ok(rolePermissionInsert, 'The central seed must insert the role-permission matrix');
+
+        const associations = [...rolePermissionInsert.matchAll(
+            /(?:SELECT|UNION ALL SELECT)\s+'([^']+)'(?:\s+AS RoleCode)?\s*,\s*'([^']+)'(?:\s+AS PermissionCode)?/g
+        )].map((match) => ({ roleCode: match[1], permissionCode: match[2] }));
+        const associationKeys = associations.map(({ roleCode, permissionCode }) => `${roleCode}:${permissionCode}`);
+        const knownPermissionCodes = new Set<string>(Object.values(PERMISSIONS));
+        const permissionsByRole: Record<string, string[]> = {};
+
+        for (const { roleCode, permissionCode } of associations)
+            (permissionsByRole[roleCode] ??= []).push(permissionCode);
+        for (const permissionCodes of Object.values(permissionsByRole))
+            permissionCodes.sort();
+
+        assert.deepEqual(permissionsByRole, EXPECTED_ROLE_PERMISSIONS);
+        assert.equal(new Set(associationKeys).size, associationKeys.length);
+        assert.ok(associations.every(({ permissionCode }) => knownPermissionCodes.has(permissionCode)));
     });
 
     it('keeps all initial permissions out of the structural schema', async () => {

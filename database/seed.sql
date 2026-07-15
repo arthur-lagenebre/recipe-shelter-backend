@@ -47,40 +47,44 @@ ON DUPLICATE KEY UPDATE
 -- =====================================================
 -- Role permissions
 -- =====================================================
-INSERT INTO RolePermissions (RoleId, PermissionId) VALUES
--- RecipeModerator: consultation et cycle de modération, sans suppression définitive.
-(1, 4),
-(1, 5),
-(1, 6),
--- CommentModerator: consultation et modération réversible, sans suppression définitive.
-(2, 8),
-(2, 9),
-(2, 10),
--- UserAdmin: consultation et modération des seuls comptes community.
-(3, 2),
-(3, 3),
--- CatalogManager: gestion complète des données du catalogue.
-(4, 12),
-(4, 13),
--- SuperAdmin: catalogue explicite complet, sans wildcard ni héritage de rôle.
-(5, 1),
-(5, 2),
-(5, 3),
-(5, 4),
-(5, 5),
-(5, 6),
-(5, 7),
-(5, 8),
-(5, 9),
-(5, 10),
-(5, 11),
-(5, 12),
-(5, 13),
-(5, 14),
-(5, 15),
-(5, 16)
-AS new_role_permissions
-ON DUPLICATE KEY UPDATE PermissionId = new_role_permissions.PermissionId;
+INSERT INTO RolePermissions (RoleId, PermissionId)
+SELECT roles.Id, permissions.Id
+FROM (
+  -- RecipeModerator: consultation et cycle de modération, sans suppression définitive.
+  SELECT 'RecipeModerator' AS RoleCode, 'recipes.read' AS PermissionCode
+  UNION ALL SELECT 'RecipeModerator', 'recipes.moderate'
+  UNION ALL SELECT 'RecipeModerator', 'recipes.archive'
+  -- CommentModerator: consultation et modération réversible, sans suppression définitive.
+  UNION ALL SELECT 'CommentModerator', 'comments.read'
+  UNION ALL SELECT 'CommentModerator', 'comments.moderate'
+  UNION ALL SELECT 'CommentModerator', 'comments.update'
+  -- UserAdmin: consultation et modération des seuls comptes community.
+  UNION ALL SELECT 'UserAdmin', 'users.read'
+  UNION ALL SELECT 'UserAdmin', 'users.moderate'
+  -- CatalogManager: gestion complète des données du catalogue.
+  UNION ALL SELECT 'CatalogManager', 'catalog.read'
+  UNION ALL SELECT 'CatalogManager', 'catalog.manage'
+  -- SuperAdmin: catalogue explicite complet, sans wildcard ni héritage de rôle.
+  UNION ALL SELECT 'SuperAdmin', 'system.health.read'
+  UNION ALL SELECT 'SuperAdmin', 'users.read'
+  UNION ALL SELECT 'SuperAdmin', 'users.moderate'
+  UNION ALL SELECT 'SuperAdmin', 'recipes.read'
+  UNION ALL SELECT 'SuperAdmin', 'recipes.moderate'
+  UNION ALL SELECT 'SuperAdmin', 'recipes.archive'
+  UNION ALL SELECT 'SuperAdmin', 'recipes.delete'
+  UNION ALL SELECT 'SuperAdmin', 'comments.read'
+  UNION ALL SELECT 'SuperAdmin', 'comments.moderate'
+  UNION ALL SELECT 'SuperAdmin', 'comments.update'
+  UNION ALL SELECT 'SuperAdmin', 'comments.delete'
+  UNION ALL SELECT 'SuperAdmin', 'catalog.read'
+  UNION ALL SELECT 'SuperAdmin', 'catalog.manage'
+  UNION ALL SELECT 'SuperAdmin', 'staff.read'
+  UNION ALL SELECT 'SuperAdmin', 'staff.manage'
+  UNION ALL SELECT 'SuperAdmin', 'audit.read'
+) AS role_permission_matrix
+INNER JOIN Roles AS roles ON roles.Code = role_permission_matrix.RoleCode
+INNER JOIN Permissions AS permissions ON permissions.Code = role_permission_matrix.PermissionCode
+ON DUPLICATE KEY UPDATE PermissionId = permissions.Id;
 
 -- =====================================================
 -- Users
