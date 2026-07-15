@@ -1,4 +1,5 @@
 import { PERMISSIONS } from '../../security/permissions.js';
+import { hasPermission } from '../auth/authorization.service.js';
 
 import type { AuthContext } from '../../api/auth/auth.types.js';
 import type { Recipe } from '../../repositories/recipes/recipe.types.js';
@@ -8,7 +9,7 @@ export function isRecipeOwner(recipe: Recipe, auth: AuthContext): boolean {
 }
 
 export function canViewRecipe(recipe: Recipe, auth: AuthContext): boolean {
-    return auth.permissions.includes(PERMISSIONS.recipesRead) || isRecipeOwner(recipe, auth) || recipe.status === 'published';
+    return hasPermission(auth, PERMISSIONS.recipesRead) || isRecipeOwner(recipe, auth) || recipe.status === 'published';
 }
 
 export function canEditRecipe(recipe: Recipe, auth: AuthContext): boolean {

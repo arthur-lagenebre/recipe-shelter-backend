@@ -11,6 +11,7 @@ import { errorHandler } from '../../src/middlewares/error-handler.js';
 import { configureAuthRbacRepository, configureAuthUserRepository, requireAuth } from '../../src/middlewares/require-auth.js';
 import { PERMISSIONS } from '../../src/security/permissions.js';
 import { AdminUserService } from '../../src/services/admin/admin.users.service.js';
+import { requireCommunityAccount, requireStaffAccount } from '../../src/services/auth/authorization.service.js';
 import { env } from '../../src/utils/env.js';
 import { startHttpTestServer } from '../helpers/http-test-server.js';
 
@@ -103,6 +104,8 @@ describe('admin user access HTTP integration', () => {
         app.use(cookieParser());
         app.use(express.json());
         app.get('/protected', requireAuth, (req, res) => res.status(200).json({ userId: req.auth?.userId }));
+        app.get('/community-only', requireAuth, requireCommunityAccount, (_req, res) => res.status(200).json({ ok: true }));
+        app.get('/staff-only', requireAuth, requireStaffAccount, (_req, res) => res.status(200).json({ ok: true }));
         app.use('/api/v1/admin/users', createAdminUsersRouter(createAdminUsersController(service)));
         app.use(errorHandler);
 
@@ -122,6 +125,22 @@ describe('admin user access HTTP integration', () => {
 
         assert.equal(response.status, 403);
         assert.equal((await response.json() as { error: { code: string } }).error.code, 'AUTH_PERMISSION_REQUIRED');
+    });
+
+    it('enforces community and staff account boundaries', async () => {
+        const [communityAllowed, communityDenied, staffAllowed, staffDenied] = await Promise.all([
+            fetch(`${server.baseUrl}/community-only`, { headers: { cookie: userCookie } }),
+            fetch(`${server.baseUrl}/staff-only`, { headers: { cookie: userCookie } }),
+            fetch(`${server.baseUrl}/staff-only`, { headers: { cookie: adminCookie } }),
+            fetch(`${server.baseUrl}/community-only`, { headers: { cookie: adminCookie } })
+        ]);
+
+        assert.equal(communityAllowed.status, 200);
+        assert.equal(staffAllowed.status, 200);
+        assert.equal(communityDenied.status, 403);
+        assert.equal((await communityDenied.json() as { error: { code: string } }).error.code, 'AUTH_STAFF_ACCOUNT_REQUIRED');
+        assert.equal(staffDenied.status, 403);
+        assert.equal((await staffDenied.json() as { error: { code: string } }).error.code, 'AUTH_COMMUNITY_ACCOUNT_REQUIRED');
     });
 
     it('invalidates a banned user session and restores it after unban', async () => {

@@ -141,6 +141,12 @@ Les suppressions définitives de recettes et commentaires, la gestion du staff,
 l'audit et la santé du service restent ainsi réservés au rôle `SuperAdmin` dans
 le seed initial.
 
+Les décisions d'autorisation sont centralisées dans
+`src/services/auth/authorization.service.ts`. `hasPermission` n'accorde que les
+permissions explicites d'un compte staff actif ; `requirePermission`,
+`requireCommunityAccount` et `requireStaffAccount` refusent par défaut un
+contexte absent, inactif ou incompatible.
+
 Le schéma d'installation est consolidé dans l'unique fichier
 `database/migrations/1_create_schema.sql`. Les identifiants `Users.Id` restent
 les clés référencées par les recettes, commentaires et favoris. Les triggers du

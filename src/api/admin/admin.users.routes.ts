@@ -1,8 +1,8 @@
 import { Router } from 'express';
 
 import { requireAuth } from '../../middlewares/require-auth.js';
-import { requirePermission } from '../../middlewares/require-permission.js';
 import { PERMISSIONS } from '../../security/permissions.js';
+import { requirePermission } from '../../services/auth/authorization.service.js';
 
 import type { RequestHandler } from 'express';
 
