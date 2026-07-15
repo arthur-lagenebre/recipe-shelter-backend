@@ -55,9 +55,9 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
 
         await adminConnection.query(`
             USE \`${databaseName}\`;
-            INSERT INTO Roles (Id, Name, Description) VALUES
-                (1, 'administrator', 'Full access'),
-                (2, 'moderator', 'Moderation access');
+            INSERT INTO Roles (Id, Code, Name, Description) VALUES
+                (1, 'SuperAdmin', 'administrator', 'Full access'),
+                (2, 'RecipeModerator', 'moderator', 'Moderation access');
             INSERT INTO Permissions (Id, Code, Description) VALUES
                 (1, 'users.moderate', 'Moderate users'),
                 (2, 'recipes.read', 'Read recipes'),
@@ -219,7 +219,9 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
         await assert.rejects(() => pool.query(`INSERT INTO StaffRoles (StaffUserId, RoleId) VALUES (?, 999999)`, [staff.id]));
         await assert.rejects(() => pool.query(`INSERT INTO RolePermissions (RoleId, PermissionId) VALUES (1, 1)`));
         await assert.rejects(() => pool.query(`INSERT INTO RolePermissions (RoleId, PermissionId) VALUES (1, 999999)`));
-        await assert.rejects(() => pool.query(`INSERT INTO Roles (Name, Description) VALUES ('ADMINISTRATOR', 'Duplicate')`));
+        await assert.rejects(() => pool.query(
+            `INSERT INTO Roles (Code, Name, Description) VALUES ('SUPERADMIN', 'Other administrator', 'Duplicate')`
+        ));
         await assert.rejects(() => pool.query(`INSERT INTO Permissions (Code, Description) VALUES ('RECIPES.READ', 'Duplicate')`));
         const author = await users.create({
             mail: 'author@test.local',

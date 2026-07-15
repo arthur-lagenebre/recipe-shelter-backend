@@ -107,6 +107,12 @@ effectives proviennent exclusivement de `RolePermissions` ; un compte sans rôle
 ou sans permission correspondante est refusé par défaut. Les comptes community
 ne reçoivent aucun rôle RBAC.
 
+Chaque rôle possède un `Code` stable distinct de son nom d'affichage. Le seed
+initialise `RecipeModerator`, `CommentModerator`, `UserAdmin`, `CatalogManager`
+et `SuperAdmin`. Le compte admin de démonstration reçoit uniquement
+`SuperAdmin`, dont les permissions sont associées directement : ce rôle
+n'hérite pas automatiquement des rôles métier.
+
 Le schéma d'installation est consolidé dans l'unique fichier
 `database/migrations/1_create_schema.sql`. Les identifiants `Users.Id` restent
 les clés référencées par les recettes, commentaires et favoris. Les triggers du

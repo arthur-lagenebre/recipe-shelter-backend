@@ -7,11 +7,15 @@ START TRANSACTION;
 -- =====================================================
 -- Roles
 -- =====================================================
-INSERT INTO Roles (Id, Name, Description) VALUES
-(1, 'administrator', 'Accès administratif complet'),
-(2, 'moderator', 'Modération des recettes et des commentaires')
+INSERT INTO Roles (Id, Code, Name, Description) VALUES
+(1, 'RecipeModerator',  'Modérateur de recettes',           'Examine, approuve, rejette et archive les recettes'),
+(2, 'CommentModerator', 'Modérateur de commentaires',       'Examine, masque, restaure et modifie les commentaires'),
+(3, 'UserAdmin',        'Administrateur des utilisateurs',  'Consulte, suspend et réactive les comptes utilisateurs'),
+(4, 'CatalogManager',   'Gestionnaire du catalogue',        'Gère les catégories, ingrédients, tags et ustensiles'),
+(5, 'SuperAdmin',       'Super administrateur',             'Dispose explicitement de toutes les permissions administratives')
 AS new_roles
 ON DUPLICATE KEY UPDATE
+  Code = new_roles.Code,
   Name = new_roles.Name,
   Description = new_roles.Description;
 
@@ -39,22 +43,17 @@ ON DUPLICATE KEY UPDATE
 -- Role permissions
 -- =====================================================
 INSERT INTO RolePermissions (RoleId, PermissionId) VALUES
-(1, 1),
-(1, 2),
-(1, 3),
-(1, 4),
-(1, 5),
-(1, 6),
-(1, 7),
-(1, 8),
-(1, 9),
-(1, 10),
-(1, 11),
-(2, 4),
-(2, 5),
-(2, 8),
-(2, 9),
-(2, 10)
+(5, 1),
+(5, 2),
+(5, 3),
+(5, 4),
+(5, 5),
+(5, 6),
+(5, 7),
+(5, 8),
+(5, 9),
+(5, 10),
+(5, 11)
 AS new_role_permissions
 ON DUPLICATE KEY UPDATE PermissionId = new_role_permissions.PermissionId;
 
@@ -89,11 +88,8 @@ ON DUPLICATE KEY UPDATE
   AccountType = new_staff.AccountType,
   Status = new_staff.Status;
 
--- The administrator deliberately cumulates two roles. The anonymous technical
--- account has no role and therefore no permission (default deny).
-INSERT INTO StaffRoles (StaffUserId, RoleId) VALUES
-  (1, 1),
-  (1, 2)
+-- SuperAdmin receives its permissions directly instead of inheriting the four business roles. The anonymous technical account has no role and therefore no permission (default deny).
+INSERT INTO StaffRoles (StaffUserId, RoleId) VALUES (1, 5)
 AS new_staff_roles
 ON DUPLICATE KEY UPDATE RoleId = new_staff_roles.RoleId;
 

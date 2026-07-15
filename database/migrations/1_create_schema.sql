@@ -7,9 +7,11 @@ USE recipe_shelter;
 -- ---------- Core ----------
 CREATE TABLE Roles (
   Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  Code VARCHAR(64) NOT NULL,
   Name VARCHAR(64) NOT NULL,
   Description VARCHAR(255) NOT NULL,
   PRIMARY KEY (Id),
+  UNIQUE KEY roles_code_UK (Code),
   UNIQUE KEY roles_name_UK (Name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

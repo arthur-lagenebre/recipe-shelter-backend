@@ -29,6 +29,7 @@ function targetDatabase(sql: string, databaseName: string): string {
 
 describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_DB_NAME to run isolated MySQL tests' }, () => {
     let connection: mysql.Connection;
+    let seed: string;
 
     before(async () => {
         const databaseName = requireRbacTestDatabaseName();
@@ -46,7 +47,7 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
         const schemaPath = new URL('../../../database/migrations/1_create_schema.sql', import.meta.url);
         const seedPath = new URL('../../../database/seed.sql', import.meta.url);
         const schema = targetDatabase(await readFile(schemaPath, 'utf8'), databaseName);
-        const seed = targetDatabase(await readFile(seedPath, 'utf8'), databaseName);
+        seed = targetDatabase(await readFile(seedPath, 'utf8'), databaseName);
 
         await connection.query(schema);
         await connection.query(seed);
@@ -77,8 +78,47 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
         const [legacyRoleColumns] = await connection.query(`SHOW COLUMNS FROM Users WHERE Field = 'RoleId'`);
         assert.deepEqual(legacyRoleColumns, []);
 
-        const [adminRoles] = await connection.query(`SELECT RoleId FROM StaffRoles WHERE StaffUserId = 1 ORDER BY RoleId`);
-        assert.deepEqual(adminRoles, [{ RoleId: 1 }, { RoleId: 2 }]);
+        const [roles] = await connection.query(
+            `SELECT Code, Name, Description
+             FROM Roles
+             ORDER BY Code`
+        );
+        assert.deepEqual(roles, [
+            {
+                Code: 'CatalogManager',
+                Name: 'Gestionnaire du catalogue',
+                Description: 'Gère les catégories, ingrédients, tags et ustensiles'
+            },
+            {
+                Code: 'CommentModerator',
+                Name: 'Modérateur de commentaires',
+                Description: 'Examine, masque, restaure et modifie les commentaires'
+            },
+            {
+                Code: 'RecipeModerator',
+                Name: 'Modérateur de recettes',
+                Description: 'Examine, approuve, rejette et archive les recettes'
+            },
+            {
+                Code: 'SuperAdmin',
+                Name: 'Super administrateur',
+                Description: 'Dispose explicitement de toutes les permissions administratives'
+            },
+            {
+                Code: 'UserAdmin',
+                Name: 'Administrateur des utilisateurs',
+                Description: 'Consulte, suspend et réactive les comptes utilisateurs'
+            }
+        ]);
+
+        const [adminRoles] = await connection.query(
+            `SELECT r.Code
+             FROM StaffRoles AS sr
+             INNER JOIN Roles AS r ON r.Id = sr.RoleId
+             WHERE sr.StaffUserId = 1
+             ORDER BY r.Code`
+        );
+        assert.deepEqual(adminRoles, [{ Code: 'SuperAdmin' }]);
 
         const [adminPermissions] = await connection.query(
             `SELECT DISTINCT p.Code
@@ -99,6 +139,39 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
         assert.deepEqual(anonymousPermissions, [{ PermissionCount: 0 }]);
     });
 
+    it('replays the seed without duplicating RBAC data', async () => {
+        await connection.query(seed);
+
+        const [roleInstances] = await connection.query(
+            `SELECT Code, COUNT(*) AS InstanceCount
+             FROM Roles
+             GROUP BY Code
+             ORDER BY Code`
+        );
+        assert.deepEqual(roleInstances, [
+            { Code: 'CatalogManager', InstanceCount: 1 },
+            { Code: 'CommentModerator', InstanceCount: 1 },
+            { Code: 'RecipeModerator', InstanceCount: 1 },
+            { Code: 'SuperAdmin', InstanceCount: 1 },
+            { Code: 'UserAdmin', InstanceCount: 1 }
+        ]);
+
+        const [adminRoleAssignments] = await connection.query(
+            `SELECT COUNT(*) AS AssignmentCount
+             FROM StaffRoles
+             WHERE StaffUserId = 1`
+        );
+        assert.deepEqual(adminRoleAssignments, [{ AssignmentCount: 1 }]);
+
+        const [superAdminPermissions] = await connection.query(
+            `SELECT COUNT(*) AS PermissionCount
+             FROM RolePermissions AS rp
+             INNER JOIN Roles AS r ON r.Id = rp.RoleId
+             WHERE r.Code = 'SuperAdmin'`
+        );
+        assert.deepEqual(superAdminPermissions, [{ PermissionCount: 11 }]);
+    });
+
     it('enforces unique assignments, foreign keys and default deny', async () => {
         await connection.query(
             `INSERT INTO Users (Id, Mail, Username, Password, AccountType, Status) VALUES
@@ -116,9 +189,16 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
         await assert.rejects(() => connection.query(`INSERT INTO StaffRoles (StaffUserId, RoleId) VALUES (101, 1)`));
         await assert.rejects(() => connection.query(`INSERT INTO StaffRoles (StaffUserId, RoleId) VALUES (100, 1)`));
         await assert.rejects(() => connection.query(`INSERT INTO StaffRoles (StaffUserId, RoleId) VALUES (101, 999999)`));
-        await assert.rejects(() => connection.query(`INSERT INTO RolePermissions (RoleId, PermissionId) VALUES (1, 1)`));
+        await assert.rejects(() => connection.query(`INSERT INTO RolePermissions (RoleId, PermissionId) VALUES (5, 1)`));
         await assert.rejects(() => connection.query(`INSERT INTO RolePermissions (RoleId, PermissionId) VALUES (1, 999999)`));
-        await assert.rejects(() => connection.query(`INSERT INTO Roles (Name, Description) VALUES ('ADMINISTRATOR', 'Duplicate')`));
+        await assert.rejects(() => connection.query(
+            `INSERT INTO Roles (Code, Name, Description)
+             VALUES ('RECIPEMODERATOR', 'Autre rôle recettes', 'Duplicate code')`
+        ));
+        await assert.rejects(() => connection.query(
+            `INSERT INTO Roles (Code, Name, Description)
+             VALUES ('OtherRecipeModerator', 'MODÉRATEUR DE RECETTES', 'Duplicate name')`
+        ));
         await assert.rejects(() => connection.query(`INSERT INTO Permissions (Code, Description) VALUES ('USERS.READ', 'Duplicate')`));
     });
 });
