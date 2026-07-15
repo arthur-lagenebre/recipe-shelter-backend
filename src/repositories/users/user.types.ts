@@ -47,7 +47,6 @@ export type User = {
   id: number;
   mail: string;
   username: string;
-  roleId: number;
   accountType: AccountType;
   status: UserStatus;
   emailValidatedAt: Date | null;
@@ -66,7 +65,6 @@ type CreateUserBaseInput = {
   mail: string;
   username: string;
   passwordHash: string;
-  roleId: number;
 };
 
 export type CreateUserInput = CreateUserBaseInput & (
@@ -78,7 +76,6 @@ export type UserRow = RowDataPacket & {
   Id: number;
   Mail: string;
   Username: string;
-  RoleId: number;
   AccountType: unknown;
   CommunityProfileUserId: number | null;
   CommunityStatus: unknown;
@@ -115,8 +112,4 @@ export type StaffProfileRow = RowDataPacket & {
 
 export type ExistsRow = RowDataPacket & {
   One: number;
-};
-
-export type RoleRow = RowDataPacket & {
-  Id: number;
 };

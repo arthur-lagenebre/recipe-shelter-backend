@@ -14,7 +14,6 @@ import type { Secret, SignOptions } from 'jsonwebtoken';
 export type AuthTokenPayload = {
   sub: number;
   username: string;
-  roleId: number;
   accountType: AccountType;
   status: UserStatus;
 };
@@ -26,7 +25,6 @@ export class AuthService {
     const payload: AuthTokenPayload = {
       sub: user.id,
       username: user.username,
-      roleId: user.roleId,
       accountType: user.accountType,
       status: user.status
     };
@@ -58,12 +56,8 @@ export class AuthService {
     if (await this.users.isUsernameTaken(username))
       throw conflict('Username already used', 'AUTH_USERNAME_TAKEN');
 
-    const roleId = await this.users.getRoleIdByName(env.auth.defaultRoleName);
-    if (!roleId)
-      throw badRequest(`Default role not found: ${env.auth.defaultRoleName}`, 'AUTH_ROLE_NOT_FOUND');
-
     const passwordHash = await bcrypt.hash(password, env.auth.bcryptCost);
-    const user = await this.users.create({ mail, username, passwordHash, roleId, accountType: 'community', status: 'inactive' });
+    const user = await this.users.create({ mail, username, passwordHash, accountType: 'community', status: 'inactive' });
     await this.emailValidationService.sendValidationEmailForUser(user);
 
     return { user, message: 'Account created. Please validate your email before signing in.' };

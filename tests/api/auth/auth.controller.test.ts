@@ -32,7 +32,6 @@ const user: User = {
     id: 2,
     mail: 'user@example.com',
     username: 'testuser',
-    roleId: 2,
     accountType: 'community',
     status: 'active',
     emailValidatedAt: new Date('2026-05-09T10:00:00.000Z'),

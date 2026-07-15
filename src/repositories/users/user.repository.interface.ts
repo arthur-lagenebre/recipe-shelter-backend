@@ -9,7 +9,6 @@ export interface UserRepository {
     findStaffProfileByUserId(userId: number): Promise<StaffProfile | null>;
     findAuthByEmail(mail: string): Promise<UserWithPassword | null>;
     findWithPasswordById(id: number): Promise<UserWithPassword | null>;
-    getRoleIdByName(roleName: string): Promise<number | null>;
     markEmailValidated(userId: number): Promise<boolean>;
     updateEmail(userId: number, mail: string): Promise<void>;
     updatePassword(userId: number, passwordHash: string): Promise<void>;

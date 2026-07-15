@@ -11,7 +11,6 @@ const baseUser: User = {
     id: 42,
     mail: 'user@example.com',
     username: 'testuser',
-    roleId: 2,
     accountType: 'community',
     status: 'inactive',
     emailValidatedAt: null,
@@ -63,7 +62,6 @@ describe('UserRepositoryMysql', () => {
                 mail: 'user@example.com',
                 username: 'testuser',
                 passwordHash: 'hash',
-                roleId: 2,
                 accountType: 'partner' as never
             }),
             { name: 'TypeError', message: 'Invalid account type: partner' }
@@ -80,12 +78,11 @@ describe('UserRepositoryMysql', () => {
             mail: 'user@example.com',
             username: 'testuser',
             passwordHash: 'hash',
-            roleId: 2,
             accountType: 'community'
         });
 
         assert.match(fake.statements[0]?.sql ?? '', /INSERT INTO Users/);
-        assert.deepEqual(fake.statements[0]?.params, ['user@example.com', 'testuser', 'hash', 2, 'community', 'inactive']);
+        assert.deepEqual(fake.statements[0]?.params, ['user@example.com', 'testuser', 'hash', 'community', 'inactive']);
         assert.match(fake.statements[1]?.sql ?? '', /INSERT INTO CommunityProfiles/);
         assert.equal(fake.statements.some(({ sql }) => /INSERT INTO StaffProfiles/.test(sql)), false);
         assert.deepEqual(fake.counts(), { commits: 1, rollbacks: 0, releases: 1 });
@@ -100,12 +97,11 @@ describe('UserRepositoryMysql', () => {
             mail: 'staff@example.com',
             username: 'staff',
             passwordHash: 'hash',
-            roleId: 1,
             accountType: 'staff',
             status: 'locked'
         });
 
-        assert.deepEqual(fake.statements[0]?.params, ['staff@example.com', 'staff', 'hash', 1, 'staff', 'banned']);
+        assert.deepEqual(fake.statements[0]?.params, ['staff@example.com', 'staff', 'hash', 'staff', 'banned']);
         assert.match(fake.statements[1]?.sql ?? '', /INSERT INTO StaffProfiles/);
         assert.deepEqual(fake.statements[1]?.params, [42, 'locked', 'locked']);
         assert.equal(fake.statements.some(({ sql }) => /INSERT INTO CommunityProfiles/.test(sql)), false);
@@ -119,7 +115,6 @@ describe('UserRepositoryMysql', () => {
             mail: 'staff@example.com',
             username: 'staff',
             passwordHash: 'hash',
-            roleId: 1,
             accountType: 'staff'
         }), /profile insert failed/);
 

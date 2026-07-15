@@ -97,10 +97,15 @@ Ce script :
 
 - supprime la base `recipe_shelter` si elle existe ;
 - recrée le schéma ;
-- insère les données de référence minimales : rôles, catégories, ingrédients, groupes de tags, tags et ustensiles.
+- insère les données de référence minimales : rôles et permissions RBAC, catégories, ingrédients, groupes de tags, tags et ustensiles.
 
 La réinitialisation crée aussi les profils spécialisés `CommunityProfiles` et
 `StaffProfiles`.
+
+Les comptes staff cumulent leurs rôles via `StaffRoles`. Leurs permissions
+effectives proviennent exclusivement de `RolePermissions` ; un compte sans rôle
+ou sans permission correspondante est refusé par défaut. Les comptes community
+ne reçoivent aucun rôle RBAC.
 
 Le schéma d'installation est consolidé dans l'unique fichier
 `database/migrations/1_create_schema.sql`. Les identifiants `Users.Id` restent
@@ -218,7 +223,7 @@ La configuration par défaut utilise `SameSite=lax`, adaptée à un front et une
 
 Des exemples de requêtes sont disponibles dans `tests/http/`.
 
-Les routes `/api/v1/admin/*` et `/api/v1/health/*` demandent une session administrateur. Pour une première vérification sans authentification, utilisez plutôt `GET /api/v1/recipes`, `GET /api/v1/categories`, `GET /api/v1/ingredients` ou `GET /api/v1/tags`.
+Les routes `/api/v1/admin/*` et `/api/v1/health/*` demandent une session staff active possédant la permission explicite de la route. Pour une première vérification sans authentification, utilisez plutôt `GET /api/v1/recipes`, `GET /api/v1/categories`, `GET /api/v1/ingredients` ou `GET /api/v1/tags`.
 
 ## Variables d'environnement
 
@@ -242,7 +247,6 @@ Les valeurs par défaut sont définies dans `.env.example`.
 | `AUTH_SESSION_COOKIE_DOMAIN` | Non | Domaine du cookie si nécessaire, par exemple `.recipe-shelter.fr`. Défaut : non défini. |
 | `AUTH_SESSION_COOKIE_MAX_AGE_MS` | Non | Durée de vie du cookie en millisecondes. Défaut : dérivé de `JWT_EXPIRES_IN`. |
 | `BCRYPT_COST` | Non | Coût bcrypt pour le hash des mots de passe. Défaut : `12`. |
-| `AUTH_DEFAULT_ROLE_NAME` | Non | Rôle attribué aux nouveaux comptes. Défaut : `user`. |
 | `AUTH_RATE_LIMIT_MAX_ATTEMPTS` | Non | Nombre maximal de tentatives sur les routes auth limitées. |
 | `AUTH_RATE_LIMIT_WINDOW_MS` | Non | Fenêtre du rate limit en millisecondes. |
 | `CORS_ALLOWED_ORIGINS` | Non | Origines frontend autorisées, séparées par des virgules. Les credentials CORS sont activés, donc `*` n'est pas accepté. |

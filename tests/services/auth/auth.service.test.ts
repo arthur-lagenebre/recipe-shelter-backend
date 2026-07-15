@@ -16,7 +16,6 @@ const baseUser: User = {
     id: 2,
     mail: 'user@example.com',
     username: 'testuser',
-    roleId: 2,
     accountType: 'community',
     status: 'active',
     emailValidatedAt: new Date('2026-05-09T10:00:00.000Z'),
@@ -31,7 +30,6 @@ class FakeUserRepository implements Partial<UserRepository> {
     createdInput: CreateUserInput | null = null;
     emailTaken = false;
     usernameTaken = false;
-    roleId: number | null = 2;
     authUser: UserWithPassword | null = null;
 
     async isEmailTaken(): Promise<boolean> {
@@ -42,14 +40,10 @@ class FakeUserRepository implements Partial<UserRepository> {
         return this.usernameTaken;
     }
 
-    async getRoleIdByName(): Promise<number | null> {
-        return this.roleId;
-    }
-
     async create(input: CreateUserInput): Promise<User> {
         this.createdInput = input;
 
-        return { ...baseUser, mail: input.mail, username: input.username, roleId: input.roleId, accountType: input.accountType, status: input.status ?? 'active' };
+        return { ...baseUser, mail: input.mail, username: input.username, accountType: input.accountType, status: input.status ?? 'active' };
     }
 
     async findAuthByEmail(): Promise<UserWithPassword | null> {
@@ -90,7 +84,6 @@ describe('AuthService', () => {
 
         assert.equal(users.createdInput?.mail, 'user@example.com');
         assert.equal(users.createdInput?.username, 'testuser');
-        assert.equal(users.createdInput?.roleId, 2);
         assert.equal(users.createdInput?.accountType, 'community');
         assert.equal(users.createdInput?.status, 'inactive');
         assert.equal(await bcrypt.compare('Recipe42?', users.createdInput?.passwordHash ?? ''), true);
@@ -108,8 +101,6 @@ describe('AuthService', () => {
         users.usernameTaken = true;
         await assert.rejects(() => service.register({ mail: 'user@example.com', username: 'testuser', password: 'Recipe42?' }), (error) => assertHttpError(error, 'AUTH_USERNAME_TAKEN', 409));
         users.usernameTaken = false;
-        users.roleId = null;
-        await assert.rejects(() => service.register({ mail: 'user@example.com', username: 'testuser', password: 'Recipe42?' }), (error) => assertHttpError(error, 'AUTH_ROLE_NOT_FOUND', 400));
     });
 
     it('logs in active users and returns a signed token', async () => {
@@ -122,7 +113,7 @@ describe('AuthService', () => {
         assert.equal('passwordHash' in result.user, false);
         assert.equal(payload.sub, 2);
         assert.equal(payload.username, 'testuser');
-        assert.equal(payload.roleId, 2);
+        assert.equal('roleId' in payload, false);
         assert.equal(payload.accountType, 'community');
         assert.equal(payload.status, 'active');
     });

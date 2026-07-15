@@ -605,7 +605,7 @@ type PaginatedResult&lt;T&gt; = {
           <pre><code>type AuthContext = {
   userId: number;
   username: string;
-  roleId: number;
+  permissions: string[];
   accountType: AccountType;
   status: UserStatus;
 };
@@ -613,7 +613,6 @@ type PaginatedResult&lt;T&gt; = {
 type AuthTokenPayload = {
   sub: number;
   username: string;
-  roleId: number;
   accountType: AccountType;
   status: UserStatus;
 };
@@ -631,7 +630,6 @@ type AuthMeResponse = {
   id: number;
   mail: string;
   username: string;
-  roleId: number;
   accountType: AccountType;
   status: UserStatus;
   emailValidatedAt: ISODateString | null;
@@ -765,7 +763,6 @@ type ResetPasswordResponse = MessageResponse;</code></pre>
   id: number;
   mail: string;
   username: string;
-  roleId: number;
   accountType: AccountType;
   createdAt: ISODateString;
   updatedAt: ISODateString;
@@ -1442,7 +1439,7 @@ type ContactMessageResponse = {
 
     <section aria-labelledby="health">
       <h2 id="health">Health</h2>
-      <p class="section-intro">Contrôle de santé réservé aux administrateurs.</p>
+      <p class="section-intro">Contrôle de santé réservé aux sessions staff possédant <code>system.health.read</code>.</p>
       <div class="table-wrap">
         <table>
           <thead>
@@ -1500,7 +1497,7 @@ type HealthReadyResponse = {
 
     <section aria-labelledby="admin-recipes">
       <h2 id="admin-recipes">Admin recipes</h2>
-      <p class="section-intro">Modération et administration des recettes. Toutes les routes exigent une session admin (<code>roleId === 1</code>).</p>
+      <p class="section-intro">Modération et administration des recettes. Les routes de lecture exigent <code>recipes.read</code>, l’approbation et le rejet <code>recipes.moderate</code>, l’archivage <code>recipes.archive</code> et la suppression <code>recipes.delete</code>.</p>
       <div class="table-wrap">
         <table>
           <thead>
@@ -1661,7 +1658,7 @@ type DeleteRecipeAdminResponse = OkResponse;</code></pre>
 
     <section aria-labelledby="admin-comments">
       <h2 id="admin-comments">Admin comments</h2>
-      <p class="section-intro">Modération des commentaires: commentaires masqués, supprimés souplement, restauration et suppression définitive.</p>
+      <p class="section-intro">Modération des commentaires : lecture avec <code>comments.read</code>, masquage et restauration avec <code>comments.moderate</code>, modification avec <code>comments.update</code> et suppression définitive avec <code>comments.delete</code>.</p>
       <div class="table-wrap">
         <table>
           <thead>
@@ -1793,7 +1790,7 @@ type DeleteCommentAdminResponse = OkResponse;</code></pre>
 
     <section aria-labelledby="admin-users">
       <h2 id="admin-users">Admin users</h2>
-      <p class="section-intro">Administration des utilisateurs bannis, profil admin et journal de modération. Toutes les routes exigent une session admin.</p>
+      <p class="section-intro">Administration des utilisateurs bannis, profil admin et journal de modération. La consultation exige <code>users.read</code> et le bannissement ou la réactivation <code>users.moderate</code>.</p>
       <div class="table-wrap">
         <table>
           <thead>

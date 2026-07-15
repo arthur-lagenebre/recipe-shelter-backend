@@ -1,12 +1,12 @@
 import jwt from 'jsonwebtoken';
 
-import { assertAccountType, COMMUNITY_STATUSES, STAFF_STATUSES } from '../repositories/users/user.types.js';
 import { env } from '../utils/env.js';
 import { unauthorized } from '../utils/errors.js';
 import { sessionCookieName } from '../utils/session-cookie.js';
 
 import type { AuthContext } from '../api/auth/auth.types.js';
-import type { AccountType, User, UserStatus } from '../repositories/users/user.types.js';
+import type { RbacRepository } from '../repositories/rbac/rbac.repository.interface.js';
+import type { User } from '../repositories/users/user.types.js';
 import type { AuthTokenPayload } from '../services/auth/auth.service.js';
 import type { NextFunction, Request, Response } from 'express';
 
@@ -14,19 +14,20 @@ type AuthUserRepository = {
   findById(id: number): Promise<User | null>;
 };
 
-type ParsedAuthContext = Omit<AuthContext, 'accountType' | 'status'> & {
-  accountType?: AccountType;
-  status?: UserStatus;
+type ParsedAuthContext = {
+  userId: number;
+  username: string;
 };
 
 let authUserRepository: AuthUserRepository | null = null;
+let authRbacRepository: RbacRepository | null = null;
 
 export function configureAuthUserRepository(repository: AuthUserRepository): void {
   authUserRepository = repository;
 }
 
-function isUserStatus(value: unknown): value is UserStatus {
-  return COMMUNITY_STATUSES.some((status) => status === value) || STAFF_STATUSES.some((status) => status === value);
+export function configureAuthRbacRepository(repository: RbacRepository): void {
+  authRbacRepository = repository;
 }
 
 function getSessionToken(req: Request): string | null {
@@ -42,46 +43,34 @@ function parseAuthPayload(payload: unknown): ParsedAuthContext | null {
   const data = payload as Partial<AuthTokenPayload>;
 
   const userId = Number(data.sub);
-  const roleId = Number(data.roleId);
   const username = typeof data.username === 'string' ? data.username : '';
 
-  if (!Number.isFinite(userId) || !Number.isFinite(roleId) || !username)
+  if (!Number.isFinite(userId) || !username)
     return null;
 
-  let accountType: AccountType | undefined;
-  if (data.accountType !== undefined) {
-    try {
-      assertAccountType(data.accountType);
-      accountType = data.accountType;
-    } catch {
-      return null;
-    }
-  }
-
-  return {
-    userId,
-    username,
-    roleId,
-    ...(accountType ? { accountType } : {}),
-    ...(isUserStatus(data.status) ? { status: data.status } : {})
-  };
+  return { userId, username };
 }
 
 async function resolveActiveAuth(auth: ParsedAuthContext): Promise<AuthContext | null> {
-  if (!authUserRepository) {
-    const status = auth.status ?? 'active';
-    if (status !== 'active')
-      return null;
-
-    return { ...auth, accountType: auth.accountType ?? 'community', status };
-  }
+  if (!authUserRepository)
+    return null;
 
   const user = await authUserRepository.findById(auth.userId);
 
   if (!user || user.status !== 'active')
     return null;
 
-  return { userId: user.id, username: user.username, roleId: user.roleId, accountType: user.accountType, status: user.status };
+  const permissions = user.accountType === 'staff' && authRbacRepository
+    ? await authRbacRepository.findPermissionCodesByStaffUserId(user.id)
+    : [];
+
+  return {
+    userId: user.id,
+    username: user.username,
+    accountType: user.accountType,
+    status: user.status,
+    permissions
+  };
 }
 
 export async function requireAuth(req: Request, _res: Response, next: NextFunction) {

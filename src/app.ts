@@ -33,7 +33,7 @@ import { createUsersRouter } from './api/users/users.routes.js';
 import { pool } from './db/pool.js';
 import { errorHandler } from './middlewares/error-handler.js';
 import { notFound } from './middlewares/not-found.js';
-import { configureAuthUserRepository } from './middlewares/require-auth.js';
+import { configureAuthRbacRepository, configureAuthUserRepository } from './middlewares/require-auth.js';
 import { AdminCommentRepositoryMysql } from './repositories/admin/admin.comments.repository.mysql.js';
 import { AdminRecipeRepositoryMysql } from './repositories/admin/admin.recipe.repository.mysql.js';
 import { AdminUserRepositoryMysql } from './repositories/admin/admin.users.repository.mysql.js';
@@ -44,6 +44,7 @@ import { CommentRepositoryMysql } from './repositories/comments/comments.reposit
 import { EquipmentRepositoryMysql } from './repositories/equipments/equipment.repository.mysql.js';
 import { FavoriteRepositoryMysql } from './repositories/favorites/favorites.repository.mysql.js';
 import { IngredientRepositoryMysql } from './repositories/ingredients/ingredient.repository.mysql.js';
+import { RbacRepositoryMysql } from './repositories/rbac/rbac.repository.mysql.js';
 import { RecipeImageRepositoryMysql } from './repositories/recipe-images/recipe-image.repository.mysql.js';
 import { RecipeRepositoryMysql } from './repositories/recipes/recipe.repository.mysql.js';
 import { TagRepositoryMysql } from './repositories/tag/tag.repository.mysql.js';
@@ -71,6 +72,7 @@ import { createImageStorage } from './storage/image-storage.factory.js';
 import { createLocalMediaMiddleware } from './storage/local-media.middleware.js';
 import { env } from './utils/env.js';
 
+import type { RbacRepository } from './repositories/rbac/rbac.repository.interface.js';
 import type { UserRepository } from './repositories/users/user.repository.interface.js';
 import type { ImageStorage } from './storage/image-storage.interface.js';
 
@@ -79,6 +81,7 @@ export type AppDependencies = {
   adminRecipeService: AdminRecipeService;
   adminUserService: AdminUserService;
   authService: AuthService;
+  authRbacRepository: RbacRepository;
   authUserRepository: Pick<UserRepository, 'findById'>;
   categoryService: CategoryService;
   commentService: CommentService;
@@ -112,6 +115,7 @@ function createDefaultDependencies(): AppDependencies {
   const passwordResetRepository = new PasswordResetRepositoryMysql(pool);
   const recipeRepository = new RecipeRepositoryMysql(pool, getPublicImageUrl);
   const recipeImageRepository = new RecipeImageRepositoryMysql(pool);
+  const rbacRepository = new RbacRepositoryMysql(pool);
   const tagRepository = new TagRepositoryMysql(pool);
   const userRepository = new UserRepositoryMysql(pool);
 
@@ -124,6 +128,7 @@ function createDefaultDependencies(): AppDependencies {
     adminRecipeService: new AdminRecipeService(recipeRepository, adminRecipeRepository, recipeImageService),
     adminUserService: new AdminUserService(userRepository, adminUserRepository),
     authService: new AuthService(userRepository, emailValidationService),
+    authRbacRepository: rbacRepository,
     authUserRepository: userRepository,
     categoryService: new CategoryService(categoryRepository),
     commentService: new CommentService(commentRepository),
@@ -163,6 +168,7 @@ export function createApp(overrides: Partial<AppDependencies> = {}) {
   app.use(express.json());
 
   configureAuthUserRepository(dependencies.authUserRepository);
+  configureAuthRbacRepository(dependencies.authRbacRepository);
 
   const adminCommentsController = createAdminCommentsController(dependencies.adminCommentService);
   const adminRecipesController = createAdminRecipesController(dependencies.adminRecipeService);

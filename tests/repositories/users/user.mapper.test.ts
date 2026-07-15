@@ -10,7 +10,6 @@ const baseRow = {
     Id: 2,
     Mail: 'user@example.com',
     Username: 'testuser',
-    RoleId: 2,
     EmailValidatedAt: now,
     BannedByUserId: null,
     BannedReason: null,

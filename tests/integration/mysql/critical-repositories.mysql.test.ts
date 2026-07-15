@@ -10,6 +10,7 @@ import { AdminUserRepositoryMysql } from '../../../src/repositories/admin/admin.
 import { CommentRepositoryMysql } from '../../../src/repositories/comments/comments.repository.mysql.js';
 import { FavoriteRepositoryMysql } from '../../../src/repositories/favorites/favorites.repository.mysql.js';
 import { RecipeRepositoryMysql } from '../../../src/repositories/recipes/recipe.repository.mysql.js';
+import { RbacRepositoryMysql } from '../../../src/repositories/rbac/rbac.repository.mysql.js';
 import { UserRepositoryMysql } from '../../../src/repositories/users/user.repository.mysql.js';
 import { env } from '../../../src/utils/env.js';
 
@@ -54,12 +55,22 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
 
         await adminConnection.query(`
             USE \`${databaseName}\`;
-            INSERT INTO Roles (Id, Name) VALUES (1, 'admin'), (2, 'user');
-            INSERT INTO Users (Id, Mail, Username, Password, RoleId, AccountType, Status, EmailValidatedAt, BannedByUserId, BannedReason, BannedAt) VALUES
-                (1, 'admin@test.local', 'admin', 'hash', 1, 'staff', 'active', CURRENT_TIMESTAMP, NULL, NULL, NULL),
-                (2, 'reader@test.local', 'reader', 'hash', 2, 'community', 'active', CURRENT_TIMESTAMP, NULL, NULL, NULL),
-                (3, 'locked-staff@test.local', 'locked-staff', 'hash', 1, 'staff', 'banned', CURRENT_TIMESTAMP, NULL, NULL, NULL),
-                (4, 'banned-community@test.local', 'banned-community', 'hash', 2, 'community', 'banned', CURRENT_TIMESTAMP, 1, 'Pre-migration moderation', CURRENT_TIMESTAMP);
+            INSERT INTO Roles (Id, Name, Description) VALUES
+                (1, 'administrator', 'Full access'),
+                (2, 'moderator', 'Moderation access');
+            INSERT INTO Permissions (Id, Code, Description) VALUES
+                (1, 'users.moderate', 'Moderate users'),
+                (2, 'recipes.read', 'Read recipes'),
+                (3, 'recipes.moderate', 'Moderate recipes');
+            INSERT INTO RolePermissions (RoleId, PermissionId) VALUES
+                (1, 1), (1, 2), (1, 3),
+                (2, 2), (2, 3);
+            INSERT INTO Users (Id, Mail, Username, Password, AccountType, Status, EmailValidatedAt, BannedByUserId, BannedReason, BannedAt) VALUES
+                (1, 'admin@test.local', 'admin', 'hash', 'staff', 'active', CURRENT_TIMESTAMP, NULL, NULL, NULL),
+                (2, 'reader@test.local', 'reader', 'hash', 'community', 'active', CURRENT_TIMESTAMP, NULL, NULL, NULL),
+                (3, 'locked-staff@test.local', 'locked-staff', 'hash', 'staff', 'banned', CURRENT_TIMESTAMP, NULL, NULL, NULL),
+                (4, 'banned-community@test.local', 'banned-community', 'hash', 'community', 'banned', CURRENT_TIMESTAMP, 1, 'Pre-migration moderation', CURRENT_TIMESTAMP);
+            INSERT INTO StaffRoles (StaffUserId, RoleId) VALUES (1, 1);
         `);
 
         pool = mysql.createPool({
@@ -132,6 +143,7 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
 
     it('persists the critical user, recipe, favorite and comment flow with transactions', async () => {
         const users = new UserRepositoryMysql(pool);
+        const rbac = new RbacRepositoryMysql(pool);
         const recipes = new RecipeRepositoryMysql(pool);
         const favorites = new FavoriteRepositoryMysql(pool);
         const comments = new CommentRepositoryMysql(pool);
@@ -169,8 +181,8 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
         assert.equal(await users.findCommunityProfileByUserId(1), null);
 
         const [legacyInsert] = await pool.query(
-            `INSERT INTO Users (Mail, Username, Password, RoleId, AccountType, Status)
-             VALUES ('rolling-community@test.local', 'rolling-community', 'hash', 2, 'community', 'inactive')`
+            `INSERT INTO Users (Mail, Username, Password, AccountType, Status)
+             VALUES ('rolling-community@test.local', 'rolling-community', 'hash', 'community', 'inactive')`
         );
         const rollingCommunityId = Number((legacyInsert as { insertId: number }).insertId);
         assert.equal((await users.findCommunityProfileByUserId(rollingCommunityId))?.status, 'inactive');
@@ -181,23 +193,38 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
             [rollingCommunityId]
         );
         assert.equal((await users.findCommunityProfileByUserId(rollingCommunityId))?.status, 'banned');
-        assert.equal(await users.getRoleIdByName('user'), 2);
         const staff = await users.create({
             mail: 'staff@test.local',
             username: 'staff',
             passwordHash: 'password-hash',
-            roleId: 2,
             accountType: 'staff',
             status: 'active'
         });
         assert.equal(staff.accountType, 'staff');
         assert.equal(await users.findCommunityProfileByUserId(staff.id), null);
         assert.equal((await users.findStaffProfileByUserId(staff.id))?.status, 'active');
+        assert.deepEqual(await rbac.findPermissionCodesByStaffUserId(staff.id), []);
+
+        await pool.query(
+            `INSERT INTO StaffRoles (StaffUserId, RoleId) VALUES (?, 1), (?, 2)`,
+            [staff.id, staff.id]
+        );
+        assert.deepEqual(await rbac.findPermissionCodesByStaffUserId(staff.id), [
+            'recipes.moderate',
+            'recipes.read',
+            'users.moderate'
+        ]);
+        await assert.rejects(() => pool.query(`INSERT INTO StaffRoles (StaffUserId, RoleId) VALUES (?, 1)`, [staff.id]));
+        await assert.rejects(() => pool.query(`INSERT INTO StaffRoles (StaffUserId, RoleId) VALUES (2, 1)`));
+        await assert.rejects(() => pool.query(`INSERT INTO StaffRoles (StaffUserId, RoleId) VALUES (?, 999999)`, [staff.id]));
+        await assert.rejects(() => pool.query(`INSERT INTO RolePermissions (RoleId, PermissionId) VALUES (1, 1)`));
+        await assert.rejects(() => pool.query(`INSERT INTO RolePermissions (RoleId, PermissionId) VALUES (1, 999999)`));
+        await assert.rejects(() => pool.query(`INSERT INTO Roles (Name, Description) VALUES ('ADMINISTRATOR', 'Duplicate')`));
+        await assert.rejects(() => pool.query(`INSERT INTO Permissions (Code, Description) VALUES ('RECIPES.READ', 'Duplicate')`));
         const author = await users.create({
             mail: 'author@test.local',
             username: 'author',
             passwordHash: 'password-hash',
-            roleId: 2,
             accountType: 'community',
             status: 'active'
         });

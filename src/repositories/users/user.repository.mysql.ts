@@ -9,7 +9,6 @@ import type {
     CommunityStatus,
     CreateUserInput,
     ExistsRow,
-    RoleRow,
     StaffProfile,
     StaffProfileRow,
     StaffStatus,
@@ -21,7 +20,7 @@ import type {
 import type { ResultSetHeader } from 'mysql2';
 import type { Pool } from 'mysql2/promise';
 
-const USER_SELECT = `u.Id, u.Mail, u.Username, u.RoleId, u.AccountType, u.EmailValidatedAt,
+const USER_SELECT = `u.Id, u.Mail, u.Username, u.AccountType, u.EmailValidatedAt,
                      cp.UserId AS CommunityProfileUserId, cp.Status AS CommunityStatus,
                      cp.BannedByUserId, cp.BannedReason, cp.BannedAt,
                      sp.UserId AS StaffProfileUserId, sp.Status AS StaffStatus,
@@ -155,19 +154,6 @@ export class UserRepositoryMysql implements UserRepository {
         return firstOrNull(rows as ExistsRow[]) !== null;
     }
 
-    async getRoleIdByName(roleName: string): Promise<number | null> {
-        const [rows] = await this.db.execute(
-            `SELECT Id
-             FROM Roles
-             WHERE Name = ?
-             LIMIT 1`,
-            [roleName]
-        );
-
-        const row = firstOrNull(rows as RoleRow[]);
-        return row ? Number(row.Id) : null;
-    }
-
     async create(input: CreateUserInput): Promise<User> {
         assertAccountType(input.accountType);
         const profileStatus = getProfileStatus(input);
@@ -179,9 +165,9 @@ export class UserRepositoryMysql implements UserRepository {
             await conn.beginTransaction();
 
             const [result] = await conn.execute<ResultSetHeader>(
-                `INSERT INTO Users (Mail, Username, Password, RoleId, AccountType, Status)
-                 VALUES (?, ?, ?, ?, ?, ?)`,
-                [input.mail, input.username, input.passwordHash, input.roleId, input.accountType, legacyStatus]
+                `INSERT INTO Users (Mail, Username, Password, AccountType, Status)
+                 VALUES (?, ?, ?, ?, ?)`,
+                [input.mail, input.username, input.passwordHash, input.accountType, legacyStatus]
             );
             insertId = Number(result.insertId);
 

@@ -15,7 +15,6 @@ const baseUser: User = {
     id: 2,
     mail: 'user@example.com',
     username: 'testuser',
-    roleId: 2,
     accountType: 'community',
     status: 'banned',
     emailValidatedAt: new Date('2026-05-09T10:00:00.000Z'),
@@ -177,7 +176,6 @@ describe('UserService', () => {
             id: 2,
             mail: 'user@example.com',
             username: 'testuser',
-            roleId: 2,
             accountType: 'community',
             createdAt: baseUser.createdAt,
             updatedAt: baseUser.updatedAt

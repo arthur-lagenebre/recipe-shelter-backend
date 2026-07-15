@@ -13,7 +13,6 @@ const baseUser: User = {
     id: 2,
     mail: 'user@example.com',
     username: 'testuser',
-    roleId: 2,
     accountType: 'community',
     status: 'active',
     emailValidatedAt: new Date('2026-05-09T10:00:00.000Z'),
@@ -101,12 +100,6 @@ class FakeUserRepository implements UserRepository {
 
     async findWithPasswordById(id: number): Promise<UserWithPassword | null> {
         void id;
-
-        return null;
-    }
-
-    async getRoleIdByName(roleName: string): Promise<number | null> {
-        void roleName;
 
         return null;
     }

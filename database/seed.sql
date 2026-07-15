@@ -7,33 +7,76 @@ START TRANSACTION;
 -- =====================================================
 -- Roles
 -- =====================================================
-INSERT INTO Roles (Id, Name) VALUES
-(1, 'admin'),
-(2, 'user')
+INSERT INTO Roles (Id, Name, Description) VALUES
+(1, 'administrator', 'Accès administratif complet'),
+(2, 'moderator', 'Modération des recettes et des commentaires')
 AS new_roles
-ON DUPLICATE KEY UPDATE Name = new_roles.Name;
+ON DUPLICATE KEY UPDATE
+  Name = new_roles.Name,
+  Description = new_roles.Description;
+
+-- =====================================================
+-- Permissions
+-- =====================================================
+INSERT INTO Permissions (Id, Code, Description) VALUES
+(1,  'system.health.read', "Consulter l'état de santé du service"),
+(2,  'users.read', "Consulter les comptes et leur historique de modération"),
+(3,  'users.moderate', "Bannir et réactiver des comptes community"),
+(4,  'recipes.read', "Consulter les recettes en attente de modération"),
+(5,  'recipes.moderate', "Approuver et rejeter des recettes"),
+(6,  'recipes.archive', "Archiver des recettes"),
+(7,  'recipes.delete', "Supprimer définitivement des recettes"),
+(8,  'comments.read', "Consulter les commentaires modérés ou supprimés"),
+(9,  'comments.moderate', "Masquer, restaurer et démodérer des commentaires"),
+(10, 'comments.update', "Modifier des commentaires dans l'administration"),
+(11, 'comments.delete', "Supprimer définitivement des commentaires")
+AS new_permissions
+ON DUPLICATE KEY UPDATE
+  Code = new_permissions.Code,
+  Description = new_permissions.Description;
+
+-- =====================================================
+-- Role permissions
+-- =====================================================
+INSERT INTO RolePermissions (RoleId, PermissionId) VALUES
+(1, 1),
+(1, 2),
+(1, 3),
+(1, 4),
+(1, 5),
+(1, 6),
+(1, 7),
+(1, 8),
+(1, 9),
+(1, 10),
+(1, 11),
+(2, 4),
+(2, 5),
+(2, 8),
+(2, 9),
+(2, 10)
+AS new_role_permissions
+ON DUPLICATE KEY UPDATE PermissionId = new_role_permissions.PermissionId;
 
 -- =====================================================
 -- Users
 -- =====================================================
 
 -- Admin
-INSERT INTO Users (Id, Mail, Username, Password, RoleId, AccountType, Status, EmailValidatedAt)
-VALUES (1, 'admin@recipe-shelter.fr', 'Admin', '$2b$12$zrX5iMCRel.f0GtuWfc2J.w8rq7bSuNnFnpd6.ODVPEGhgZlygfBW', 1, 'staff', 'active', CURRENT_TIMESTAMP) AS new_admin
+INSERT INTO Users (Id, Mail, Username, Password, AccountType, Status, EmailValidatedAt)
+VALUES (1, 'admin@recipe-shelter.fr', 'Admin', '$2b$12$zrX5iMCRel.f0GtuWfc2J.w8rq7bSuNnFnpd6.ODVPEGhgZlygfBW', 'staff', 'active', CURRENT_TIMESTAMP) AS new_admin
 ON DUPLICATE KEY UPDATE
   Username  = new_admin.Username,
   Password  = new_admin.Password,
-  RoleId    = new_admin.RoleId,
   AccountType = new_admin.AccountType,
   Status    = new_admin.Status,
   EmailValidatedAt = COALESCE(Users.EmailValidatedAt, new_admin.EmailValidatedAt);
 
 -- Anonyme
-INSERT INTO Users (Id, Mail, Username, Password, RoleId, AccountType, Status, EmailValidatedAt)
-VALUES (2, 'anonyme@recipe-shelter.fr', 'Anonyme', '$2b$12$BY86H8oVSASAM7V0RJKO3e10vL7kebIc7jrxNX5TR1cJSlCrDBEq6', 2, 'staff', 'active', CURRENT_TIMESTAMP) AS new_anonyme
+INSERT INTO Users (Id, Mail, Username, Password, AccountType, Status, EmailValidatedAt)
+VALUES (2, 'anonyme@recipe-shelter.fr', 'Anonyme', '$2b$12$BY86H8oVSASAM7V0RJKO3e10vL7kebIc7jrxNX5TR1cJSlCrDBEq6', 'staff', 'active', CURRENT_TIMESTAMP) AS new_anonyme
 ON DUPLICATE KEY UPDATE
   Username  = new_anonyme.Username,
-  RoleId    = new_anonyme.RoleId,
   AccountType = new_anonyme.AccountType,
   Status    = new_anonyme.Status,
   EmailValidatedAt = COALESCE(Users.EmailValidatedAt, new_anonyme.EmailValidatedAt);
@@ -45,6 +88,14 @@ VALUES
 ON DUPLICATE KEY UPDATE
   AccountType = new_staff.AccountType,
   Status = new_staff.Status;
+
+-- The administrator deliberately cumulates two roles. The anonymous technical
+-- account has no role and therefore no permission (default deny).
+INSERT INTO StaffRoles (StaffUserId, RoleId) VALUES
+  (1, 1),
+  (1, 2)
+AS new_staff_roles
+ON DUPLICATE KEY UPDATE RoleId = new_staff_roles.RoleId;
 
 -- =====================================================
 -- Recipe Categories

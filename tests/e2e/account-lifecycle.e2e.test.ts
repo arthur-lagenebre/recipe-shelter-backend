@@ -28,7 +28,6 @@ class AccountUserRepository implements UserRepository {
             mail: input.mail,
             username: input.username,
             passwordHash: input.passwordHash,
-            roleId: input.roleId,
             accountType: input.accountType,
             status: input.status ?? (input.accountType === 'community' ? 'inactive' : 'invited'),
             emailValidatedAt: null,
@@ -90,10 +89,6 @@ class AccountUserRepository implements UserRepository {
 
     async findWithPasswordById(id: number): Promise<UserWithPassword | null> {
         return this.users.get(id) ?? null;
-    }
-
-    async getRoleIdByName(roleName: string): Promise<number | null> {
-        return roleName === 'user' ? 2 : null;
     }
 
     async markEmailValidated(userId: number): Promise<boolean> {

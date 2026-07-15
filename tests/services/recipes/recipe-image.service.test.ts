@@ -12,9 +12,9 @@ import type { RecipeRepository } from '../../../src/repositories/recipes/recipe.
 import type { Recipe } from '../../../src/repositories/recipes/recipe.types.js';
 import type { ImageStorage, PutImageInput } from '../../../src/storage/image-storage.interface.js';
 
-const owner: AuthContext = { userId: 2, username: 'owner', roleId: 2, accountType: 'community', status: 'active' };
-const otherUser: AuthContext = { userId: 3, username: 'other', roleId: 2, accountType: 'community', status: 'active' };
-const admin: AuthContext = { userId: 1, username: 'admin', roleId: 1, accountType: 'community', status: 'active' };
+const owner: AuthContext = { userId: 2, username: 'owner', accountType: 'community', status: 'active', permissions: [] };
+const otherUser: AuthContext = { userId: 3, username: 'other', accountType: 'community', status: 'active', permissions: [] };
+const admin: AuthContext = { userId: 1, username: 'admin', accountType: 'staff', status: 'active', permissions: [] };
 
 const baseRecipe: Recipe = {
     id: 10,

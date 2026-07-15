@@ -10,6 +10,7 @@ import { CommentService } from '../../src/services/comments/comments.service.js'
 import { FavoriteService } from '../../src/services/favorites/favorites.service.js';
 import { RecipeSlugService } from '../../src/services/recipes/recipe-slug.service.js';
 import { RecipeService } from '../../src/services/recipes/recipes.services.js';
+import { PERMISSIONS } from '../../src/security/permissions.js';
 import { createPaginatedResult } from '../../src/utils/pagination.js';
 import { startHttpTestServer } from '../helpers/http-test-server.js';
 
@@ -28,13 +29,12 @@ import type { PaginationOptions } from '../../src/utils/pagination.js';
 
 const now = new Date('2026-07-13T09:00:00.000Z');
 
-function createUser(id: number, mail: string, username: string, roleId: number, passwordHash: string): UserWithPassword {
+function createUser(id: number, mail: string, username: string, accountType: User['accountType'], passwordHash: string): UserWithPassword {
     return {
         id,
         mail,
         username,
-        roleId,
-        accountType: 'community',
+        accountType,
         passwordHash,
         status: 'active',
         emailValidatedAt: now,
@@ -341,8 +341,8 @@ describe('critical user journey E2E', () => {
     before(async () => {
         const passwordHash = await bcrypt.hash('StrongPass123!', 4);
         const users = new CriticalFlowUserRepository([
-            createUser(2, 'alice@example.com', 'alice', 2, passwordHash),
-            createUser(1, 'admin@example.com', 'admin', 1, passwordHash)
+            createUser(2, 'alice@example.com', 'alice', 'community', passwordHash),
+            createUser(1, 'admin@example.com', 'admin', 'staff', passwordHash)
         ]);
         const recipes = new CriticalFlowRecipeRepository();
         const recipeRepository = recipes as unknown as RecipeRepository;
@@ -354,6 +354,11 @@ describe('critical user journey E2E', () => {
 
         const app = createApp({
             authService,
+            authRbacRepository: {
+                async findPermissionCodesByStaffUserId(staffUserId) {
+                    return staffUserId === 1 ? [PERMISSIONS.recipesRead, PERMISSIONS.recipesModerate] : [];
+                }
+            },
             authUserRepository: users as Pick<UserRepository, 'findById'>,
             recipeService: new RecipeService(recipeRepository, new RecipeSlugService(recipeRepository)),
             adminRecipeService: new AdminRecipeService(recipeRepository, adminRecipeRepository),
@@ -448,7 +453,7 @@ describe('critical user journey E2E', () => {
             headers: { cookie: userCookie }
         });
         assert.equal(forbiddenResponse.status, 403);
-        assert.equal((await forbiddenResponse.json() as { error: { code: string } }).error.code, 'ADMIN_ACCESS_REQUIRED');
+        assert.equal((await forbiddenResponse.json() as { error: { code: string } }).error.code, 'AUTH_PERMISSION_REQUIRED');
 
         const adminLogin = await fetch(`${server.baseUrl}/api/v1/auth/login`, {
             method: 'POST',

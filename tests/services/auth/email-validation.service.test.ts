@@ -13,7 +13,6 @@ const baseUser: User = {
     id: 2,
     mail: 'user@example.com',
     username: 'testuser',
-    roleId: 2,
     accountType: 'community',
     status: 'inactive',
     emailValidatedAt: null,

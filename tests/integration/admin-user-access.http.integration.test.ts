@@ -8,7 +8,8 @@ import jwt from 'jsonwebtoken';
 import { createAdminUsersController } from '../../src/api/admin/admin.users.controller.js';
 import { createAdminUsersRouter } from '../../src/api/admin/admin.users.routes.js';
 import { errorHandler } from '../../src/middlewares/error-handler.js';
-import { configureAuthUserRepository, requireAuth } from '../../src/middlewares/require-auth.js';
+import { configureAuthRbacRepository, configureAuthUserRepository, requireAuth } from '../../src/middlewares/require-auth.js';
+import { PERMISSIONS } from '../../src/security/permissions.js';
 import { AdminUserService } from '../../src/services/admin/admin.users.service.js';
 import { env } from '../../src/utils/env.js';
 import { startHttpTestServer } from '../helpers/http-test-server.js';
@@ -20,13 +21,12 @@ import type { HttpTestServer } from '../helpers/http-test-server.js';
 
 const createdAt = new Date('2026-07-13T10:00:00.000Z');
 
-function createUser(id: number, username: string, roleId: number): User {
+function createUser(id: number, username: string, accountType: User['accountType']): User {
     return {
         id,
         mail: `${username}@example.com`,
         username,
-        roleId,
-        accountType: 'community',
+        accountType,
         status: 'active',
         emailValidatedAt: createdAt,
         bannedByUserId: null,
@@ -41,7 +41,6 @@ function sessionCookie(user: User): string {
     const token = jwt.sign({
         sub: user.id,
         username: user.username,
-        roleId: user.roleId,
         accountType: user.accountType,
         status: user.status
     }, env.auth.jwtSecret);
@@ -53,8 +52,8 @@ describe('admin user access HTTP integration', () => {
     let adminCookie: string;
     let userCookie: string;
     const users = new Map<number, User>([
-        [1, createUser(1, 'admin', 1)],
-        [2, createUser(2, 'alice', 2)]
+        [1, createUser(1, 'admin', 'staff')],
+        [2, createUser(2, 'alice', 'community')]
     ]);
 
     before(async () => {
@@ -96,6 +95,11 @@ describe('admin user access HTTP integration', () => {
         const app = express();
 
         configureAuthUserRepository(userRepository);
+        configureAuthRbacRepository({
+            async findPermissionCodesByStaffUserId(staffUserId) {
+                return staffUserId === 1 ? [PERMISSIONS.usersModerate] : [];
+            }
+        });
         app.use(cookieParser());
         app.use(express.json());
         app.get('/protected', requireAuth, (req, res) => res.status(200).json({ userId: req.auth?.userId }));
@@ -117,7 +121,7 @@ describe('admin user access HTTP integration', () => {
         });
 
         assert.equal(response.status, 403);
-        assert.equal((await response.json() as { error: { code: string } }).error.code, 'ADMIN_ACCESS_REQUIRED');
+        assert.equal((await response.json() as { error: { code: string } }).error.code, 'AUTH_PERMISSION_REQUIRED');
     });
 
     it('invalidates a banned user session and restores it after unban', async () => {

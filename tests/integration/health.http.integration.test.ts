@@ -8,7 +8,8 @@ import jwt from 'jsonwebtoken';
 import { createHealthController } from '../../src/api/health/health.controller.js';
 import { createHealthRouter } from '../../src/api/health/health.routes.js';
 import { errorHandler } from '../../src/middlewares/error-handler.js';
-import { configureAuthUserRepository } from '../../src/middlewares/require-auth.js';
+import { configureAuthRbacRepository, configureAuthUserRepository } from '../../src/middlewares/require-auth.js';
+import { PERMISSIONS } from '../../src/security/permissions.js';
 import { env } from '../../src/utils/env.js';
 import { startHttpTestServer } from '../helpers/http-test-server.js';
 
@@ -19,8 +20,7 @@ const admin: User = {
     id: 1,
     mail: 'admin@example.com',
     username: 'admin',
-    roleId: 1,
-    accountType: 'community',
+    accountType: 'staff',
     status: 'active',
     emailValidatedAt: new Date(),
     bannedByUserId: null,
@@ -39,6 +39,9 @@ describe('health HTTP integration', () => {
         configureAuthUserRepository({
             async findById(id) { return id === admin.id ? admin : null; }
         });
+        configureAuthRbacRepository({
+            async findPermissionCodesByStaffUserId() { return [PERMISSIONS.systemHealthRead]; }
+        });
         const app = express();
         app.use(cookieParser());
         app.use('/api/v1/health', createHealthRouter(createHealthController(async () => databaseAvailable)));
@@ -47,7 +50,6 @@ describe('health HTTP integration', () => {
         cookie = `${env.auth.sessionCookieName}=${jwt.sign({
             sub: admin.id,
             username: admin.username,
-            roleId: admin.roleId,
             accountType: admin.accountType,
             status: admin.status
         }, env.auth.jwtSecret)}`;

@@ -25,7 +25,6 @@ const activeUser: User = {
     id: 2,
     mail: 'owner@example.test',
     username: 'owner',
-    roleId: 2,
     accountType: 'community',
     status: 'active',
     emailValidatedAt: new Date(),
@@ -60,7 +59,7 @@ const imageService = {
 };
 
 function authenticatedHeaders(): HeadersInit {
-    const token = jwt.sign({ sub: 2, username: 'owner', roleId: 2, status: 'active' }, env.auth.jwtSecret);
+    const token = jwt.sign({ sub: 2, username: 'owner', accountType: 'community', status: 'active' }, env.auth.jwtSecret);
     return { cookie: `${sessionCookieName}=${token}` };
 }
 

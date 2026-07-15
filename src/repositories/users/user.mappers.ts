@@ -58,7 +58,6 @@ export function mapUser(row: UserRow): User {
     id: row.Id,
     mail: row.Mail,
     username: row.Username,
-    roleId: row.RoleId,
     accountType: row.AccountType,
     status,
     emailValidatedAt: row.EmailValidatedAt,

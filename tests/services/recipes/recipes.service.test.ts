@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { beforeEach, describe, it } from 'node:test';
 
 import { RecipeService } from '../../../src/services/recipes/recipes.services.js';
+import { PERMISSIONS } from '../../../src/security/permissions.js';
 import { HttpError } from '../../../src/utils/errors.js';
 
 import type { AuthContext } from '../../../src/api/auth/auth.types.js';
@@ -36,8 +37,8 @@ const baseRecipe: Recipe = {
     equipments: []
 };
 
-const auth: AuthContext = { userId: 2, username: 'owner', roleId: 2, accountType: 'community', status: 'active' };
-const adminAuth: AuthContext = { userId: 1, username: 'admin', roleId: 1, accountType: 'community', status: 'active' };
+const auth: AuthContext = { userId: 2, username: 'owner', accountType: 'community', status: 'active', permissions: [] };
+const adminAuth: AuthContext = { userId: 1, username: 'admin', accountType: 'staff', status: 'active', permissions: [PERMISSIONS.recipesRead] };
 const pagination: PaginationOptions = { page: 1, limit: 12, offset: 0 };
 
 class FakeRecipeRepository implements RecipeRepository {

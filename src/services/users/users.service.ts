@@ -12,7 +12,6 @@ export type PublicUserProfile = {
     id: number;
     mail: string;
     username: string;
-    roleId: number;
     accountType: AccountType;
     createdAt: Date;
     updatedAt: Date;
@@ -38,7 +37,6 @@ export class UserService {
             id: user.id,
             mail: user.mail,
             username: user.username,
-            roleId: user.roleId,
             accountType: user.accountType,
             createdAt: user.createdAt,
             updatedAt: user.updatedAt

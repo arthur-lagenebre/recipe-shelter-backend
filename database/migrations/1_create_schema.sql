@@ -8,8 +8,32 @@ USE recipe_shelter;
 CREATE TABLE Roles (
   Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   Name VARCHAR(64) NOT NULL,
+  Description VARCHAR(255) NOT NULL,
   PRIMARY KEY (Id),
   UNIQUE KEY roles_name_UK (Name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE Permissions (
+  Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  Code VARCHAR(128) NOT NULL,
+  Description VARCHAR(255) NOT NULL,
+  PRIMARY KEY (Id),
+  UNIQUE KEY permissions_code_UK (Code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE RolePermissions (
+  RoleId BIGINT UNSIGNED NOT NULL,
+  PermissionId BIGINT UNSIGNED NOT NULL,
+  PRIMARY KEY (RoleId, PermissionId),
+  KEY idx_role_permissions_permission_id (PermissionId),
+  CONSTRAINT role_permissions_role_FK
+    FOREIGN KEY (RoleId) REFERENCES Roles(Id)
+    ON UPDATE CASCADE
+    ON DELETE CASCADE,
+  CONSTRAINT role_permissions_permission_FK
+    FOREIGN KEY (PermissionId) REFERENCES Permissions(Id)
+    ON UPDATE CASCADE
+    ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE Users (
@@ -17,7 +41,6 @@ CREATE TABLE Users (
   Mail VARCHAR(255) NOT NULL,
   Username VARCHAR(64) NOT NULL,
   Password VARCHAR(255) NOT NULL,
-  RoleId BIGINT UNSIGNED NOT NULL,
   AccountType ENUM('community', 'staff') NOT NULL DEFAULT 'community',
   Status ENUM('inactive', 'active', 'banned') NOT NULL DEFAULT 'inactive',
   EmailValidatedAt DATETIME NULL,
@@ -30,13 +53,8 @@ CREATE TABLE Users (
   UNIQUE KEY users_mail_UK (Mail),
   UNIQUE KEY users_username_UK (Username),
   UNIQUE KEY users_id_account_type_UK (Id, AccountType),
-  KEY idx_users_role_id (RoleId),
   KEY idx_users_status (Status),
   KEY idx_users_banned_by_user_id (BannedByUserId),
-  CONSTRAINT users_role_FK
-    FOREIGN KEY (RoleId) REFERENCES Roles(Id)
-    ON UPDATE CASCADE
-    ON DELETE RESTRICT,
   CONSTRAINT users_banned_by_user_FK
     FOREIGN KEY (BannedByUserId) REFERENCES Users(Id)
     ON UPDATE CASCADE
@@ -55,6 +73,21 @@ CREATE TABLE StaffProfiles (
   CONSTRAINT staff_profiles_user_account_type_FK
     FOREIGN KEY (UserId, AccountType) REFERENCES Users(Id, AccountType)
     ON UPDATE RESTRICT
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE StaffRoles (
+  StaffUserId BIGINT UNSIGNED NOT NULL,
+  RoleId BIGINT UNSIGNED NOT NULL,
+  PRIMARY KEY (StaffUserId, RoleId),
+  KEY idx_staff_roles_role_id (RoleId),
+  CONSTRAINT staff_roles_staff_profile_FK
+    FOREIGN KEY (StaffUserId) REFERENCES StaffProfiles(UserId)
+    ON UPDATE CASCADE
+    ON DELETE CASCADE,
+  CONSTRAINT staff_roles_role_FK
+    FOREIGN KEY (RoleId) REFERENCES Roles(Id)
+    ON UPDATE CASCADE
     ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
