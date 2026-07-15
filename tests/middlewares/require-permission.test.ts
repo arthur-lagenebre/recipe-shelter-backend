@@ -37,6 +37,15 @@ describe('requirePermission', () => {
                     status: 'active',
                     permissions: []
                 }
+            },
+            {
+                auth: {
+                    userId: 3,
+                    username: 'unbanner',
+                    accountType: 'staff',
+                    status: 'active',
+                    permissions: [PERMISSIONS.usersRead]
+                }
             }
         ]) {
             let nextError: unknown;

@@ -4,6 +4,7 @@ import { after, before, describe, it } from 'node:test';
 
 import mysql from 'mysql2/promise';
 
+import { PERMISSIONS } from '../../../src/security/permissions.js';
 import { env } from '../../../src/utils/env.js';
 
 const baseTestDatabaseName = process.env.TEST_DB_NAME?.trim() ?? '';
@@ -111,6 +112,51 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
             }
         ]);
 
+        const [permissions] = await connection.query(
+            `SELECT Code, Description
+             FROM Permissions
+             ORDER BY Code`
+        );
+        assert.deepEqual(
+            (permissions as Array<{ Code: string }>).map(({ Code }) => Code),
+            [...Object.values(PERMISSIONS)].sort()
+        );
+        assert.ok(
+            (permissions as Array<{ Description: string }>).every(({ Description }) => Description.trim().length > 0)
+        );
+
+        const [rolePermissions] = await connection.query(
+            `SELECT r.Code AS RoleCode, p.Code AS PermissionCode
+             FROM RolePermissions AS rp
+             INNER JOIN Roles AS r ON r.Id = rp.RoleId
+             INNER JOIN Permissions AS p ON p.Id = rp.PermissionId
+             ORDER BY r.Code, p.Code`
+        );
+        const permissionsByRole: Record<string, string[]> = {};
+        for (const { RoleCode, PermissionCode } of rolePermissions as Array<{ RoleCode: string; PermissionCode: string }>)
+            (permissionsByRole[RoleCode] ??= []).push(PermissionCode);
+        assert.deepEqual(permissionsByRole, {
+            CatalogManager: [
+                PERMISSIONS.catalogManage,
+                PERMISSIONS.catalogRead
+            ],
+            CommentModerator: [
+                PERMISSIONS.commentsModerate,
+                PERMISSIONS.commentsRead,
+                PERMISSIONS.commentsUpdate
+            ],
+            RecipeModerator: [
+                PERMISSIONS.recipesArchive,
+                PERMISSIONS.recipesModerate,
+                PERMISSIONS.recipesRead
+            ],
+            SuperAdmin: [...Object.values(PERMISSIONS)].sort(),
+            UserAdmin: [
+                PERMISSIONS.usersModerate,
+                PERMISSIONS.usersRead
+            ]
+        });
+
         const [adminRoles] = await connection.query(
             `SELECT r.Code
              FROM StaffRoles AS sr
@@ -128,7 +174,10 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
              WHERE sr.StaffUserId = 1
              ORDER BY p.Code`
         );
-        assert.equal((adminPermissions as Array<{ Code: string }>).length, 11);
+        assert.deepEqual(
+            (adminPermissions as Array<{ Code: string }>).map(({ Code }) => Code),
+            [...Object.values(PERMISSIONS)].sort()
+        );
 
         const [anonymousPermissions] = await connection.query(
             `SELECT COUNT(*) AS PermissionCount
@@ -163,13 +212,24 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
         );
         assert.deepEqual(adminRoleAssignments, [{ AssignmentCount: 1 }]);
 
+        const [permissionInstances] = await connection.query(
+            `SELECT Code, COUNT(*) AS InstanceCount
+             FROM Permissions
+             GROUP BY Code
+             ORDER BY Code`
+        );
+        assert.deepEqual(
+            permissionInstances,
+            [...Object.values(PERMISSIONS)].sort().map((Code) => ({ Code, InstanceCount: 1 }))
+        );
+
         const [superAdminPermissions] = await connection.query(
             `SELECT COUNT(*) AS PermissionCount
              FROM RolePermissions AS rp
              INNER JOIN Roles AS r ON r.Id = rp.RoleId
              WHERE r.Code = 'SuperAdmin'`
         );
-        assert.deepEqual(superAdminPermissions, [{ PermissionCount: 11 }]);
+        assert.deepEqual(superAdminPermissions, [{ PermissionCount: Object.values(PERMISSIONS).length }]);
     });
 
     it('enforces unique assignments, foreign keys and default deny', async () => {

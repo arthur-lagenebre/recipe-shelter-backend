@@ -113,6 +113,25 @@ et `SuperAdmin`. Le compte admin de démonstration reçoit uniquement
 `SuperAdmin`, dont les permissions sont associées directement : ce rôle
 n'hérite pas automatiquement des rôles métier.
 
+Les codes de permission sont stables, en minuscules et suivent la convention
+`domaine.action`. Aucune permission implicite ni wildcard n'est interprétée par
+le backend. Le catalogue initial est le suivant :
+
+| Domaine | Permissions |
+| --- | --- |
+| Système | `system.health.read` |
+| Recettes | `recipes.read`, `recipes.moderate`, `recipes.archive`, `recipes.delete` |
+| Commentaires | `comments.read`, `comments.moderate`, `comments.update`, `comments.delete` |
+| Utilisateurs community | `users.read`, `users.moderate` |
+| Catalogue | `catalog.read`, `catalog.manage` |
+| Staff | `staff.read`, `staff.manage` |
+| Audit | `audit.read` |
+
+`RecipeModerator`, `CommentModerator`, `UserAdmin` et `CatalogManager` ne
+reçoivent que les permissions de leur domaine. Les suppressions définitives de
+recettes et commentaires, la gestion du staff, l'audit et la santé du service
+restent réservés au rôle `SuperAdmin` dans le seed initial.
+
 Le schéma d'installation est consolidé dans l'unique fichier
 `database/migrations/1_create_schema.sql`. Les identifiants `Users.Id` restent
 les clés référencées par les recettes, commentaires et favoris. Les triggers du

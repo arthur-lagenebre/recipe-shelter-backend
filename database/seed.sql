@@ -24,16 +24,21 @@ ON DUPLICATE KEY UPDATE
 -- =====================================================
 INSERT INTO Permissions (Id, Code, Description) VALUES
 (1,  'system.health.read', "Consulter l'état de santé du service"),
-(2,  'users.read', "Consulter les comptes et leur historique de modération"),
+(2,  'users.read', "Consulter les comptes community et leur historique de modération"),
 (3,  'users.moderate', "Bannir et réactiver des comptes community"),
-(4,  'recipes.read', "Consulter les recettes en attente de modération"),
-(5,  'recipes.moderate', "Approuver et rejeter des recettes"),
-(6,  'recipes.archive', "Archiver des recettes"),
+(4,  'recipes.read', "Consulter les recettes dans l'administration"),
+(5,  'recipes.moderate', "Approuver et rejeter les recettes en attente"),
+(6,  'recipes.archive', "Archiver les recettes publiées ou rejetées"),
 (7,  'recipes.delete', "Supprimer définitivement des recettes"),
-(8,  'comments.read', "Consulter les commentaires modérés ou supprimés"),
+(8,  'comments.read', "Consulter les commentaires dans l'administration"),
 (9,  'comments.moderate', "Masquer, restaurer et démodérer des commentaires"),
 (10, 'comments.update', "Modifier des commentaires dans l'administration"),
-(11, 'comments.delete', "Supprimer définitivement des commentaires")
+(11, 'comments.delete', "Supprimer définitivement des commentaires"),
+(12, 'catalog.read', "Consulter le catalogue dans l'administration"),
+(13, 'catalog.manage', "Créer, modifier et supprimer des catégories, ingrédients, tags et ustensiles"),
+(14, 'staff.read', "Consulter les comptes staff et leurs rôles"),
+(15, 'staff.manage', "Inviter, modifier, désactiver et gérer les rôles des comptes staff"),
+(16, 'audit.read', "Consulter le journal d'audit administratif")
 AS new_permissions
 ON DUPLICATE KEY UPDATE
   Code = new_permissions.Code,
@@ -43,6 +48,21 @@ ON DUPLICATE KEY UPDATE
 -- Role permissions
 -- =====================================================
 INSERT INTO RolePermissions (RoleId, PermissionId) VALUES
+-- RecipeModerator: consultation et cycle de modération, sans suppression définitive.
+(1, 4),
+(1, 5),
+(1, 6),
+-- CommentModerator: consultation et modération réversible, sans suppression définitive.
+(2, 8),
+(2, 9),
+(2, 10),
+-- UserAdmin: consultation et modération des seuls comptes community.
+(3, 2),
+(3, 3),
+-- CatalogManager: gestion complète des données du catalogue.
+(4, 12),
+(4, 13),
+-- SuperAdmin: catalogue explicite complet, sans wildcard ni héritage de rôle.
 (5, 1),
 (5, 2),
 (5, 3),
@@ -53,7 +73,12 @@ INSERT INTO RolePermissions (RoleId, PermissionId) VALUES
 (5, 8),
 (5, 9),
 (5, 10),
-(5, 11)
+(5, 11),
+(5, 12),
+(5, 13),
+(5, 14),
+(5, 15),
+(5, 16)
 AS new_role_permissions
 ON DUPLICATE KEY UPDATE PermissionId = new_role_permissions.PermissionId;
 
