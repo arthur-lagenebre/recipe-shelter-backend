@@ -137,7 +137,7 @@ describe('SuperAdminBootstrapService', () => {
 
         await assert.rejects(
             () => service.bootstrap({ mail: 'other@example.com', username: 'other-admin' }),
-            (error) => assertHttpError(error, 'BOOTSTRAP_SUPER_ADMIN_ACTIVE_EXISTS', 409)
+            (error) => assertHttpError(error, 'SUPER_ADMIN_ALREADY_EXISTS', 409)
         );
         assert.equal(mailer.input, null);
     });

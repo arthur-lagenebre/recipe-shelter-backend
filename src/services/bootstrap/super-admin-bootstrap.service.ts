@@ -82,7 +82,7 @@ export class SuperAdminBootstrapService {
             }
             case 'super_admin_exists':
                 if (result.active)
-                    throw conflict('An active SuperAdmin already exists', 'BOOTSTRAP_SUPER_ADMIN_ACTIVE_EXISTS');
+                    throw conflict('An active SuperAdmin already exists', 'SUPER_ADMIN_ALREADY_EXISTS');
                 throw conflict( 'The first SuperAdmin has already been bootstrapped', 'BOOTSTRAP_SUPER_ADMIN_ALREADY_COMPLETED');
             case 'email_taken':
                 throw conflict('Email already used', 'BOOTSTRAP_SUPER_ADMIN_EMAIL_TAKEN');

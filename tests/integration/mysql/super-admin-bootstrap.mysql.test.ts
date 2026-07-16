@@ -287,6 +287,36 @@ describe('SuperAdmin bootstrap MySQL integration', { skip: !mysqlEnabled && 'Set
         const [stillInvitedRows] = await pool.query(`SELECT Status FROM StaffProfiles WHERE UserId = ?`, [createdAccount.Id]);
         assert.deepEqual(stillInvitedRows, [{ Status: 'invited' }]);
 
+        await pool.query(
+            `UPDATE Users AS u
+             INNER JOIN StaffProfiles AS sp ON sp.UserId = u.Id
+             SET u.Status = 'active', sp.Status = 'active'
+             WHERE u.Id = ?`,
+            [createdAccount.Id]
+        );
+        await assert.rejects(
+            () => firstService.bootstrap({
+                mail: 'second-active@test.local',
+                username: 'second-active-admin'
+            }),
+            (error) => {
+                assert.ok(error instanceof HttpError);
+                assert.equal(error.code, 'SUPER_ADMIN_ALREADY_EXISTS');
+                assert.equal(error.statusCode, 409);
+                return true;
+            }
+        );
+        const [accountsAfterActiveRetry] = await pool.query(
+            `SELECT
+                (SELECT COUNT(*) FROM Users) AS UserCount,
+                (SELECT COUNT(*)
+                 FROM StaffRoles AS sr
+                 INNER JOIN Roles AS r ON r.Id = sr.RoleId
+                 WHERE r.Code = 'SuperAdmin') AS SuperAdminCount`
+        );
+        assert.deepEqual(accountsAfterActiveRetry, [{ UserCount: 1, SuperAdminCount: 1 }]);
+        assert.equal(firstMailer.messages.length + secondMailer.messages.length, 1);
+
         await pool.query(`UPDATE StaffProfiles SET Status = 'disabled' WHERE UserId = ?`, [createdAccount.Id]);
         await assert.rejects(
             () => firstService.bootstrap({
