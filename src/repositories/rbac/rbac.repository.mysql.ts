@@ -1,4 +1,4 @@
-import { PERMISSIONS } from '../../security/permissions.js';
+import { isPermissionCode } from '../../security/permissions.js';
 
 import type { RbacRepository } from './rbac.repository.interface.js';
 import type { PermissionCode } from '../../security/permissions.js';
@@ -8,8 +8,6 @@ import type { Pool } from 'mysql2/promise';
 type PermissionCodeRow = RowDataPacket & {
   Code: string;
 };
-
-const KNOWN_PERMISSION_CODES = new Set<string>(Object.values(PERMISSIONS));
 
 export class RbacRepositoryMysql implements RbacRepository {
   constructor(private readonly db: Pool) { }
@@ -27,6 +25,6 @@ export class RbacRepositoryMysql implements RbacRepository {
 
     return rows
       .map((row) => row.Code)
-      .filter((code): code is PermissionCode => KNOWN_PERMISSION_CODES.has(code));
+      .filter((code): code is PermissionCode => isPermissionCode(code));
   }
 }

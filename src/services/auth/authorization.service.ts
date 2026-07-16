@@ -1,3 +1,5 @@
+import { isPermissionCode } from '../../security/permissions.js';
+
 import type { AuthContext } from '../../api/auth/auth.types.js';
 import type { PermissionCode } from '../../security/permissions.js';
 
@@ -6,7 +8,9 @@ function hasActiveAccountType(auth: Readonly<AuthContext> | null | undefined, ac
 }
 
 export function hasPermission(auth: Readonly<AuthContext> | null | undefined, permission: PermissionCode): boolean {
-  return isStaffAccount(auth) && auth?.permissions.includes(permission) === true;
+  return isPermissionCode(permission)
+    && isStaffAccount(auth)
+    && auth?.permissions.includes(permission) === true;
 }
 
 export function isCommunityAccount(auth: Readonly<AuthContext> | null | undefined): boolean {

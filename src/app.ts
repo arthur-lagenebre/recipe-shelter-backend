@@ -2,6 +2,7 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express from 'express';
 
+import { adminAuthorizationPolicies } from './api/admin/admin.authorization.js';
 import { createAdminCommentsController } from './api/admin/admin.comments.controller.js';
 import { createAdminCommentsRouter } from './api/admin/admin.comments.routes.js';
 import { createAdminRecipesController } from './api/admin/admin.recipes.controller.js';
@@ -31,9 +32,10 @@ import { createTagssRouter } from './api/tag/tags.routes.js';
 import { createUsersController } from './api/users/users.controller.js';
 import { createUsersRouter } from './api/users/users.routes.js';
 import { pool } from './db/pool.js';
+import { EnforceAuthorizationPolicies } from './middlewares/authorization.js';
 import { errorHandler } from './middlewares/error-handler.js';
 import { notFound } from './middlewares/not-found.js';
-import { configureAuthRbacRepository, configureAuthUserRepository } from './middlewares/require-auth.js';
+import { configureAuthRbacRepository, configureAuthUserRepository, requireAuth } from './middlewares/require-auth.js';
 import { AdminCommentRepositoryMysql } from './repositories/admin/admin.comments.repository.mysql.js';
 import { AdminRecipeRepositoryMysql } from './repositories/admin/admin.recipe.repository.mysql.js';
 import { AdminUserRepositoryMysql } from './repositories/admin/admin.users.repository.mysql.js';
@@ -184,9 +186,13 @@ export function createApp(overrides: Partial<AppDependencies> = {}) {
   const tagController = createTagsController(dependencies.tagService);
   const usersController = createUsersController(dependencies.usersService);
 
-  app.use('/api/v1/admin/comments', createAdminCommentsRouter(adminCommentsController));
-  app.use('/api/v1/admin/recipes', createAdminRecipesRouter(adminRecipesController));
-  app.use('/api/v1/admin/users', createAdminUsersRouter(adminUsersController));
+  const adminRouter = express.Router();
+  adminRouter.use(requireAuth, EnforceAuthorizationPolicies(adminAuthorizationPolicies));
+  adminRouter.use('/comments', createAdminCommentsRouter(adminCommentsController));
+  adminRouter.use('/recipes', createAdminRecipesRouter(adminRecipesController));
+  adminRouter.use('/users', createAdminUsersRouter(adminUsersController));
+
+  app.use('/api/v1/admin', adminRouter);
   app.use('/api/v1/auth', createAuthRouter(authController));
   app.use('/api/v1/categories', createCategoryRouter(categoryController));
   app.use('/api/v1/comments', createCommentsRouter(commentsController));

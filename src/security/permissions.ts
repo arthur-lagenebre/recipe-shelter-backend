@@ -18,3 +18,9 @@ export const PERMISSIONS = {
 } as const;
 
 export type PermissionCode = typeof PERMISSIONS[keyof typeof PERMISSIONS];
+
+const KNOWN_PERMISSION_CODES = new Set<string>(Object.values(PERMISSIONS));
+
+export function isPermissionCode(value: unknown): value is PermissionCode {
+  return typeof value === 'string' && KNOWN_PERMISSION_CODES.has(value);
+}

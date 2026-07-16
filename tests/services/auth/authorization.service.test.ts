@@ -53,6 +53,7 @@ describe('authorization service', () => {
             assert.equal(hasPermission({ ...staffAuth, status: 'locked' }, PERMISSIONS.usersModerate), false);
             assert.equal(hasPermission({ ...communityAuth, permissions: [PERMISSIONS.usersModerate] }, PERMISSIONS.usersModerate), false);
             assert.equal(hasPermission({ ...staffAuth, permissions: [PERMISSIONS.usersRead] }, PERMISSIONS.usersModerate), false);
+            assert.equal(hasPermission(staffAuth, 'unknown.permission' as never), false);
         });
     });
 });

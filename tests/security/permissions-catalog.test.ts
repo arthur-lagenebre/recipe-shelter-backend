@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { describe, it } from 'node:test';
 
-import { PERMISSIONS } from '../../src/security/permissions.js';
+import { isPermissionCode, PERMISSIONS } from '../../src/security/permissions.js';
 
 const schemaPath = new URL('../../database/migrations/1_create_schema.sql', import.meta.url);
 const seedPath = new URL('../../database/seed.sql', import.meta.url);
@@ -48,6 +48,9 @@ describe('RBAC seed catalog', () => {
             [...new Set(applicationCodes.map((code) => code.split('.')[0]))].sort(),
             ['audit', 'catalog', 'comments', 'recipes', 'staff', 'system', 'users']
         );
+        assert.ok(applicationCodes.every((code) => isPermissionCode(code)));
+        assert.equal(isPermissionCode('unknown.permission'), false);
+        assert.equal(isPermissionCode(null), false);
     });
 
     it('defines the validated role-permission matrix with no duplicate or unknown association', async () => {

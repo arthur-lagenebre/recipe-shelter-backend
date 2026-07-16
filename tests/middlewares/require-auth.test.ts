@@ -53,6 +53,46 @@ function createToken(payload = { sub: 2, username: 'token-user' }): string {
 }
 
 describe('requireAuth', () => {
+  it('reuses an authentication context already established by an upstream boundary', async () => {
+    let userRepositoryCalls = 0;
+    let rbacRepositoryCalls = 0;
+    const req: MockRequest = {
+      cookies: {},
+      auth: {
+      userId: activeUser.id,
+      username: activeUser.username,
+      accountType: 'staff',
+      status: 'active',
+      permissions: [PERMISSIONS.usersRead]
+      }
+    };
+
+    configureAuthUserRepository({
+      async findById() {
+        userRepositoryCalls += 1;
+        return activeUser;
+      }
+    });
+    configureAuthRbacRepository({
+      async findPermissionCodesByStaffUserId() {
+        rbacRepositoryCalls += 1;
+        return [PERMISSIONS.usersRead];
+      }
+    });
+
+    let nextCalls = 0;
+    let nextError: unknown;
+    await requireAuth(req as never, null as never, (error) => {
+      nextCalls += 1;
+      nextError = error;
+    });
+
+    assert.equal(nextError, undefined);
+    assert.equal(nextCalls, 1);
+    assert.equal(userRepositoryCalls, 0);
+    assert.equal(rbacRepositoryCalls, 0);
+  });
+
     let users: FakeAuthUsers;
     let rbac: FakeAuthRbac;
 

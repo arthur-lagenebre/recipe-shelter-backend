@@ -74,6 +74,9 @@ async function resolveActiveAuth(auth: ParsedAuthContext): Promise<AuthContext |
 }
 
 export async function requireAuth(req: Request, _res: Response, next: NextFunction) {
+  if (req.auth)
+    return next();
+
   const token = getSessionToken(req);
 
   if (!token)

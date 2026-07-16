@@ -6,13 +6,16 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 
 import { createAdminCommentsRouter } from '../../src/api/admin/admin.comments.routes.js';
+import { adminAuthorizationPolicies } from '../../src/api/admin/admin.authorization.js';
 import { createAdminRecipesRouter } from '../../src/api/admin/admin.recipes.routes.js';
 import { createAdminUsersRouter } from '../../src/api/admin/admin.users.routes.js';
 import { createHealthRouter } from '../../src/api/health/health.routes.js';
+import { EnforceAuthorizationPolicies } from '../../src/middlewares/authorization.js';
 import { errorHandler } from '../../src/middlewares/error-handler.js';
-import { configureAuthRbacRepository, configureAuthUserRepository } from '../../src/middlewares/require-auth.js';
+import { configureAuthRbacRepository, configureAuthUserRepository, requireAuth } from '../../src/middlewares/require-auth.js';
 import { PERMISSIONS } from '../../src/security/permissions.js';
 import { env } from '../../src/utils/env.js';
+import { logger } from '../../src/utils/logger.js';
 import { startHttpTestServer } from '../helpers/http-test-server.js';
 
 import type { User } from '../../src/repositories/users/user.types.js';
@@ -71,6 +74,7 @@ describe('administrative endpoint authorization policies', () => {
     let server: HttpTestServer;
     let cookie: string;
     let controllerCalls = 0;
+    let defaultDenyControllerCalls = 0;
     let grantedPermissions: PermissionCode[] = [];
 
     before(async () => {
@@ -92,7 +96,18 @@ describe('administrative endpoint authorization policies', () => {
         const app = express();
 
         app.use(cookieParser());
-        app.use('/api/v1/admin/comments', createAdminCommentsRouter({
+        const adminRouter = express.Router();
+
+        adminRouter.use(requireAuth, EnforceAuthorizationPolicies([
+            ...adminAuthorizationPolicies,
+            { method: 'get', path: '/default-deny/declared', permission: PERMISSIONS.usersRead },
+            {
+                method: 'get',
+                path: '/default-deny/unknown-permission',
+                permission: 'unknown.permission' as PermissionCode
+            }
+        ]));
+        adminRouter.use('/comments', createAdminCommentsRouter({
             listModeratedComments: endpointHandler,
             countModeratedComments: endpointHandler,
             listSoftDeletedComments: endpointHandler,
@@ -103,7 +118,7 @@ describe('administrative endpoint authorization policies', () => {
             updateComment: endpointHandler,
             deleteComment: endpointHandler
         }));
-        app.use('/api/v1/admin/recipes', createAdminRecipesRouter({
+        adminRouter.use('/recipes', createAdminRecipesRouter({
             listPendingRecipes: endpointHandler,
             countPendingRecipes: endpointHandler,
             getRecipeAdmin: endpointHandler,
@@ -112,13 +127,22 @@ describe('administrative endpoint authorization policies', () => {
             archiveRecipe: endpointHandler,
             deleteRecipe: endpointHandler
         }));
-        app.use('/api/v1/admin/users', createAdminUsersRouter({
+        adminRouter.use('/users', createAdminUsersRouter({
             listBannedUsers: endpointHandler,
             countBannedUsers: endpointHandler,
             getUserProfile: endpointHandler,
             banUser: endpointHandler,
             unbanUser: endpointHandler
         }));
+        const defaultDenyHandler: RequestHandler = (_req, res) => {
+            defaultDenyControllerCalls += 1;
+            res.status(204).end();
+        };
+
+        adminRouter.get('/default-deny/declared', defaultDenyHandler);
+        adminRouter.get('/default-deny/forgotten', defaultDenyHandler);
+        adminRouter.get('/default-deny/unknown-permission', defaultDenyHandler);
+        app.use('/api/v1/admin', adminRouter);
         app.use('/api/v1/health', createHealthRouter({
             live: endpointHandler,
             ready: endpointHandler,
@@ -169,5 +193,83 @@ describe('administrative endpoint authorization policies', () => {
             );
             assert.equal(controllerCalls, callsBeforeAllowedRequest + 1);
         }
+    });
+
+    it('denies and logs a registered administrative endpoint with no declared policy', async () => {
+        grantedPermissions = [...Object.values(PERMISSIONS)];
+        const warnings: Array<{ message: string; meta?: unknown }> = [];
+        const originalWarn = logger.warn;
+        logger.warn = (message, meta) => warnings.push({ message, meta });
+
+        try {
+            const declared = await fetch(`${server.baseUrl}/api/v1/admin/default-deny/declared`, {
+                headers: { cookie }
+            });
+            assert.equal(declared.status, 204);
+            assert.equal(defaultDenyControllerCalls, 1);
+
+            const forgotten = await fetch(`${server.baseUrl}/api/v1/admin/default-deny/forgotten`, {
+                headers: { cookie }
+            });
+
+            assert.equal(forgotten.status, 403);
+            assert.deepEqual(await forgotten.json(), {
+                error: {
+                    message: 'Administrative authorization policy is required',
+                    code: 'AUTH_POLICY_REQUIRED'
+                }
+            });
+            assert.equal(defaultDenyControllerCalls, 1);
+        } finally {
+            logger.warn = originalWarn;
+        }
+
+        assert.deepEqual(warnings, [{
+            message: '[authz] Administrative request denied',
+            meta: {
+                code: 'AUTH_POLICY_REQUIRED',
+                method: 'GET',
+                path: '/api/v1/admin/default-deny/forgotten',
+                permission: undefined,
+                reason: 'policy_missing',
+                userId: staff.id
+            }
+        }]);
+    });
+
+    it('denies and logs a policy that references an unknown permission', async () => {
+        grantedPermissions = ['unknown.permission' as PermissionCode];
+        const warnings: Array<{ message: string; meta?: unknown }> = [];
+        const originalWarn = logger.warn;
+        logger.warn = (message, meta) => warnings.push({ message, meta });
+
+        try {
+            const response = await fetch(`${server.baseUrl}/api/v1/admin/default-deny/unknown-permission`, {
+                headers: { cookie }
+            });
+
+            assert.equal(response.status, 403);
+            assert.deepEqual(await response.json(), {
+                error: {
+                    message: 'Administrative authorization policy references an unknown permission',
+                    code: 'AUTH_PERMISSION_UNKNOWN'
+                }
+            });
+            assert.equal(defaultDenyControllerCalls, 1);
+        } finally {
+            logger.warn = originalWarn;
+        }
+
+        assert.deepEqual(warnings, [{
+            message: '[authz] Administrative request denied',
+            meta: {
+                code: 'AUTH_PERMISSION_UNKNOWN',
+                method: 'GET',
+                path: '/api/v1/admin/default-deny/unknown-permission',
+                permission: 'unknown.permission',
+                reason: 'permission_unknown',
+                userId: staff.id
+            }
+        }]);
     });
 });

@@ -148,6 +148,13 @@ permissions explicites d'un compte staff actif. Les middlewares
 `src/middlewares/authorization.ts` appliquent ces décisions aux routes et
 refusent par défaut un contexte absent, inactif ou incompatible.
 
+La frontière administrative centrale et le routeur de santé déclarent en outre
+leur catalogue de politiques avant les contrôleurs. `EnforceAuthorizationPolicies`
+refuse toute combinaison méthode/chemin non déclarée avec `AUTH_POLICY_REQUIRED`,
+ainsi que toute permission absente du catalogue applicatif avec
+`AUTH_PERMISSION_UNKNOWN`. Ces refus produisent une trace structurée contenant
+le code, la méthode, le chemin, la raison et l'identifiant du compte authentifié.
+
 Le schéma d'installation est consolidé dans l'unique fichier
 `database/migrations/1_create_schema.sql`. Les auteurs de recettes et de
 commentaires ainsi que les propriétaires de favoris référencent exclusivement
