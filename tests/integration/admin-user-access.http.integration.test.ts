@@ -7,11 +7,11 @@ import jwt from 'jsonwebtoken';
 
 import { createAdminUsersController } from '../../src/api/admin/admin.users.controller.js';
 import { createAdminUsersRouter } from '../../src/api/admin/admin.users.routes.js';
+import { CommunityOnly, StaffOnly } from '../../src/middlewares/authorization.js';
 import { errorHandler } from '../../src/middlewares/error-handler.js';
 import { configureAuthRbacRepository, configureAuthUserRepository, requireAuth } from '../../src/middlewares/require-auth.js';
 import { PERMISSIONS } from '../../src/security/permissions.js';
 import { AdminUserService } from '../../src/services/admin/admin.users.service.js';
-import { requireCommunityAccount, requireStaffAccount } from '../../src/services/auth/authorization.service.js';
 import { env } from '../../src/utils/env.js';
 import { startHttpTestServer } from '../helpers/http-test-server.js';
 
@@ -104,8 +104,8 @@ describe('admin user access HTTP integration', () => {
         app.use(cookieParser());
         app.use(express.json());
         app.get('/protected', requireAuth, (req, res) => res.status(200).json({ userId: req.auth?.userId }));
-        app.get('/community-only', requireAuth, requireCommunityAccount, (_req, res) => res.status(200).json({ ok: true }));
-        app.get('/staff-only', requireAuth, requireStaffAccount, (_req, res) => res.status(200).json({ ok: true }));
+        app.get('/community-only', requireAuth, CommunityOnly, (_req, res) => res.status(200).json({ ok: true }));
+        app.get('/staff-only', requireAuth, StaffOnly, (_req, res) => res.status(200).json({ ok: true }));
         app.use('/api/v1/admin/users', createAdminUsersRouter(createAdminUsersController(service)));
         app.use(errorHandler);
 

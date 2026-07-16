@@ -143,9 +143,10 @@ le seed initial.
 
 Les décisions d'autorisation sont centralisées dans
 `src/services/auth/authorization.service.ts`. `hasPermission` n'accorde que les
-permissions explicites d'un compte staff actif ; `requirePermission`,
-`requireCommunityAccount` et `requireStaffAccount` refusent par défaut un
-contexte absent, inactif ou incompatible.
+permissions explicites d'un compte staff actif. Les middlewares
+`CommunityOnly`, `StaffOnly` et `RequirePermission(permission)` de
+`src/middlewares/authorization.ts` appliquent ces décisions aux routes et
+refusent par défaut un contexte absent, inactif ou incompatible.
 
 Le schéma d'installation est consolidé dans l'unique fichier
 `database/migrations/1_create_schema.sql`. Les auteurs de recettes et de

@@ -1,8 +1,8 @@
 import { Router } from 'express';
 
+import { RequirePermission } from '../../middlewares/authorization.js';
 import { requireAuth } from '../../middlewares/require-auth.js';
 import { PERMISSIONS } from '../../security/permissions.js';
-import { requirePermission } from '../../services/auth/authorization.service.js';
 
 import type { RequestHandler } from 'express';
 
@@ -15,9 +15,9 @@ type HealthController = {
 export function createHealthRouter(controller: HealthController) {
   const router = Router();
 
-  router.get('/live', requireAuth, requirePermission(PERMISSIONS.systemHealthRead), controller.live);
-  router.get('/ready', requireAuth, requirePermission(PERMISSIONS.systemHealthRead), controller.ready);
-  router.get('/', requireAuth, requirePermission(PERMISSIONS.systemHealthRead), controller.health);
+  router.get('/live', requireAuth, RequirePermission(PERMISSIONS.systemHealthRead), controller.live);
+  router.get('/ready', requireAuth, RequirePermission(PERMISSIONS.systemHealthRead), controller.ready);
+  router.get('/', requireAuth, RequirePermission(PERMISSIONS.systemHealthRead), controller.health);
 
   return router;
 }
