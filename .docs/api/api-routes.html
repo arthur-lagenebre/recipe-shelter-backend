@@ -821,7 +821,7 @@ type UpdatePasswordResponse = {
 
     <section aria-labelledby="recipes">
       <h2 id="recipes">Recipes</h2>
-      <p class="section-intro">Lecture publique des recettes publiées, création de brouillons et cycle de vie des recettes de l’utilisateur connecté.</p>
+      <p class="section-intro">Lecture publique des recettes publiées. La création, la mise à jour, la soumission et l’archivage personnels exigent un compte community actif ; un compte staff reçoit <code>403 AUTH_COMMUNITY_ACCOUNT_REQUIRED</code>.</p>
       <div class="table-wrap">
         <table>
           <thead>
@@ -872,7 +872,7 @@ type UpdatePasswordResponse = {
             <tr>
               <td><span class="method post">POST</span></td>
               <td><code>/api/v1/recipes</code></td>
-              <td><span class="auth">Session</span></td>
+              <td><span class="auth">Community active</span></td>
               <td>Body recette. <code>title</code> requis, min 5 caractères.</td>
               <td><code>201</code> brouillon créé.</td>
             </tr>
@@ -886,21 +886,21 @@ type UpdatePasswordResponse = {
             <tr>
               <td><span class="method patch">PATCH</span></td>
               <td><code>/api/v1/recipes/me/:id</code></td>
-              <td><span class="auth">Session</span></td>
+              <td><span class="auth">Community active</span></td>
               <td>Body recette. <code>title</code> requis, min 5 caractères.</td>
               <td><code>200</code> brouillon mis à jour.</td>
             </tr>
             <tr>
               <td><span class="method post">POST</span></td>
               <td><code>/api/v1/recipes/me/:id/submit</code></td>
-              <td><span class="auth">Session</span></td>
+              <td><span class="auth">Community active</span></td>
               <td><code>id</code> entier positif.</td>
               <td><code>200</code> résultat de soumission.</td>
             </tr>
             <tr>
               <td><span class="method post">POST</span></td>
               <td><code>/api/v1/recipes/me/:id/archive</code></td>
-              <td><span class="auth">Session</span></td>
+              <td><span class="auth">Community active</span></td>
               <td><code>id</code> entier positif.</td>
               <td><code>200</code> <code>{ "ok": true }</code>.</td>
             </tr>
@@ -1133,7 +1133,7 @@ type RecipeDetailTag = {
 
     <section aria-labelledby="comments">
       <h2 id="comments">Comments</h2>
-      <p class="section-intro">Lecture publique de l’arbre de commentaires et actions utilisateur sur ses propres commentaires.</p>
+      <p class="section-intro">Lecture publique de l’arbre de commentaires. Les écritures exigent un compte community actif ; un compte staff reçoit <code>403 AUTH_COMMUNITY_ACCOUNT_REQUIRED</code>.</p>
       <div class="table-wrap">
         <table>
           <thead>
@@ -1156,21 +1156,21 @@ type RecipeDetailTag = {
             <tr>
               <td><span class="method post">POST</span></td>
               <td><code>/api/v1/recipes/:recipeId/comments</code></td>
-              <td><span class="auth">Session</span></td>
+              <td><span class="auth">Community active</span></td>
               <td><code>comment</code> requis, <code>rating</code> 1..5 optionnel, <code>parentCommentId</code> optionnel. Une réponse ne peut pas avoir de note.</td>
               <td><code>201</code> commentaire créé.</td>
             </tr>
             <tr>
               <td><span class="method patch">PATCH</span></td>
               <td><code>/api/v1/comments/:id</code></td>
-              <td><span class="auth">Session</span></td>
+              <td><span class="auth">Community active</span></td>
               <td><code>comment</code> requis, <code>rating</code> 1..5 ou <code>null</code>.</td>
               <td><code>200</code> commentaire mis à jour.</td>
             </tr>
             <tr>
               <td><span class="method delete">DELETE</span></td>
               <td><code>/api/v1/comments/:id</code></td>
-              <td><span class="auth">Session</span></td>
+              <td><span class="auth">Community active</span></td>
               <td><code>id</code> entier positif.</td>
               <td><code>200</code> <code>{ "ok": true }</code>.</td>
             </tr>
@@ -1221,7 +1221,7 @@ type DeleteCommentResponse = OkResponse;</code></pre>
 
     <section aria-labelledby="favorites">
       <h2 id="favorites">Favorites</h2>
-      <p class="section-intro">Gestion des recettes favorites pour l’utilisateur connecté.</p>
+      <p class="section-intro">Lecture des favoris de l’utilisateur connecté. Les ajouts et suppressions exigent un compte community actif ; un compte staff reçoit <code>403 AUTH_COMMUNITY_ACCOUNT_REQUIRED</code>.</p>
       <div class="table-wrap">
         <table>
           <thead>
@@ -1237,7 +1237,7 @@ type DeleteCommentResponse = OkResponse;</code></pre>
             <tr>
               <td><span class="method post">POST</span></td>
               <td><code>/api/v1/favorites/:recipeId</code></td>
-              <td><span class="auth">Session</span></td>
+              <td><span class="auth">Community active</span></td>
               <td><code>recipeId</code> entier positif.</td>
               <td><code>200</code> favori créé.</td>
             </tr>
@@ -1251,7 +1251,7 @@ type DeleteCommentResponse = OkResponse;</code></pre>
             <tr>
               <td><span class="method delete">DELETE</span></td>
               <td><code>/api/v1/favorites/:recipeId</code></td>
-              <td><span class="auth">Session</span></td>
+              <td><span class="auth">Community active</span></td>
               <td><code>recipeId</code> entier positif.</td>
               <td><code>200</code> <code>{ "ok": true }</code>.</td>
             </tr>

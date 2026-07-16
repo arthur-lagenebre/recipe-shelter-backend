@@ -272,7 +272,7 @@ CREATE TABLE Recipes (
   KEY idx_recipes_moderated_by_user_id (ModeratedByUserId),
   FULLTEXT INDEX ft_recipes_title (Title),
   CONSTRAINT recipes_user_FK
-    FOREIGN KEY (UserId) REFERENCES Users(Id)
+    FOREIGN KEY (UserId) REFERENCES CommunityProfiles(UserId)
     ON UPDATE CASCADE
     ON DELETE RESTRICT,
   CONSTRAINT recipes_category_FK
@@ -428,7 +428,7 @@ CREATE TABLE Favorites (
   PRIMARY KEY (UserId, RecipeId),
   KEY idx_favorites_recipe_id (RecipeId),
   CONSTRAINT favorites_user_FK
-    FOREIGN KEY (UserId) REFERENCES Users(Id)
+    FOREIGN KEY (UserId) REFERENCES CommunityProfiles(UserId)
     ON UPDATE CASCADE
     ON DELETE CASCADE,
   CONSTRAINT favorites_recipe_FK
@@ -461,7 +461,7 @@ CREATE TABLE Comments (
     ON UPDATE CASCADE
     ON DELETE CASCADE,
   CONSTRAINT comments_user_FK
-    FOREIGN KEY (UserId) REFERENCES Users(Id)
+    FOREIGN KEY (UserId) REFERENCES CommunityProfiles(UserId)
     ON UPDATE CASCADE
     ON DELETE CASCADE,
   CONSTRAINT comments_parent_FK

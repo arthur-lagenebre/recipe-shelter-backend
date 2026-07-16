@@ -148,11 +148,11 @@ permissions explicites d'un compte staff actif ; `requirePermission`,
 contexte absent, inactif ou incompatible.
 
 Le schéma d'installation est consolidé dans l'unique fichier
-`database/migrations/1_create_schema.sql`. Les identifiants `Users.Id` restent
-les clés référencées par les recettes, commentaires et favoris. Les triggers du
-schéma créent le profil spécialisé correspondant lors de toute reprise ou
-création de compte et maintiennent les colonnes historiques comme miroir de
-compatibilité.
+`database/migrations/1_create_schema.sql`. Les auteurs de recettes et de
+commentaires ainsi que les propriétaires de favoris référencent exclusivement
+`CommunityProfiles.UserId`; les rôles staff référencent `StaffProfiles.UserId`.
+Une base vierge interdit donc structurellement à un compte staff de posséder du
+contenu communautaire.
 
 Les scripts npm utilisent `mysql -u root -p`. Si vous utilisez un autre utilisateur MySQL, lancez le script SQL directement.
 
@@ -224,8 +224,13 @@ Exemples :
 - `GET /api/v1/ingredients`
 - `GET /api/v1/tags`
 - `GET /api/v1/equipments`
-- `PUT /api/v1/recipes/:recipeId/cover-image` (session requise, `multipart/form-data`)
-- `DELETE /api/v1/recipes/:recipeId/cover-image` (session requise)
+- `PUT /api/v1/recipes/:recipeId/cover-image` (session community active requise, `multipart/form-data`)
+- `DELETE /api/v1/recipes/:recipeId/cover-image` (session community active requise)
+
+Toutes les écritures de recettes personnelles, propositions, commentaires et
+favoris exigent une session community active. Un compte staff reçoit
+`403 AUTH_COMMUNITY_ACCOUNT_REQUIRED` avant toute validation du contenu ou
+écriture en base.
 
 L'upload de couverture attend exactement un fichier dans le champ `image` et accepte un champ texte facultatif `altText`. Les entrées JPEG, PNG et WebP sont décodées puis normalisées en trois variantes WebP (1600, 800 et 400 pixels maximum). La taille d'entrée est limitée à 10 Mo. Les réponses de recette exposent `coverImage: null` ou l'objet suivant ; aucune clé interne de stockage n'est renvoyée :
 

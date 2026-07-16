@@ -469,7 +469,7 @@ describe('critical user journey E2E', () => {
             body: JSON.stringify({ title: 'Admin edit attempt' })
         });
         assert.equal(adminEditResponse.status, 403);
-        assert.equal((await adminEditResponse.json() as { error: { code: string } }).error.code, 'RECIPES_EDIT_FORBIDDEN');
+        assert.equal((await adminEditResponse.json() as { error: { code: string } }).error.code, 'AUTH_COMMUNITY_ACCOUNT_REQUIRED');
 
         const approveResponse = await fetch(`${server.baseUrl}/api/v1/admin/recipes/${created.id}/approve`, {
             method: 'POST',
@@ -513,7 +513,7 @@ describe('critical user journey E2E', () => {
             body: JSON.stringify({ rating: 4, comment: 'Admin edit attempt' })
         });
         assert.equal(forbiddenUpdate.status, 403);
-        assert.equal((await forbiddenUpdate.json() as { error: { code: string } }).error.code, 'COMMENT_ACCESS_DENIED');
+        assert.equal((await forbiddenUpdate.json() as { error: { code: string } }).error.code, 'AUTH_COMMUNITY_ACCOUNT_REQUIRED');
 
         const updateResponse = await fetch(`${server.baseUrl}/api/v1/comments/1`, {
             method: 'PATCH',

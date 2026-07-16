@@ -232,6 +232,50 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
         assert.deepEqual(superAdminPermissions, [{ PermissionCount: Object.values(PERMISSIONS).length }]);
     });
 
+    it('restricts community content ownership to community profiles in a fresh schema', async () => {
+        const databaseName = requireRbacTestDatabaseName();
+        const [foreignKeys] = await connection.query(
+            `SELECT TABLE_NAME AS TableName, REFERENCED_TABLE_NAME AS ReferencedTableName
+             FROM information_schema.KEY_COLUMN_USAGE
+             WHERE TABLE_SCHEMA = ?
+               AND CONSTRAINT_NAME IN ('recipes_user_FK', 'comments_user_FK', 'favorites_user_FK')
+             ORDER BY TABLE_NAME`,
+            [databaseName]
+        );
+        assert.deepEqual(
+            (foreignKeys as Array<{ TableName: string; ReferencedTableName: string }>).map((row) => ({
+                tableName: row.TableName.toLowerCase(),
+                referencedTableName: row.ReferencedTableName.toLowerCase()
+            })),
+            [
+                { tableName: 'comments', referencedTableName: 'communityprofiles' },
+                { tableName: 'favorites', referencedTableName: 'communityprofiles' },
+                { tableName: 'recipes', referencedTableName: 'communityprofiles' }
+            ]
+        );
+
+        await connection.query(
+            `INSERT INTO Users (Id, Mail, Username, Password, AccountType, Status) VALUES
+                (110, 'community-content@test.local', 'community-content', 'hash', 'community', 'active'),
+                (111, 'staff-content@test.local', 'staff-content', 'hash', 'staff', 'active');
+             INSERT INTO RecipeCategories (Id, Name, Slug, IconName)
+             VALUES (100, 'Community boundary', 'community-boundary', 'boundary');
+             INSERT INTO Recipes (Id, UserId, CategoryId, Title, Slug, Description, PrepTimeMinutes, Servings)
+             VALUES (200, 110, 100, 'Community recipe', 'community-recipe', 'Allowed owner', 5, 2);
+             INSERT INTO Favorites (UserId, RecipeId) VALUES (110, 200);
+             INSERT INTO Comments (RecipeId, UserId, Comment) VALUES (200, 110, 'Allowed author')`
+        );
+
+        await assert.rejects(() => connection.query(
+            `INSERT INTO Recipes (Id, UserId, CategoryId, Title, Slug, Description, PrepTimeMinutes, Servings)
+             VALUES (201, 111, 100, 'Staff recipe', 'staff-recipe', 'Forbidden owner', 5, 2)`
+        ));
+        await assert.rejects(() => connection.query(`INSERT INTO Favorites (UserId, RecipeId) VALUES (111, 200)`));
+        await assert.rejects(() => connection.query(
+            `INSERT INTO Comments (RecipeId, UserId, Comment) VALUES (200, 111, 'Forbidden author')`
+        ));
+    });
+
     it('enforces unique assignments, foreign keys and default deny', async () => {
         await connection.query(
             `INSERT INTO Users (Id, Mail, Username, Password, AccountType, Status) VALUES
