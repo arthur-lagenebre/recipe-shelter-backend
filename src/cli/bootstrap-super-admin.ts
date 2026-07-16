@@ -1,20 +1,18 @@
 import { BOOTSTRAP_SUPER_ADMIN_USAGE, CommandUsageError, runBootstrapSuperAdminCommand } from './bootstrap-super-admin.command.js';
-import { TerminalSecretPrompter } from './terminal-secret-prompter.js';
 import { pool } from '../db/pool.js';
 import { SuperAdminBootstrapRepositoryMysql } from '../repositories/bootstrap/super-admin-bootstrap.repository.mysql.js';
 import { SuperAdminBootstrapService } from '../services/bootstrap/super-admin-bootstrap.service.js';
+import { SmtpMailService } from '../services/mail/mail.service.js';
+import { env } from '../utils/env.js';
 import { HttpError } from '../utils/errors.js';
 
 async function main(): Promise<void> {
-    const prompter = new TerminalSecretPrompter();
-
     try {
         const repository = new SuperAdminBootstrapRepositoryMysql(pool);
-        const service = new SuperAdminBootstrapService(repository);
+        const service = new SuperAdminBootstrapService(repository, new SmtpMailService(env.smtp), env.http.frontendBaseUrl);
 
         await runBootstrapSuperAdminCommand(process.argv.slice(2), {
             service,
-            prompter,
             writeOutput: (message) => process.stdout.write(`${message}\n`)
         });
     } catch (error) {
@@ -25,7 +23,6 @@ async function main(): Promise<void> {
 
         process.exitCode = 1;
     } finally {
-        prompter.close();
         await pool.end();
     }
 }

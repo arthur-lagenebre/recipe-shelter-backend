@@ -3,7 +3,15 @@ import nodemailer from 'nodemailer';
 import { internalError, type HttpError } from '../../utils/errors.js';
 import { logger } from '../../utils/logger.js';
 
-import type { ContactMailInput, EmailValidationMailInput, Mailer, PasswordChangedMailInput, PasswordResetMailInput } from './mail.types.js';
+import type {
+  ContactMailInput,
+  EmailValidationMailInput,
+  Mailer,
+  PasswordChangedMailInput,
+  PasswordResetMailInput,
+  SuperAdminBootstrapInvitationMailer,
+  SuperAdminBootstrapInvitationMailInput
+} from './mail.types.js';
 import type { Transporter } from 'nodemailer';
 
 export type SmtpConfig = {
@@ -16,7 +24,7 @@ export type SmtpConfig = {
   contactRecipientEmail: string;
 };
 
-export class SmtpMailService implements Mailer {
+export class SmtpMailService implements Mailer, SuperAdminBootstrapInvitationMailer {
   private readonly transporter: Pick<Transporter, 'sendMail'>;
 
   constructor(private readonly config: SmtpConfig, transporter?: Pick<Transporter, 'sendMail'>) {
@@ -49,6 +57,14 @@ export class SmtpMailService implements Mailer {
       to: input.to,
       subject: 'Validation de votre compte Recipe Shelter',
       text: this.formatValidationMessage(input.username, input.validationUrl)
+    });
+  }
+
+  async sendSuperAdminBootstrapInvitationEmail(input: SuperAdminBootstrapInvitationMailInput): Promise<void> {
+    await this.sendApplicationMail({
+      to: input.to,
+      subject: 'Invitation SuperAdmin Recipe Shelter',
+      text: this.formatSuperAdminBootstrapInvitationMessage(input)
     });
   }
 
@@ -152,6 +168,19 @@ export class SmtpMailService implements Mailer {
       `Lien de validation : ${validationUrl}`,
       ``,
       `Ce lien expirera dans 24 heures.`
+    ].join('\n');
+  }
+
+  private formatSuperAdminBootstrapInvitationMessage(input: SuperAdminBootstrapInvitationMailInput): string {
+    return [
+      `Bonjour ${input.username},`,
+      ``,
+      `Vous êtes invité à activer le premier compte SuperAdmin Recipe Shelter.`,
+      `Lien d'activation : ${input.invitationUrl}`,
+      `Ce lien expirera dans ${input.expiresInMinutes} minutes et ne pourra être utilisé qu'une fois.`,
+      `L'activation de l'authentification multifacteur est obligatoire.`,
+      ``,
+      `Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.`
     ].join('\n');
   }
 

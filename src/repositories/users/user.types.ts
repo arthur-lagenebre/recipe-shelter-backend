@@ -58,7 +58,7 @@ export type User = {
 };
 
 export type UserWithPassword = User & {
-  passwordHash: string;
+  passwordHash: string | null;
 };
 
 type CreateUserBaseInput = {
@@ -90,7 +90,7 @@ export type UserRow = RowDataPacket & {
 };
 
 export type UserWithPasswordRow = UserRow & {
-  Password: string;
+  Password: string | null;
 };
 
 export type CommunityProfileRow = RowDataPacket & {

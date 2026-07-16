@@ -78,6 +78,9 @@ export class UserService {
         if (!user)
             throw notFound('User not found', 'USER_NOT_FOUND');
 
+        if (!user.passwordHash)
+            throw unauthorized('Current password is incorrect', 'USERS_UPDATE_EMAIL_BAD_PASSWORD');
+
         const passwordOk = await bcrypt.compare(currentPassword, user.passwordHash);
 
         if (!passwordOk)
@@ -101,6 +104,9 @@ export class UserService {
 
         if (!user)
             throw notFound('User not found', 'USER_NOT_FOUND');
+
+        if (!user.passwordHash)
+            throw unauthorized('Current password is incorrect', 'USERS_UPDATE_PASSWORD_BAD_CURRENT');
 
         const passwordOk = await bcrypt.compare(currentPassword, user.passwordHash);
 
@@ -133,6 +139,9 @@ export class UserService {
 
         if (!user)
             throw notFound('User not found', 'USER_NOT_FOUND');
+
+        if (!user.passwordHash)
+            throw unauthorized('Current password is incorrect', 'USERS_UPDATE_USERNAME_BAD_PASSWORD');
 
         const passwordOk = await bcrypt.compare(currentPassword, user.passwordHash);
 

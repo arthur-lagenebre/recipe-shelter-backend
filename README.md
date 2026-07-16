@@ -187,11 +187,16 @@ npm run build
 npm run bootstrap:superadmin -- --email superadmin@example.com --username superadmin
 ```
 
-Le mot de passe et sa confirmation sont demandés interactivement sans écho. La
-commande ne possède volontairement aucun argument de mot de passe et crée le
-premier SuperAdmin dans une transaction uniquement si aucun SuperAdmin n'a déjà
-été initialisé. Une fois le premier SuperAdmin créé, toute nouvelle exécution
-est refusée, y compris si ce premier compte a ensuite été désactivé.
+La commande crée dans une transaction le premier SuperAdmin en statut `invited`
+et lui envoie un lien d'activation à usage unique. Aucun mot de passe ou jeton
+n'est accepté en argument ou écrit dans la sortie de la commande : seul le hash
+SHA-256 du jeton est conservé dans `StaffInvitations`. L'invitation expire après
+30 minutes par défaut, durée configurable avec
+`BOOTSTRAP_SUPER_ADMIN_INVITATION_TTL_MINUTES`, et impose l'activation du MFA.
+
+La commande nécessite donc une configuration SMTP applicative valide. Une fois
+le premier SuperAdmin créé, toute nouvelle exécution est refusée, y compris si
+ce premier compte est encore invité ou s'il a ensuite été désactivé.
 
 ## Lancer le serveur
 

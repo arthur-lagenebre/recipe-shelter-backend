@@ -42,7 +42,7 @@ CREATE TABLE Users (
   Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   Mail VARCHAR(255) NOT NULL,
   Username VARCHAR(64) NOT NULL,
-  Password VARCHAR(255) NOT NULL,
+  Password VARCHAR(255) NULL,
   AccountType ENUM('community', 'staff') NOT NULL DEFAULT 'community',
   Status ENUM('inactive', 'active', 'banned') NOT NULL DEFAULT 'inactive',
   EmailValidatedAt DATETIME NULL,
@@ -57,6 +57,8 @@ CREATE TABLE Users (
   UNIQUE KEY users_id_account_type_UK (Id, AccountType),
   KEY idx_users_status (Status),
   KEY idx_users_banned_by_user_id (BannedByUserId),
+  CONSTRAINT users_community_password_CK
+    CHECK (AccountType <> 'community' OR Password IS NOT NULL),
   CONSTRAINT users_banned_by_user_FK
     FOREIGN KEY (BannedByUserId) REFERENCES Users(Id)
     ON UPDATE CASCADE
@@ -89,6 +91,25 @@ CREATE TABLE StaffRoles (
     ON DELETE CASCADE,
   CONSTRAINT staff_roles_role_FK
     FOREIGN KEY (RoleId) REFERENCES Roles(Id)
+    ON UPDATE CASCADE
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE StaffInvitations (
+  Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  StaffUserId BIGINT UNSIGNED NOT NULL,
+  TokenHash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  ExpiresAt DATETIME NOT NULL,
+  UsedAt DATETIME NULL,
+  RequiresMfa BOOLEAN NOT NULL DEFAULT TRUE,
+  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (Id),
+  UNIQUE KEY staff_invitations_staff_user_id_UK (StaffUserId),
+  UNIQUE KEY staff_invitations_token_hash_UK (TokenHash),
+  KEY idx_staff_invitations_expires_at (ExpiresAt),
+  CONSTRAINT staff_invitations_mfa_required_CK CHECK (RequiresMfa = TRUE),
+  CONSTRAINT staff_invitations_staff_profile_FK
+    FOREIGN KEY (StaffUserId) REFERENCES StaffProfiles(UserId)
     ON UPDATE CASCADE
     ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

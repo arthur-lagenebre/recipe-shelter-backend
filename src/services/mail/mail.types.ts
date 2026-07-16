@@ -15,6 +15,13 @@ export interface EmailValidationMailInput {
     validationUrl: string;
 }
 
+export interface SuperAdminBootstrapInvitationMailInput {
+    to: string;
+    username: string;
+    invitationUrl: string;
+    expiresInMinutes: number;
+}
+
 export interface ContactMailInput {
     name: string;
     email: string;
@@ -28,4 +35,8 @@ export interface Mailer {
     sendPasswordChangedEmail(input: PasswordChangedMailInput): Promise<void>;
     sendEmailValidationEmail(input: EmailValidationMailInput): Promise<void>;
     sendContactEmail(input: ContactMailInput): Promise<void>;
+}
+
+export interface SuperAdminBootstrapInvitationMailer {
+    sendSuperAdminBootstrapInvitationEmail(input: SuperAdminBootstrapInvitationMailInput): Promise<void>;
 }

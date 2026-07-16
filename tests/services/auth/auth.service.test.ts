@@ -122,6 +122,9 @@ describe('AuthService', () => {
         await assert.rejects(() => service.login({ mail: '', password: 'Recipe42?' }), (error) => assertHttpError(error, 'AUTH_MISSING_FIELDS', 400));
         await assert.rejects(() => service.login({ mail: 'user@example.com', password: 'Recipe42?' }), (error) => assertHttpError(error, 'AUTH_INVALID_CREDENTIALS', 401));
 
+        users.authUser = { ...baseUser, accountType: 'staff', status: 'invited', passwordHash: null };
+        await assert.rejects(() => service.login({ mail: 'user@example.com', password: 'Recipe42?' }), (error) => assertHttpError(error, 'AUTH_INVALID_CREDENTIALS', 401));
+
         users.authUser = { ...baseUser, passwordHash: await bcrypt.hash('Recipe42?', 4) };
         await assert.rejects(() => service.login({ mail: 'user@example.com', password: 'wrong' }), (error) => assertHttpError(error, 'AUTH_INVALID_CREDENTIALS', 401));
 

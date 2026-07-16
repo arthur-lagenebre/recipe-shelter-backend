@@ -10,6 +10,12 @@ function readNumber(value: string | undefined, fallback: number): number {
   return Number.isFinite(number) ? number : fallback;
 }
 
+function readPositiveInteger(value: string | undefined, fallback: number): number {
+  const number = readNumber(value, fallback);
+
+  return Number.isInteger(number) && number > 0 ? number : fallback;
+}
+
 function readBoolean(value: string | undefined, fallback: boolean): boolean {
   const normalizedValue = value?.trim().toLowerCase();
 
@@ -121,6 +127,10 @@ export const env = {
     bcryptCost: readNumber(process.env.BCRYPT_COST, 12),
     rateLimitMaxAttempts: readNumber(process.env.AUTH_RATE_LIMIT_MAX_ATTEMPTS, 5),
     rateLimitWindowMs: readNumber(process.env.AUTH_RATE_LIMIT_WINDOW_MS, 900000) // 15 minutes
+  },
+
+  bootstrap: {
+    superAdminInvitationTtlMinutes: readPositiveInteger(process.env.BOOTSTRAP_SUPER_ADMIN_INVITATION_TTL_MINUTES, 30)
   },
 
   smtp: {

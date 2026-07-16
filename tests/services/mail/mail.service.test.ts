@@ -67,16 +67,25 @@ describe('SmtpMailService', () => {
             username: 'alice',
             validationUrl: 'https://front.example/validate?token=def'
         });
+        await service.sendSuperAdminBootstrapInvitationEmail({
+            to: 'alice@example.com',
+            username: 'alice',
+            invitationUrl: 'https://front.example/auth/staff-invitation?token=ghi',
+            expiresInMinutes: 30
+        });
 
-        assert.equal(transporter.messages.length, 3);
+        assert.equal(transporter.messages.length, 4);
         assert.deepEqual(
             transporter.messages.map(({ from, to }) => ({ from, to })),
-            Array.from({ length: 3 }, () => ({ from: config.from, to: 'alice@example.com' }))
+            Array.from({ length: 4 }, () => ({ from: config.from, to: 'alice@example.com' }))
         );
         assert.match(String(transporter.messages[0]?.text), /alice/);
         assert.match(String(transporter.messages[0]?.text), /token=abc/);
         assert.match(String(transporter.messages[1]?.text), /alice/);
         assert.match(String(transporter.messages[2]?.text), /token=def/);
+        assert.match(String(transporter.messages[3]?.text), /token=ghi/);
+        assert.match(String(transporter.messages[3]?.text), /30 minutes/);
+        assert.match(String(transporter.messages[3]?.text), /multifacteur/);
     });
 
     it('sends contact messages to the configured recipient with reply-to metadata', async () => {

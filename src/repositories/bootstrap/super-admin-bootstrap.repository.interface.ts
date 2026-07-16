@@ -1,7 +1,8 @@
 export type CreateFirstSuperAdminInput = {
     mail: string;
     username: string;
-    passwordHash: string;
+    invitationTokenHash: string;
+    invitationTtlMinutes: number;
 };
 
 export type CreateFirstSuperAdminResult =
@@ -11,6 +12,12 @@ export type CreateFirstSuperAdminResult =
     | { status: 'username_taken' }
     | { status: 'role_missing' };
 
+export type ConsumeSuperAdminInvitationResult =
+    | { status: 'consumed'; userId: number; requiresMfa: true }
+    | { status: 'invalid' };
+
 export interface SuperAdminBootstrapRepository {
     createFirst(input: CreateFirstSuperAdminInput): Promise<CreateFirstSuperAdminResult>;
+    cancelPendingInvitation(userId: number, tokenHash: string): Promise<boolean>;
+    consumeInvitation(tokenHash: string): Promise<ConsumeSuperAdminInvitationResult>;
 }
