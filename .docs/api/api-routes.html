@@ -400,7 +400,7 @@
           <span>Domaines de routes montés dans <code>src/app.ts</code></span>
         </div>
         <div class="summary-card">
-          <strong>63</strong>
+          <strong>66</strong>
           <span>Endpoints HTTP actifs</span>
         </div>
         <div class="summary-card">
@@ -408,8 +408,8 @@
           <span>Routes admin protégées</span>
         </div>
         <div class="summary-card">
-          <strong>Cookie</strong>
-          <span>Session via <code>rs_session</code> HttpOnly</span>
+          <strong>2 cookies</strong>
+          <span><code>rs_app_session</code> et <code>rs_admin_session</code> HttpOnly</span>
         </div>
       </div>
 
@@ -428,7 +428,7 @@
         <a href="#admin-users">Admin users</a>
       </nav>
 
-      <p class="note">Les routes marquées "Auth optionnelle" acceptent le cookie de session <code>rs_session</code> mais fonctionnent aussi sans session. Quand la session est valide, certaines réponses ajoutent des informations propres à l'utilisateur, par exemple <code>isFavorite</code>.</p>
+      <p class="note">Les routes marquées "Auth optionnelle" acceptent uniquement le cookie community <code>rs_app_session</code> mais fonctionnent aussi sans session. Le cookie staff <code>rs_admin_session</code> n'est jamais interprété par les routes applicatives.</p>
     </section>
 
     <section aria-labelledby="conventions">
@@ -525,7 +525,7 @@ type PaginatedResult&lt;T&gt; = {
 
     <section aria-labelledby="auth">
       <h2 id="auth">Auth</h2>
-      <p class="section-intro">Inscription, connexion, déconnexion, session courante, validation e-mail et reset de mot de passe. Les routes sensibles sont limitées par le rate limiter auth. <code>POST /api/v1/auth/login</code> pose le cookie HttpOnly <code>rs_session</code>; les routes protégées lisent ensuite ce cookie.</p>
+      <p class="section-intro">Les sessions community et staff utilisent des cookies, audiences JWT, durées et tables SQL distincts. Le login community pose <code>rs_app_session</code> pour 7 jours par défaut. Le login staff exige un TOTP et pose <code>rs_admin_session</code> pour 8 heures par défaut. Les routes sensibles sont limitées par le rate limiter auth.</p>
       <div class="table-wrap">
         <table>
           <thead>
@@ -550,12 +550,12 @@ type PaginatedResult&lt;T&gt; = {
               <td><code>/api/v1/auth/login</code></td>
               <td><span class="auth public">Public</span></td>
               <td><code>mail</code>, <code>password</code>.</td>
-              <td><code>200</code> <code>{ "user": ... }</code> + <code>Set-Cookie: rs_session=...</code>. Un staff non actif renvoie <code>401 STAFF_INVITED</code>, <code>STAFF_LOCKED</code> ou <code>STAFF_DISABLED</code>.</td>
+              <td><code>200</code> <code>{ "user": ... }</code> + <code>Set-Cookie: rs_app_session=...</code>. Toute identité staff est refusée avec des credentials invalides.</td>
             </tr>
             <tr>
               <td><span class="method get">GET</span></td>
               <td><code>/api/v1/auth/me</code></td>
-              <td><span class="auth">Session</span></td>
+              <td><span class="auth">Session community</span></td>
               <td>Aucun.</td>
               <td><code>200</code> <code>{ "auth": ... }</code>.</td>
             </tr>
@@ -563,7 +563,28 @@ type PaginatedResult&lt;T&gt; = {
               <td><span class="method post">POST</span></td>
               <td><code>/api/v1/auth/logout</code></td>
               <td><span class="auth public">Public</span></td>
-              <td>Cookie de session optionnel. Supprime <code>rs_session</code> s'il est présent.</td>
+              <td>Cookie community optionnel. Révoque et supprime uniquement <code>rs_app_session</code>.</td>
+              <td><code>200</code> <code>{ "ok": true }</code>.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/admin/auth/login</code></td>
+              <td><span class="auth public">Public</span></td>
+              <td><code>mail</code>, <code>password</code>, <code>mfaCode</code> TOTP à 6 chiffres.</td>
+              <td><code>200</code> <code>{ "user": ... }</code> + <code>Set-Cookie: rs_admin_session=...</code>. Erreurs : <code>STAFF_INVITED</code>, <code>STAFF_LOCKED</code>, <code>STAFF_DISABLED</code>, <code>STAFF_MFA_REQUIRED</code>, <code>AUTH_INVALID_MFA_CODE</code>.</td>
+            </tr>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/admin/auth/me</code></td>
+              <td><span class="auth">Session staff + MFA</span></td>
+              <td>Aucun.</td>
+              <td><code>200</code> <code>{ "auth": ... }</code>.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/admin/auth/logout</code></td>
+              <td><span class="auth public">Public</span></td>
+              <td>Cookie staff optionnel. Révoque et supprime uniquement <code>rs_admin_session</code>.</td>
               <td><code>200</code> <code>{ "ok": true }</code>.</td>
             </tr>
             <tr>
@@ -614,7 +635,9 @@ type AuthTokenPayload = {
   sub: number;
   username: string;
   accountType: AccountType;
-  status: UserStatus;
+  amr: ["pwd"] | ["pwd", "mfa"];
+  aud: "recipe-shelter-app" | "recipe-shelter-admin";
+  jti: string;
 };
 
 type AuthMeResponse = {
@@ -821,7 +844,7 @@ type UpdatePasswordResponse = {
 
     <section aria-labelledby="recipes">
       <h2 id="recipes">Recipes</h2>
-      <p class="section-intro">Lecture publique des recettes publiées. La création, la mise à jour, la soumission et l’archivage personnels exigent un compte community actif ; un compte staff reçoit <code>403 AUTH_COMMUNITY_ACCOUNT_REQUIRED</code>.</p>
+      <p class="section-intro">Lecture publique des recettes publiées. La création, la mise à jour, la soumission et l’archivage personnels exigent <code>rs_app_session</code> pour un compte community actif ; un cookie staff reçoit <code>401 AUTH_NO_TOKEN</code>.</p>
       <div class="table-wrap">
         <table>
           <thead>
@@ -1133,7 +1156,7 @@ type RecipeDetailTag = {
 
     <section aria-labelledby="comments">
       <h2 id="comments">Comments</h2>
-      <p class="section-intro">Lecture publique de l’arbre de commentaires. Les écritures exigent un compte community actif ; un compte staff reçoit <code>403 AUTH_COMMUNITY_ACCOUNT_REQUIRED</code>.</p>
+      <p class="section-intro">Lecture publique de l’arbre de commentaires. Les écritures exigent <code>rs_app_session</code> pour un compte community actif ; un cookie staff reçoit <code>401 AUTH_NO_TOKEN</code>.</p>
       <div class="table-wrap">
         <table>
           <thead>
@@ -1221,7 +1244,7 @@ type DeleteCommentResponse = OkResponse;</code></pre>
 
     <section aria-labelledby="favorites">
       <h2 id="favorites">Favorites</h2>
-      <p class="section-intro">Lecture des favoris de l’utilisateur connecté. Les ajouts et suppressions exigent un compte community actif ; un compte staff reçoit <code>403 AUTH_COMMUNITY_ACCOUNT_REQUIRED</code>.</p>
+      <p class="section-intro">Lecture des favoris de l’utilisateur connecté. Les ajouts et suppressions exigent <code>rs_app_session</code> pour un compte community actif ; un cookie staff reçoit <code>401 AUTH_NO_TOKEN</code>.</p>
       <div class="table-wrap">
         <table>
           <thead>

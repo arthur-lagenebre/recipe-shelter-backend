@@ -1,5 +1,5 @@
-import { parseLoginBody, parseRegisterBody, parseResendValidationEmailBody, parseResetPasswordBody, parseValidateEmailBody } from './auth.dto.js';
-import { clearSessionCookie, setSessionCookie } from '../../utils/session-cookie.js';
+import { parseLoginBody, parseRegisterBody, parseResendValidationEmailBody, parseResetPasswordBody, parseStaffLoginBody, parseValidateEmailBody } from './auth.dto.js';
+import { clearSessionCookie, getSessionToken, setSessionCookie } from '../../utils/session-cookie.js';
 import { asyncHandler } from '../http/async-handler.js';
 
 import type { AuthService } from '../../services/auth/auth.service.js';
@@ -17,9 +17,18 @@ export function createAuthController(authService: AuthService, passwordResetServ
 
   const login = asyncHandler(async (req, res) => {
     const input = parseLoginBody(req.body);
-    const { token, user } = await authService.login(input);
+    const { token, user } = await authService.loginCommunity(input);
 
-    setSessionCookie(res, token);
+    setSessionCookie(res, 'app', token);
+
+    res.status(200).json({ user });
+  });
+
+  const staffLogin = asyncHandler(async (req, res) => {
+    const input = parseStaffLoginBody(req.body);
+    const { token, user } = await authService.loginStaff(input);
+
+    setSessionCookie(res, 'admin', token);
 
     res.status(200).json({ user });
   });
@@ -34,11 +43,19 @@ export function createAuthController(authService: AuthService, passwordResetServ
     res.status(200).json({ auth: req.auth });
   };
 
-  const logout: Handler = (_req, res) => {
-    clearSessionCookie(res);
+  const logout: Handler = asyncHandler(async (req, res) => {
+    await authService.logout(getSessionToken(req, 'app'), 'app');
+    clearSessionCookie(res, 'app');
 
     res.status(200).json({ ok: true });
-  };
+  });
+
+  const staffLogout: Handler = asyncHandler(async (req, res) => {
+    await authService.logout(getSessionToken(req, 'admin'), 'admin');
+    clearSessionCookie(res, 'admin');
+
+    res.status(200).json({ ok: true });
+  });
 
   const forgotPassword: Handler = asyncHandler(async (req, res) => {
     const mail = typeof req.body?.mail === 'string' ? req.body.mail : '';
@@ -95,5 +112,5 @@ export function createAuthController(authService: AuthService, passwordResetServ
     res.status(200).json({ ok: true, message: 'If an inactive account exists for this email, a validation link has been sent.' });
   });
 
-  return { register, login, me, logout, forgotPassword, resetPassword, validateEmail, resendValidationEmail };
+  return { register, login, staffLogin, me, logout, staffLogout, forgotPassword, resetPassword, validateEmail, resendValidationEmail };
 }

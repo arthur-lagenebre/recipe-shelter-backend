@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-import { optionalAuth, requireAuth } from '../../middlewares/require-auth.js';
+import { optionalCommunityAuth, requireCommunityAuth } from '../../middlewares/require-auth.js';
 
 import type { RequestHandler } from 'express';
 
@@ -15,11 +15,11 @@ type UsersController = {
 export function createUsersRouter(controller: UsersController) {
   const router = Router();
 
-  router.get('/me', requireAuth, controller.me);
-  router.get('/:username', optionalAuth, controller.getUser);
-  router.patch('/me/email', requireAuth, controller.updateEmail);
-  router.patch('/me/password', requireAuth, controller.updatePassword);
-  router.patch('/me/username', requireAuth, controller.updateUsername);
+  router.get('/me', requireCommunityAuth, controller.me);
+  router.get('/:username', optionalCommunityAuth, controller.getUser);
+  router.patch('/me/email', requireCommunityAuth, controller.updateEmail);
+  router.patch('/me/password', requireCommunityAuth, controller.updatePassword);
+  router.patch('/me/username', requireCommunityAuth, controller.updateUsername);
 
   return router;
 }

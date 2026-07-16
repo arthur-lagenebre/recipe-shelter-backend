@@ -8,6 +8,7 @@ import { PasswordResetService } from '../../src/services/auth/password-reset.ser
 import { UserService } from '../../src/services/users/users.service.js';
 import { env } from '../../src/utils/env.js';
 import { startHttpTestServer } from '../helpers/http-test-server.js';
+import { TestSessionRepository } from '../helpers/auth-session.js';
 
 import type { EmailValidationCreateInput, EmailValidationRecord, EmailValidationRepository } from '../../src/repositories/auth/email-validation.repository.interface.js';
 import type { PasswordResetCreateInput, PasswordResetRecord, PasswordResetRepository } from '../../src/repositories/auth/password-reset.repository.interface.js';
@@ -78,6 +79,8 @@ class AccountUserRepository implements UserRepository {
         return {
             userId,
             status: user.status === 'invited' || user.status === 'active' || user.status === 'locked' || user.status === 'disabled' ? user.status : 'invited',
+            mfaSecretEncrypted: null,
+            mfaEnabledAt: null,
             createdAt: user.createdAt,
             updatedAt: user.updatedAt
         };
@@ -253,9 +256,11 @@ describe('account lifecycle E2E', () => {
         mailer = new AccountMailer();
         const emailValidationService = new EmailValidationService(users, validations, mailer, 'https://front.example');
         const passwordResetService = new PasswordResetService(users, resets, mailer, 'https://front.example');
+        const sessions = new TestSessionRepository();
 
         server = await startHttpTestServer(createApp({
-            authService: new AuthService(users, emailValidationService),
+            authService: new AuthService(users, emailValidationService, sessions, { async verify() { return 'verified'; } }),
+            authSessionRepository: sessions,
             authUserRepository: users,
             emailValidationService,
             passwordResetService,

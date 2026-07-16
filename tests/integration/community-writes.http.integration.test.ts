@@ -3,17 +3,15 @@ import { after, before, describe, it } from 'node:test';
 
 import cookieParser from 'cookie-parser';
 import express from 'express';
-import jwt from 'jsonwebtoken';
 
 import { createCommentsRouter, createRecipeCommentsRouter } from '../../src/api/comments/comments.routes.js';
 import { createFavoritesRouter } from '../../src/api/favorites/favorites.routes.js';
 import { createRecipesRouter } from '../../src/api/recipes/recipes.routes.js';
 import { errorHandler } from '../../src/middlewares/error-handler.js';
 import { notFound } from '../../src/middlewares/not-found.js';
-import { configureAuthRbacRepository, configureAuthUserRepository } from '../../src/middlewares/require-auth.js';
+import { configureAuthRbacRepository, configureAuthSessionRepository, configureAuthUserRepository } from '../../src/middlewares/require-auth.js';
 import { PERMISSIONS } from '../../src/security/permissions.js';
-import { env } from '../../src/utils/env.js';
-import { sessionCookieName } from '../../src/utils/session-cookie.js';
+import { TestSessionRepository } from '../helpers/auth-session.js';
 import { startHttpTestServer } from '../helpers/http-test-server.js';
 
 import type { User } from '../../src/repositories/users/user.types.js';
@@ -56,14 +54,11 @@ const communityWriteEndpoints = [
     { name: 'delete favorite', method: 'DELETE', path: '/api/v1/favorites/42' }
 ] as const;
 
-function sessionCookie(user: User): string {
-    const token = jwt.sign({ sub: user.id, username: user.username }, env.auth.jwtSecret);
-    return `${sessionCookieName}=${token}`;
-}
-
 describe('community write HTTP boundary', () => {
     let server: HttpTestServer;
     let controllerCalls = 0;
+    let staffCookie: string;
+    let communityCookie: string;
 
     before(async () => {
         const unexpectedControllerCall: RequestHandler = (_req, res) => {
@@ -108,6 +103,10 @@ describe('community write HTTP boundary', () => {
         configureAuthRbacRepository({
             async findPermissionCodesByStaffUserId() { return Object.values(PERMISSIONS); }
         });
+        const sessions = new TestSessionRepository();
+        configureAuthSessionRepository(sessions);
+        staffCookie = await sessions.issueCookie(staff, 'admin');
+        communityCookie = await sessions.issueCookie(communityUser, 'app');
 
         const app = express();
         app.use(cookieParser());
@@ -132,18 +131,18 @@ describe('community write HTTP boundary', () => {
         assert.equal(controllerCalls, 0);
     });
 
-    it('returns 403 for staff on every community write endpoint before controllers and uploads', async () => {
+    it('rejects the admin cookie on every community write endpoint before controllers and uploads', async () => {
         for (const endpoint of communityWriteEndpoints) {
             const response = await fetch(`${server.baseUrl}${endpoint.path}`, {
                 method: endpoint.method,
-                headers: { cookie: sessionCookie(staff) }
+                headers: { cookie: staffCookie }
             });
 
-            assert.equal(response.status, 403, endpoint.name);
+            assert.equal(response.status, 401, endpoint.name);
             assert.deepEqual(await response.json(), {
                 error: {
-                    message: 'Active community account is required',
-                    code: 'AUTH_COMMUNITY_ACCOUNT_REQUIRED'
+                    message: 'Missing session cookie',
+                    code: 'AUTH_NO_TOKEN'
                 }
             }, endpoint.name);
         }
@@ -154,7 +153,7 @@ describe('community write HTTP boundary', () => {
     it('allows an active community account through the write boundary', async () => {
         const response = await fetch(`${server.baseUrl}/api/v1/recipes`, {
             method: 'POST',
-            headers: { cookie: sessionCookie(communityUser) }
+            headers: { cookie: communityCookie }
         });
 
         assert.equal(response.status, 204);

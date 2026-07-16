@@ -11,7 +11,7 @@
     },
     {
       "key": "adminSessionCookie",
-      "value": "PASTE_ADMIN_RS_SESSION_COOKIE_HERE"
+      "value": "PASTE_RS_ADMIN_SESSION_COOKIE_HERE"
     }
   ],
   "item": [
@@ -22,7 +22,7 @@
         "header": [
           {
             "key": "Cookie",
-            "value": "rs_session={{adminSessionCookie}}"
+            "value": "rs_admin_session={{adminSessionCookie}}"
           }
         ],
         "url": {
@@ -57,7 +57,7 @@
         "header": [
           {
             "key": "Cookie",
-            "value": "rs_session={{adminSessionCookie}}"
+            "value": "rs_admin_session={{adminSessionCookie}}"
           }
         ],
         "url": {
@@ -81,7 +81,7 @@
         "header": [
           {
             "key": "Cookie",
-            "value": "rs_session={{adminSessionCookie}}"
+            "value": "rs_admin_session={{adminSessionCookie}}"
           }
         ],
         "url": {

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { parseLoginBody, parseRegisterBody, parseResendValidationEmailBody, parseResetPasswordBody, parseValidateEmailBody } from '../../../src/api/auth/auth.dto.js';
+import { parseLoginBody, parseRegisterBody, parseResendValidationEmailBody, parseResetPasswordBody, parseStaffLoginBody, parseValidateEmailBody } from '../../../src/api/auth/auth.dto.js';
 import { HttpError } from '../../../src/utils/errors.js';
 
 function assertHttpError(error: unknown, code: string, status: number): void {
@@ -82,6 +82,28 @@ describe('auth.dto', () => {
                 return true;
             }
         );
+    });
+
+    it('requires a six-digit MFA code only on staff login', () => {
+        assert.deepEqual(parseStaffLoginBody({
+            mail: ' STAFF@Example.COM ',
+            password: 'Recipe42?',
+            mfaCode: '123456'
+        }), {
+            mail: 'staff@example.com',
+            password: 'Recipe42?',
+            mfaCode: '123456'
+        });
+
+        for (const mfaCode of ['', '12345', '1234567', 'abcdef']) {
+            assert.throws(
+                () => parseStaffLoginBody({ mail: 'staff@example.com', password: 'Recipe42?', mfaCode }),
+                (error) => {
+                    assertHttpError(error, 'AUTH_INVALID_MFA_CODE', 400);
+                    return true;
+                }
+            );
+        }
     });
 
     it('parses and validates email validation tokens', () => {

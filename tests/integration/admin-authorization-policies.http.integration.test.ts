@@ -3,7 +3,6 @@ import { after, before, describe, it } from 'node:test';
 
 import cookieParser from 'cookie-parser';
 import express from 'express';
-import jwt from 'jsonwebtoken';
 
 import { createAdminCommentsRouter } from '../../src/api/admin/admin.comments.routes.js';
 import { adminAuthorizationPolicies } from '../../src/api/admin/admin.authorization.js';
@@ -12,10 +11,10 @@ import { createAdminUsersRouter } from '../../src/api/admin/admin.users.routes.j
 import { createHealthRouter } from '../../src/api/health/health.routes.js';
 import { EnforceAuthorizationPolicies } from '../../src/middlewares/authorization.js';
 import { errorHandler } from '../../src/middlewares/error-handler.js';
-import { configureAuthRbacRepository, configureAuthUserRepository, requireAuth } from '../../src/middlewares/require-auth.js';
+import { configureAuthRbacRepository, configureAuthSessionRepository, configureAuthUserRepository, requireStaffAuth } from '../../src/middlewares/require-auth.js';
 import { PERMISSIONS } from '../../src/security/permissions.js';
-import { env } from '../../src/utils/env.js';
 import { logger } from '../../src/utils/logger.js';
+import { TestSessionRepository } from '../helpers/auth-session.js';
 import { startHttpTestServer } from '../helpers/http-test-server.js';
 
 import type { User } from '../../src/repositories/users/user.types.js';
@@ -88,6 +87,8 @@ describe('administrative endpoint authorization policies', () => {
                 return [...grantedPermissions];
             }
         });
+        const sessions = new TestSessionRepository();
+        configureAuthSessionRepository(sessions);
 
         const endpointHandler: RequestHandler = (_req, res) => {
             controllerCalls += 1;
@@ -98,7 +99,7 @@ describe('administrative endpoint authorization policies', () => {
         app.use(cookieParser());
         const adminRouter = express.Router();
 
-        adminRouter.use(requireAuth, EnforceAuthorizationPolicies([
+        adminRouter.use(requireStaffAuth, EnforceAuthorizationPolicies([
             ...adminAuthorizationPolicies,
             { method: 'get', path: '/default-deny/declared', permission: PERMISSIONS.usersRead },
             {
@@ -150,10 +151,7 @@ describe('administrative endpoint authorization policies', () => {
         }));
         app.use(errorHandler);
 
-        cookie = `${env.auth.sessionCookieName}=${jwt.sign({
-            sub: staff.id,
-            username: staff.username
-        }, env.auth.jwtSecret)}`;
+        cookie = await sessions.issueCookie(staff, 'admin');
         server = await startHttpTestServer(app);
     });
 

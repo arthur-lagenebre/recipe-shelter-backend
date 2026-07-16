@@ -39,6 +39,8 @@ export type CommunityProfile = {
 export type StaffProfile = {
   userId: number;
   status: StaffStatus;
+  mfaSecretEncrypted: Buffer | null;
+  mfaEnabledAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -106,6 +108,8 @@ export type CommunityProfileRow = RowDataPacket & {
 export type StaffProfileRow = RowDataPacket & {
   UserId: number;
   Status: unknown;
+  MfaSecretEncrypted: Buffer | null;
+  MfaEnabledAt: Date | null;
   CreatedAt: Date;
   UpdatedAt: Date;
 };

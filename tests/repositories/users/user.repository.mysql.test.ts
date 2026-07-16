@@ -107,6 +107,21 @@ describe('UserRepositoryMysql', () => {
         assert.equal(fake.statements.some(({ sql }) => /INSERT INTO CommunityProfiles/.test(sql)), false);
     });
 
+    it('refuses direct staff activation without the MFA enrollment workflow', async () => {
+        const fake = createTransactionalPool();
+        const repository = new UserRepositoryMysql(fake.pool);
+
+        await assert.rejects(() => repository.create({
+            mail: 'staff@example.com',
+            username: 'staff',
+            passwordHash: 'hash',
+            accountType: 'staff',
+            status: 'active'
+        }), /activated through MFA enrollment/);
+
+        assert.deepEqual(fake.statements, []);
+    });
+
     it('rolls back identity creation when profile creation fails', async () => {
         const fake = createTransactionalPool(new Error('profile insert failed'));
         const repository = new UserRepositoryMysql(fake.pool);

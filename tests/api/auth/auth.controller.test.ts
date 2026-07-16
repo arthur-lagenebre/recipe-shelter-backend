@@ -3,7 +3,7 @@ import { describe, it } from 'node:test';
 
 import { createAuthController } from '../../../src/api/auth/auth.controller.js';
 import { env } from '../../../src/utils/env.js';
-import { sessionCookieName } from '../../../src/utils/session-cookie.js';
+import { adminSessionCookieName, appSessionCookieName } from '../../../src/utils/session-cookie.js';
 
 import type { User } from '../../../src/repositories/users/user.types.js';
 import type { AuthService } from '../../../src/services/auth/auth.service.js';
@@ -92,7 +92,7 @@ describe('auth.controller', () => {
     it('sets the session cookie on login without returning the JWT', async () => {
         let receivedInput: unknown;
         const controller = createController({
-            async login(input: { mail: string; password: string }) {
+            async loginCommunity(input: { mail: string; password: string }) {
                 receivedInput = input;
 
                 return { user, token: 'signed-token' };
@@ -107,29 +107,67 @@ describe('auth.controller', () => {
         assert.deepEqual(res.body, { user });
         assert.equal('token' in (res.body as Record<string, unknown>), false);
         assert.equal(res.cookies.length, 1);
-        assert.equal(res.cookies[0].name, sessionCookieName);
+        assert.equal(res.cookies[0].name, appSessionCookieName);
         assert.equal(res.cookies[0].value, 'signed-token');
         assert.equal(res.cookies[0].options.httpOnly, true);
-        assert.equal(res.cookies[0].options.path, '/');
-        assert.equal(res.cookies[0].options.sameSite, env.auth.sessionCookieSameSite);
-        assert.equal(res.cookies[0].options.secure, env.auth.sessionCookieSecure);
-        assert.equal(res.cookies[0].options.maxAge, env.auth.sessionCookieMaxAgeMs);
+        assert.equal(res.cookies[0].options.path, env.auth.app.sessionCookiePath);
+        assert.equal(res.cookies[0].options.sameSite, env.auth.cookie.sameSite);
+        assert.equal(res.cookies[0].options.secure, env.auth.cookie.secure);
+        assert.equal(res.cookies[0].options.maxAge, env.auth.app.sessionCookieMaxAgeMs);
+    });
+
+    it('sets only the shorter admin cookie after password and MFA verification', async () => {
+        const staffUser = { ...user, accountType: 'staff', status: 'active' } as const;
+        const controller = createController({
+            async loginStaff() {
+                return { user: staffUser, token: 'staff-token' };
+            }
+        });
+        const res = createResponse();
+
+        await runHandler(controller.staffLogin, {
+            body: { mail: 'staff@example.com', password: 'secret', mfaCode: '123456' }
+        }, res);
+
+        assert.equal(res.statusCode, 200);
+        assert.deepEqual(res.body, { user: staffUser });
+        assert.deepEqual(res.cookies.map(({ name }) => name), [adminSessionCookieName]);
+        assert.equal(env.auth.admin.sessionCookiePath, '/api/v1');
+        assert.equal(res.cookies[0].options.path, env.auth.admin.sessionCookiePath);
+        assert.equal(res.cookies[0].options.maxAge, env.auth.admin.sessionCookieMaxAgeMs);
+        assert.ok(env.auth.admin.sessionCookieMaxAgeMs < env.auth.app.sessionCookieMaxAgeMs);
     });
 
     it('clears the same session cookie on logout', async () => {
-        const controller = createController({});
+        const logoutCalls: unknown[] = [];
+        const controller = createController({
+            async logout(...args: unknown[]) {
+                logoutCalls.push(args);
+            }
+        });
         const res = createResponse();
 
-        await runHandler(controller.logout, {}, res);
+        await runHandler(controller.logout, { cookies: { [appSessionCookieName]: 'app-token' } }, res);
 
         assert.equal(res.statusCode, 200);
         assert.deepEqual(res.body, { ok: true });
+        assert.deepEqual(logoutCalls, [['app-token', 'app']]);
         assert.equal(res.clearedCookies.length, 1);
-        assert.equal(res.clearedCookies[0].name, sessionCookieName);
+        assert.equal(res.clearedCookies[0].name, appSessionCookieName);
         assert.equal(res.clearedCookies[0].options.httpOnly, true);
-        assert.equal(res.clearedCookies[0].options.path, '/');
-        assert.equal(res.clearedCookies[0].options.sameSite, env.auth.sessionCookieSameSite);
-        assert.equal(res.clearedCookies[0].options.secure, env.auth.sessionCookieSecure);
-        assert.equal(res.clearedCookies[0].options.domain, env.auth.sessionCookieDomain);
+        assert.equal(res.clearedCookies[0].options.path, env.auth.app.sessionCookiePath);
+        assert.equal(res.clearedCookies[0].options.sameSite, env.auth.cookie.sameSite);
+        assert.equal(res.clearedCookies[0].options.secure, env.auth.cookie.secure);
+        assert.equal(res.clearedCookies[0].options.domain, env.auth.cookie.domain);
+    });
+
+    it('clears only the admin cookie on staff logout', async () => {
+        const controller = createController({ async logout() { } });
+        const res = createResponse();
+
+        await runHandler(controller.staffLogout, { cookies: { [adminSessionCookieName]: 'admin-token' } }, res);
+
+        assert.deepEqual(res.clearedCookies.map(({ name }) => name), [adminSessionCookieName]);
+        assert.equal(res.clearedCookies[0].options.path, env.auth.admin.sessionCookiePath);
     });
 });

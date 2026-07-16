@@ -3,7 +3,7 @@
 # ============================================
 
 @baseUrl = http://localhost:3000/api/v1
-@sessionCookie = PASTE_RS_SESSION_COOKIE_HERE
+@sessionCookie = PASTE_RS_APP_SESSION_COOKIE_HERE
 @recipeId = 1
 @commentId = 1
 @parentCommentId = 1
@@ -152,7 +152,7 @@ GET {{baseUrl}}/recipes/abc/comments
 ### Create root comment with rating
 POST {{baseUrl}}/recipes/{{recipeId}}/comments
 Content-Type: application/json
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
 
 {
   "rating": 5,
@@ -162,7 +162,7 @@ Cookie: rs_session={{sessionCookie}}
 ### Create reply without rating
 POST {{baseUrl}}/recipes/{{recipeId}}/comments
 Content-Type: application/json
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
 
 {
   "parentCommentId": {{parentCommentId}},
@@ -181,7 +181,7 @@ Content-Type: application/json
 ### Create comment - missing comment
 POST {{baseUrl}}/recipes/{{recipeId}}/comments
 Content-Type: application/json
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
 
 {
   "rating": 5
@@ -190,7 +190,7 @@ Cookie: rs_session={{sessionCookie}}
 ### Create comment - invalid rating
 POST {{baseUrl}}/recipes/{{recipeId}}/comments
 Content-Type: application/json
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
 
 {
   "rating": 6,
@@ -200,7 +200,7 @@ Cookie: rs_session={{sessionCookie}}
 ### Create reply - rating not allowed
 POST {{baseUrl}}/recipes/{{recipeId}}/comments
 Content-Type: application/json
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
 
 {
   "parentCommentId": {{parentCommentId}},
@@ -211,7 +211,7 @@ Cookie: rs_session={{sessionCookie}}
 ### Create nested reply - not allowed
 POST {{baseUrl}}/recipes/{{recipeId}}/comments
 Content-Type: application/json
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
 
 {
   "parentCommentId": {{parentCommentId}},
@@ -221,7 +221,7 @@ Cookie: rs_session={{sessionCookie}}
 ### Update my comment
 PATCH {{baseUrl}}/comments/{{commentId}}
 Content-Type: application/json
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
 
 {
   "rating": 4,
@@ -231,7 +231,7 @@ Cookie: rs_session={{sessionCookie}}
 ### Update my comment - remove rating
 PATCH {{baseUrl}}/comments/{{commentId}}
 Content-Type: application/json
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
 
 {
   "rating": null,
@@ -241,7 +241,7 @@ Cookie: rs_session={{sessionCookie}}
 ### Update comment - bad comment id
 PATCH {{baseUrl}}/comments/abc
 Content-Type: application/json
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
 
 {
   "rating": 4,
@@ -259,7 +259,7 @@ Content-Type: application/json
 
 ### Delete my comment - soft delete
 DELETE {{baseUrl}}/comments/{{commentId}}
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
 
 ### Delete comment - missing auth
 DELETE {{baseUrl}}/comments/{{commentId}}

@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Recipe Shelter - Auth",
-    "description": "Postman collection for auth routes. Login stores the rs_session HTTP-only cookie value in the sessionCookie collection variable when Set-Cookie is present.",
+    "description": "Postman collection for auth routes. Login stores the rs_app_session HTTP-only cookie value in the sessionCookie collection variable when Set-Cookie is present.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -35,7 +35,7 @@
     },
     {
       "key": "sessionCookie",
-      "value": "PASTE_RS_SESSION_COOKIE_HERE"
+      "value": "PASTE_RS_APP_SESSION_COOKIE_HERE"
     }
   ],
   "item": [
@@ -103,8 +103,8 @@
               "pm.test('status is 200', () => pm.response.to.have.status(200));",
               "pm.test('session cookie is set', () => {",
               "  const setCookie = pm.response.headers.get('Set-Cookie') || '';",
-              "  const match = setCookie.match(/(?:^|,\\s*)rs_session=([^;]+)/);",
-              "  pm.expect(match, 'rs_session cookie').to.not.be.null;",
+              "  const match = setCookie.match(/(?:^|,\\s*)rs_app_session=([^;]+)/);",
+              "  pm.expect(match, 'rs_app_session cookie').to.not.be.null;",
               "  pm.collectionVariables.set('sessionCookie', match[1]);",
               "});"
             ]
@@ -175,7 +175,7 @@
         "header": [
           {
             "key": "Cookie",
-            "value": "rs_session={{sessionCookie}}"
+            "value": "rs_app_session={{sessionCookie}}"
           }
         ],
         "url": {
@@ -199,7 +199,7 @@
         "header": [
           {
             "key": "Cookie",
-            "value": "rs_session={{sessionCookie}}"
+            "value": "rs_app_session={{sessionCookie}}"
           }
         ],
         "url": {

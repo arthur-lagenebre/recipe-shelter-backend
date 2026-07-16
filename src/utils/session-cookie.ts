@@ -1,38 +1,52 @@
 import { env } from './env.js';
 
-import type { CookieOptions, Response } from 'express';
+import type { CookieOptions, Request, Response } from 'express';
 
-export const sessionCookieName = env.auth.sessionCookieName;
+export type SessionRealm = 'app' | 'admin';
 
-function getBaseSessionCookieOptions(): CookieOptions {
+export const appSessionCookieName = env.auth.app.sessionCookieName;
+export const adminSessionCookieName = env.auth.admin.sessionCookieName;
+
+function getRealmConfig(realm: SessionRealm) {
+  return realm === 'app' ? env.auth.app : env.auth.admin;
+}
+
+function getBaseSessionCookieOptions(realm: SessionRealm): CookieOptions {
+  const realmConfig = getRealmConfig(realm);
   const options: CookieOptions = {
     httpOnly: true,
-    path: '/',
-    sameSite: env.auth.sessionCookieSameSite,
-    secure: env.auth.sessionCookieSecure
+    path: realmConfig.sessionCookiePath,
+    sameSite: env.auth.cookie.sameSite,
+    secure: env.auth.cookie.secure
   };
 
-  if (env.auth.sessionCookieDomain)
-    options.domain = env.auth.sessionCookieDomain;
+  if (env.auth.cookie.domain)
+    options.domain = env.auth.cookie.domain;
 
   return options;
 }
 
-export function getSessionCookieOptions(): CookieOptions {
+export function getSessionCookieOptions(realm: SessionRealm): CookieOptions {
   return {
-    ...getBaseSessionCookieOptions(),
-    maxAge: env.auth.sessionCookieMaxAgeMs
+    ...getBaseSessionCookieOptions(realm),
+    maxAge: getRealmConfig(realm).sessionCookieMaxAgeMs
   };
 }
 
-export function getSessionClearCookieOptions(): CookieOptions {
-  return getBaseSessionCookieOptions();
+export function getSessionClearCookieOptions(realm: SessionRealm): CookieOptions {
+  return getBaseSessionCookieOptions(realm);
 }
 
-export function setSessionCookie(res: Response, token: string): void {
-  res.cookie(sessionCookieName, token, getSessionCookieOptions());
+export function getSessionToken(req: Request, realm: SessionRealm): string | null {
+  const token = req.cookies?.[getRealmConfig(realm).sessionCookieName];
+
+  return typeof token === 'string' && token.trim() ? token.trim() : null;
 }
 
-export function clearSessionCookie(res: Response): void {
-  res.clearCookie(sessionCookieName, getSessionClearCookieOptions());
+export function setSessionCookie(res: Response, realm: SessionRealm, token: string): void {
+  res.cookie(getRealmConfig(realm).sessionCookieName, token, getSessionCookieOptions(realm));
+}
+
+export function clearSessionCookie(res: Response, realm: SessionRealm): void {
+  res.clearCookie(getRealmConfig(realm).sessionCookieName, getSessionClearCookieOptions(realm));
 }

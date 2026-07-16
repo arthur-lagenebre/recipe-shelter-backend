@@ -1,26 +1,21 @@
-import jwt from 'jsonwebtoken';
-
-import { env } from '../utils/env.js';
+import { verifySessionToken } from '../services/auth/session-token.js';
 import { unauthorized } from '../utils/errors.js';
-import { sessionCookieName } from '../utils/session-cookie.js';
+import { getSessionToken } from '../utils/session-cookie.js';
 
 import type { AuthContext } from '../api/auth/auth.types.js';
+import type { SessionRepository } from '../repositories/auth/session.repository.interface.js';
 import type { RbacRepository } from '../repositories/rbac/rbac.repository.interface.js';
 import type { User } from '../repositories/users/user.types.js';
-import type { AuthTokenPayload } from '../services/auth/auth.service.js';
+import type { SessionRealm } from '../utils/session-cookie.js';
 import type { NextFunction, Request, Response } from 'express';
 
 type AuthUserRepository = {
   findById(id: number): Promise<User | null>;
 };
 
-type ParsedAuthContext = {
-  userId: number;
-  username: string;
-};
-
 let authUserRepository: AuthUserRepository | null = null;
 let authRbacRepository: RbacRepository | null = null;
+let authSessionRepository: SessionRepository | null = null;
 
 export function configureAuthUserRepository(repository: AuthUserRepository): void {
   authUserRepository = repository;
@@ -30,37 +25,31 @@ export function configureAuthRbacRepository(repository: RbacRepository): void {
   authRbacRepository = repository;
 }
 
-function getSessionToken(req: Request): string | null {
-  const token = req.cookies?.[sessionCookieName];
-
-  return typeof token === 'string' && token.trim() ? token.trim() : null;
+export function configureAuthSessionRepository(repository: SessionRepository): void {
+  authSessionRepository = repository;
 }
 
-function parseAuthPayload(payload: unknown): ParsedAuthContext | null {
-  if (!payload || typeof payload !== 'object')
+async function resolveActiveAuth(
+  session: { sessionId: string; userId: number },
+  realm: SessionRealm
+): Promise<AuthContext | null> {
+  if (!authUserRepository || !authSessionRepository)
     return null;
 
-  const data = payload as Partial<AuthTokenPayload>;
+  const sessionIsActive = realm === 'app'
+    ? await authSessionRepository.isCommunitySessionActive(session.sessionId, session.userId)
+    : await authSessionRepository.isStaffSessionActive(session.sessionId, session.userId);
 
-  const userId = Number(data.sub);
-  const username = typeof data.username === 'string' ? data.username : '';
-
-  if (!Number.isFinite(userId) || !username)
+  if (!sessionIsActive)
     return null;
 
-  return { userId, username };
-}
+  const user = await authUserRepository.findById(session.userId);
+  const expectedAccountType = realm === 'app' ? 'community' : 'staff';
 
-async function resolveActiveAuth(auth: ParsedAuthContext): Promise<AuthContext | null> {
-  if (!authUserRepository)
+  if (!user || user.status !== 'active' || user.accountType !== expectedAccountType)
     return null;
 
-  const user = await authUserRepository.findById(auth.userId);
-
-  if (!user || user.status !== 'active')
-    return null;
-
-  const permissions = user.accountType === 'staff' && authRbacRepository
+  const permissions = realm === 'admin' && authRbacRepository
     ? await authRbacRepository.findPermissionCodesByStaffUserId(user.id)
     : [];
 
@@ -73,55 +62,64 @@ async function resolveActiveAuth(auth: ParsedAuthContext): Promise<AuthContext |
   };
 }
 
-export async function requireAuth(req: Request, _res: Response, next: NextFunction) {
-  if (req.auth)
-    return next();
+async function authenticate(
+  req: Request,
+  next: NextFunction,
+  realm: SessionRealm,
+  optional: boolean
+): Promise<void> {
+  const expectedAccountType = realm === 'app' ? 'community' : 'staff';
 
-  const token = getSessionToken(req);
+  if (req.auth) {
+    if (req.auth.accountType === expectedAccountType && req.auth.status === 'active') {
+      next();
+      return;
+    }
 
-  if (!token)
-    return next(unauthorized('Missing session cookie', 'AUTH_NO_TOKEN'));
+    if (optional) {
+      delete req.auth;
+      next();
+      return;
+    }
+
+    next(unauthorized('Invalid session realm', 'AUTH_BAD_TOKEN'));
+    return;
+  }
+
+  const token = getSessionToken(req, realm);
+  if (!token) {
+    next(optional ? undefined : unauthorized('Missing session cookie', 'AUTH_NO_TOKEN'));
+    return;
+  }
 
   try {
-    const payload = jwt.verify(token, env.auth.jwtSecret);
-    const auth = parseAuthPayload(payload);
+    const session = verifySessionToken(token, realm);
+    if (!session) {
+      next(optional ? undefined : unauthorized('Invalid token payload', 'AUTH_BAD_TOKEN'));
+      return;
+    }
 
-    if (!auth)
-      return next(unauthorized('Invalid token payload', 'AUTH_BAD_TOKEN'));
-
-    const activeAuth = await resolveActiveAuth(auth);
-
-    if (!activeAuth)
-      return next(unauthorized('Invalid or expired token', 'AUTH_BAD_TOKEN'));
+    const activeAuth = await resolveActiveAuth(session, realm);
+    if (!activeAuth) {
+      next(optional ? undefined : unauthorized('Invalid or expired token', 'AUTH_BAD_TOKEN'));
+      return;
+    }
 
     req.auth = activeAuth;
-    return next();
+    next();
   } catch {
-    return next(unauthorized('Invalid or expired token', 'AUTH_BAD_TOKEN'));
+    next(optional ? undefined : unauthorized('Invalid or expired token', 'AUTH_BAD_TOKEN'));
   }
 }
 
-export async function optionalAuth(req: Request, _res: Response, next: NextFunction) {
-  const token = getSessionToken(req);
+export async function requireCommunityAuth(req: Request, _res: Response, next: NextFunction) {
+  await authenticate(req, next, 'app', false);
+}
 
-  if (!token)
-    return next();
+export async function requireStaffAuth(req: Request, _res: Response, next: NextFunction) {
+  await authenticate(req, next, 'admin', false);
+}
 
-  try {
-    const payload = jwt.verify(token, env.auth.jwtSecret);
-    const auth = parseAuthPayload(payload);
-
-    if (!auth)
-      return next();
-
-    const activeAuth = await resolveActiveAuth(auth);
-
-    if (!activeAuth)
-      return next();
-
-    req.auth = activeAuth;
-    return next();
-  } catch {
-    return next();
-  }
+export async function optionalCommunityAuth(req: Request, _res: Response, next: NextFunction) {
+  await authenticate(req, next, 'app', true);
 }

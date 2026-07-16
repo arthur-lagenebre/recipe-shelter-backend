@@ -3,17 +3,16 @@ import { after, before, describe, it } from 'node:test';
 
 import cookieParser from 'cookie-parser';
 import express from 'express';
-import jwt from 'jsonwebtoken';
 
 import { adminAuthorizationPolicies } from '../../src/api/admin/admin.authorization.js';
 import { createAdminUsersController } from '../../src/api/admin/admin.users.controller.js';
 import { createAdminUsersRouter } from '../../src/api/admin/admin.users.routes.js';
 import { CommunityOnly, EnforceAuthorizationPolicies, StaffOnly } from '../../src/middlewares/authorization.js';
 import { errorHandler } from '../../src/middlewares/error-handler.js';
-import { configureAuthRbacRepository, configureAuthUserRepository, requireAuth } from '../../src/middlewares/require-auth.js';
+import { configureAuthRbacRepository, configureAuthSessionRepository, configureAuthUserRepository, requireCommunityAuth, requireStaffAuth } from '../../src/middlewares/require-auth.js';
 import { PERMISSIONS } from '../../src/security/permissions.js';
 import { AdminUserService } from '../../src/services/admin/admin.users.service.js';
-import { env } from '../../src/utils/env.js';
+import { TestSessionRepository } from '../helpers/auth-session.js';
 import { startHttpTestServer } from '../helpers/http-test-server.js';
 
 import type { AdminUserRepository } from '../../src/repositories/admin/admin.users.repository.interface.js';
@@ -37,16 +36,6 @@ function createUser(id: number, username: string, accountType: User['accountType
         createdAt,
         updatedAt: createdAt
     };
-}
-
-function sessionCookie(user: User): string {
-    const token = jwt.sign({
-        sub: user.id,
-        username: user.username,
-        accountType: user.accountType,
-        status: user.status
-    }, env.auth.jwtSecret);
-    return `${env.auth.sessionCookieName}=${token}`;
 }
 
 describe('admin user access HTTP integration', () => {
@@ -102,19 +91,21 @@ describe('admin user access HTTP integration', () => {
                 return staffUserId === 1 ? [PERMISSIONS.usersModerate] : [];
             }
         });
+        const sessions = new TestSessionRepository();
+        configureAuthSessionRepository(sessions);
         app.use(cookieParser());
         app.use(express.json());
-        app.get('/protected', requireAuth, (req, res) => res.status(200).json({ userId: req.auth?.userId }));
-        app.get('/community-only', requireAuth, CommunityOnly, (_req, res) => res.status(200).json({ ok: true }));
-        app.get('/staff-only', requireAuth, StaffOnly, (_req, res) => res.status(200).json({ ok: true }));
+        app.get('/protected', requireCommunityAuth, (req, res) => res.status(200).json({ userId: req.auth?.userId }));
+        app.get('/community-only', requireCommunityAuth, CommunityOnly, (_req, res) => res.status(200).json({ ok: true }));
+        app.get('/staff-only', requireStaffAuth, StaffOnly, (_req, res) => res.status(200).json({ ok: true }));
         const adminRouter = express.Router();
-        adminRouter.use(requireAuth, EnforceAuthorizationPolicies(adminAuthorizationPolicies));
+        adminRouter.use(requireStaffAuth, EnforceAuthorizationPolicies(adminAuthorizationPolicies));
         adminRouter.use('/users', createAdminUsersRouter(createAdminUsersController(service)));
         app.use('/api/v1/admin', adminRouter);
         app.use(errorHandler);
 
-        adminCookie = sessionCookie(users.get(1)!);
-        userCookie = sessionCookie(users.get(2)!);
+        adminCookie = await sessions.issueCookie(users.get(1)!, 'admin');
+        userCookie = await sessions.issueCookie(users.get(2)!, 'app');
         server = await startHttpTestServer(app);
     });
 
@@ -127,8 +118,8 @@ describe('admin user access HTTP integration', () => {
             body: JSON.stringify({ reason: 'Repeated abusive behaviour.' })
         });
 
-        assert.equal(response.status, 403);
-        assert.equal((await response.json() as { error: { code: string } }).error.code, 'AUTH_PERMISSION_REQUIRED');
+        assert.equal(response.status, 401);
+        assert.equal((await response.json() as { error: { code: string } }).error.code, 'AUTH_NO_TOKEN');
     });
 
     it('enforces community and staff account boundaries', async () => {
@@ -141,10 +132,10 @@ describe('admin user access HTTP integration', () => {
 
         assert.equal(communityAllowed.status, 200);
         assert.equal(staffAllowed.status, 200);
-        assert.equal(communityDenied.status, 403);
-        assert.equal((await communityDenied.json() as { error: { code: string } }).error.code, 'AUTH_STAFF_ACCOUNT_REQUIRED');
-        assert.equal(staffDenied.status, 403);
-        assert.equal((await staffDenied.json() as { error: { code: string } }).error.code, 'AUTH_COMMUNITY_ACCOUNT_REQUIRED');
+        assert.equal(communityDenied.status, 401);
+        assert.equal((await communityDenied.json() as { error: { code: string } }).error.code, 'AUTH_NO_TOKEN');
+        assert.equal(staffDenied.status, 401);
+        assert.equal((await staffDenied.json() as { error: { code: string } }).error.code, 'AUTH_NO_TOKEN');
     });
 
     it('invalidates a banned user session and restores it after unban', async () => {

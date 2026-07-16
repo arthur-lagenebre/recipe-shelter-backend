@@ -66,10 +66,14 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
                 (1, 1), (1, 2), (1, 3),
                 (2, 2), (2, 3);
             INSERT INTO Users (Id, Mail, Username, Password, AccountType, Status, EmailValidatedAt, BannedByUserId, BannedReason, BannedAt) VALUES
-                (1, 'admin@test.local', 'admin', 'hash', 'staff', 'active', CURRENT_TIMESTAMP, NULL, NULL, NULL),
+                (1, 'admin@test.local', 'admin', 'hash', 'staff', 'inactive', CURRENT_TIMESTAMP, NULL, NULL, NULL),
                 (2, 'reader@test.local', 'reader', 'hash', 'community', 'active', CURRENT_TIMESTAMP, NULL, NULL, NULL),
                 (3, 'locked-staff@test.local', 'locked-staff', 'hash', 'staff', 'banned', CURRENT_TIMESTAMP, NULL, NULL, NULL),
                 (4, 'banned-community@test.local', 'banned-community', 'hash', 'community', 'banned', CURRENT_TIMESTAMP, 1, 'Pre-migration moderation', CURRENT_TIMESTAMP);
+            UPDATE StaffProfiles
+            SET MfaSecretEncrypted = 0x01, MfaEnabledAt = CURRENT_TIMESTAMP
+            WHERE UserId = 1;
+            UPDATE Users SET Status = 'active' WHERE Id = 1;
             INSERT INTO StaffRoles (StaffUserId, RoleId) VALUES (1, 1);
         `);
 
@@ -198,11 +202,11 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
             username: 'staff',
             passwordHash: 'password-hash',
             accountType: 'staff',
-            status: 'active'
+            status: 'invited'
         });
         assert.equal(staff.accountType, 'staff');
         assert.equal(await users.findCommunityProfileByUserId(staff.id), null);
-        assert.equal((await users.findStaffProfileByUserId(staff.id))?.status, 'active');
+        assert.equal((await users.findStaffProfileByUserId(staff.id))?.status, 'invited');
         assert.deepEqual(await rbac.findPermissionCodesByStaffUserId(staff.id), []);
 
         await pool.query(

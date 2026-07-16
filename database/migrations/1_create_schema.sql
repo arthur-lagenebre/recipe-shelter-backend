@@ -69,11 +69,20 @@ CREATE TABLE StaffProfiles (
   UserId BIGINT UNSIGNED NOT NULL,
   AccountType ENUM('community', 'staff') NOT NULL DEFAULT 'staff',
   Status ENUM('invited', 'active', 'locked', 'disabled') NOT NULL DEFAULT 'invited',
+  MfaSecretEncrypted VARBINARY(255) NULL,
+  MfaEnabledAt DATETIME NULL,
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (UserId),
   KEY idx_staff_profiles_status (Status),
   CONSTRAINT staff_profiles_account_type_CK CHECK (AccountType = 'staff'),
+  CONSTRAINT staff_profiles_mfa_state_CK
+    CHECK (
+      (MfaSecretEncrypted IS NULL AND MfaEnabledAt IS NULL)
+      OR (MfaSecretEncrypted IS NOT NULL AND MfaEnabledAt IS NOT NULL)
+    ),
+  CONSTRAINT staff_profiles_active_mfa_CK
+    CHECK (Status <> 'active' OR MfaEnabledAt IS NOT NULL),
   CONSTRAINT staff_profiles_user_account_type_FK
     FOREIGN KEY (UserId, AccountType) REFERENCES Users(Id, AccountType)
     ON UPDATE RESTRICT
@@ -135,6 +144,39 @@ CREATE TABLE CommunityProfiles (
     FOREIGN KEY (BannedByUserId) REFERENCES Users(Id)
     ON UPDATE CASCADE
     ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE CommunitySessions (
+  Id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  CommunityUserId BIGINT UNSIGNED NOT NULL,
+  ExpiresAt DATETIME NOT NULL,
+  RevokedAt DATETIME NULL,
+  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (Id),
+  KEY idx_community_sessions_user_id (CommunityUserId),
+  KEY idx_community_sessions_expires_at (ExpiresAt),
+  CONSTRAINT community_sessions_user_FK
+    FOREIGN KEY (CommunityUserId) REFERENCES CommunityProfiles(UserId)
+    ON UPDATE CASCADE
+    ON DELETE CASCADE,
+  CONSTRAINT community_sessions_expiry_CK CHECK (ExpiresAt > CreatedAt)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE StaffSessions (
+  Id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  StaffUserId BIGINT UNSIGNED NOT NULL,
+  MfaVerifiedAt DATETIME NOT NULL,
+  ExpiresAt DATETIME NOT NULL,
+  RevokedAt DATETIME NULL,
+  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (Id),
+  KEY idx_staff_sessions_user_id (StaffUserId),
+  KEY idx_staff_sessions_expires_at (ExpiresAt),
+  CONSTRAINT staff_sessions_user_FK
+    FOREIGN KEY (StaffUserId) REFERENCES StaffProfiles(UserId)
+    ON UPDATE CASCADE
+    ON DELETE CASCADE,
+  CONSTRAINT staff_sessions_expiry_CK CHECK (ExpiresAt > CreatedAt)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TRIGGER users_community_profile_AI

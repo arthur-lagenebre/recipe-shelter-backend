@@ -31,6 +31,8 @@ export function mapStaffProfile(row: StaffProfileRow): StaffProfile {
   return {
     userId: row.UserId,
     status: row.Status,
+    mfaSecretEncrypted: row.MfaSecretEncrypted,
+    mfaEnabledAt: row.MfaEnabledAt,
     createdAt: row.CreatedAt,
     updatedAt: row.UpdatedAt
   };

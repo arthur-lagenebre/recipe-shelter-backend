@@ -10,7 +10,7 @@ import { createAdminRecipesRouter } from './api/admin/admin.recipes.routes.js';
 import { createAdminUsersController } from './api/admin/admin.users.controller.js';
 import { createAdminUsersRouter } from './api/admin/admin.users.routes.js';
 import { createAuthController } from './api/auth/auth.controller.js';
-import { createAuthRouter } from './api/auth/auth.routes.js';
+import { createAuthRouter, createStaffAuthRouter } from './api/auth/auth.routes.js';
 import { createCategoryController } from './api/category/category.controller.js';
 import { createCategoryRouter } from './api/category/category.routes.js';
 import { createCommentsController } from './api/comments/comments.controller.js';
@@ -35,12 +35,13 @@ import { pool } from './db/pool.js';
 import { EnforceAuthorizationPolicies } from './middlewares/authorization.js';
 import { errorHandler } from './middlewares/error-handler.js';
 import { notFound } from './middlewares/not-found.js';
-import { configureAuthRbacRepository, configureAuthUserRepository, requireAuth } from './middlewares/require-auth.js';
+import { configureAuthRbacRepository, configureAuthSessionRepository, configureAuthUserRepository, requireStaffAuth } from './middlewares/require-auth.js';
 import { AdminCommentRepositoryMysql } from './repositories/admin/admin.comments.repository.mysql.js';
 import { AdminRecipeRepositoryMysql } from './repositories/admin/admin.recipe.repository.mysql.js';
 import { AdminUserRepositoryMysql } from './repositories/admin/admin.users.repository.mysql.js';
 import { EmailValidationRepositoryMysql } from './repositories/auth/email-validation.repository.mysql.js';
 import { PasswordResetRepositoryMysql } from './repositories/auth/password-reset.repository.mysql.js';
+import { SessionRepositoryMysql } from './repositories/auth/session.repository.mysql.js';
 import { CategoryRepositoryMysql } from './repositories/category/category.repository.mysql.js';
 import { CommentRepositoryMysql } from './repositories/comments/comments.repository.mysql.js';
 import { EquipmentRepositoryMysql } from './repositories/equipments/equipment.repository.mysql.js';
@@ -57,6 +58,7 @@ import { AdminUserService } from './services/admin/admin.users.service.js';
 import { AuthService } from './services/auth/auth.service.js';
 import { EmailValidationService } from './services/auth/email-validation.service.js';
 import { PasswordResetService } from './services/auth/password-reset.service.js';
+import { StaffMfaService } from './services/auth/staff-mfa.service.js';
 import { CategoryService } from './services/category/category.service.js';
 import { CommentService } from './services/comments/comments.service.js';
 import { ContactService } from './services/contact/contact.service.js';
@@ -74,6 +76,7 @@ import { createImageStorage } from './storage/image-storage.factory.js';
 import { createLocalMediaMiddleware } from './storage/local-media.middleware.js';
 import { env } from './utils/env.js';
 
+import type { SessionRepository } from './repositories/auth/session.repository.interface.js';
 import type { RbacRepository } from './repositories/rbac/rbac.repository.interface.js';
 import type { UserRepository } from './repositories/users/user.repository.interface.js';
 import type { ImageStorage } from './storage/image-storage.interface.js';
@@ -84,6 +87,7 @@ export type AppDependencies = {
   adminUserService: AdminUserService;
   authService: AuthService;
   authRbacRepository: RbacRepository;
+  authSessionRepository: SessionRepository;
   authUserRepository: Pick<UserRepository, 'findById'>;
   categoryService: CategoryService;
   commentService: CommentService;
@@ -115,6 +119,7 @@ function createDefaultDependencies(): AppDependencies {
   const ingredientRepository = new IngredientRepositoryMysql(pool);
   const emailValidationRepository = new EmailValidationRepositoryMysql(pool);
   const passwordResetRepository = new PasswordResetRepositoryMysql(pool);
+  const sessionRepository = new SessionRepositoryMysql(pool);
   const recipeRepository = new RecipeRepositoryMysql(pool, getPublicImageUrl);
   const recipeImageRepository = new RecipeImageRepositoryMysql(pool);
   const rbacRepository = new RbacRepositoryMysql(pool);
@@ -122,6 +127,7 @@ function createDefaultDependencies(): AppDependencies {
   const userRepository = new UserRepositoryMysql(pool);
 
   const emailValidationService = new EmailValidationService(userRepository, emailValidationRepository, mailer, env.http.frontendBaseUrl);
+  const staffMfaService = new StaffMfaService(userRepository);
   const recipeSlugService = new RecipeSlugService(recipeRepository);
   const recipeImageService = new RecipeImageService(recipeRepository, recipeImageRepository, new RecipeImageProcessor(), imageStorage);
 
@@ -129,8 +135,9 @@ function createDefaultDependencies(): AppDependencies {
     adminCommentService: new AdminCommentService(adminCommentRepository),
     adminRecipeService: new AdminRecipeService(recipeRepository, adminRecipeRepository, recipeImageService),
     adminUserService: new AdminUserService(userRepository, adminUserRepository),
-    authService: new AuthService(userRepository, emailValidationService),
+    authService: new AuthService(userRepository, emailValidationService, sessionRepository, staffMfaService),
     authRbacRepository: rbacRepository,
+    authSessionRepository: sessionRepository,
     authUserRepository: userRepository,
     categoryService: new CategoryService(categoryRepository),
     commentService: new CommentService(commentRepository),
@@ -171,6 +178,7 @@ export function createApp(overrides: Partial<AppDependencies> = {}) {
 
   configureAuthUserRepository(dependencies.authUserRepository);
   configureAuthRbacRepository(dependencies.authRbacRepository);
+  configureAuthSessionRepository(dependencies.authSessionRepository);
 
   const adminCommentsController = createAdminCommentsController(dependencies.adminCommentService);
   const adminRecipesController = createAdminRecipesController(dependencies.adminRecipeService);
@@ -187,7 +195,8 @@ export function createApp(overrides: Partial<AppDependencies> = {}) {
   const usersController = createUsersController(dependencies.usersService);
 
   const adminRouter = express.Router();
-  adminRouter.use(requireAuth, EnforceAuthorizationPolicies(adminAuthorizationPolicies));
+  adminRouter.use('/auth', createStaffAuthRouter(authController));
+  adminRouter.use(requireStaffAuth, EnforceAuthorizationPolicies(adminAuthorizationPolicies));
   adminRouter.use('/comments', createAdminCommentsRouter(adminCommentsController));
   adminRouter.use('/recipes', createAdminRecipesRouter(adminRecipesController));
   adminRouter.use('/users', createAdminUsersRouter(adminUsersController));

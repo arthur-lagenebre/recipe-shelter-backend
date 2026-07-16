@@ -9,7 +9,10 @@
 @newPassword = NewPassword123!
 @resetToken = PASTE_RESET_TOKEN_HERE
 @validationToken = PASTE_VALIDATION_TOKEN_HERE
-@sessionCookie = PASTE_RS_SESSION_COOKIE_HERE
+@sessionCookie = PASTE_RS_APP_SESSION_COOKIE_HERE
+@adminMail = staff@example.com
+@adminMfaCode = 123456
+@adminSessionCookie = PASTE_RS_ADMIN_SESSION_COOKIE_HERE
 
 ### Register
 POST {{baseUrl}}/auth/register
@@ -48,11 +51,29 @@ Content-Type: application/json
 
 ### Auth me
 GET {{baseUrl}}/auth/me
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
 
 ### Logout
 POST {{baseUrl}}/auth/logout
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
+
+### Staff login (password + TOTP)
+POST {{baseUrl}}/admin/auth/login
+Content-Type: application/json
+
+{
+  "mail": "{{adminMail}}",
+  "password": "{{password}}",
+  "mfaCode": "{{adminMfaCode}}"
+}
+
+### Staff auth me
+GET {{baseUrl}}/admin/auth/me
+Cookie: rs_admin_session={{adminSessionCookie}}
+
+### Staff logout
+POST {{baseUrl}}/admin/auth/logout
+Cookie: rs_admin_session={{adminSessionCookie}}
 
 ### Forgot password
 POST {{baseUrl}}/auth/forgot-password

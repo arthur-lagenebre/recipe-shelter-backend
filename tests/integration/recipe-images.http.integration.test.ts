@@ -3,19 +3,17 @@ import { after, before, describe, it } from 'node:test';
 
 import cookieParser from 'cookie-parser';
 import express from 'express';
-import jwt from 'jsonwebtoken';
 import sharp from 'sharp';
 
 import { createRecipesController } from '../../src/api/recipes/recipes.controller.js';
 import { createRecipesRouter } from '../../src/api/recipes/recipes.routes.js';
 import { errorHandler } from '../../src/middlewares/error-handler.js';
 import { notFound } from '../../src/middlewares/not-found.js';
-import { configureAuthUserRepository } from '../../src/middlewares/require-auth.js';
+import { configureAuthSessionRepository, configureAuthUserRepository } from '../../src/middlewares/require-auth.js';
 import { MAX_RECIPE_IMAGE_BYTES, RecipeImageProcessor } from '../../src/services/recipes/recipe-image.processor.js';
 import { normalizeAltText } from '../../src/services/recipes/recipe-image.service.js';
-import { env } from '../../src/utils/env.js';
 import { badRequest } from '../../src/utils/errors.js';
-import { sessionCookieName } from '../../src/utils/session-cookie.js';
+import { TestSessionRepository } from '../helpers/auth-session.js';
 import { startHttpTestServer } from '../helpers/http-test-server.js';
 
 import type { User } from '../../src/repositories/users/user.types.js';
@@ -58,9 +56,10 @@ const imageService = {
     async delete() { }
 };
 
+let sessionCookie = '';
+
 function authenticatedHeaders(): HeadersInit {
-    const token = jwt.sign({ sub: 2, username: 'owner', accountType: 'community', status: 'active' }, env.auth.jwtSecret);
-    return { cookie: `${sessionCookieName}=${token}` };
+    return { cookie: sessionCookie };
 }
 
 function formWithFile(buffer: Buffer, filename: string, contentType: string, altText?: string): FormData {
@@ -85,6 +84,9 @@ describe('recipe image multipart HTTP integration', () => {
 
     before(async () => {
         configureAuthUserRepository({ findById: async () => activeUser });
+        const sessions = new TestSessionRepository();
+        configureAuthSessionRepository(sessions);
+        sessionCookie = await sessions.issueCookie(activeUser, 'app');
 
         const app = express();
         app.use(cookieParser());

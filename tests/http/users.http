@@ -3,18 +3,18 @@
 # ============================================
 
 @baseUrl = http://localhost:3000/api/v1
-@sessionCookie = PASTE_RS_SESSION_COOKIE_HERE
+@sessionCookie = PASTE_RS_APP_SESSION_COOKIE_HERE
 @password = Password123!
 @newPassword = NewPassword123!
 
 ### User profile
 GET {{baseUrl}}/users/me
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
 
 ### Update email
 PATCH {{baseUrl}}/users/me/email
 Content-Type: application/json
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
 
 {
   "newEmail": "new-test@example.com",
@@ -24,7 +24,7 @@ Cookie: rs_session={{sessionCookie}}
 ### Update username
 PATCH {{baseUrl}}/users/me/username
 Content-Type: application/json
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
 
 {
   "newUsername": "newtestuser",
@@ -34,7 +34,7 @@ Cookie: rs_session={{sessionCookie}}
 ### Update password
 PATCH {{baseUrl}}/users/me/password
 Content-Type: application/json
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
 
 {
   "currentPassword": "{{password}}",
@@ -44,7 +44,7 @@ Cookie: rs_session={{sessionCookie}}
 ### Update password - wrong current password
 PATCH {{baseUrl}}/users/me/password
 Content-Type: application/json
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
 
 {
   "currentPassword": "WrongPassword123!",

@@ -13,6 +13,7 @@ import { RecipeService } from '../../src/services/recipes/recipes.services.js';
 import { PERMISSIONS } from '../../src/security/permissions.js';
 import { createPaginatedResult } from '../../src/utils/pagination.js';
 import { startHttpTestServer } from '../helpers/http-test-server.js';
+import { TestSessionRepository } from '../helpers/auth-session.js';
 
 import type { AdminRecipeRepository } from '../../src/repositories/admin/admin.recipe.repository.interface.js';
 import type { CommentRepository } from '../../src/repositories/comments/comments.repository.interface.js';
@@ -350,7 +351,13 @@ describe('critical user journey E2E', () => {
             async publish(id: number, adminUserId: number) { return recipes.publish(id, adminUserId); },
             async reject(id: number, adminUserId: number, reason: string) { return recipes.reject(id, adminUserId, reason); }
         } as unknown as AdminRecipeRepository;
-        const authService = new AuthService(users as unknown as UserRepository, {} as EmailValidationService);
+        const sessions = new TestSessionRepository();
+        const authService = new AuthService(
+            users as unknown as UserRepository,
+            {} as EmailValidationService,
+            sessions,
+            { async verify() { return 'verified'; } }
+        );
 
         const app = createApp({
             authService,
@@ -359,6 +366,7 @@ describe('critical user journey E2E', () => {
                     return staffUserId === 1 ? [PERMISSIONS.recipesRead, PERMISSIONS.recipesModerate] : [];
                 }
             },
+            authSessionRepository: sessions,
             authUserRepository: users as Pick<UserRepository, 'findById'>,
             recipeService: new RecipeService(recipeRepository, new RecipeSlugService(recipeRepository)),
             adminRecipeService: new AdminRecipeService(recipeRepository, adminRecipeRepository),
@@ -452,13 +460,13 @@ describe('critical user journey E2E', () => {
             method: 'POST',
             headers: { cookie: userCookie }
         });
-        assert.equal(forbiddenResponse.status, 403);
-        assert.equal((await forbiddenResponse.json() as { error: { code: string } }).error.code, 'AUTH_PERMISSION_REQUIRED');
+        assert.equal(forbiddenResponse.status, 401);
+        assert.equal((await forbiddenResponse.json() as { error: { code: string } }).error.code, 'AUTH_NO_TOKEN');
 
-        const adminLogin = await fetch(`${server.baseUrl}/api/v1/auth/login`, {
+        const adminLogin = await fetch(`${server.baseUrl}/api/v1/admin/auth/login`, {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ mail: 'admin@example.com', password: 'StrongPass123!' })
+            body: JSON.stringify({ mail: 'admin@example.com', password: 'StrongPass123!', mfaCode: '123456' })
         });
         assert.equal(adminLogin.status, 200);
         adminCookie = cookieFrom(adminLogin);
@@ -468,8 +476,8 @@ describe('critical user journey E2E', () => {
             headers: { cookie: adminCookie, 'content-type': 'application/json' },
             body: JSON.stringify({ title: 'Admin edit attempt' })
         });
-        assert.equal(adminEditResponse.status, 403);
-        assert.equal((await adminEditResponse.json() as { error: { code: string } }).error.code, 'AUTH_COMMUNITY_ACCOUNT_REQUIRED');
+        assert.equal(adminEditResponse.status, 401);
+        assert.equal((await adminEditResponse.json() as { error: { code: string } }).error.code, 'AUTH_NO_TOKEN');
 
         const approveResponse = await fetch(`${server.baseUrl}/api/v1/admin/recipes/${created.id}/approve`, {
             method: 'POST',
@@ -512,8 +520,8 @@ describe('critical user journey E2E', () => {
             headers: { cookie: adminCookie, 'content-type': 'application/json' },
             body: JSON.stringify({ rating: 4, comment: 'Admin edit attempt' })
         });
-        assert.equal(forbiddenUpdate.status, 403);
-        assert.equal((await forbiddenUpdate.json() as { error: { code: string } }).error.code, 'AUTH_COMMUNITY_ACCOUNT_REQUIRED');
+        assert.equal(forbiddenUpdate.status, 401);
+        assert.equal((await forbiddenUpdate.json() as { error: { code: string } }).error.code, 'AUTH_NO_TOKEN');
 
         const updateResponse = await fetch(`${server.baseUrl}/api/v1/comments/1`, {
             method: 'PATCH',

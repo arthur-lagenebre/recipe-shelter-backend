@@ -288,6 +288,12 @@ describe('SuperAdmin bootstrap MySQL integration', { skip: !mysqlEnabled && 'Set
         assert.deepEqual(stillInvitedRows, [{ Status: 'invited' }]);
 
         await pool.query(
+            `UPDATE StaffProfiles
+             SET MfaSecretEncrypted = 0x01, MfaEnabledAt = CURRENT_TIMESTAMP
+             WHERE UserId = ?`,
+            [createdAccount.Id]
+        );
+        await pool.query(
             `UPDATE Users
              SET Status = 'active'
              WHERE Id = ?`,

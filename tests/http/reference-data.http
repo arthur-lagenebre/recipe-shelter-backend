@@ -3,7 +3,7 @@
 # ============================================
 
 @baseUrl = http://localhost:3000/api/v1
-@sessionCookie = PASTE_RS_SESSION_COOKIE_HERE
+@sessionCookie = PASTE_RS_APP_SESSION_COOKIE_HERE
 @categoryId = 1
 @equipmentId = 1
 @ingredientId = 1
@@ -11,31 +11,31 @@
 
 ### Categories
 GET {{baseUrl}}/categories
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
 
 ### Category by id
 GET {{baseUrl}}/categories/{{categoryId}}
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
 
 ### Equipments
 GET {{baseUrl}}/equipments
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
 
 ### Equipment by id
 GET {{baseUrl}}/equipments/{{equipmentId}}
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
 
 ### Ingredients
 GET {{baseUrl}}/ingredients
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
 
 ### Ingredient by id
 GET {{baseUrl}}/ingredients/{{ingredientId}}
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
 
 ### Tags
 GET {{baseUrl}}/tags
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
 
 # Expected response items include:
 # {
@@ -52,4 +52,4 @@ Cookie: rs_session={{sessionCookie}}
 
 ### Tag by id
 GET {{baseUrl}}/tags/{{tagId}}
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}

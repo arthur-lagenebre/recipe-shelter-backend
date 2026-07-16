@@ -3,7 +3,7 @@
 # ============================================
 
 @baseUrl = http://localhost:3000/api/v1
-@sessionCookie = PASTE_RS_SESSION_COOKIE_HERE
+@sessionCookie = PASTE_RS_APP_SESSION_COOKIE_HERE
 @recipeId = 1
 @recipeSlug = cake-marbre-maison
 
@@ -48,11 +48,11 @@ GET {{baseUrl}}/recipes/search?q=porc&categoryId=3&tagIds=1,2&excludedTagIds=8&i
 
 ### Published recipes - with optional auth, includes isFavorite for current user
 GET {{baseUrl}}/recipes
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
 
 ### Published recipe detail by slug
 GET {{baseUrl}}/recipes/{{recipeSlug}}
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
 
 # Expected response includes:
 # {
@@ -134,12 +134,12 @@ Cookie: rs_session={{sessionCookie}}
 
 ### My recipes
 GET {{baseUrl}}/recipes/me?page=1&limit=10
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
 
 ### Create recipe draft - minimal
 POST {{baseUrl}}/recipes
 Content-Type: application/json
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
 
 {
   "title": "Tarte aux pommes"
@@ -148,7 +148,7 @@ Cookie: rs_session={{sessionCookie}}
 ### Create recipe draft - full body
 POST {{baseUrl}}/recipes
 Content-Type: application/json
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
 
 {
   "title": "Cake marbre maison",
@@ -201,7 +201,7 @@ Content-Type: application/json
 ### Create recipe draft - missing title
 POST {{baseUrl}}/recipes
 Content-Type: application/json
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
 
 {
   "description": "Pas de titre"
@@ -210,7 +210,7 @@ Cookie: rs_session={{sessionCookie}}
 ### Create recipe draft - title too short
 POST {{baseUrl}}/recipes
 Content-Type: application/json
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
 
 {
   "title": "Cake"
@@ -219,7 +219,7 @@ Cookie: rs_session={{sessionCookie}}
 ### Create recipe draft - invalid servings type
 POST {{baseUrl}}/recipes
 Content-Type: application/json
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
 
 {
   "title": "Cake au citron",
@@ -228,12 +228,12 @@ Cookie: rs_session={{sessionCookie}}
 
 ### Get my recipe by id
 GET {{baseUrl}}/recipes/me/{{recipeId}}
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
 
 ### Update recipe draft
 PATCH {{baseUrl}}/recipes/me/{{recipeId}}
 Content-Type: application/json
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
 
 {
   "title": "Cake marbre maison v2",
@@ -262,16 +262,16 @@ Cookie: rs_session={{sessionCookie}}
 
 ### Submit recipe draft
 POST {{baseUrl}}/recipes/me/{{recipeId}}/submit
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
 
 ### Archive my recipe
 POST {{baseUrl}}/recipes/me/{{recipeId}}/archive
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
 
 ### Replace recipe cover image
 # Replace ./fixtures/cover.jpg with an existing local JPEG, PNG or WebP file.
 PUT {{baseUrl}}/recipes/{{recipeId}}/cover-image
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}
 Content-Type: multipart/form-data; boundary=RecipeShelterBoundary
 
 --RecipeShelterBoundary
@@ -287,4 +287,4 @@ Content-Type: image/jpeg
 
 ### Delete recipe cover image
 DELETE {{baseUrl}}/recipes/{{recipeId}}/cover-image
-Cookie: rs_session={{sessionCookie}}
+Cookie: rs_app_session={{sessionCookie}}

@@ -11,6 +11,10 @@ export type LoginDto = {
   password: string;
 };
 
+export type StaffLoginDto = LoginDto & {
+  mfaCode: string;
+};
+
 export type ValidateEmailDto = {
   token: string;
 };
@@ -61,6 +65,17 @@ export function parseLoginBody(body: unknown): LoginDto {
     throw badRequest('Missing fields', 'AUTH_MISSING_FIELDS');
 
   return { mail, password };
+}
+
+export function parseStaffLoginBody(body: unknown): StaffLoginDto {
+  const login = parseLoginBody(body);
+  const obj = asObject(body);
+  const mfaCode = getString(obj.mfaCode);
+
+  if (!/^\d{6}$/.test(mfaCode))
+    throw badRequest('MFA code must contain exactly 6 digits', 'AUTH_INVALID_MFA_CODE');
+
+  return { ...login, mfaCode };
 }
 
 export function parseValidateEmailBody(body: unknown): ValidateEmailDto {

@@ -234,7 +234,7 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
         await connection.query(
             `INSERT INTO Users (Id, Mail, Username, Password, AccountType, Status) VALUES
                 (110, 'community-content@test.local', 'community-content', 'hash', 'community', 'active'),
-                (111, 'staff-content@test.local', 'staff-content', 'hash', 'staff', 'active');
+                (111, 'staff-content@test.local', 'staff-content', 'hash', 'staff', 'inactive');
              INSERT INTO RecipeCategories (Id, Name, Slug, IconName)
              VALUES (100, 'Community boundary', 'community-boundary', 'boundary');
              INSERT INTO Recipes (Id, UserId, CategoryId, Title, Slug, Description, PrepTimeMinutes, Servings)
@@ -257,7 +257,7 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
         await connection.query(
             `INSERT INTO Users (Id, Mail, Username, Password, AccountType, Status) VALUES
                 (100, 'community-rbac@test.local', 'community-rbac', 'hash', 'community', 'active'),
-                (101, 'staff-rbac@test.local', 'staff-rbac', 'hash', 'staff', 'active')`
+                (101, 'staff-rbac@test.local', 'staff-rbac', 'hash', 'staff', 'inactive')`
         );
 
         const [defaultRoles] = await connection.query(`SELECT RoleId FROM StaffRoles WHERE StaffUserId = 101`);
@@ -281,5 +281,54 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
              VALUES ('OtherRecipeModerator', 'MODÉRATEUR DE RECETTES', 'Duplicate name')`
         ));
         await assert.rejects(() => connection.query(`INSERT INTO Permissions (Code, Description) VALUES ('USERS.READ', 'Duplicate')`));
+    });
+
+    it('creates strictly separate session stores and requires MFA before staff activation', async () => {
+        const [sessionTables] = await connection.query(
+            `SELECT TABLE_NAME AS TableName
+             FROM information_schema.TABLES
+             WHERE TABLE_SCHEMA = ?
+               AND TABLE_NAME IN ('CommunitySessions', 'StaffSessions')
+             ORDER BY TABLE_NAME`,
+            [requireRbacTestDatabaseName()]
+        );
+        assert.deepEqual(
+            (sessionTables as Array<{ TableName: string }>).map(({ TableName }) => TableName.toLowerCase()),
+            ['communitysessions', 'staffsessions']
+        );
+
+        await connection.query(
+            `INSERT INTO Users (Id, Mail, Username, Password, AccountType, Status) VALUES
+                (120, 'session-community@test.local', 'session-community', 'hash', 'community', 'active'),
+                (121, 'session-staff@test.local', 'session-staff', 'hash', 'staff', 'inactive')`
+        );
+
+        await assert.rejects(() => connection.query(`UPDATE Users SET Status = 'active' WHERE Id = 121`));
+        await connection.query(
+            `UPDATE StaffProfiles
+             SET MfaSecretEncrypted = 0x01, MfaEnabledAt = CURRENT_TIMESTAMP
+             WHERE UserId = 121;
+             UPDATE Users SET Status = 'active' WHERE Id = 121`
+        );
+
+        await connection.query(
+            `INSERT INTO CommunitySessions (Id, CommunityUserId, ExpiresAt)
+             VALUES ('00000000-0000-4000-8000-000000000120', 120, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 1 DAY));
+             INSERT INTO StaffSessions (Id, StaffUserId, MfaVerifiedAt, ExpiresAt)
+             VALUES ('00000000-0000-4000-8000-000000000121', 121, CURRENT_TIMESTAMP, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 8 HOUR))`
+        );
+
+        await assert.rejects(() => connection.query(
+            `INSERT INTO CommunitySessions (Id, CommunityUserId, ExpiresAt)
+             VALUES ('00000000-0000-4000-8000-000000000122', 121, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 1 DAY))`
+        ));
+        await assert.rejects(() => connection.query(
+            `INSERT INTO StaffSessions (Id, StaffUserId, MfaVerifiedAt, ExpiresAt)
+             VALUES ('00000000-0000-4000-8000-000000000123', 120, CURRENT_TIMESTAMP, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 8 HOUR))`
+        ));
+        await assert.rejects(() => connection.query(
+            `INSERT INTO StaffSessions (Id, StaffUserId, MfaVerifiedAt, ExpiresAt)
+             VALUES ('00000000-0000-4000-8000-000000000124', 121, NULL, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 8 HOUR))`
+        ));
     });
 });

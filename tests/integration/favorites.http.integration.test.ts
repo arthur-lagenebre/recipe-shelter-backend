@@ -3,16 +3,15 @@ import { after, before, describe, it } from 'node:test';
 
 import cookieParser from 'cookie-parser';
 import express from 'express';
-import jwt from 'jsonwebtoken';
 
 import { createFavoritesController } from '../../src/api/favorites/favorites.controller.js';
 import { createFavoritesRouter } from '../../src/api/favorites/favorites.routes.js';
 import { errorHandler } from '../../src/middlewares/error-handler.js';
 import { notFound } from '../../src/middlewares/not-found.js';
-import { configureAuthUserRepository } from '../../src/middlewares/require-auth.js';
+import { configureAuthSessionRepository, configureAuthUserRepository } from '../../src/middlewares/require-auth.js';
 import { FavoriteService } from '../../src/services/favorites/favorites.service.js';
-import { env } from '../../src/utils/env.js';
 import { createPaginatedResult } from '../../src/utils/pagination.js';
+import { TestSessionRepository } from '../helpers/auth-session.js';
 import { startHttpTestServer } from '../helpers/http-test-server.js';
 
 import type { FavoriteRepository } from '../../src/repositories/favorites/favorites.repository.interface.js';
@@ -83,6 +82,8 @@ describe('favorites HTTP integration', () => {
         configureAuthUserRepository({
             async findById(id) { return id === activeUser.id ? activeUser : null; }
         });
+        const sessions = new TestSessionRepository();
+        configureAuthSessionRepository(sessions);
 
         app.use(cookieParser());
         app.use(express.json());
@@ -90,12 +91,7 @@ describe('favorites HTTP integration', () => {
         app.use(notFound);
         app.use(errorHandler);
 
-        sessionCookie = `${env.auth.sessionCookieName}=${jwt.sign({
-            sub: activeUser.id,
-            username: activeUser.username,
-            accountType: activeUser.accountType,
-            status: activeUser.status
-        }, env.auth.jwtSecret)}`;
+        sessionCookie = await sessions.issueCookie(activeUser, 'app');
         server = await startHttpTestServer(app);
     });
 

@@ -66,7 +66,7 @@ function readSameSite(value: string | undefined, fallback: 'strict' | 'lax' | 'n
   return fallback;
 }
 
-function readDurationMs(value: string, fallback: number): number {
+export function readDurationMs(value: string, fallback: number): number {
   const match = value.trim().match(/^(\d+)(ms|s|m|h|d)?$/i);
 
   if (!match)
@@ -83,7 +83,7 @@ function readDurationMs(value: string, fallback: number): number {
   };
   const multiplier = multipliers[unit];
 
-  if (!Number.isFinite(amount) || !multiplier)
+  if (!Number.isFinite(amount) || amount <= 0 || !multiplier)
     return fallback;
 
   return amount * multiplier;
@@ -91,8 +91,26 @@ function readDurationMs(value: string, fallback: number): number {
 
 const nodeEnv = readString(process.env.NODE_ENV, 'development');
 const port = readNumber(process.env.PORT, 3000);
-const jwtExpiresIn = readString(process.env.JWT_EXPIRES_IN, '7d');
-const defaultSessionCookieMaxAgeMs = readDurationMs(jwtExpiresIn, 604800000);
+const appJwtExpiresIn = readString(process.env.AUTH_APP_JWT_EXPIRES_IN, '7d');
+const adminJwtExpiresIn = readString(process.env.AUTH_ADMIN_JWT_EXPIRES_IN, '8h');
+const appJwtExpiresInMs = readDurationMs(appJwtExpiresIn, 604800000);
+const adminJwtExpiresInMs = readDurationMs(adminJwtExpiresIn, 28800000);
+const appJwtAudience = readString(process.env.AUTH_APP_JWT_AUDIENCE, 'recipe-shelter-app');
+const adminJwtAudience = readString(process.env.AUTH_ADMIN_JWT_AUDIENCE, 'recipe-shelter-admin');
+const appSessionCookieName = readString(process.env.AUTH_APP_SESSION_COOKIE_NAME, 'rs_app_session');
+const adminSessionCookieName = readString(process.env.AUTH_ADMIN_SESSION_COOKIE_NAME, 'rs_admin_session');
+const appSessionCookieMaxAgeMs = readPositiveInteger(process.env.AUTH_APP_SESSION_COOKIE_MAX_AGE_MS, appJwtExpiresInMs);
+const adminSessionCookieMaxAgeMs = readPositiveInteger(process.env.AUTH_ADMIN_SESSION_COOKIE_MAX_AGE_MS, adminJwtExpiresInMs);
+
+if (appJwtAudience === adminJwtAudience)
+  throw new Error('App and admin JWT audiences must be different');
+if (appSessionCookieName === adminSessionCookieName)
+  throw new Error('App and admin session cookie names must be different');
+if (adminJwtExpiresInMs >= appJwtExpiresInMs)
+  throw new Error('Admin JWT lifetime must be shorter than app JWT lifetime');
+if (adminSessionCookieMaxAgeMs >= appSessionCookieMaxAgeMs)
+  throw new Error('Admin session cookie lifetime must be shorter than app session cookie lifetime');
+
 const imageStorageDriver = readImageStorageDriver(process.env.IMAGE_STORAGE_DRIVER);
 const imagePublicBaseUrl = imageStorageDriver === 's3'
   ? requireImageStorageValue('IMAGE_PUBLIC_BASE_URL', process.env.IMAGE_PUBLIC_BASE_URL, imageStorageDriver)
@@ -118,12 +136,28 @@ export const env = {
 
   auth: {
     jwtSecret: process.env.JWT_SECRET ?? (() => { throw new Error('JWT_SECRET is required'); })(),
-    jwtExpiresIn,
-    sessionCookieName: readString(process.env.AUTH_SESSION_COOKIE_NAME, 'rs_session'),
-    sessionCookieDomain: readOptionalString(process.env.AUTH_SESSION_COOKIE_DOMAIN),
-    sessionCookieSameSite: readSameSite(process.env.AUTH_SESSION_COOKIE_SAME_SITE, 'lax'),
-    sessionCookieSecure: readBoolean(process.env.AUTH_SESSION_COOKIE_SECURE, nodeEnv === 'production'),
-    sessionCookieMaxAgeMs: readNumber(process.env.AUTH_SESSION_COOKIE_MAX_AGE_MS, defaultSessionCookieMaxAgeMs),
+    staffMfaEncryptionKey: readOptionalString(process.env.AUTH_STAFF_MFA_ENCRYPTION_KEY),
+    cookie: {
+      domain: readOptionalString(process.env.AUTH_SESSION_COOKIE_DOMAIN),
+      sameSite: readSameSite(process.env.AUTH_SESSION_COOKIE_SAME_SITE, 'lax'),
+      secure: readBoolean(process.env.AUTH_SESSION_COOKIE_SECURE, nodeEnv === 'production')
+    },
+    app: {
+      jwtAudience: appJwtAudience,
+      jwtExpiresIn: appJwtExpiresIn,
+      jwtExpiresInMs: appJwtExpiresInMs,
+      sessionCookieName: appSessionCookieName,
+      sessionCookieMaxAgeMs: appSessionCookieMaxAgeMs,
+      sessionCookiePath: '/api/v1'
+    },
+    admin: {
+      jwtAudience: adminJwtAudience,
+      jwtExpiresIn: adminJwtExpiresIn,
+      jwtExpiresInMs: adminJwtExpiresInMs,
+      sessionCookieName: adminSessionCookieName,
+      sessionCookieMaxAgeMs: adminSessionCookieMaxAgeMs,
+      sessionCookiePath: '/api/v1'
+    },
     bcryptCost: readNumber(process.env.BCRYPT_COST, 12),
     rateLimitMaxAttempts: readNumber(process.env.AUTH_RATE_LIMIT_MAX_ATTEMPTS, 5),
     rateLimitWindowMs: readNumber(process.env.AUTH_RATE_LIMIT_WINDOW_MS, 900000) // 15 minutes

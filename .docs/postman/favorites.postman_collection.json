@@ -11,7 +11,7 @@
     },
     {
       "key": "sessionCookie",
-      "value": "PASTE_RS_SESSION_COOKIE_HERE"
+      "value": "PASTE_RS_APP_SESSION_COOKIE_HERE"
     },
     {
       "key": "recipeId",
@@ -26,7 +26,7 @@
         "header": [
           {
             "key": "Cookie",
-            "value": "rs_session={{sessionCookie}}"
+            "value": "rs_app_session={{sessionCookie}}"
           }
         ],
         "url": {
@@ -50,7 +50,7 @@
         "header": [
           {
             "key": "Cookie",
-            "value": "rs_session={{sessionCookie}}"
+            "value": "rs_app_session={{sessionCookie}}"
           }
         ],
         "url": {
@@ -84,7 +84,7 @@
         "header": [
           {
             "key": "Cookie",
-            "value": "rs_session={{sessionCookie}}"
+            "value": "rs_app_session={{sessionCookie}}"
           }
         ],
         "url": {

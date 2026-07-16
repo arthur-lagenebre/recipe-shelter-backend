@@ -10,7 +10,7 @@ Backend Node.js/Express de **Recipe Shelter**, un projet de formation autour d'u
 - MySQL
 - Multer et Sharp pour les images de couverture
 - Stockage local ou S3 compatible Cloudflare R2
-- JWT stocké en cookie HttpOnly
+- JWT d’app et d’administration stockés dans des cookies HttpOnly distincts
 
 ## Prérequis
 
@@ -101,7 +101,10 @@ Ce script :
 - ne crée aucun compte utilisateur ou staff par défaut.
 
 La réinitialisation crée aussi les profils spécialisés `CommunityProfiles` et
-`StaffProfiles`.
+`StaffProfiles`, ainsi que leurs stockages de sessions séparés
+`CommunitySessions` et `StaffSessions`. Une ligne `StaffSessions` exige une date
+de vérification MFA ; un profil staff ne peut pas devenir actif tant que son
+secret TOTP chiffré et sa date d’activation MFA ne sont pas renseignés.
 
 Les comptes staff cumulent leurs rôles via `StaffRoles`. Leurs permissions
 effectives proviennent exclusivement de `RolePermissions` ; un compte sans rôle
@@ -250,6 +253,8 @@ Exemples :
 - `POST /api/v1/auth/login`
 - `POST /api/v1/auth/logout`
 - `POST /api/v1/auth/register`
+- `POST /api/v1/admin/auth/login`
+- `POST /api/v1/admin/auth/logout`
 - `GET /api/v1/categories`
 - `GET /api/v1/ingredients`
 - `GET /api/v1/tags`
@@ -258,9 +263,10 @@ Exemples :
 - `DELETE /api/v1/recipes/:recipeId/cover-image` (session community active requise)
 
 Toutes les écritures de recettes personnelles, propositions, commentaires et
-favoris exigent une session community active. Un compte staff reçoit
-`403 AUTH_COMMUNITY_ACCOUNT_REQUIRED` avant toute validation du contenu ou
-écriture en base.
+favoris exigent une session community active. Un cookie staff n’est pas lu sur
+ces routes et reçoit `401 AUTH_NO_TOKEN` avant toute validation du contenu ou
+écriture en base. Symétriquement, un cookie community n’est jamais accepté par
+les routes administratives.
 
 L'upload de couverture attend exactement un fichier dans le champ `image` et accepte un champ texte facultatif `altText`. Les entrées JPEG, PNG et WebP sont décodées puis normalisées en trois variantes WebP (1600, 800 et 400 pixels maximum). La taille d'entrée est limitée à 10 Mo. Les réponses de recette exposent `coverImage: null` ou l'objet suivant ; aucune clé interne de stockage n'est renvoyée :
 
@@ -292,7 +298,20 @@ Les tags sont rattachés à un groupe. Les réponses `GET /api/v1/tags` et `GET 
 }
 ```
 
-`POST /api/v1/auth/login` pose le cookie HttpOnly `rs_session` et ne renvoie pas le JWT dans le JSON. Les routes authentifiées lisent ensuite ce cookie.
+`POST /api/v1/auth/login` est réservé aux comptes community et pose le cookie
+HttpOnly `rs_app_session`, avec l’audience JWT `recipe-shelter-app` et une durée
+de 7 jours par défaut. Les endpoints `GET /api/v1/auth/me` et
+`POST /api/v1/auth/logout` ne lisent et ne révoquent que cette session.
+
+`POST /api/v1/admin/auth/login` est réservé aux comptes staff actifs. Il exige
+`mail`, `password` et un `mfaCode` TOTP à 6 chiffres, puis pose
+`rs_admin_session`, audience `recipe-shelter-admin`, pour 8 heures par défaut.
+`GET /api/v1/admin/auth/me` et `POST /api/v1/admin/auth/logout` utilisent
+exclusivement ce cookie. Copier ou renommer un cookie ne permet pas de franchir
+la frontière : l’audience, le type de compte, les méthodes d’authentification et
+la session persistée sont tous vérifiés côté backend.
+Le démarrage échoue si les deux noms de cookie ou audiences sont identiques, ou
+si la durée staff n’est pas strictement plus courte que la durée community.
 
 La configuration par défaut utilise `SameSite=lax`, adaptée à un front et une API sur le même site, par exemple `recipe-shelter.fr` et `api.recipe-shelter.fr`. Si vous passez en `SameSite=none` pour un vrai contexte cross-site, ajoutez une protection CSRF côté API.
 
@@ -315,12 +334,18 @@ Les valeurs par défaut sont définies dans `.env.example`.
 | `DB_PASSWORD` | Oui | Mot de passe MySQL. |
 | `DB_CONNECTION_LIMIT` | Non | Nombre maximal de connexions MySQL dans le pool. |
 | `JWT_SECRET` | Oui | Secret utilisé pour signer les tokens JWT. |
-| `JWT_EXPIRES_IN` | Non | Durée de validité des JWT. Défaut : `7d`. |
-| `AUTH_SESSION_COOKIE_NAME` | Non | Nom du cookie de session. Défaut : `rs_session`. |
+| `AUTH_APP_JWT_AUDIENCE` | Non | Audience JWT community. Défaut : `recipe-shelter-app`. |
+| `AUTH_APP_JWT_EXPIRES_IN` | Non | Durée du JWT community. Défaut : `7d`. |
+| `AUTH_APP_SESSION_COOKIE_NAME` | Non | Cookie community. Défaut : `rs_app_session`. |
+| `AUTH_APP_SESSION_COOKIE_MAX_AGE_MS` | Non | Durée du cookie community. Défaut : durée du JWT community. |
+| `AUTH_ADMIN_JWT_AUDIENCE` | Non | Audience JWT staff. Défaut : `recipe-shelter-admin`. |
+| `AUTH_ADMIN_JWT_EXPIRES_IN` | Non | Durée du JWT staff. Défaut : `8h`. |
+| `AUTH_ADMIN_SESSION_COOKIE_NAME` | Non | Cookie staff. Défaut : `rs_admin_session`. |
+| `AUTH_ADMIN_SESSION_COOKIE_MAX_AGE_MS` | Non | Durée du cookie staff. Défaut : durée du JWT staff. |
 | `AUTH_SESSION_COOKIE_SAME_SITE` | Non | Politique SameSite du cookie : `lax`, `strict` ou `none`. Défaut : `lax`. |
 | `AUTH_SESSION_COOKIE_SECURE` | Non | Force le flag `Secure`. Défaut : `true` en production, sinon `false`. |
 | `AUTH_SESSION_COOKIE_DOMAIN` | Non | Domaine du cookie si nécessaire, par exemple `.recipe-shelter.fr`. Défaut : non défini. |
-| `AUTH_SESSION_COOKIE_MAX_AGE_MS` | Non | Durée de vie du cookie en millisecondes. Défaut : dérivé de `JWT_EXPIRES_IN`. |
+| `AUTH_STAFF_MFA_ENCRYPTION_KEY` | Pour le login staff | Clé indépendante de 32 octets encodée en base64, utilisée pour déchiffrer les secrets TOTP staff. |
 | `BCRYPT_COST` | Non | Coût bcrypt pour le hash des mots de passe. Défaut : `12`. |
 | `AUTH_RATE_LIMIT_MAX_ATTEMPTS` | Non | Nombre maximal de tentatives sur les routes auth limitées. |
 | `AUTH_RATE_LIMIT_WINDOW_MS` | Non | Fenêtre du rate limit en millisecondes. |
