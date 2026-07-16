@@ -157,35 +157,13 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
             ]
         });
 
-        const [adminRoles] = await connection.query(
-            `SELECT r.Code
-             FROM StaffRoles AS sr
-             INNER JOIN Roles AS r ON r.Id = sr.RoleId
-             WHERE sr.StaffUserId = 1
-             ORDER BY r.Code`
-        );
-        assert.deepEqual(adminRoles, [{ Code: 'SuperAdmin' }]);
+        const [seededAccounts] = await connection.query(`SELECT COUNT(*) AS AccountCount FROM Users`);
+        assert.deepEqual(seededAccounts, [{ AccountCount: 0 }]);
 
-        const [adminPermissions] = await connection.query(
-            `SELECT DISTINCT p.Code
-             FROM StaffRoles AS sr
-             INNER JOIN RolePermissions AS rp ON rp.RoleId = sr.RoleId
-             INNER JOIN Permissions AS p ON p.Id = rp.PermissionId
-             WHERE sr.StaffUserId = 1
-             ORDER BY p.Code`
+        const [seededRoleAssignments] = await connection.query(
+            `SELECT COUNT(*) AS AssignmentCount FROM StaffRoles`
         );
-        assert.deepEqual(
-            (adminPermissions as Array<{ Code: string }>).map(({ Code }) => Code),
-            [...Object.values(PERMISSIONS)].sort()
-        );
-
-        const [anonymousPermissions] = await connection.query(
-            `SELECT COUNT(*) AS PermissionCount
-             FROM StaffRoles AS sr
-             INNER JOIN RolePermissions AS rp ON rp.RoleId = sr.RoleId
-             WHERE sr.StaffUserId = 2`
-        );
-        assert.deepEqual(anonymousPermissions, [{ PermissionCount: 0 }]);
+        assert.deepEqual(seededRoleAssignments, [{ AssignmentCount: 0 }]);
     });
 
     it('replays the seed without duplicating RBAC data', async () => {
@@ -205,12 +183,11 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
             { Code: 'UserAdmin', InstanceCount: 1 }
         ]);
 
-        const [adminRoleAssignments] = await connection.query(
+        const [staffRoleAssignments] = await connection.query(
             `SELECT COUNT(*) AS AssignmentCount
-             FROM StaffRoles
-             WHERE StaffUserId = 1`
+             FROM StaffRoles`
         );
-        assert.deepEqual(adminRoleAssignments, [{ AssignmentCount: 1 }]);
+        assert.deepEqual(staffRoleAssignments, [{ AssignmentCount: 0 }]);
 
         const [permissionInstances] = await connection.query(
             `SELECT Code, COUNT(*) AS InstanceCount

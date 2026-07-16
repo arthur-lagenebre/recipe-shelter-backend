@@ -18,6 +18,7 @@
     "test:mysql": "node --import tsx --test \"tests/integration/mysql/**/*.test.ts\"",
     "test:e2e": "node --import tsx --test \"tests/e2e/**/*.test.ts\"",
     "start": "node dist/server.js",
+    "bootstrap:superadmin": "node dist/cli/bootstrap-super-admin.js",
     "db:reset": "mysql -u root -p < database/reset.sql",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

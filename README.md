@@ -97,7 +97,8 @@ Ce script :
 
 - supprime la base `recipe_shelter` si elle existe ;
 - recrée le schéma ;
-- insère les données de référence minimales : rôles et permissions RBAC, catégories, ingrédients, groupes de tags, tags et ustensiles.
+- insère les données de référence minimales : rôles et permissions RBAC, catégories, ingrédients, groupes de tags, tags et ustensiles ;
+- ne crée aucun compte utilisateur ou staff par défaut.
 
 La réinitialisation crée aussi les profils spécialisés `CommunityProfiles` et
 `StaffProfiles`.
@@ -109,9 +110,8 @@ ne reçoivent aucun rôle RBAC.
 
 Chaque rôle possède un `Code` stable distinct de son nom d'affichage. Le seed
 initialise `RecipeModerator`, `CommentModerator`, `UserAdmin`, `CatalogManager`
-et `SuperAdmin`. Le compte admin de démonstration reçoit uniquement
-`SuperAdmin`, dont les permissions sont associées directement : ce rôle
-n'hérite pas automatiquement des rôles métier.
+et `SuperAdmin`. Les permissions de `SuperAdmin` sont associées directement :
+ce rôle n'hérite pas automatiquement des rôles métier.
 
 Les codes de permission sont stables, en minuscules et suivent la convention
 `domaine.action`. Aucune permission implicite ni wildcard n'est interprétée par
@@ -177,6 +177,21 @@ mysql -u votre_utilisateur -p < database/reset.sql
 ```
 
 Dans ce cas, mettez aussi `DB_USER` et `DB_PASSWORD` à jour dans `.env`.
+
+### Commande de bootstrap SuperAdmin
+
+La commande contrôlée reste disponible avec :
+
+```bash
+npm run build
+npm run bootstrap:superadmin -- --email superadmin@example.com --username superadmin
+```
+
+Le mot de passe et sa confirmation sont demandés interactivement sans écho. La
+commande ne possède volontairement aucun argument de mot de passe et crée le
+premier SuperAdmin dans une transaction uniquement si aucun SuperAdmin n'a déjà
+été initialisé. Une fois le premier SuperAdmin créé, toute nouvelle exécution
+est refusée, y compris si ce premier compte a ensuite été désactivé.
 
 ## Lancer le serveur
 
