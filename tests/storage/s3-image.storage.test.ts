@@ -3,6 +3,15 @@ import { describe, it } from 'node:test';
 
 import { S3ImageStorage } from '../../src/storage/s3-image.storage.js';
 
+const config = {
+    endpoint: 'https://private.example.test',
+    region: 'auto',
+    bucket: 'bucket',
+    accessKeyId: 'id',
+    secretAccessKey: 'secret',
+    publicBaseUrl: 'https://images.example.test'
+};
+
 describe('S3ImageStorage', () => {
     it('encapsulates S3 commands and builds public URLs independently from the endpoint', async () => {
         const commands: Array<{ constructor: { name: string }; input: Record<string, unknown> }> = [];
@@ -43,15 +52,40 @@ describe('S3ImageStorage', () => {
                 throw { name: 'NotFound', $metadata: { httpStatusCode: 404 } };
             }
         };
-        const storage = new S3ImageStorage({
-            endpoint: 'https://private.example.test',
-            region: 'auto',
-            bucket: 'bucket',
-            accessKeyId: 'id',
-            secretAccessKey: 'secret',
-            publicBaseUrl: 'https://images.example.test'
-        }, client as never);
+        const storage = new S3ImageStorage(config, client as never);
 
         assert.equal(await storage.exists('recipes/10/image-id/large.webp'), false);
+    });
+
+    it('recognizes every supported S3 not-found response shape', async () => {
+        for (const error of [
+            { name: 'NoSuchKey' },
+            { name: 'UnknownError', $metadata: { httpStatusCode: 404 } }
+        ]) {
+            const client = {
+                async send() {
+                    throw error;
+                }
+            };
+            const storage = new S3ImageStorage(config, client as never);
+
+            assert.equal(await storage.exists('recipes/10/image-id/large.webp'), false);
+        }
+    });
+
+    it('preserves unexpected S3 failures', async () => {
+        for (const error of [null, new Error('S3 unavailable')]) {
+            const client = {
+                async send() {
+                    throw error;
+                }
+            };
+            const storage = new S3ImageStorage(config, client as never);
+
+            await assert.rejects(
+                () => storage.exists('recipes/10/image-id/large.webp'),
+                (caught) => caught === error
+            );
+        }
     });
 });

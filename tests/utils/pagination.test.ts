@@ -57,6 +57,35 @@ describe('pagination', () => {
         );
     });
 
+    it('rejects invalid query and pagination value types', () => {
+        assert.throws(
+            () => parsePaginationQuery(null, 12, 'RECIPES_PAGINATION'),
+            (error) => {
+                assertHttpError(error, 'RECIPES_PAGINATION_BAD_QUERY', 400);
+
+                return true;
+            }
+        );
+
+        assert.throws(
+            () => parsePaginationQuery({ page: 2 }, 12, 'RECIPES_PAGINATION'),
+            (error) => {
+                assertHttpError(error, 'RECIPES_PAGINATION_BAD_PAGE', 400);
+
+                return true;
+            }
+        );
+
+        assert.throws(
+            () => parsePaginationQuery({ limit: 12 }, 12, 'RECIPES_PAGINATION'),
+            (error) => {
+                assertHttpError(error, 'RECIPES_PAGINATION_BAD_LIMIT', 400);
+
+                return true;
+            }
+        );
+    });
+
     it('creates pagination metadata from a total count', () => {
         assert.deepEqual(createPaginatedResult(['one'], 25, { page: 2, limit: 12, offset: 12 }), {
             items: ['one'],

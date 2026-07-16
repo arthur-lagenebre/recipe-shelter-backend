@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, it } from 'node:test';
@@ -61,6 +61,15 @@ describe('LocalImageStorage', () => {
         } finally {
             await server.close();
         }
+    });
+
+    it('does not create local media middleware for a non-local storage backend', () => {
+        assert.equal(createLocalMediaMiddleware({} as never), null);
+    });
+
+    it('preserves unexpected local filesystem delete failures', async () => {
+        await mkdir(path.join(root, 'directory'));
+        await assert.rejects(() => storage.delete('directory'));
     });
 
     it('rejects absolute paths, traversal, backslashes and malformed keys', async () => {
