@@ -75,7 +75,7 @@ export class AuthService {
     return this.staffMfa.beginAuthentication(authUser.id);
   }
 
-  async completeStaffLogin(input: { flowId: string; credential: AuthenticationResponseJSON }): Promise<{ user: User; token: string }> {
+  async completeStaffLogin(input: { flowId: string; credential: AuthenticationResponseJSON; ipAddress: string | null; userAgent: string | null; }): Promise<{ user: User; token: string }> {
     const mfa = await this.staffMfa.completeAuthentication(input.flowId, input.credential);
     const user = await this.users.findById(mfa.staffUserId);
 
@@ -83,7 +83,11 @@ export class AuthService {
       throw unauthorized('Invalid MFA assertion', 'AUTH_INVALID_MFA_ASSERTION');
 
     this.assertStaffCanAuthenticate(user);
-    const token = await this.createSession(user, 'admin', mfa);
+    const token = await this.createSession(user, 'admin', {
+      ...mfa,
+      ipAddress: input.ipAddress,
+      userAgent: input.userAgent
+    });
 
     return { user, token };
   }
@@ -118,7 +122,12 @@ export class AuthService {
     if (realm === 'app')
       await this.sessions.revokeCommunitySession(session.sessionId, session.userId);
     else
-      await this.sessions.revokeStaffSession(session.sessionId, session.userId);
+      await this.sessions.revokeStaffSession({
+        id: session.sessionId,
+        staffUserId: session.userId,
+        revokedByStaffUserId: session.userId,
+        revocationType: 'logout'
+      });
   }
 
   private async authenticatePassword(input: { mail: string; password: string }): Promise<UserWithPassword> {
@@ -158,11 +167,7 @@ export class AuthService {
       throw unauthorized('Staff account is disabled', 'STAFF_DISABLED');
   }
 
-  private async createSession(
-    user: User,
-    realm: SessionRealm,
-    mfa?: { credentialId: string; verifiedAt: Date }
-  ): Promise<string> {
+  private async createSession( user: User, realm: SessionRealm, mfa?: { credentialId: string; verifiedAt: Date; ipAddress: string | null; userAgent: string | null; }): Promise<string> {
     const sessionId = randomUUID();
     const realmConfig = realm === 'app' ? env.auth.app : env.auth.admin;
     const expiresAt = new Date(Date.now() + realmConfig.jwtExpiresInMs);
@@ -177,7 +182,9 @@ export class AuthService {
         userId: user.id,
         expiresAt,
         webAuthnCredentialId: mfa.credentialId,
-        mfaVerifiedAt: mfa.verifiedAt
+        mfaVerifiedAt: mfa.verifiedAt,
+        ipAddress: mfa.ipAddress,
+        userAgent: mfa.userAgent
       });
     }
 

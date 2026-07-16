@@ -32,7 +32,10 @@ export function createAuthController(authService: AuthService, passwordResetServ
   });
 
   const staffLoginVerify = asyncHandler(async (req, res) => {
-    const input = parseStaffLoginVerificationBody(req.body);
+    const input = {
+      ...parseStaffLoginVerificationBody(req.body),
+      ...getStaffSessionMetadata(req)
+    };
     const { token, user } = await authService.completeStaffLogin(input);
 
     setSessionCookie(res, 'admin', token);
@@ -147,5 +150,18 @@ export function createAuthController(authService: AuthService, passwordResetServ
     resetPassword,
     validateEmail,
     resendValidationEmail
+  };
+}
+
+function getStaffSessionMetadata(req: Parameters<Handler>[0]): { ipAddress: string | null; userAgent: string | null } {
+  const rawIpAddress = typeof req.ip === 'string' ? req.ip.trim() : '';
+  const rawUserAgent = req.headers?.['user-agent'];
+  const userAgent = Array.isArray(rawUserAgent) ? rawUserAgent[0] : rawUserAgent;
+
+  return {
+    ipAddress: rawIpAddress && rawIpAddress.length <= 45 ? rawIpAddress : null,
+    userAgent: typeof userAgent === 'string' && userAgent.trim()
+      ? userAgent.trim().slice(0, 512)
+      : null
   };
 }

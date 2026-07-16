@@ -14,6 +14,7 @@ export const PERMISSIONS = {
   catalogManage: 'catalog.manage',
   staffRead: 'staff.read',
   staffManage: 'staff.manage',
+  staffSessionRevoke: 'staff.session.revoke',
   auditRead: 'audit.read'
 } as const;
 

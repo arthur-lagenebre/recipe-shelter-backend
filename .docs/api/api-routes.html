@@ -385,8 +385,8 @@
       <div class="meta">
         <span class="pill">Base URL: <code>http://localhost:3000</code></span>
         <span class="pill">Préfixe API: <code>/api/v1</code></span>
-        <span class="pill">Mise à jour: 2026-05-23</span>
-        <span class="pill">Routes documentées: 63</span>
+        <span class="pill">Mise à jour: 2026-07-16</span>
+        <span class="pill">Routes documentées: 70</span>
       </div>
     </div>
   </header>
@@ -400,11 +400,11 @@
           <span>Domaines de routes montés dans <code>src/app.ts</code></span>
         </div>
         <div class="summary-card">
-          <strong>66</strong>
+          <strong>70</strong>
           <span>Endpoints HTTP actifs</span>
         </div>
         <div class="summary-card">
-          <strong>21</strong>
+          <strong>23</strong>
           <span>Routes admin protégées</span>
         </div>
         <div class="summary-card">
@@ -426,6 +426,7 @@
         <a href="#admin-recipes">Admin recipes</a>
         <a href="#admin-comments">Admin comments</a>
         <a href="#admin-users">Admin users</a>
+        <a href="#admin-staff-sessions">Admin staff sessions</a>
       </nav>
 
       <p class="note">Les routes marquées "Auth optionnelle" acceptent uniquement le cookie community <code>rs_app_session</code> mais fonctionnent aussi sans session. Le cookie staff <code>rs_admin_session</code> n'est jamais interprété par les routes applicatives.</p>
@@ -602,6 +603,20 @@ type PaginatedResult&lt;T&gt; = {
               <td><code>200</code> <code>{ "auth": ... }</code>.</td>
             </tr>
             <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/admin/auth/sessions</code></td>
+              <td><span class="auth">Session staff + MFA</span></td>
+              <td>Aucun.</td>
+              <td><code>200</code> <code>{ "sessions": StaffSession[] }</code>. Uniquement les sessions actives du compte courant.</td>
+            </tr>
+            <tr>
+              <td><span class="method delete">DELETE</span></td>
+              <td><code>/api/v1/admin/auth/sessions/:sessionId</code></td>
+              <td><span class="auth">Session staff + MFA</span></td>
+              <td><code>sessionId</code> UUID d’une session propre active.</td>
+              <td><code>204</code>. Supprime aussi le cookie admin si la session courante est révoquée.</td>
+            </tr>
+            <tr>
               <td><span class="method post">POST</span></td>
               <td><code>/api/v1/admin/auth/logout</code></td>
               <td><span class="auth public">Public</span></td>
@@ -656,13 +671,24 @@ type AuthTokenPayload = {
   sub: number;
   username: string;
   accountType: AccountType;
-  amr: ["pwd"] | ["pwd", "mfa"];
+  amr: ["pwd"] | ["pwd", "webauthn"];
   aud: "recipe-shelter-app" | "recipe-shelter-admin";
   jti: string;
 };
 
 type AuthMeResponse = {
   auth: AuthContext;
+};
+
+type StaffSession = {
+  id: string;
+  mfaMethod: "webauthn";
+  mfaVerifiedAt: ISODateString;
+  ipAddress: string | null;
+  userAgent: string | null;
+  expiresAt: ISODateString;
+  createdAt: ISODateString;
+  isCurrent: boolean;
 };</code></pre>
         </article>
 
@@ -1949,6 +1975,40 @@ type UnbanUserRequest = {
 type BanUserResponse = OkResponse;
 type UnbanUserResponse = OkResponse;</code></pre>
         </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="admin-staff-sessions">
+      <h2 id="admin-staff-sessions">Admin staff sessions</h2>
+      <p class="section-intro">Consultation des sessions actives d’un compte staff avec <code>staff.read</code> et révocation administrative avec <code>staff.session.revoke</code>. Le credential WebAuthn, les clés, challenges, cookies et JWT ne sont jamais exposés.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Méthode</th>
+              <th>Route</th>
+              <th>Auth</th>
+              <th>Body / Query</th>
+              <th>Réponse</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/admin/staff/:staffUserId/sessions</code></td>
+              <td><span class="auth admin">Admin + <code>staff.read</code></span></td>
+              <td><code>staffUserId</code> entier positif.</td>
+              <td><code>200</code> <code>{ "staff": { "id": number, "username": string }, "sessions": StaffSession[] }</code>.</td>
+            </tr>
+            <tr>
+              <td><span class="method delete">DELETE</span></td>
+              <td><code>/api/v1/admin/staff/:staffUserId/sessions/:sessionId</code></td>
+              <td><span class="auth admin">Admin + <code>staff.session.revoke</code></span></td>
+              <td><code>staffUserId</code> entier positif et <code>sessionId</code> UUID.</td>
+              <td><code>204</code>, ou <code>404 STAFF_SESSION_NOT_FOUND</code> si cette session active n’appartient pas au compte ciblé.</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </section>
 

@@ -15,6 +15,8 @@
 @staffMfaFlowId = PASTE_STAFF_MFA_FLOW_ID_HERE
 @staffLoginFlowId = PASTE_STAFF_LOGIN_FLOW_ID_HERE
 @adminSessionCookie = PASTE_RS_ADMIN_SESSION_COOKIE_HERE
+@staffSessionId = PASTE_STAFF_SESSION_UUID_HERE
+@managedStaffUserId = 1
 
 ### Register
 POST {{baseUrl}}/auth/register
@@ -98,6 +100,22 @@ Content-Type: application/json
 
 ### Staff auth me
 GET {{baseUrl}}/admin/auth/me
+Cookie: rs_admin_session={{adminSessionCookie}}
+
+### List own active staff sessions
+GET {{baseUrl}}/admin/auth/sessions
+Cookie: rs_admin_session={{adminSessionCookie}}
+
+### Revoke one own staff session
+DELETE {{baseUrl}}/admin/auth/sessions/{{staffSessionId}}
+Cookie: rs_admin_session={{adminSessionCookie}}
+
+### List a managed staff user's active sessions (staff.read)
+GET {{baseUrl}}/admin/staff/{{managedStaffUserId}}/sessions
+Cookie: rs_admin_session={{adminSessionCookie}}
+
+### Revoke a managed staff session (staff.session.revoke)
+DELETE {{baseUrl}}/admin/staff/{{managedStaffUserId}}/sessions/{{staffSessionId}}
 Cookie: rs_admin_session={{adminSessionCookie}}
 
 ### Staff logout

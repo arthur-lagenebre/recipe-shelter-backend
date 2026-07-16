@@ -23,5 +23,7 @@ export const adminAuthorizationPolicies = [
   { method: 'get', path: '/users/banned/count', permission: PERMISSIONS.usersRead },
   { method: 'get', path: '/users/:id', permission: PERMISSIONS.usersRead },
   { method: 'post', path: '/users/:id/ban', permission: PERMISSIONS.usersModerate },
-  { method: 'post', path: '/users/:id/unban', permission: PERMISSIONS.usersModerate }
+  { method: 'post', path: '/users/:id/unban', permission: PERMISSIONS.usersModerate },
+  { method: 'get', path: '/staff/:staffUserId/sessions', permission: PERMISSIONS.staffRead },
+  { method: 'delete', path: '/staff/:staffUserId/sessions/:sessionId', permission: PERMISSIONS.staffSessionRevoke }
 ] as const satisfies readonly AuthorizationPolicy[];

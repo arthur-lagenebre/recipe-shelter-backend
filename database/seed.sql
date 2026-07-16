@@ -38,7 +38,8 @@ INSERT INTO Permissions (Id, Code, Description) VALUES
 (13, 'catalog.manage', "Créer, modifier et supprimer des catégories, ingrédients, tags et ustensiles"),
 (14, 'staff.read', "Consulter les comptes staff et leurs rôles"),
 (15, 'staff.manage', "Inviter, modifier, désactiver et gérer les rôles des comptes staff"),
-(16, 'audit.read', "Consulter le journal d'audit administratif")
+(16, 'staff.session.revoke', "Révoquer les sessions actives des comptes staff"),
+(17, 'audit.read', "Consulter le journal d'audit administratif")
 AS new_permissions
 ON DUPLICATE KEY UPDATE
   Code = new_permissions.Code,
@@ -80,6 +81,7 @@ FROM (
   UNION ALL SELECT 'SuperAdmin', 'catalog.manage'
   UNION ALL SELECT 'SuperAdmin', 'staff.read'
   UNION ALL SELECT 'SuperAdmin', 'staff.manage'
+  UNION ALL SELECT 'SuperAdmin', 'staff.session.revoke'
   UNION ALL SELECT 'SuperAdmin', 'audit.read'
 ) AS role_permission_matrix
 INNER JOIN Roles AS roles ON roles.Code = role_permission_matrix.RoleCode

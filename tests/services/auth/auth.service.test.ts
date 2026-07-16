@@ -222,7 +222,9 @@ describe('AuthService', () => {
 
     const result = await service.completeStaffLogin({
       flowId: 'authentication-flow',
-      credential: authenticationCredential
+      credential: authenticationCredential,
+      ipAddress: '192.0.2.10',
+      userAgent: 'Recipe Shelter test client'
     });
     const payload = jwt.verify(result.token, env.auth.jwtSecret, { audience: env.auth.admin.jwtAudience }) as jwt.JwtPayload;
 
@@ -230,6 +232,8 @@ describe('AuthService', () => {
     assert.deepEqual(payload.amr, ['pwd', 'webauthn']);
     assert.ok(payload.jti && sessions.staffSessions.has(payload.jti));
     assert.equal(sessions.staffSessions.get(payload.jti ?? '')?.webAuthnCredentialId, 'credential-1');
+    assert.equal(sessions.staffSessions.get(payload.jti ?? '')?.ipAddress, '192.0.2.10');
+    assert.equal(sessions.staffSessions.get(payload.jti ?? '')?.userAgent, 'Recipe Shelter test client');
     assert.ok((payload.exp ?? 0) - (payload.iat ?? 0) < env.auth.app.jwtExpiresInMs / 1000);
     assert.throws(() => jwt.verify(result.token, env.auth.jwtSecret, { audience: env.auth.app.jwtAudience }));
   });
@@ -244,7 +248,12 @@ describe('AuthService', () => {
 
     staffMfa.authenticationCompleted = false;
     await assert.rejects(
-      () => service.completeStaffLogin({ flowId: 'flow', credential: authenticationCredential }),
+      () => service.completeStaffLogin({
+        flowId: 'flow',
+        credential: authenticationCredential,
+        ipAddress: null,
+        userAgent: null
+      }),
       (error) => assertHttpError(error, 'AUTH_INVALID_MFA_ASSERTION', 401)
     );
     assert.equal(sessions.staffSessions.size, 0);

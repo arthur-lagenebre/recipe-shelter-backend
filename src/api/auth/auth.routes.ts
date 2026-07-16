@@ -4,6 +4,7 @@ import { rateLimiter } from '../../middlewares/rate-limiter.js';
 import { requireCommunityAuth, requireStaffAuth } from '../../middlewares/require-auth.js';
 import { env } from '../../utils/env.js';
 
+import type { StaffSessionsController } from '../admin/staff-sessions.routes.js';
 import type { RequestHandler } from 'express';
 
 type AuthController = {
@@ -38,7 +39,7 @@ export function createAuthRouter(controller: AuthController) {
   return router;
 }
 
-export function createStaffAuthRouter(controller: AuthController) {
+export function createStaffAuthRouter(controller: AuthController, staffSessionsController: StaffSessionsController) {
   const router = Router();
   const authRateLimiter = rateLimiter(env.auth.rateLimitMaxAttempts, env.auth.rateLimitWindowMs);
 
@@ -47,6 +48,8 @@ export function createStaffAuthRouter(controller: AuthController) {
   router.post('/mfa/enrollment/options', authRateLimiter, controller.staffMfaEnrollmentOptions);
   router.post('/mfa/enrollment/verify', authRateLimiter, controller.staffMfaEnrollmentVerify);
   router.get('/me', requireStaffAuth, controller.me);
+  router.get('/sessions', requireStaffAuth, staffSessionsController.listOwn);
+  router.delete('/sessions/:sessionId', requireStaffAuth, staffSessionsController.revokeOwn);
   router.post('/logout', controller.staffLogout);
 
   return router;

@@ -106,7 +106,9 @@ La réinitialisation crée aussi les profils spécialisés `CommunityProfiles` e
 de vérification MFA et référence obligatoirement le credential de
 `StaffWebAuthnCredentials` utilisé. Un profil staff ne peut pas devenir actif
 tant qu’un passkey ou une clé de sécurité WebAuthn avec vérification utilisateur
-n’a pas été enregistré.
+n’a pas été enregistré. Les sessions staff conservent aussi l’adresse IP, le
+user-agent et, en cas de révocation, l’identité staff à l’origine de l’action et
+son contexte (`logout`, `self` ou `admin`).
 
 Les comptes staff cumulent leurs rôles via `StaffRoles`. Leurs permissions
 effectives proviennent exclusivement de `RolePermissions` ; un compte sans rôle
@@ -129,7 +131,7 @@ le backend. Le catalogue initial est le suivant :
 | Commentaires | `comments.read`, `comments.moderate`, `comments.update`, `comments.delete` |
 | Utilisateurs community | `users.read`, `users.moderate` |
 | Catalogue | `catalog.read`, `catalog.manage` |
-| Staff | `staff.read`, `staff.manage` |
+| Staff | `staff.read`, `staff.manage`, `staff.session.revoke` |
 | Audit | `audit.read` |
 
 La matrice initiale est explicite et insérée de manière idempotente par le seed :
@@ -261,7 +263,11 @@ Exemples :
 - `POST /api/v1/admin/auth/login/verify`
 - `POST /api/v1/admin/auth/mfa/enrollment/options`
 - `POST /api/v1/admin/auth/mfa/enrollment/verify`
+- `GET /api/v1/admin/auth/sessions`
+- `DELETE /api/v1/admin/auth/sessions/:sessionId`
 - `POST /api/v1/admin/auth/logout`
+- `GET /api/v1/admin/staff/:staffUserId/sessions`
+- `DELETE /api/v1/admin/staff/:staffUserId/sessions/:sessionId`
 - `GET /api/v1/categories`
 - `GET /api/v1/ingredients`
 - `GET /api/v1/tags`
@@ -328,6 +334,18 @@ la vérification utilisateur (PIN ou biométrie) est obligatoire.
 exclusivement ce cookie. Copier ou renommer un cookie ne permet pas de franchir
 la frontière : l’audience, le type de compte, les méthodes d’authentification et
 la session persistée sont tous vérifiés côté backend.
+
+`GET /api/v1/admin/auth/sessions` liste les sessions MFA actives du compte
+staff courant. `DELETE /api/v1/admin/auth/sessions/:sessionId` permet de révoquer
+l’une de ses propres sessions et supprime le cookie admin lorsqu’il s’agit de la
+session courante. L’administration utilise
+`GET /api/v1/admin/staff/:staffUserId/sessions` avec `staff.read` et
+`DELETE /api/v1/admin/staff/:staffUserId/sessions/:sessionId` avec
+`staff.session.revoke`. Les réponses exposent uniquement l’identifiant de
+gestion, l’IP, le user-agent, la méthode et la date MFA, les dates de création et
+d’expiration et l’indicateur de session courante ; elles ne contiennent jamais
+le JWT, le cookie, le credential WebAuthn, sa clé publique ou un challenge.
+
 Le démarrage échoue si les deux noms de cookie ou audiences sont identiques, ou
 si la durée staff n’est pas strictement plus courte que la durée community.
 

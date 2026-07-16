@@ -4,6 +4,7 @@ import { after, before, describe, it } from 'node:test';
 
 import mysql from 'mysql2/promise';
 
+import { SessionRepositoryMysql } from '../../../src/repositories/auth/session.repository.mysql.js';
 import { StaffMfaRepositoryMysql } from '../../../src/repositories/auth/staff-mfa.repository.mysql.js';
 import { PERMISSIONS } from '../../../src/security/permissions.js';
 import { env } from '../../../src/utils/env.js';
@@ -334,8 +335,10 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
         await connection.query(
             `INSERT INTO CommunitySessions (Id, CommunityUserId, ExpiresAt)
              VALUES ('00000000-0000-4000-8000-000000000120', 120, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 1 DAY));
-             INSERT INTO StaffSessions (Id, StaffUserId, WebAuthnCredentialId, MfaVerifiedAt, ExpiresAt)
+             INSERT INTO StaffSessions
+               (Id, StaffUserId, WebAuthnCredentialId, MfaVerifiedAt, IpAddress, UserAgent, ExpiresAt)
              VALUES ('00000000-0000-4000-8000-000000000121', 121, 'credential-121', CURRENT_TIMESTAMP,
+                     '192.0.2.121', 'Recipe Shelter schema test',
                      DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 8 HOUR))`
         );
 
@@ -358,6 +361,46 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
              VALUES ('00000000-0000-4000-8000-000000000125', 121, 'credential-121', NULL,
                      DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 8 HOUR))`
         ));
+        await assert.rejects(() => connection.query(
+            `UPDATE StaffSessions
+             SET RevokedByStaffUserId = 121, RevocationType = 'self'
+             WHERE Id = '00000000-0000-4000-8000-000000000121'`
+        ));
+
+        const sessions = new SessionRepositoryMysql(pool);
+        const activeSessions = await sessions.findActiveStaffSessionsByUserId(121);
+        assert.equal(activeSessions.length, 1);
+        assert.deepEqual({
+            id: activeSessions[0]?.id,
+            mfaMethod: activeSessions[0]?.mfaMethod,
+            ipAddress: activeSessions[0]?.ipAddress,
+            userAgent: activeSessions[0]?.userAgent
+        }, {
+            id: '00000000-0000-4000-8000-000000000121',
+            mfaMethod: 'webauthn',
+            ipAddress: '192.0.2.121',
+            userAgent: 'Recipe Shelter schema test'
+        });
+        assert.equal('webAuthnCredentialId' in (activeSessions[0] as unknown as Record<string, unknown>), false);
+        assert.equal(await sessions.revokeStaffSession({
+            id: '00000000-0000-4000-8000-000000000121',
+            staffUserId: 121,
+            revokedByStaffUserId: 121,
+            revocationType: 'self'
+        }), true);
+        assert.deepEqual(await sessions.findActiveStaffSessionsByUserId(121), []);
+
+        const [revokedSession] = await connection.query(
+            `SELECT IpAddress, UserAgent, RevokedByStaffUserId, RevocationType
+             FROM StaffSessions
+             WHERE Id = '00000000-0000-4000-8000-000000000121'`
+        );
+        assert.deepEqual(revokedSession, [{
+            IpAddress: '192.0.2.121',
+            UserAgent: 'Recipe Shelter schema test',
+            RevokedByStaffUserId: 121,
+            RevocationType: 'self'
+        }]);
     });
 
     it('completes enrollment and authentication atomically through the WebAuthn repository', async () => {

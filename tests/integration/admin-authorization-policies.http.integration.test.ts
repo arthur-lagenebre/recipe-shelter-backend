@@ -8,6 +8,7 @@ import { createAdminCommentsRouter } from '../../src/api/admin/admin.comments.ro
 import { adminAuthorizationPolicies } from '../../src/api/admin/admin.authorization.js';
 import { createAdminRecipesRouter } from '../../src/api/admin/admin.recipes.routes.js';
 import { createAdminUsersRouter } from '../../src/api/admin/admin.users.routes.js';
+import { createAdminStaffSessionsRouter } from '../../src/api/admin/staff-sessions.routes.js';
 import { createHealthRouter } from '../../src/api/health/health.routes.js';
 import { EnforceAuthorizationPolicies } from '../../src/middlewares/authorization.js';
 import { errorHandler } from '../../src/middlewares/error-handler.js';
@@ -50,6 +51,8 @@ const ADMIN_POLICIES: AdminPolicy[] = [
     { method: 'GET', path: '/api/v1/admin/users/2', permission: PERMISSIONS.usersRead },
     { method: 'POST', path: '/api/v1/admin/users/2/ban', permission: PERMISSIONS.usersModerate },
     { method: 'POST', path: '/api/v1/admin/users/2/unban', permission: PERMISSIONS.usersModerate },
+    { method: 'GET', path: '/api/v1/admin/staff/2/sessions', permission: PERMISSIONS.staffRead },
+    { method: 'DELETE', path: '/api/v1/admin/staff/2/sessions/00000000-0000-4000-8000-000000000002', permission: PERMISSIONS.staffSessionRevoke },
     { method: 'GET', path: '/api/v1/health/live', permission: PERMISSIONS.systemHealthRead },
     { method: 'GET', path: '/api/v1/health/ready', permission: PERMISSIONS.systemHealthRead },
     { method: 'GET', path: '/api/v1/health', permission: PERMISSIONS.systemHealthRead }
@@ -134,6 +137,12 @@ describe('administrative endpoint authorization policies', () => {
             getUserProfile: endpointHandler,
             banUser: endpointHandler,
             unbanUser: endpointHandler
+        }));
+        adminRouter.use('/staff', createAdminStaffSessionsRouter({
+            listOwn: endpointHandler,
+            revokeOwn: endpointHandler,
+            listManaged: endpointHandler,
+            revokeManaged: endpointHandler
         }));
         const defaultDenyHandler: RequestHandler = (_req, res) => {
             defaultDenyControllerCalls += 1;

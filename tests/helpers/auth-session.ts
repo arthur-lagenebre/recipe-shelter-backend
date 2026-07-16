@@ -3,20 +3,21 @@ import { randomUUID } from 'node:crypto';
 import { signSessionToken } from '../../src/services/auth/session-token.js';
 import { adminSessionCookieName, appSessionCookieName } from '../../src/utils/session-cookie.js';
 
-import type { CreateCommunitySessionInput, CreateStaffSessionInput, SessionRepository } from '../../src/repositories/auth/session.repository.interface.js';
+import type { CreateCommunitySessionInput, CreateStaffSessionInput, RevokeStaffSessionInput, SessionRepository, StaffSession } from '../../src/repositories/auth/session.repository.interface.js';
 import type { User } from '../../src/repositories/users/user.types.js';
 import type { SessionRealm } from '../../src/utils/session-cookie.js';
 
 export class TestSessionRepository implements SessionRepository {
   readonly communitySessions = new Map<string, CreateCommunitySessionInput>();
-  readonly staffSessions = new Map<string, CreateStaffSessionInput>();
+  readonly staffSessions = new Map<string, CreateStaffSessionInput & { createdAt: Date }>();
+  readonly staffRevocations: RevokeStaffSessionInput[] = [];
 
   async createCommunitySession(input: CreateCommunitySessionInput): Promise<void> {
     this.communitySessions.set(input.id, input);
   }
 
   async createStaffSession(input: CreateStaffSessionInput): Promise<void> {
-    this.staffSessions.set(input.id, input);
+    this.staffSessions.set(input.id, { ...input, createdAt: new Date() });
   }
 
   async isCommunitySessionActive(id: string, userId: number): Promise<boolean> {
@@ -29,14 +30,34 @@ export class TestSessionRepository implements SessionRepository {
     return Boolean(session?.userId === userId && Boolean(session.webAuthnCredentialId) && session.mfaVerifiedAt instanceof Date && session.expiresAt.getTime() > Date.now());
   }
 
+  async findActiveStaffSessionsByUserId(userId: number): Promise<StaffSession[]> {
+    return [...this.staffSessions.values()]
+      .filter((session) => session.userId === userId && session.expiresAt.getTime() > Date.now())
+      .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
+      .map((session) => ({
+        id: session.id,
+        mfaMethod: 'webauthn',
+        mfaVerifiedAt: session.mfaVerifiedAt,
+        ipAddress: session.ipAddress,
+        userAgent: session.userAgent,
+        expiresAt: session.expiresAt,
+        createdAt: session.createdAt
+      }));
+  }
+
   async revokeCommunitySession(id: string, userId: number): Promise<void> {
     if (this.communitySessions.get(id)?.userId === userId)
       this.communitySessions.delete(id);
   }
 
-  async revokeStaffSession(id: string, userId: number): Promise<void> {
-    if (this.staffSessions.get(id)?.userId === userId)
-      this.staffSessions.delete(id);
+  async revokeStaffSession(input: RevokeStaffSessionInput): Promise<boolean> {
+    this.staffRevocations.push(input);
+    const session = this.staffSessions.get(input.id);
+    if (session?.userId !== input.staffUserId || session.expiresAt.getTime() <= Date.now())
+      return false;
+
+    this.staffSessions.delete(input.id);
+    return true;
   }
 
   async issueCookie(user: User, realm: SessionRealm): Promise<string> {
@@ -51,7 +72,9 @@ export class TestSessionRepository implements SessionRepository {
         userId: user.id,
         expiresAt,
         webAuthnCredentialId: 'test-staff-credential',
-        mfaVerifiedAt: new Date()
+        mfaVerifiedAt: new Date(),
+        ipAddress: '127.0.0.1',
+        userAgent: 'Recipe Shelter test client'
       });
 
     const token = signSessionToken(user, realm, id);

@@ -9,6 +9,8 @@ import { createAdminRecipesController } from './api/admin/admin.recipes.controll
 import { createAdminRecipesRouter } from './api/admin/admin.recipes.routes.js';
 import { createAdminUsersController } from './api/admin/admin.users.controller.js';
 import { createAdminUsersRouter } from './api/admin/admin.users.routes.js';
+import { createStaffSessionsController } from './api/admin/staff-sessions.controller.js';
+import { createAdminStaffSessionsRouter } from './api/admin/staff-sessions.routes.js';
 import { createAuthController } from './api/auth/auth.controller.js';
 import { createAuthRouter, createStaffAuthRouter } from './api/auth/auth.routes.js';
 import { createCategoryController } from './api/category/category.controller.js';
@@ -60,6 +62,7 @@ import { AuthService } from './services/auth/auth.service.js';
 import { EmailValidationService } from './services/auth/email-validation.service.js';
 import { PasswordResetService } from './services/auth/password-reset.service.js';
 import { StaffMfaService } from './services/auth/staff-mfa.service.js';
+import { StaffSessionService } from './services/auth/staff-session.service.js';
 import { CategoryService } from './services/category/category.service.js';
 import { CommentService } from './services/comments/comments.service.js';
 import { ContactService } from './services/contact/contact.service.js';
@@ -101,6 +104,7 @@ export type AppDependencies = {
   passwordResetService: PasswordResetService;
   recipeImageService: RecipeImageService;
   recipeService: RecipeService;
+  staffSessionService: StaffSessionService;
   tagService: TagService;
   usersService: UserService;
 };
@@ -152,6 +156,7 @@ function createDefaultDependencies(): AppDependencies {
     passwordResetService: new PasswordResetService(userRepository, passwordResetRepository, mailer, env.http.frontendBaseUrl),
     recipeImageService,
     recipeService: new RecipeService(recipeRepository, recipeSlugService),
+    staffSessionService: new StaffSessionService(sessionRepository, userRepository),
     tagService: new TagService(tagRepository),
     usersService: new UserService(userRepository, recipeRepository)
   };
@@ -186,6 +191,7 @@ export function createApp(overrides: Partial<AppDependencies> = {}) {
   const adminRecipesController = createAdminRecipesController(dependencies.adminRecipeService);
   const adminUsersController = createAdminUsersController(dependencies.adminUserService);
   const authController = createAuthController(dependencies.authService, dependencies.passwordResetService, dependencies.emailValidationService);
+  const staffSessionsController = createStaffSessionsController(dependencies.staffSessionService);
   const categoryController = createCategoryController(dependencies.categoryService);
   const commentsController = createCommentsController(dependencies.commentService);
   const contactController = createContactController(dependencies.contactService);
@@ -197,10 +203,11 @@ export function createApp(overrides: Partial<AppDependencies> = {}) {
   const usersController = createUsersController(dependencies.usersService);
 
   const adminRouter = express.Router();
-  adminRouter.use('/auth', createStaffAuthRouter(authController));
+  adminRouter.use('/auth', createStaffAuthRouter(authController, staffSessionsController));
   adminRouter.use(requireStaffAuth, EnforceAuthorizationPolicies(adminAuthorizationPolicies));
   adminRouter.use('/comments', createAdminCommentsRouter(adminCommentsController));
   adminRouter.use('/recipes', createAdminRecipesRouter(adminRecipesController));
+  adminRouter.use('/staff', createAdminStaffSessionsRouter(staffSessionsController));
   adminRouter.use('/users', createAdminUsersRouter(adminUsersController));
 
   app.use('/api/v1/admin', adminRouter);

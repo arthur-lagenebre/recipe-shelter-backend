@@ -12,7 +12,21 @@ function createPool(active = true) {
   const pool = {
     async execute(sql: string, params: unknown[]) {
       statements.push({ sql, params });
-      return [active && /^SELECT/.test(sql.trim()) ? [{ One: 1 }] : [], []];
+      if (/^SELECT 1/.test(sql.trim()))
+        return [active ? [{ One: 1 }] : [], []];
+      if (/^SELECT Id/.test(sql.trim())) {
+        return [[{
+          Id: 'staff-id',
+          MfaMethod: 'webauthn',
+          MfaVerifiedAt: new Date('2026-07-16T10:00:00.000Z'),
+          IpAddress: '192.0.2.10',
+          UserAgent: 'Recipe Shelter test client',
+          ExpiresAt: new Date('2026-07-17T10:00:00.000Z'),
+          CreatedAt: new Date('2026-07-16T10:00:01.000Z')
+        }], []];
+      }
+
+      return [{ affectedRows: active ? 1 : 0 }, []];
     }
   } as unknown as Pool;
 
@@ -32,13 +46,43 @@ describe('SessionRepositoryMysql', () => {
       userId: 1,
       expiresAt,
       webAuthnCredentialId: 'credential-id',
-      mfaVerifiedAt
+      mfaVerifiedAt,
+      ipAddress: '192.0.2.10',
+      userAgent: 'Recipe Shelter test client'
     });
 
     assert.match(fake.statements[0]?.sql ?? '', /INSERT INTO CommunitySessions/);
     assert.deepEqual(fake.statements[0]?.params, ['community-id', 2, expiresAt]);
-    assert.match(fake.statements[1]?.sql ?? '', /INSERT INTO StaffSessions[\s\S]+WebAuthnCredentialId[\s\S]+MfaVerifiedAt/);
-    assert.deepEqual(fake.statements[1]?.params, ['staff-id', 1, 'credential-id', mfaVerifiedAt, expiresAt]);
+    assert.match(fake.statements[1]?.sql ?? '', /INSERT INTO StaffSessions[\s\S]+WebAuthnCredentialId[\s\S]+IpAddress[\s\S]+UserAgent/);
+    assert.deepEqual(fake.statements[1]?.params, [
+      'staff-id',
+      1,
+      'credential-id',
+      mfaVerifiedAt,
+      '192.0.2.10',
+      'Recipe Shelter test client',
+      expiresAt
+    ]);
+  });
+
+  it('lists only active MFA-backed staff sessions without selecting credential secrets', async () => {
+    const fake = createPool();
+    const repository = new SessionRepositoryMysql(fake.pool);
+
+    const sessions = await repository.findActiveStaffSessionsByUserId(1);
+
+    assert.deepEqual(sessions, [{
+      id: 'staff-id',
+      mfaMethod: 'webauthn',
+      mfaVerifiedAt: new Date('2026-07-16T10:00:00.000Z'),
+      ipAddress: '192.0.2.10',
+      userAgent: 'Recipe Shelter test client',
+      expiresAt: new Date('2026-07-17T10:00:00.000Z'),
+      createdAt: new Date('2026-07-16T10:00:01.000Z')
+    }]);
+    assert.deepEqual(fake.statements[0]?.params, [1]);
+    assert.match(fake.statements[0]?.sql ?? '', /FROM StaffSessions[\s\S]+RevokedAt IS NULL[\s\S]+ExpiresAt > CURRENT_TIMESTAMP/);
+    assert.doesNotMatch(fake.statements[0]?.sql ?? '', /SELECT[\s\S]*WebAuthnCredentialId,/);
   });
 
   it('checks expiry, revocation and MFA for the matching session realm', async () => {
@@ -57,11 +101,18 @@ describe('SessionRepositoryMysql', () => {
     const repository = new SessionRepositoryMysql(fake.pool);
 
     await repository.revokeCommunitySession('community-id', 2);
-    await repository.revokeStaffSession('staff-id', 1);
+    const revoked = await repository.revokeStaffSession({
+      id: 'staff-id',
+      staffUserId: 1,
+      revokedByStaffUserId: 9,
+      revocationType: 'admin'
+    });
 
     assert.match(fake.statements[0]?.sql ?? '', /UPDATE CommunitySessions/);
     assert.deepEqual(fake.statements[0]?.params, ['community-id', 2]);
     assert.match(fake.statements[1]?.sql ?? '', /UPDATE StaffSessions/);
-    assert.deepEqual(fake.statements[1]?.params, ['staff-id', 1]);
+    assert.match(fake.statements[1]?.sql ?? '', /RevokedByStaffUserId = \?[\s\S]+RevocationType = \?/);
+    assert.deepEqual(fake.statements[1]?.params, [9, 'admin', 'staff-id', 1]);
+    assert.equal(revoked, false);
   });
 });

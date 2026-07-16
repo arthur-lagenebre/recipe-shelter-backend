@@ -229,13 +229,18 @@ CREATE TABLE StaffSessions (
   WebAuthnCredentialId VARCHAR(2048) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   MfaMethod ENUM('webauthn') NOT NULL DEFAULT 'webauthn',
   MfaVerifiedAt DATETIME NOT NULL,
+  IpAddress VARCHAR(45) CHARACTER SET ascii COLLATE ascii_bin NULL,
+  UserAgent VARCHAR(512) NULL,
   ExpiresAt DATETIME NOT NULL,
   RevokedAt DATETIME NULL,
+  RevokedByStaffUserId BIGINT UNSIGNED NULL,
+  RevocationType ENUM('logout', 'self', 'admin') NULL,
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (Id),
   KEY idx_staff_sessions_user_id (StaffUserId),
   KEY idx_staff_sessions_user_credential (StaffUserId, WebAuthnCredentialId),
   KEY idx_staff_sessions_expires_at (ExpiresAt),
+  KEY idx_staff_sessions_revoked_by_user_id (RevokedByStaffUserId),
   CONSTRAINT staff_sessions_user_FK
     FOREIGN KEY (StaffUserId) REFERENCES StaffProfiles(UserId)
     ON UPDATE CASCADE
@@ -245,7 +250,16 @@ CREATE TABLE StaffSessions (
     REFERENCES StaffWebAuthnCredentials(StaffUserId, CredentialId)
     ON UPDATE CASCADE
     ON DELETE CASCADE,
-  CONSTRAINT staff_sessions_expiry_CK CHECK (ExpiresAt > CreatedAt)
+  CONSTRAINT staff_sessions_revoked_by_user_FK
+    FOREIGN KEY (RevokedByStaffUserId) REFERENCES StaffProfiles(UserId)
+    ON UPDATE RESTRICT
+    ON DELETE RESTRICT,
+  CONSTRAINT staff_sessions_expiry_CK CHECK (ExpiresAt > CreatedAt),
+  CONSTRAINT staff_sessions_revocation_CK
+    CHECK (
+      (RevokedAt IS NULL AND RevokedByStaffUserId IS NULL AND RevocationType IS NULL)
+      OR (RevokedAt IS NOT NULL AND RevocationType IS NOT NULL)
+    )
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TRIGGER users_community_profile_AI

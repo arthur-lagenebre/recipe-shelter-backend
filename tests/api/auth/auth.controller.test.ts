@@ -135,8 +135,10 @@ describe('auth.controller', () => {
 
     it('sets only the shorter admin cookie after WebAuthn verification', async () => {
         const staffUser = { ...user, accountType: 'staff', status: 'active' } as const;
+        const receivedInputs: Record<string, unknown>[] = [];
         const controller = createController({
-            async completeStaffLogin() {
+            async completeStaffLogin(input: Record<string, unknown>) {
+                receivedInputs.push(input);
                 return { user: staffUser, token: 'staff-token' };
             }
         });
@@ -149,11 +151,17 @@ describe('auth.controller', () => {
                     id: 'credential-1', rawId: 'credential-1', type: 'public-key', clientExtensionResults: {},
                     response: { clientDataJSON: 'data', authenticatorData: 'auth-data', signature: 'signature' }
                 }
-            }
+            },
+            ip: '192.0.2.10',
+            headers: { 'user-agent': ` ${'browser'.repeat(100)} ` }
         }, res);
 
         assert.equal(res.statusCode, 200);
         assert.deepEqual(res.body, { user: staffUser });
+        assert.equal(receivedInputs[0]?.ipAddress, '192.0.2.10');
+        assert.equal(typeof receivedInputs[0]?.userAgent, 'string');
+        assert.equal((receivedInputs[0]?.userAgent as string).length, 512);
+        assert.equal('password' in (receivedInputs[0] ?? {}), false);
         assert.deepEqual(res.cookies.map(({ name }) => name), [adminSessionCookieName]);
         assert.equal(env.auth.admin.sessionCookiePath, '/api/v1');
         assert.equal(res.cookies[0].options.path, env.auth.admin.sessionCookiePath);
