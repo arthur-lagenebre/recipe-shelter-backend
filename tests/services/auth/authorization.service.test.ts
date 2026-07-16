@@ -9,6 +9,9 @@ import {
 } from '../../../src/services/auth/authorization.service.js';
 
 import type { AuthContext } from '../../../src/api/auth/auth.types.js';
+import type { PermissionCode } from '../../../src/security/permissions.js';
+
+const ALL_PERMISSIONS = Object.values(PERMISSIONS);
 
 const communityAuth: AuthContext = {
     userId: 2,
@@ -25,6 +28,92 @@ const staffAuth: AuthContext = {
     status: 'active',
     permissions: [PERMISSIONS.usersRead, PERMISSIONS.usersModerate]
 };
+
+type AccessMatrixCase = Readonly<{
+    name: string;
+    auth: Readonly<AuthContext>;
+    allowedPermissions: readonly PermissionCode[];
+}>;
+
+function createStaffAuth(
+    userId: number,
+    username: string,
+    permissions: readonly PermissionCode[],
+    status: AuthContext['status'] = 'active'
+): AuthContext {
+    return {
+        userId,
+        username,
+        accountType: 'staff',
+        status,
+        permissions: [...permissions]
+    };
+}
+
+const ROLE_PERMISSIONS = {
+    RecipeModerator: [
+        PERMISSIONS.recipesRead,
+        PERMISSIONS.recipesModerate,
+        PERMISSIONS.recipesArchive
+    ],
+    CommentModerator: [
+        PERMISSIONS.commentsRead,
+        PERMISSIONS.commentsModerate,
+        PERMISSIONS.commentsUpdate
+    ],
+    UserAdmin: [
+        PERMISSIONS.usersRead,
+        PERMISSIONS.usersModerate
+    ],
+    CatalogManager: [
+        PERMISSIONS.catalogRead,
+        PERMISSIONS.catalogManage
+    ],
+    SuperAdmin: ALL_PERMISSIONS
+} as const satisfies Record<string, readonly PermissionCode[]>;
+
+const ACCESS_MATRIX: readonly AccessMatrixCase[] = [
+    {
+        name: 'community',
+        auth: { ...communityAuth, permissions: [...ALL_PERMISSIONS] },
+        allowedPermissions: []
+    },
+    {
+        name: 'staff without role',
+        auth: createStaffAuth(3, 'staff-without-role', []),
+        allowedPermissions: []
+    },
+    {
+        name: 'RecipeModerator',
+        auth: createStaffAuth(4, 'recipe-moderator', ROLE_PERMISSIONS.RecipeModerator),
+        allowedPermissions: ROLE_PERMISSIONS.RecipeModerator
+    },
+    {
+        name: 'CommentModerator',
+        auth: createStaffAuth(5, 'comment-moderator', ROLE_PERMISSIONS.CommentModerator),
+        allowedPermissions: ROLE_PERMISSIONS.CommentModerator
+    },
+    {
+        name: 'UserAdmin',
+        auth: createStaffAuth(6, 'user-admin', ROLE_PERMISSIONS.UserAdmin),
+        allowedPermissions: ROLE_PERMISSIONS.UserAdmin
+    },
+    {
+        name: 'CatalogManager',
+        auth: createStaffAuth(7, 'catalog-manager', ROLE_PERMISSIONS.CatalogManager),
+        allowedPermissions: ROLE_PERMISSIONS.CatalogManager
+    },
+    {
+        name: 'SuperAdmin',
+        auth: createStaffAuth(8, 'super-admin', ROLE_PERMISSIONS.SuperAdmin),
+        allowedPermissions: ROLE_PERMISSIONS.SuperAdmin
+    },
+    {
+        name: 'disabled staff',
+        auth: createStaffAuth(9, 'disabled-staff', ALL_PERMISSIONS, 'disabled'),
+        allowedPermissions: []
+    }
+];
 
 describe('authorization service', () => {
     describe('account type decisions', () => {
@@ -44,15 +133,31 @@ describe('authorization service', () => {
     });
 
     describe('hasPermission', () => {
-        it('allows an active staff account with the exact effective permission', () => {
-            assert.equal(hasPermission(staffAuth, PERMISSIONS.usersModerate), true);
+        it('enforces the complete access matrix for every account and role', () => {
+            for (const matrixCase of ACCESS_MATRIX) {
+                const expectedPermissions = new Set(matrixCase.allowedPermissions);
+                const allowedPermissions = ALL_PERMISSIONS.filter((permission) =>
+                    hasPermission(matrixCase.auth, permission)
+                );
+                const deniedPermissions = ALL_PERMISSIONS.filter((permission) =>
+                    !hasPermission(matrixCase.auth, permission)
+                );
+
+                assert.deepEqual(
+                    allowedPermissions,
+                    matrixCase.allowedPermissions,
+                    `${matrixCase.name} must receive exactly its declared permissions`
+                );
+                assert.deepEqual(
+                    deniedPermissions,
+                    ALL_PERMISSIONS.filter((permission) => !expectedPermissions.has(permission)),
+                    `${matrixCase.name} must be denied every other permission`
+                );
+            }
         });
 
-        it('denies absent, inactive, community, and underprivileged contexts by default', () => {
+        it('denies absent and unknown authorization inputs by default', () => {
             assert.equal(hasPermission(undefined, PERMISSIONS.usersModerate), false);
-            assert.equal(hasPermission({ ...staffAuth, status: 'locked' }, PERMISSIONS.usersModerate), false);
-            assert.equal(hasPermission({ ...communityAuth, permissions: [PERMISSIONS.usersModerate] }, PERMISSIONS.usersModerate), false);
-            assert.equal(hasPermission({ ...staffAuth, permissions: [PERMISSIONS.usersRead] }, PERMISSIONS.usersModerate), false);
             assert.equal(hasPermission(staffAuth, 'unknown.permission' as never), false);
         });
     });
