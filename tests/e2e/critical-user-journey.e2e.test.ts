@@ -25,6 +25,7 @@ import type { Recipe, RecipeInput, RecipeListItem, RecipeSearchFilters, UpdateRe
 import type { UserRepository } from '../../src/repositories/users/user.repository.interface.js';
 import type { User, UserWithPassword } from '../../src/repositories/users/user.types.js';
 import type { EmailValidationService } from '../../src/services/auth/email-validation.service.js';
+import type { StaffMfaManager } from '../../src/services/auth/staff-mfa.service.js';
 import type { HttpTestServer } from '../helpers/http-test-server.js';
 import type { PaginationOptions } from '../../src/utils/pagination.js';
 
@@ -356,7 +357,14 @@ describe('critical user journey E2E', () => {
             users as unknown as UserRepository,
             {} as EmailValidationService,
             sessions,
-            { async verify() { return 'verified'; } }
+            {
+                async beginAuthentication() {
+                    return { flowId: 'staff-login-flow', publicKey: { challenge: 'challenge' } as never };
+                },
+                async completeAuthentication() {
+                    return { staffUserId: 1, credentialId: 'credential-1', verifiedAt: new Date() };
+                }
+            } as unknown as StaffMfaManager
         );
 
         const app = createApp({
@@ -463,10 +471,23 @@ describe('critical user journey E2E', () => {
         assert.equal(forbiddenResponse.status, 401);
         assert.equal((await forbiddenResponse.json() as { error: { code: string } }).error.code, 'AUTH_NO_TOKEN');
 
-        const adminLogin = await fetch(`${server.baseUrl}/api/v1/admin/auth/login`, {
+        const adminLoginOptions = await fetch(`${server.baseUrl}/api/v1/admin/auth/login/options`, {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ mail: 'admin@example.com', password: 'StrongPass123!', mfaCode: '123456' })
+            body: JSON.stringify({ mail: 'admin@example.com', password: 'StrongPass123!' })
+        });
+        assert.equal(adminLoginOptions.status, 200);
+
+        const adminLogin = await fetch(`${server.baseUrl}/api/v1/admin/auth/login/verify`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+                flowId: 'staff-login-flow',
+                credential: {
+                    id: 'credential-1', rawId: 'credential-1', type: 'public-key', clientExtensionResults: {},
+                    response: { clientDataJSON: 'data', authenticatorData: 'auth-data', signature: 'signature' }
+                }
+            })
         });
         assert.equal(adminLogin.status, 200);
         adminCookie = cookieFrom(adminLogin);

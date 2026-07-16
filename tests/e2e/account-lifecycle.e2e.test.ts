@@ -16,6 +16,7 @@ import type { UserRepository } from '../../src/repositories/users/user.repositor
 import type { CommunityProfile, CreateUserInput, StaffProfile, User, UserWithPassword } from '../../src/repositories/users/user.types.js';
 import type { RecipeRepository } from '../../src/repositories/recipes/recipe.repository.interface.js';
 import type { EmailValidationMailInput, Mailer, PasswordChangedMailInput, PasswordResetMailInput } from '../../src/services/mail/mail.types.js';
+import type { StaffMfaManager } from '../../src/services/auth/staff-mfa.service.js';
 import type { HttpTestServer } from '../helpers/http-test-server.js';
 
 class AccountUserRepository implements UserRepository {
@@ -79,8 +80,7 @@ class AccountUserRepository implements UserRepository {
         return {
             userId,
             status: user.status === 'invited' || user.status === 'active' || user.status === 'locked' || user.status === 'disabled' ? user.status : 'invited',
-            mfaSecretEncrypted: null,
-            mfaEnabledAt: null,
+            mfaEnrolledAt: null,
             createdAt: user.createdAt,
             updatedAt: user.updatedAt
         };
@@ -259,7 +259,7 @@ describe('account lifecycle E2E', () => {
         const sessions = new TestSessionRepository();
 
         server = await startHttpTestServer(createApp({
-            authService: new AuthService(users, emailValidationService, sessions, { async verify() { return 'verified'; } }),
+            authService: new AuthService(users, emailValidationService, sessions, {} as StaffMfaManager),
             authSessionRepository: sessions,
             authUserRepository: users,
             emailValidationService,

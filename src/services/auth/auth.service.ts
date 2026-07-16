@@ -9,18 +9,19 @@ import { conflict, unauthorized, badRequest } from '../../utils/errors.js';
 import { normalizeEmail } from '../../utils/string.js';
 
 import type { EmailValidationService } from './email-validation.service.js';
-import type { StaffMfaVerifier } from './staff-mfa.service.js';
+import type { StaffMfaManager } from './staff-mfa.service.js';
 import type { SessionRepository } from '../../repositories/auth/session.repository.interface.js';
 import type { UserRepository } from '../../repositories/users/user.repository.interface.js';
 import type { User, UserWithPassword } from '../../repositories/users/user.types.js';
 import type { SessionRealm } from '../../utils/session-cookie.js';
+import type { AuthenticationResponseJSON, RegistrationResponseJSON } from '@simplewebauthn/server';
 
 export class AuthService {
   constructor(
     private readonly users: UserRepository,
     private readonly emailValidationService: EmailValidationService,
     private readonly sessions: SessionRepository,
-    private readonly staffMfa: StaffMfaVerifier
+    private readonly staffMfa: StaffMfaManager
   ) { }
 
   async register(input: { mail: string; username: string; password: string }): Promise<{ user: User; message: string }> {
@@ -66,28 +67,38 @@ export class AuthService {
     return { user, token };
   }
 
-  async loginStaff(input: { mail: string; password: string; mfaCode: string }): Promise<{ user: User; token: string }> {
+  async beginStaffLogin(input: { mail: string; password: string }) {
     const authUser = await this.authenticatePassword(input);
 
-    if (authUser.accountType !== 'staff')
-      throw unauthorized('Invalid credentials', 'AUTH_INVALID_CREDENTIALS');
-    if (authUser.status === 'invited')
-      throw unauthorized('Staff invitation is not active', 'STAFF_INVITED');
-    if (authUser.status === 'locked')
-      throw unauthorized('Staff account is locked', 'STAFF_LOCKED');
-    if (authUser.status === 'disabled')
-      throw unauthorized('Staff account is disabled', 'STAFF_DISABLED');
+    this.assertStaffCanAuthenticate(authUser);
 
-    const mfaVerification = await this.staffMfa.verify(authUser.id, input.mfaCode);
-    if (mfaVerification === 'not_enrolled')
-      throw unauthorized('Staff MFA enrollment is required', 'STAFF_MFA_REQUIRED');
-    if (mfaVerification !== 'verified')
-      throw unauthorized('Invalid MFA code', 'AUTH_INVALID_MFA_CODE');
+    return this.staffMfa.beginAuthentication(authUser.id);
+  }
 
-    const user = this.withoutPassword(authUser);
-    const token = await this.createSession(user, 'admin', new Date());
+  async completeStaffLogin(input: { flowId: string; credential: AuthenticationResponseJSON }): Promise<{ user: User; token: string }> {
+    const mfa = await this.staffMfa.completeAuthentication(input.flowId, input.credential);
+    const user = await this.users.findById(mfa.staffUserId);
+
+    if (!user || user.accountType !== 'staff')
+      throw unauthorized('Invalid MFA assertion', 'AUTH_INVALID_MFA_ASSERTION');
+
+    this.assertStaffCanAuthenticate(user);
+    const token = await this.createSession(user, 'admin', mfa);
 
     return { user, token };
+  }
+
+  async beginStaffMfaEnrollment(invitationToken: string) {
+    return this.staffMfa.beginEnrollment(invitationToken);
+  }
+
+  async completeStaffMfaEnrollment(input: {
+    flowId: string;
+    invitationToken: string;
+    password: string;
+    credential: RegistrationResponseJSON;
+  }) {
+    return this.staffMfa.completeEnrollment(input);
   }
 
   async logout(token: string | null, realm: SessionRealm): Promise<void> {
@@ -136,7 +147,22 @@ export class AuthService {
     return user;
   }
 
-  private async createSession(user: User, realm: SessionRealm, mfaVerifiedAt?: Date): Promise<string> {
+  private assertStaffCanAuthenticate(user: User): void {
+    if (user.accountType !== 'staff')
+      throw unauthorized('Invalid credentials', 'AUTH_INVALID_CREDENTIALS');
+    if (user.status === 'invited')
+      throw unauthorized('Staff invitation is not active', 'STAFF_INVITED');
+    if (user.status === 'locked')
+      throw unauthorized('Staff account is locked', 'STAFF_LOCKED');
+    if (user.status === 'disabled')
+      throw unauthorized('Staff account is disabled', 'STAFF_DISABLED');
+  }
+
+  private async createSession(
+    user: User,
+    realm: SessionRealm,
+    mfa?: { credentialId: string; verifiedAt: Date }
+  ): Promise<string> {
     const sessionId = randomUUID();
     const realmConfig = realm === 'app' ? env.auth.app : env.auth.admin;
     const expiresAt = new Date(Date.now() + realmConfig.jwtExpiresInMs);
@@ -144,9 +170,15 @@ export class AuthService {
     if (realm === 'app') {
       await this.sessions.createCommunitySession({ id: sessionId, userId: user.id, expiresAt });
     } else {
-      if (!mfaVerifiedAt)
+      if (!mfa)
         throw new TypeError('MFA verification is required for a staff session');
-      await this.sessions.createStaffSession({ id: sessionId, userId: user.id, expiresAt, mfaVerifiedAt });
+      await this.sessions.createStaffSession({
+        id: sessionId,
+        userId: user.id,
+        expiresAt,
+        webAuthnCredentialId: mfa.credentialId,
+        mfaVerifiedAt: mfa.verifiedAt
+      });
     }
 
     return signSessionToken(user, realm, sessionId);

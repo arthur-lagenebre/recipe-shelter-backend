@@ -5,6 +5,7 @@ export type CreateCommunitySessionInput = {
 };
 
 export type CreateStaffSessionInput = CreateCommunitySessionInput & {
+  webAuthnCredentialId: string;
   mfaVerifiedAt: Date;
 };
 

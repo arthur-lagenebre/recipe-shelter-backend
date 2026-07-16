@@ -1,11 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import {
-    CommunityOnly,
-    RequirePermission,
-    StaffOnly
-} from '../../src/middlewares/authorization.js';
+import { CommunityOnly, RequirePermission, StaffOnly } from '../../src/middlewares/authorization.js';
 import { PERMISSIONS } from '../../src/security/permissions.js';
 import { HttpError } from '../../src/utils/errors.js';
 

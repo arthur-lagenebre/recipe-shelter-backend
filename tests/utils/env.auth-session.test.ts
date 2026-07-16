@@ -50,4 +50,26 @@ describe('auth session environment configuration', () => {
     assert.notEqual(cookieLifetime.status, 0);
     assert.match(cookieLifetime.stderr, /Admin session cookie lifetime must be shorter/);
   });
+
+  it('requires a secure and origin-compatible WebAuthn relying party configuration', () => {
+    const insecureOrigin = importEnv({
+      AUTH_STAFF_WEBAUTHN_ORIGIN: 'http://staff.example.com',
+      AUTH_STAFF_WEBAUTHN_RP_ID: 'example.com'
+    });
+    assert.notEqual(insecureOrigin.status, 0);
+    assert.match(insecureOrigin.stderr, /must use HTTPS/);
+
+    const unrelatedRpId = importEnv({
+      AUTH_STAFF_WEBAUTHN_ORIGIN: 'https://staff.example.com',
+      AUTH_STAFF_WEBAUTHN_RP_ID: 'attacker.example'
+    });
+    assert.notEqual(unrelatedRpId.status, 0);
+    assert.match(unrelatedRpId.stderr, /must match the origin hostname/);
+
+    const parentRpId = importEnv({
+      AUTH_STAFF_WEBAUTHN_ORIGIN: 'https://staff.example.com',
+      AUTH_STAFF_WEBAUTHN_RP_ID: 'example.com'
+    });
+    assert.equal(parentRpId.status, 0, parentRpId.stderr);
+  });
 });

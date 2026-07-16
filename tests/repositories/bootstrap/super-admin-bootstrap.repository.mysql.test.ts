@@ -10,7 +10,6 @@ type FakeOptions = {
     superAdminRows?: unknown[];
     identityRows?: unknown[];
     invitationRows?: unknown[];
-    invitationUpdateAffectedRows?: number;
     userDeleteAffectedRows?: number;
     userInsertError?: unknown;
     invitationReadError?: unknown;
@@ -45,8 +44,6 @@ function createPool(options: FakeOptions = {}) {
                     throw options.invitationReadError;
                 return [options.invitationRows ?? []];
             }
-            if (/UPDATE StaffInvitations/.test(sql))
-                return [{ affectedRows: options.invitationUpdateAffectedRows ?? 1 }];
             if (/INSERT INTO Users/.test(sql)) {
                 if (options.userInsertError)
                     throw options.userInsertError;
@@ -142,45 +139,6 @@ describe('SuperAdminBootstrapRepositoryMysql', () => {
         );
     });
 
-    it('atomically consumes a valid invitation once and preserves its MFA requirement', async () => {
-        const fake = createPool({ invitationRows: [{ Id: 7, StaffUserId: 42 }] });
-        const repository = new SuperAdminBootstrapRepositoryMysql(fake.pool);
-
-        assert.deepEqual(await repository.consumeInvitation('a'.repeat(64)), {
-            status: 'consumed',
-            userId: 42,
-            requiresMfa: true
-        });
-        assert.match(fake.statements[0]?.sql ?? '', /UsedAt IS NULL/);
-        assert.match(fake.statements[0]?.sql ?? '', /ExpiresAt > CURRENT_TIMESTAMP/);
-        assert.match(fake.statements[0]?.sql ?? '', /RequiresMfa = TRUE/);
-        assert.match(fake.statements[0]?.sql ?? '', /r\.Code = 'SuperAdmin'/);
-        assert.match(fake.statements[0]?.sql ?? '', /FOR UPDATE/);
-        assert.deepEqual(fake.statements[0]?.params, ['a'.repeat(64)]);
-        assert.match(fake.statements[1]?.sql ?? '', /SET UsedAt = CURRENT_TIMESTAMP/);
-        assert.deepEqual(fake.counts(), { commits: 1, rollbacks: 0, releases: 1 });
-    });
-
-    it('does not consume missing, expired or already used invitations', async () => {
-        const unavailable = createPool({ invitationRows: [] });
-        assert.deepEqual(
-            await new SuperAdminBootstrapRepositoryMysql(unavailable.pool).consumeInvitation('a'.repeat(64)),
-            { status: 'invalid' }
-        );
-        assert.equal(unavailable.statements.some(({ sql }) => /UPDATE StaffInvitations/.test(sql)), false);
-        assert.deepEqual(unavailable.counts(), { commits: 1, rollbacks: 0, releases: 1 });
-
-        const expiredDuringConsumption = createPool({
-            invitationRows: [{ Id: 7, StaffUserId: 42 }],
-            invitationUpdateAffectedRows: 0
-        });
-        assert.deepEqual(
-            await new SuperAdminBootstrapRepositoryMysql(expiredDuringConsumption.pool).consumeInvitation('a'.repeat(64)),
-            { status: 'invalid' }
-        );
-        assert.deepEqual(expiredDuringConsumption.counts(), { commits: 0, rollbacks: 1, releases: 1 });
-    });
-
     it('removes only its still-pending invited account when email delivery fails', async () => {
         const cancellable = createPool({ invitationRows: [{ Id: 7, StaffUserId: 42 }] });
         const repository = new SuperAdminBootstrapRepositoryMysql(cancellable.pool);
@@ -222,13 +180,5 @@ describe('SuperAdminBootstrapRepositoryMysql', () => {
             createError
         );
         assert.deepEqual(create.counts(), { commits: 0, rollbacks: 1, releases: 1 });
-
-        const consumeError = new Error('database unavailable');
-        const consume = createPool({ invitationReadError: consumeError });
-        await assert.rejects(
-            () => new SuperAdminBootstrapRepositoryMysql(consume.pool).consumeInvitation('a'.repeat(64)),
-            consumeError
-        );
-        assert.deepEqual(consume.counts(), { commits: 0, rollbacks: 1, releases: 1 });
     });
 });

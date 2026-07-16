@@ -59,6 +59,8 @@ CREATE TABLE Users (
   KEY idx_users_banned_by_user_id (BannedByUserId),
   CONSTRAINT users_community_password_CK
     CHECK (AccountType <> 'community' OR Password IS NOT NULL),
+  CONSTRAINT users_active_staff_password_CK
+    CHECK (AccountType <> 'staff' OR Status <> 'active' OR Password IS NOT NULL),
   CONSTRAINT users_banned_by_user_FK
     FOREIGN KEY (BannedByUserId) REFERENCES Users(Id)
     ON UPDATE CASCADE
@@ -69,20 +71,14 @@ CREATE TABLE StaffProfiles (
   UserId BIGINT UNSIGNED NOT NULL,
   AccountType ENUM('community', 'staff') NOT NULL DEFAULT 'staff',
   Status ENUM('invited', 'active', 'locked', 'disabled') NOT NULL DEFAULT 'invited',
-  MfaSecretEncrypted VARBINARY(255) NULL,
-  MfaEnabledAt DATETIME NULL,
+  MfaEnrolledAt DATETIME NULL,
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (UserId),
   KEY idx_staff_profiles_status (Status),
   CONSTRAINT staff_profiles_account_type_CK CHECK (AccountType = 'staff'),
-  CONSTRAINT staff_profiles_mfa_state_CK
-    CHECK (
-      (MfaSecretEncrypted IS NULL AND MfaEnabledAt IS NULL)
-      OR (MfaSecretEncrypted IS NOT NULL AND MfaEnabledAt IS NOT NULL)
-    ),
   CONSTRAINT staff_profiles_active_mfa_CK
-    CHECK (Status <> 'active' OR MfaEnabledAt IS NOT NULL),
+    CHECK (Status <> 'active' OR MfaEnrolledAt IS NOT NULL),
   CONSTRAINT staff_profiles_user_account_type_FK
     FOREIGN KEY (UserId, AccountType) REFERENCES Users(Id, AccountType)
     ON UPDATE RESTRICT
@@ -115,12 +111,77 @@ CREATE TABLE StaffInvitations (
   PRIMARY KEY (Id),
   UNIQUE KEY staff_invitations_staff_user_id_UK (StaffUserId),
   UNIQUE KEY staff_invitations_token_hash_UK (TokenHash),
+  UNIQUE KEY staff_invitations_id_staff_user_id_UK (Id, StaffUserId),
   KEY idx_staff_invitations_expires_at (ExpiresAt),
   CONSTRAINT staff_invitations_mfa_required_CK CHECK (RequiresMfa = TRUE),
   CONSTRAINT staff_invitations_staff_profile_FK
     FOREIGN KEY (StaffUserId) REFERENCES StaffProfiles(UserId)
     ON UPDATE CASCADE
     ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE StaffWebAuthnCredentials (
+  CredentialId VARCHAR(2048) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  StaffUserId BIGINT UNSIGNED NOT NULL,
+  PublicKey VARBINARY(2048) NOT NULL,
+  SignatureCounter BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  Transports JSON NULL,
+  DeviceType ENUM('singleDevice', 'multiDevice') NOT NULL,
+  BackedUp BOOLEAN NOT NULL,
+  Aaguid CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  LastUsedAt DATETIME NULL,
+  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (CredentialId),
+  UNIQUE KEY staff_webauthn_credentials_user_credential_UK (StaffUserId, CredentialId),
+  KEY idx_staff_webauthn_credentials_staff_user_id (StaffUserId),
+  CONSTRAINT staff_webauthn_credentials_transports_CK
+    CHECK (Transports IS NULL OR JSON_TYPE(Transports) = 'ARRAY'),
+  CONSTRAINT staff_webauthn_credentials_staff_profile_FK
+    FOREIGN KEY (StaffUserId) REFERENCES StaffProfiles(UserId)
+    ON UPDATE CASCADE
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TRIGGER staff_profiles_active_webauthn_BU
+BEFORE UPDATE ON StaffProfiles
+FOR EACH ROW
+SET NEW.MfaEnrolledAt = CASE
+  WHEN NEW.Status = 'active'
+    AND NOT EXISTS (
+      SELECT 1
+      FROM StaffWebAuthnCredentials AS credential
+      WHERE credential.StaffUserId = NEW.UserId
+    )
+  THEN NULL
+  ELSE NEW.MfaEnrolledAt
+END;
+
+CREATE TABLE StaffWebAuthnChallenges (
+  Id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  StaffUserId BIGINT UNSIGNED NOT NULL,
+  InvitationId BIGINT UNSIGNED NULL,
+  Purpose ENUM('registration', 'authentication') NOT NULL,
+  Challenge VARCHAR(255) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  ExpiresAt DATETIME NOT NULL,
+  ConsumedAt DATETIME NULL,
+  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (Id),
+  UNIQUE KEY staff_webauthn_challenges_challenge_UK (Challenge),
+  KEY idx_staff_webauthn_challenges_user_purpose (StaffUserId, Purpose),
+  KEY idx_staff_webauthn_challenges_expires_at (ExpiresAt),
+  KEY idx_staff_webauthn_challenges_invitation_user (InvitationId, StaffUserId),
+  CONSTRAINT staff_webauthn_challenges_invitation_purpose_CK
+    CHECK (
+      (Purpose = 'registration' AND InvitationId IS NOT NULL)
+      OR (Purpose = 'authentication' AND InvitationId IS NULL)
+    ),
+  CONSTRAINT staff_webauthn_challenges_expiry_CK CHECK (ExpiresAt > CreatedAt),
+  CONSTRAINT staff_webauthn_challenges_staff_profile_FK
+    FOREIGN KEY (StaffUserId) REFERENCES StaffProfiles(UserId)
+    ON UPDATE CASCADE
+    ON DELETE CASCADE,
+  CONSTRAINT staff_webauthn_challenges_invitation_FK
+    FOREIGN KEY (InvitationId, StaffUserId) REFERENCES StaffInvitations(Id, StaffUserId)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE CommunityProfiles (
@@ -165,15 +226,23 @@ CREATE TABLE CommunitySessions (
 CREATE TABLE StaffSessions (
   Id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   StaffUserId BIGINT UNSIGNED NOT NULL,
+  WebAuthnCredentialId VARCHAR(2048) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  MfaMethod ENUM('webauthn') NOT NULL DEFAULT 'webauthn',
   MfaVerifiedAt DATETIME NOT NULL,
   ExpiresAt DATETIME NOT NULL,
   RevokedAt DATETIME NULL,
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (Id),
   KEY idx_staff_sessions_user_id (StaffUserId),
+  KEY idx_staff_sessions_user_credential (StaffUserId, WebAuthnCredentialId),
   KEY idx_staff_sessions_expires_at (ExpiresAt),
   CONSTRAINT staff_sessions_user_FK
     FOREIGN KEY (StaffUserId) REFERENCES StaffProfiles(UserId)
+    ON UPDATE CASCADE
+    ON DELETE CASCADE,
+  CONSTRAINT staff_sessions_webauthn_credential_FK
+    FOREIGN KEY (StaffUserId, WebAuthnCredentialId)
+    REFERENCES StaffWebAuthnCredentials(StaffUserId, CredentialId)
     ON UPDATE CASCADE
     ON DELETE CASCADE,
   CONSTRAINT staff_sessions_expiry_CK CHECK (ExpiresAt > CreatedAt)

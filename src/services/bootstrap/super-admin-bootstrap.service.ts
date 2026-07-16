@@ -1,9 +1,6 @@
 import { env } from '../../utils/env.js';
 import { badRequest, conflict, internalError } from '../../utils/errors.js';
-import {
-    generateBootstrapInvitationToken,
-    hashBootstrapInvitationToken
-} from '../../utils/security/bootstrap-invitation-token.js';
+import { generateBootstrapInvitationToken, hashBootstrapInvitationToken } from '../../utils/security/bootstrap-invitation-token.js';
 import { normalizeEmail } from '../../utils/string.js';
 
 import type { SuperAdminBootstrapRepository } from '../../repositories/bootstrap/super-admin-bootstrap.repository.interface.js';
@@ -91,19 +88,5 @@ export class SuperAdminBootstrapService {
             case 'role_missing':
                 throw internalError('SuperAdmin role is missing; apply the central seed before running this command', 'BOOTSTRAP_SUPER_ADMIN_ROLE_MISSING');
         }
-    }
-
-    async consumeInvitation(token: string): Promise<{ userId: number; requiresMfa: true }> {
-        const cleanToken = token.trim();
-
-        if (!cleanToken)
-            throw badRequest('Invitation token is required', 'BOOTSTRAP_SUPER_ADMIN_INVITATION_TOKEN_REQUIRED');
-
-        const result = await this.repository.consumeInvitation(this.hashToken(cleanToken));
-
-        if (result.status === 'invalid')
-            throw badRequest('Invalid, expired or already used invitation token', 'BOOTSTRAP_SUPER_ADMIN_INVITATION_INVALID');
-
-        return { userId: result.userId, requiresMfa: true };
     }
 }

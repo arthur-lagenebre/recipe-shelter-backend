@@ -101,6 +101,16 @@ const appSessionCookieName = readString(process.env.AUTH_APP_SESSION_COOKIE_NAME
 const adminSessionCookieName = readString(process.env.AUTH_ADMIN_SESSION_COOKIE_NAME, 'rs_admin_session');
 const appSessionCookieMaxAgeMs = readPositiveInteger(process.env.AUTH_APP_SESSION_COOKIE_MAX_AGE_MS, appJwtExpiresInMs);
 const adminSessionCookieMaxAgeMs = readPositiveInteger(process.env.AUTH_ADMIN_SESSION_COOKIE_MAX_AGE_MS, adminJwtExpiresInMs);
+const frontendBaseUrl = readString(process.env.FRONTEND_BASE_URL, 'http://localhost:4200');
+const webAuthnOriginUrl = new URL(readString(process.env.AUTH_STAFF_WEBAUTHN_ORIGIN, frontendBaseUrl));
+const webAuthnOrigin = webAuthnOriginUrl.origin;
+const webAuthnHostname = webAuthnOriginUrl.hostname.toLowerCase();
+const webAuthnRpId = readString(process.env.AUTH_STAFF_WEBAUTHN_RP_ID, webAuthnHostname).toLowerCase();
+
+if (webAuthnOriginUrl.protocol !== 'https:' && !['localhost', '127.0.0.1', '::1'].includes(webAuthnHostname))
+  throw new Error('Staff WebAuthn origin must use HTTPS outside local development');
+if (webAuthnHostname !== webAuthnRpId && !webAuthnHostname.endsWith(`.${webAuthnRpId}`))
+  throw new Error('Staff WebAuthn RP ID must match the origin hostname or one of its parent domains');
 
 if (appJwtAudience === adminJwtAudience)
   throw new Error('App and admin JWT audiences must be different');
@@ -122,7 +132,7 @@ export const env = {
 
   http: {
     corsAllowedOrigins: readString(process.env.CORS_ALLOWED_ORIGINS, 'http://localhost:4200,http://127.0.0.1:4200'),
-    frontendBaseUrl: process.env.FRONTEND_BASE_URL ?? 'http://localhost:4200'
+    frontendBaseUrl
   },
 
   db: {
@@ -136,7 +146,12 @@ export const env = {
 
   auth: {
     jwtSecret: process.env.JWT_SECRET ?? (() => { throw new Error('JWT_SECRET is required'); })(),
-    staffMfaEncryptionKey: readOptionalString(process.env.AUTH_STAFF_MFA_ENCRYPTION_KEY),
+    staffMfa: {
+      challengeTtlMs: readPositiveInteger(process.env.AUTH_STAFF_MFA_CHALLENGE_TTL_MS, 300000),
+      webAuthnOrigin,
+      webAuthnRpId,
+      webAuthnRpName: readString(process.env.AUTH_STAFF_WEBAUTHN_RP_NAME, 'Recipe Shelter Staff')
+    },
     cookie: {
       domain: readOptionalString(process.env.AUTH_SESSION_COOKIE_DOMAIN),
       sameSite: readSameSite(process.env.AUTH_SESSION_COOKIE_SAME_SITE, 'lax'),

@@ -1,14 +1,7 @@
 import assert from 'node:assert/strict';
 import { beforeEach, describe, it } from 'node:test';
 
-import {
-  configureAuthRbacRepository,
-  configureAuthSessionRepository,
-  configureAuthUserRepository,
-  optionalCommunityAuth,
-  requireCommunityAuth,
-  requireStaffAuth
-} from '../../src/middlewares/require-auth.js';
+import { configureAuthRbacRepository, configureAuthSessionRepository, configureAuthUserRepository, optionalCommunityAuth, requireCommunityAuth, requireStaffAuth } from '../../src/middlewares/require-auth.js';
 import { PERMISSIONS } from '../../src/security/permissions.js';
 import { HttpError } from '../../src/utils/errors.js';
 import { adminSessionCookieName, appSessionCookieName } from '../../src/utils/session-cookie.js';

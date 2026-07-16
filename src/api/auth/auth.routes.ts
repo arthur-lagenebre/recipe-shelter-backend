@@ -9,7 +9,10 @@ import type { RequestHandler } from 'express';
 type AuthController = {
   register: RequestHandler;
   login: RequestHandler;
-  staffLogin: RequestHandler;
+  staffLoginOptions: RequestHandler;
+  staffLoginVerify: RequestHandler;
+  staffMfaEnrollmentOptions: RequestHandler;
+  staffMfaEnrollmentVerify: RequestHandler;
   me: RequestHandler;
   logout: RequestHandler;
   staffLogout: RequestHandler;
@@ -39,7 +42,10 @@ export function createStaffAuthRouter(controller: AuthController) {
   const router = Router();
   const authRateLimiter = rateLimiter(env.auth.rateLimitMaxAttempts, env.auth.rateLimitWindowMs);
 
-  router.post('/login', authRateLimiter, controller.staffLogin);
+  router.post('/login/options', authRateLimiter, controller.staffLoginOptions);
+  router.post('/login/verify', authRateLimiter, controller.staffLoginVerify);
+  router.post('/mfa/enrollment/options', authRateLimiter, controller.staffMfaEnrollmentOptions);
+  router.post('/mfa/enrollment/verify', authRateLimiter, controller.staffMfaEnrollmentVerify);
   router.get('/me', requireStaffAuth, controller.me);
   router.post('/logout', controller.staffLogout);
 

@@ -10,7 +10,7 @@ export type AuthTokenPayload = {
   sub: number;
   username: string;
   accountType: User['accountType'];
-  amr: readonly ['pwd'] | readonly ['pwd', 'mfa'];
+  amr: readonly ['pwd'] | readonly ['pwd', 'webauthn'];
 };
 
 export type VerifiedSessionToken = {
@@ -33,7 +33,7 @@ export function signSessionToken(user: User, realm: SessionRealm, sessionId: str
     sub: user.id,
     username: user.username,
     accountType: user.accountType,
-    amr: realm === 'app' ? ['pwd'] : ['pwd', 'mfa']
+    amr: realm === 'app' ? ['pwd'] : ['pwd', 'webauthn']
   };
   const realmConfig = getRealmConfig(realm);
   const secret: Secret = env.auth.jwtSecret;
@@ -62,7 +62,8 @@ export function verifySessionToken(token: string, realm: SessionRealm, ignoreExp
   const expectedAccountType = realm === 'app' ? 'community' : 'staff';
   const hasExpectedAuthenticationMethods = realm === 'app'
     ? Array.isArray(data.amr) && data.amr.length === 1 && data.amr[0] === 'pwd'
-    : Array.isArray(data.amr) && data.amr.includes('pwd') && data.amr.includes('mfa');
+    : Array.isArray(data.amr) && data.amr.length === 2
+      && data.amr.includes('pwd') && data.amr.includes('webauthn');
 
   if (!Number.isSafeInteger(userId) || userId <= 0 || !username || !sessionId)
     return null;

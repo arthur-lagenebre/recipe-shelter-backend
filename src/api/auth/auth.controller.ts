@@ -1,4 +1,4 @@
-import { parseLoginBody, parseRegisterBody, parseResendValidationEmailBody, parseResetPasswordBody, parseStaffLoginBody, parseValidateEmailBody } from './auth.dto.js';
+import { parseLoginBody, parseRegisterBody, parseResendValidationEmailBody, parseResetPasswordBody, parseStaffLoginVerificationBody, parseStaffMfaEnrollmentOptionsBody, parseStaffMfaEnrollmentVerificationBody, parseValidateEmailBody } from './auth.dto.js';
 import { clearSessionCookie, getSessionToken, setSessionCookie } from '../../utils/session-cookie.js';
 import { asyncHandler } from '../http/async-handler.js';
 
@@ -24,13 +24,34 @@ export function createAuthController(authService: AuthService, passwordResetServ
     res.status(200).json({ user });
   });
 
-  const staffLogin = asyncHandler(async (req, res) => {
-    const input = parseStaffLoginBody(req.body);
-    const { token, user } = await authService.loginStaff(input);
+  const staffLoginOptions = asyncHandler(async (req, res) => {
+    const input = parseLoginBody(req.body);
+    const result = await authService.beginStaffLogin(input);
+
+    res.status(200).json(result);
+  });
+
+  const staffLoginVerify = asyncHandler(async (req, res) => {
+    const input = parseStaffLoginVerificationBody(req.body);
+    const { token, user } = await authService.completeStaffLogin(input);
 
     setSessionCookie(res, 'admin', token);
 
     res.status(200).json({ user });
+  });
+
+  const staffMfaEnrollmentOptions = asyncHandler(async (req, res) => {
+    const { invitationToken } = parseStaffMfaEnrollmentOptionsBody(req.body);
+    const result = await authService.beginStaffMfaEnrollment(invitationToken);
+
+    res.status(200).json(result);
+  });
+
+  const staffMfaEnrollmentVerify = asyncHandler(async (req, res) => {
+    const input = parseStaffMfaEnrollmentVerificationBody(req.body);
+    const result = await authService.completeStaffMfaEnrollment(input);
+
+    res.status(200).json(result);
   });
 
   const me: Handler = (req, res) => {
@@ -112,5 +133,19 @@ export function createAuthController(authService: AuthService, passwordResetServ
     res.status(200).json({ ok: true, message: 'If an inactive account exists for this email, a validation link has been sent.' });
   });
 
-  return { register, login, staffLogin, me, logout, staffLogout, forgotPassword, resetPassword, validateEmail, resendValidationEmail };
+  return {
+    register,
+    login,
+    staffLoginOptions,
+    staffLoginVerify,
+    staffMfaEnrollmentOptions,
+    staffMfaEnrollmentVerify,
+    me,
+    logout,
+    staffLogout,
+    forgotPassword,
+    resetPassword,
+    validateEmail,
+    resendValidationEmail
+  };
 }

@@ -98,7 +98,7 @@ export class UserRepositoryMysql implements UserRepository {
 
     async findStaffProfileByUserId(userId: number): Promise<StaffProfile | null> {
         const [rows] = await this.db.execute(
-            `SELECT UserId, Status, MfaSecretEncrypted, MfaEnabledAt, CreatedAt, UpdatedAt
+            `SELECT UserId, Status, MfaEnrolledAt, CreatedAt, UpdatedAt
              FROM StaffProfiles
              WHERE UserId = ?`,
             [userId]

@@ -1,10 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import {
-    generateBootstrapInvitationToken,
-    hashBootstrapInvitationToken
-} from '../../../src/utils/security/bootstrap-invitation-token.js';
+import { generateBootstrapInvitationToken, hashBootstrapInvitationToken } from '../../../src/utils/security/bootstrap-invitation-token.js';
 
 describe('bootstrap invitation token', () => {
     it('generates unpredictable 256-bit opaque tokens', () => {

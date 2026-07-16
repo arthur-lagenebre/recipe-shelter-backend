@@ -4,6 +4,7 @@ import { after, before, describe, it } from 'node:test';
 
 import mysql from 'mysql2/promise';
 
+import { StaffMfaRepositoryMysql } from '../../../src/repositories/auth/staff-mfa.repository.mysql.js';
 import { PERMISSIONS } from '../../../src/security/permissions.js';
 import { env } from '../../../src/utils/env.js';
 
@@ -30,6 +31,7 @@ function targetDatabase(sql: string, databaseName: string): string {
 
 describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_DB_NAME to run isolated MySQL tests' }, () => {
     let connection: mysql.Connection;
+    let pool: mysql.Pool;
     let seed: string;
 
     before(async () => {
@@ -52,10 +54,21 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
 
         await connection.query(schema);
         await connection.query(seed);
+        pool = mysql.createPool({
+            host: env.db.host,
+            port: env.db.port,
+            user: env.db.user,
+            password: env.db.password,
+            database: databaseName,
+            connectionLimit: 2,
+            timezone: 'Z'
+        });
     });
 
     after(async () => {
         if (connection) {
+            if (pool)
+                await pool.end();
             await connection.query(`DROP DATABASE IF EXISTS \`${requireRbacTestDatabaseName()}\``);
             await connection.end();
         }
@@ -283,18 +296,18 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
         await assert.rejects(() => connection.query(`INSERT INTO Permissions (Code, Description) VALUES ('USERS.READ', 'Duplicate')`));
     });
 
-    it('creates strictly separate session stores and requires MFA before staff activation', async () => {
+    it('creates strictly separate session stores and requires WebAuthn before staff activation', async () => {
         const [sessionTables] = await connection.query(
             `SELECT TABLE_NAME AS TableName
              FROM information_schema.TABLES
              WHERE TABLE_SCHEMA = ?
-               AND TABLE_NAME IN ('CommunitySessions', 'StaffSessions')
+               AND TABLE_NAME IN ('CommunitySessions', 'StaffSessions', 'StaffWebAuthnChallenges', 'StaffWebAuthnCredentials')
              ORDER BY TABLE_NAME`,
             [requireRbacTestDatabaseName()]
         );
         assert.deepEqual(
             (sessionTables as Array<{ TableName: string }>).map(({ TableName }) => TableName.toLowerCase()),
-            ['communitysessions', 'staffsessions']
+            ['communitysessions', 'staffsessions', 'staffwebauthnchallenges', 'staffwebauthncredentials']
         );
 
         await connection.query(
@@ -304,9 +317,16 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
         );
 
         await assert.rejects(() => connection.query(`UPDATE Users SET Status = 'active' WHERE Id = 121`));
+        await assert.rejects(() => connection.query(
+            `UPDATE StaffProfiles SET MfaEnrolledAt = CURRENT_TIMESTAMP, Status = 'active' WHERE UserId = 121`
+        ));
         await connection.query(
-            `UPDATE StaffProfiles
-             SET MfaSecretEncrypted = 0x01, MfaEnabledAt = CURRENT_TIMESTAMP
+            `INSERT INTO StaffWebAuthnCredentials
+               (CredentialId, StaffUserId, PublicKey, SignatureCounter, Transports, DeviceType, BackedUp, Aaguid)
+             VALUES ('credential-121', 121, 0x0102, 0, JSON_ARRAY('usb'), 'singleDevice', FALSE,
+                     '00000000-0000-0000-0000-000000000000');
+             UPDATE StaffProfiles
+             SET MfaEnrolledAt = CURRENT_TIMESTAMP
              WHERE UserId = 121;
              UPDATE Users SET Status = 'active' WHERE Id = 121`
         );
@@ -314,8 +334,9 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
         await connection.query(
             `INSERT INTO CommunitySessions (Id, CommunityUserId, ExpiresAt)
              VALUES ('00000000-0000-4000-8000-000000000120', 120, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 1 DAY));
-             INSERT INTO StaffSessions (Id, StaffUserId, MfaVerifiedAt, ExpiresAt)
-             VALUES ('00000000-0000-4000-8000-000000000121', 121, CURRENT_TIMESTAMP, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 8 HOUR))`
+             INSERT INTO StaffSessions (Id, StaffUserId, WebAuthnCredentialId, MfaVerifiedAt, ExpiresAt)
+             VALUES ('00000000-0000-4000-8000-000000000121', 121, 'credential-121', CURRENT_TIMESTAMP,
+                     DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 8 HOUR))`
         );
 
         await assert.rejects(() => connection.query(
@@ -323,12 +344,108 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
              VALUES ('00000000-0000-4000-8000-000000000122', 121, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 1 DAY))`
         ));
         await assert.rejects(() => connection.query(
-            `INSERT INTO StaffSessions (Id, StaffUserId, MfaVerifiedAt, ExpiresAt)
-             VALUES ('00000000-0000-4000-8000-000000000123', 120, CURRENT_TIMESTAMP, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 8 HOUR))`
+            `INSERT INTO StaffSessions (Id, StaffUserId, WebAuthnCredentialId, MfaVerifiedAt, ExpiresAt)
+             VALUES ('00000000-0000-4000-8000-000000000123', 120, 'credential-121', CURRENT_TIMESTAMP,
+                     DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 8 HOUR))`
         ));
         await assert.rejects(() => connection.query(
-            `INSERT INTO StaffSessions (Id, StaffUserId, MfaVerifiedAt, ExpiresAt)
-             VALUES ('00000000-0000-4000-8000-000000000124', 121, NULL, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 8 HOUR))`
+            `INSERT INTO StaffSessions (Id, StaffUserId, WebAuthnCredentialId, MfaVerifiedAt, ExpiresAt)
+             VALUES ('00000000-0000-4000-8000-000000000124', 121, 'unknown-credential', CURRENT_TIMESTAMP,
+                     DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 8 HOUR))`
         ));
+        await assert.rejects(() => connection.query(
+            `INSERT INTO StaffSessions (Id, StaffUserId, WebAuthnCredentialId, MfaVerifiedAt, ExpiresAt)
+             VALUES ('00000000-0000-4000-8000-000000000125', 121, 'credential-121', NULL,
+                     DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 8 HOUR))`
+        ));
+    });
+
+    it('completes enrollment and authentication atomically through the WebAuthn repository', async () => {
+        const repository = new StaffMfaRepositoryMysql(pool);
+        const tokenHash = 'b'.repeat(64);
+
+        await connection.query(
+            `INSERT INTO Users (Id, Mail, Username, Password, AccountType, Status)
+             VALUES (130, 'webauthn-staff@test.local', 'webauthn-staff', NULL, 'staff', 'inactive')`
+        );
+        await connection.query(
+            `INSERT INTO StaffInvitations (StaffUserId, TokenHash, ExpiresAt)
+             VALUES (130, ?, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 10 MINUTE))`,
+            [tokenHash]
+        );
+
+        const context = await repository.findEnrollmentContext(tokenHash);
+        assert.ok(context);
+        await repository.saveChallenge({
+            id: '00000000-0000-4000-8000-000000000130',
+            staffUserId: 130,
+            invitationId: context.invitationId,
+            purpose: 'registration',
+            challenge: 'registration-challenge-130',
+            ttlMs: 300_000
+        });
+        assert.equal(await repository.completeEnrollment({
+            challengeId: '00000000-0000-4000-8000-000000000130',
+            invitationTokenHash: tokenHash,
+            passwordHash: 'password-hash',
+            credential: {
+                credentialId: 'credential-130',
+                staffUserId: 130,
+                publicKey: new Uint8Array([1, 2, 3]),
+                signatureCounter: 0,
+                transports: ['usb'],
+                deviceType: 'singleDevice',
+                backedUp: false,
+                aaguid: '00000000-0000-0000-0000-000000000000'
+            }
+        }), true);
+
+        const [enrolledRows] = await connection.query(
+            `SELECT u.Password, u.Status AS UserStatus, sp.Status AS StaffStatus,
+                    sp.MfaEnrolledAt, si.UsedAt
+             FROM Users AS u
+             INNER JOIN StaffProfiles AS sp ON sp.UserId = u.Id
+             INNER JOIN StaffInvitations AS si ON si.StaffUserId = u.Id
+             WHERE u.Id = 130`
+        );
+        const enrolled = (enrolledRows as Array<{
+            Password: string;
+            UserStatus: string;
+            StaffStatus: string;
+            MfaEnrolledAt: Date | null;
+            UsedAt: Date | null;
+        }>)[0];
+        assert.equal(enrolled?.Password, 'password-hash');
+        assert.equal(enrolled?.UserStatus, 'active');
+        assert.equal(enrolled?.StaffStatus, 'active');
+        assert.ok(enrolled?.MfaEnrolledAt);
+        assert.ok(enrolled?.UsedAt);
+
+        await repository.saveChallenge({
+            id: '00000000-0000-4000-8000-000000000131',
+            staffUserId: 130,
+            invitationId: null,
+            purpose: 'authentication',
+            challenge: 'authentication-challenge-130',
+            ttlMs: 300_000
+        });
+        assert.equal(await repository.completeAuthentication({
+            challengeId: '00000000-0000-4000-8000-000000000131',
+            staffUserId: 130,
+            credentialId: 'credential-130',
+            expectedCounter: 0,
+            newCounter: 1
+        }), true);
+        assert.equal(await repository.completeAuthentication({
+            challengeId: '00000000-0000-4000-8000-000000000131',
+            staffUserId: 130,
+            credentialId: 'credential-130',
+            expectedCounter: 0,
+            newCounter: 1
+        }), false);
+
+        const credential = await repository.findCredential(130, 'credential-130');
+        assert.equal(credential?.signatureCounter, 1);
+        assert.deepEqual(credential?.transports, ['usb']);
     });
 });

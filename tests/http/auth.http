@@ -11,7 +11,9 @@
 @validationToken = PASTE_VALIDATION_TOKEN_HERE
 @sessionCookie = PASTE_RS_APP_SESSION_COOKIE_HERE
 @adminMail = staff@example.com
-@adminMfaCode = 123456
+@staffInvitationToken = PASTE_STAFF_INVITATION_TOKEN_HERE
+@staffMfaFlowId = PASTE_STAFF_MFA_FLOW_ID_HERE
+@staffLoginFlowId = PASTE_STAFF_LOGIN_FLOW_ID_HERE
 @adminSessionCookie = PASTE_RS_ADMIN_SESSION_COOKIE_HERE
 
 ### Register
@@ -57,14 +59,41 @@ Cookie: rs_app_session={{sessionCookie}}
 POST {{baseUrl}}/auth/logout
 Cookie: rs_app_session={{sessionCookie}}
 
-### Staff login (password + TOTP)
-POST {{baseUrl}}/admin/auth/login
+### Staff MFA enrollment options
+POST {{baseUrl}}/admin/auth/mfa/enrollment/options
+Content-Type: application/json
+
+{
+  "invitationToken": "{{staffInvitationToken}}"
+}
+
+### Staff MFA enrollment verification (replace credential with startRegistration() output)
+POST {{baseUrl}}/admin/auth/mfa/enrollment/verify
+Content-Type: application/json
+
+{
+  "flowId": "{{staffMfaFlowId}}",
+  "invitationToken": "{{staffInvitationToken}}",
+  "password": "{{password}}",
+  "credential": {}
+}
+
+### Staff login options (password first factor)
+POST {{baseUrl}}/admin/auth/login/options
 Content-Type: application/json
 
 {
   "mail": "{{adminMail}}",
-  "password": "{{password}}",
-  "mfaCode": "{{adminMfaCode}}"
+  "password": "{{password}}"
+}
+
+### Staff login verification (replace credential with startAuthentication() output)
+POST {{baseUrl}}/admin/auth/login/verify
+Content-Type: application/json
+
+{
+  "flowId": "{{staffLoginFlowId}}",
+  "credential": {}
 }
 
 ### Staff auth me

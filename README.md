@@ -103,8 +103,10 @@ Ce script :
 La réinitialisation crée aussi les profils spécialisés `CommunityProfiles` et
 `StaffProfiles`, ainsi que leurs stockages de sessions séparés
 `CommunitySessions` et `StaffSessions`. Une ligne `StaffSessions` exige une date
-de vérification MFA ; un profil staff ne peut pas devenir actif tant que son
-secret TOTP chiffré et sa date d’activation MFA ne sont pas renseignés.
+de vérification MFA et référence obligatoirement le credential de
+`StaffWebAuthnCredentials` utilisé. Un profil staff ne peut pas devenir actif
+tant qu’un passkey ou une clé de sécurité WebAuthn avec vérification utilisateur
+n’a pas été enregistré.
 
 Les comptes staff cumulent leurs rôles via `StaffRoles`. Leurs permissions
 effectives proviennent exclusivement de `RolePermissions` ; un compte sans rôle
@@ -196,6 +198,8 @@ n'est accepté en argument ou écrit dans la sortie de la commande : seul le has
 SHA-256 du jeton est conservé dans `StaffInvitations`. L'invitation expire après
 30 minutes par défaut, durée configurable avec
 `BOOTSTRAP_SUPER_ADMIN_INVITATION_TTL_MINUTES`, et impose l'activation du MFA.
+Le jeton est consommé uniquement par la transaction qui enregistre le premier
+credential WebAuthn, définit le mot de passe et active le profil staff.
 
 La commande nécessite donc une configuration SMTP applicative valide. Une fois
 le premier SuperAdmin créé, toute nouvelle exécution est refusée, y compris si
@@ -253,7 +257,10 @@ Exemples :
 - `POST /api/v1/auth/login`
 - `POST /api/v1/auth/logout`
 - `POST /api/v1/auth/register`
-- `POST /api/v1/admin/auth/login`
+- `POST /api/v1/admin/auth/login/options`
+- `POST /api/v1/admin/auth/login/verify`
+- `POST /api/v1/admin/auth/mfa/enrollment/options`
+- `POST /api/v1/admin/auth/mfa/enrollment/verify`
 - `POST /api/v1/admin/auth/logout`
 - `GET /api/v1/categories`
 - `GET /api/v1/ingredients`
@@ -303,9 +310,20 @@ HttpOnly `rs_app_session`, avec l’audience JWT `recipe-shelter-app` et une dur
 de 7 jours par défaut. Les endpoints `GET /api/v1/auth/me` et
 `POST /api/v1/auth/logout` ne lisent et ne révoquent que cette session.
 
-`POST /api/v1/admin/auth/login` est réservé aux comptes staff actifs. Il exige
-`mail`, `password` et un `mfaCode` TOTP à 6 chiffres, puis pose
-`rs_admin_session`, audience `recipe-shelter-admin`, pour 8 heures par défaut.
+L’enrôlement initial WebAuthn se déroule via
+`POST /api/v1/admin/auth/mfa/enrollment/options`, avec le jeton d’invitation,
+puis `POST /api/v1/admin/auth/mfa/enrollment/verify`, avec le `flowId`, le jeton,
+le mot de passe choisi et la réponse de création WebAuthn. Le compte reste
+`invited` et l’invitation reste utilisable tant que la réponse cryptographique
+n’est pas validée ; l’enrôlement ne crée pas de session.
+
+Le login staff se déroule ensuite en deux appels. Le premier,
+`POST /api/v1/admin/auth/login/options`, vérifie `mail` et `password` puis
+retourne `{ flowId, publicKey }` sans cookie. Le second,
+`POST /api/v1/admin/auth/login/verify`, vérifie l’assertion WebAuthn et pose
+alors seulement `rs_admin_session`, audience `recipe-shelter-admin`, pour 8
+heures par défaut. Les challenges expirent, ne sont utilisables qu’une fois et
+la vérification utilisateur (PIN ou biométrie) est obligatoire.
 `GET /api/v1/admin/auth/me` et `POST /api/v1/admin/auth/logout` utilisent
 exclusivement ce cookie. Copier ou renommer un cookie ne permet pas de franchir
 la frontière : l’audience, le type de compte, les méthodes d’authentification et
@@ -345,7 +363,10 @@ Les valeurs par défaut sont définies dans `.env.example`.
 | `AUTH_SESSION_COOKIE_SAME_SITE` | Non | Politique SameSite du cookie : `lax`, `strict` ou `none`. Défaut : `lax`. |
 | `AUTH_SESSION_COOKIE_SECURE` | Non | Force le flag `Secure`. Défaut : `true` en production, sinon `false`. |
 | `AUTH_SESSION_COOKIE_DOMAIN` | Non | Domaine du cookie si nécessaire, par exemple `.recipe-shelter.fr`. Défaut : non défini. |
-| `AUTH_STAFF_MFA_ENCRYPTION_KEY` | Pour le login staff | Clé indépendante de 32 octets encodée en base64, utilisée pour déchiffrer les secrets TOTP staff. |
+| `AUTH_STAFF_WEBAUTHN_ORIGIN` | Oui pour le staff | Origine frontend exacte attendue dans les réponses WebAuthn, sans chemin. Défaut : origine de `FRONTEND_BASE_URL`. |
+| `AUTH_STAFF_WEBAUTHN_RP_ID` | Oui pour le staff | Domaine WebAuthn (Relying Party ID). Défaut : hostname de l’origine WebAuthn. |
+| `AUTH_STAFF_WEBAUTHN_RP_NAME` | Non | Nom affiché par l’authenticator. Défaut : `Recipe Shelter Staff`. |
+| `AUTH_STAFF_MFA_CHALLENGE_TTL_MS` | Non | Durée maximale d’une cérémonie WebAuthn, plafonnée à 10 minutes. Défaut : `300000` ms. |
 | `BCRYPT_COST` | Non | Coût bcrypt pour le hash des mots de passe. Défaut : `12`. |
 | `AUTH_RATE_LIMIT_MAX_ATTEMPTS` | Non | Nombre maximal de tentatives sur les routes auth limitées. |
 | `AUTH_RATE_LIMIT_WINDOW_MS` | Non | Fenêtre du rate limit en millisecondes. |

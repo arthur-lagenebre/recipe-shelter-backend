@@ -25,9 +25,9 @@ export class SessionRepositoryMysql implements SessionRepository {
 
   async createStaffSession(input: CreateStaffSessionInput): Promise<void> {
     await this.db.execute(
-      `INSERT INTO StaffSessions (Id, StaffUserId, MfaVerifiedAt, ExpiresAt)
-       VALUES (?, ?, ?, ?)`,
-      [input.id, input.userId, input.mfaVerifiedAt, input.expiresAt]
+      `INSERT INTO StaffSessions (Id, StaffUserId, WebAuthnCredentialId, MfaVerifiedAt, ExpiresAt)
+       VALUES (?, ?, ?, ?, ?)`,
+      [input.id, input.userId, input.webAuthnCredentialId, input.mfaVerifiedAt, input.expiresAt]
     );
   }
 
@@ -54,7 +54,9 @@ export class SessionRepositoryMysql implements SessionRepository {
     userId: number,
     requireMfa = false
   ): Promise<boolean> {
-    const mfaClause = requireMfa ? 'AND MfaVerifiedAt IS NOT NULL' : '';
+    const mfaClause = requireMfa
+      ? "AND MfaVerifiedAt IS NOT NULL AND WebAuthnCredentialId IS NOT NULL AND MfaMethod = 'webauthn'"
+      : '';
     const [rows] = await this.db.execute(
       `SELECT 1 AS One
        FROM ${table}

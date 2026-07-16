@@ -1,11 +1,6 @@
 import { firstOrNull } from '../../utils/array.js';
 
-import type {
-    CreateFirstSuperAdminInput,
-    CreateFirstSuperAdminResult,
-    ConsumeSuperAdminInvitationResult,
-    SuperAdminBootstrapRepository
-} from './super-admin-bootstrap.repository.interface.js';
+import type { CreateFirstSuperAdminInput, CreateFirstSuperAdminResult, SuperAdminBootstrapRepository } from './super-admin-bootstrap.repository.interface.js';
 import type { Pool, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 
 const SUPER_ADMIN_ROLE_CODE = 'SuperAdmin';
@@ -123,56 +118,6 @@ export class SuperAdminBootstrapRepositoryMysql implements SuperAdminBootstrapRe
             if (duplicateStatus)
                 return { status: duplicateStatus };
 
-            throw error;
-        } finally {
-            conn.release();
-        }
-    }
-
-    async consumeInvitation(tokenHash: string): Promise<ConsumeSuperAdminInvitationResult> {
-        const conn = await this.db.getConnection();
-
-        try {
-            await conn.beginTransaction();
-
-            const [invitationRows] = await conn.execute<InvitationRow[]>(
-                `SELECT si.Id, si.StaffUserId
-                 FROM StaffInvitations AS si
-                 INNER JOIN StaffRoles AS sr ON sr.StaffUserId = si.StaffUserId
-                 INNER JOIN Roles AS r ON r.Id = sr.RoleId
-                 WHERE si.TokenHash = ?
-                   AND si.UsedAt IS NULL
-                   AND si.ExpiresAt > CURRENT_TIMESTAMP
-                   AND si.RequiresMfa = TRUE
-                   AND r.Code = 'SuperAdmin'
-                 FOR UPDATE`,
-                [tokenHash]
-            );
-            const invitation = firstOrNull(invitationRows);
-
-            if (!invitation) {
-                await conn.commit();
-                return { status: 'invalid' };
-            }
-
-            const [result] = await conn.execute<ResultSetHeader>(
-                `UPDATE StaffInvitations
-                 SET UsedAt = CURRENT_TIMESTAMP
-                 WHERE Id = ?
-                   AND UsedAt IS NULL
-                   AND ExpiresAt > CURRENT_TIMESTAMP`,
-                [invitation.Id]
-            );
-
-            if (result.affectedRows !== 1) {
-                await conn.rollback();
-                return { status: 'invalid' };
-            }
-
-            await conn.commit();
-            return { status: 'consumed', userId: Number(invitation.StaffUserId), requiresMfa: true };
-        } catch (error) {
-            await conn.rollback();
             throw error;
         } finally {
             conn.release();

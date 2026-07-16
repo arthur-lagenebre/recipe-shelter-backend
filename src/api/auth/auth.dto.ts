@@ -1,5 +1,7 @@
 import { badRequest } from '../../utils/errors.js';
 
+import type { AuthenticationResponseJSON, RegistrationResponseJSON } from '@simplewebauthn/server';
+
 export type RegisterDto = {
   mail: string;
   username: string;
@@ -11,8 +13,19 @@ export type LoginDto = {
   password: string;
 };
 
-export type StaffLoginDto = LoginDto & {
-  mfaCode: string;
+export type StaffLoginVerificationDto = {
+  flowId: string;
+  credential: AuthenticationResponseJSON;
+};
+
+export type StaffMfaEnrollmentOptionsDto = {
+  invitationToken: string;
+};
+
+export type StaffMfaEnrollmentVerificationDto = StaffMfaEnrollmentOptionsDto & {
+  flowId: string;
+  password: string;
+  credential: RegistrationResponseJSON;
 };
 
 export type ValidateEmailDto = {
@@ -67,15 +80,82 @@ export function parseLoginBody(body: unknown): LoginDto {
   return { mail, password };
 }
 
-export function parseStaffLoginBody(body: unknown): StaffLoginDto {
-  const login = parseLoginBody(body);
+export function parseStaffLoginVerificationBody(body: unknown): StaffLoginVerificationDto {
   const obj = asObject(body);
-  const mfaCode = getString(obj.mfaCode);
+  const flowId = getString(obj.flowId);
 
-  if (!/^\d{6}$/.test(mfaCode))
-    throw badRequest('MFA code must contain exactly 6 digits', 'AUTH_INVALID_MFA_CODE');
+  if (!flowId)
+    throw badRequest('MFA flow ID is required', 'AUTH_MFA_FLOW_REQUIRED');
 
-  return { ...login, mfaCode };
+  return { flowId, credential: parseAuthenticationCredential(obj.credential) };
+}
+
+export function parseStaffMfaEnrollmentOptionsBody(body: unknown): StaffMfaEnrollmentOptionsDto {
+  const obj = asObject(body);
+  const invitationToken = getString(obj.invitationToken);
+
+  if (!invitationToken)
+    throw badRequest('Invitation token is required', 'STAFF_MFA_INVITATION_TOKEN_REQUIRED');
+
+  return { invitationToken };
+}
+
+export function parseStaffMfaEnrollmentVerificationBody(body: unknown): StaffMfaEnrollmentVerificationDto {
+  const obj = asObject(body);
+  const { invitationToken } = parseStaffMfaEnrollmentOptionsBody(body);
+  const flowId = getString(obj.flowId);
+  const password = typeof obj.password === 'string' ? obj.password : '';
+
+  if (!flowId)
+    throw badRequest('MFA flow ID is required', 'AUTH_MFA_FLOW_REQUIRED');
+  if (!password)
+    throw badRequest('Password is required', 'AUTH_MISSING_FIELDS');
+
+  return {
+    flowId,
+    invitationToken,
+    password,
+    credential: parseRegistrationCredential(obj.credential)
+  };
+}
+
+function parseCredentialBase(value: unknown): Record<string, unknown> {
+  const credential = asObject(value);
+  const response = asObject(credential.response);
+
+  if (typeof credential.id !== 'string'
+    || typeof credential.rawId !== 'string'
+    || credential.type !== 'public-key'
+    || typeof credential.clientExtensionResults !== 'object'
+    || credential.clientExtensionResults === null
+    || typeof response.clientDataJSON !== 'string') {
+    throw badRequest('Invalid WebAuthn response', 'AUTH_INVALID_WEBAUTHN_RESPONSE');
+  }
+
+  return credential;
+}
+
+function parseAuthenticationCredential(value: unknown): AuthenticationResponseJSON {
+  const credential = parseCredentialBase(value);
+  const response = asObject(credential.response);
+
+  if (typeof response.authenticatorData !== 'string'
+    || typeof response.signature !== 'string'
+    || (response.userHandle !== undefined && typeof response.userHandle !== 'string')) {
+    throw badRequest('Invalid WebAuthn authentication response', 'AUTH_INVALID_WEBAUTHN_RESPONSE');
+  }
+
+  return credential as unknown as AuthenticationResponseJSON;
+}
+
+function parseRegistrationCredential(value: unknown): RegistrationResponseJSON {
+  const credential = parseCredentialBase(value);
+  const response = asObject(credential.response);
+
+  if (typeof response.attestationObject !== 'string')
+    throw badRequest('Invalid WebAuthn registration response', 'AUTH_INVALID_WEBAUTHN_RESPONSE');
+
+  return credential as unknown as RegistrationResponseJSON;
 }
 
 export function parseValidateEmailBody(body: unknown): ValidateEmailDto {

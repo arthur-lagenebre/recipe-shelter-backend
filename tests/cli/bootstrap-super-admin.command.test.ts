@@ -1,12 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import {
-    BOOTSTRAP_SUPER_ADMIN_USAGE,
-    CommandUsageError,
-    parseBootstrapSuperAdminArgs,
-    runBootstrapSuperAdminCommand
-} from '../../src/cli/bootstrap-super-admin.command.js';
+import { BOOTSTRAP_SUPER_ADMIN_USAGE, CommandUsageError, parseBootstrapSuperAdminArgs, runBootstrapSuperAdminCommand } from '../../src/cli/bootstrap-super-admin.command.js';
 
 describe('bootstrap SuperAdmin command', () => {
     it('accepts only the non-secret identity arguments', () => {

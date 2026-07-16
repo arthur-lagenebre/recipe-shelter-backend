@@ -2,11 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { PERMISSIONS } from '../../../src/security/permissions.js';
-import {
-    hasPermission,
-    isCommunityAccount,
-    isStaffAccount
-} from '../../../src/services/auth/authorization.service.js';
+import { hasPermission, isCommunityAccount, isStaffAccount } from '../../../src/services/auth/authorization.service.js';
 
 import type { AuthContext } from '../../../src/api/auth/auth.types.js';
 import type { PermissionCode } from '../../../src/security/permissions.js';

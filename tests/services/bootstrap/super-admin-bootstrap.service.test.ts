@@ -4,29 +4,17 @@ import { beforeEach, describe, it } from 'node:test';
 import { SuperAdminBootstrapService } from '../../../src/services/bootstrap/super-admin-bootstrap.service.js';
 import { HttpError } from '../../../src/utils/errors.js';
 
-import type {
-    ConsumeSuperAdminInvitationResult,
-    CreateFirstSuperAdminInput,
-    CreateFirstSuperAdminResult,
-    SuperAdminBootstrapRepository
-} from '../../../src/repositories/bootstrap/super-admin-bootstrap.repository.interface.js';
+import type { CreateFirstSuperAdminInput, CreateFirstSuperAdminResult, SuperAdminBootstrapRepository } from '../../../src/repositories/bootstrap/super-admin-bootstrap.repository.interface.js';
 import type { SuperAdminBootstrapInvitationMailInput } from '../../../src/services/mail/mail.types.js';
 
 class FakeSuperAdminBootstrapRepository implements SuperAdminBootstrapRepository {
     createResult: CreateFirstSuperAdminResult = { status: 'created', userId: 42 };
-    consumeResult: ConsumeSuperAdminInvitationResult = { status: 'consumed', userId: 42, requiresMfa: true };
     createInput: CreateFirstSuperAdminInput | null = null;
-    consumedTokenHash: string | null = null;
     cancelledInvitation: { userId: number; tokenHash: string } | null = null;
 
     async createFirst(input: CreateFirstSuperAdminInput): Promise<CreateFirstSuperAdminResult> {
         this.createInput = input;
         return this.createResult;
-    }
-
-    async consumeInvitation(tokenHash: string): Promise<ConsumeSuperAdminInvitationResult> {
-        this.consumedTokenHash = tokenHash;
-        return this.consumeResult;
     }
 
     async cancelPendingInvitation(userId: number, tokenHash: string): Promise<boolean> {
@@ -99,15 +87,6 @@ describe('SuperAdminBootstrapService', () => {
         assert.equal('token' in result, false);
     });
 
-    it('consumes a normalized token through its hash and keeps MFA mandatory', async () => {
-        assert.deepEqual(await service.consumeInvitation(`  ${rawToken}  `), {
-            userId: 42,
-            requiresMfa: true
-        });
-        assert.equal(repository.consumedTokenHash, tokenHash);
-        assert.notEqual(repository.consumedTokenHash, rawToken);
-    });
-
     it('cancels the pending account when invitation delivery fails so bootstrap can be retried', async () => {
         const deliveryError = new Error('mail delivery failed');
         mailer.error = deliveryError;
@@ -117,19 +96,6 @@ describe('SuperAdminBootstrapService', () => {
             deliveryError
         );
         assert.deepEqual(repository.cancelledInvitation, { userId: 42, tokenHash });
-    });
-
-    it('rejects missing, expired or already used invitation tokens with stable errors', async () => {
-        await assert.rejects(
-            () => service.consumeInvitation('  '),
-            (error) => assertHttpError(error, 'BOOTSTRAP_SUPER_ADMIN_INVITATION_TOKEN_REQUIRED', 400)
-        );
-
-        repository.consumeResult = { status: 'invalid' };
-        await assert.rejects(
-            () => service.consumeInvitation(rawToken),
-            (error) => assertHttpError(error, 'BOOTSTRAP_SUPER_ADMIN_INVITATION_INVALID', 400)
-        );
     });
 
     it('rejects bootstrap when an active SuperAdmin already exists', async () => {

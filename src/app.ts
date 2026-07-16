@@ -42,6 +42,7 @@ import { AdminUserRepositoryMysql } from './repositories/admin/admin.users.repos
 import { EmailValidationRepositoryMysql } from './repositories/auth/email-validation.repository.mysql.js';
 import { PasswordResetRepositoryMysql } from './repositories/auth/password-reset.repository.mysql.js';
 import { SessionRepositoryMysql } from './repositories/auth/session.repository.mysql.js';
+import { StaffMfaRepositoryMysql } from './repositories/auth/staff-mfa.repository.mysql.js';
 import { CategoryRepositoryMysql } from './repositories/category/category.repository.mysql.js';
 import { CommentRepositoryMysql } from './repositories/comments/comments.repository.mysql.js';
 import { EquipmentRepositoryMysql } from './repositories/equipments/equipment.repository.mysql.js';
@@ -120,6 +121,7 @@ function createDefaultDependencies(): AppDependencies {
   const emailValidationRepository = new EmailValidationRepositoryMysql(pool);
   const passwordResetRepository = new PasswordResetRepositoryMysql(pool);
   const sessionRepository = new SessionRepositoryMysql(pool);
+  const staffMfaRepository = new StaffMfaRepositoryMysql(pool);
   const recipeRepository = new RecipeRepositoryMysql(pool, getPublicImageUrl);
   const recipeImageRepository = new RecipeImageRepositoryMysql(pool);
   const rbacRepository = new RbacRepositoryMysql(pool);
@@ -127,7 +129,7 @@ function createDefaultDependencies(): AppDependencies {
   const userRepository = new UserRepositoryMysql(pool);
 
   const emailValidationService = new EmailValidationService(userRepository, emailValidationRepository, mailer, env.http.frontendBaseUrl);
-  const staffMfaService = new StaffMfaService(userRepository);
+  const staffMfaService = new StaffMfaService(staffMfaRepository);
   const recipeSlugService = new RecipeSlugService(recipeRepository);
   const recipeImageService = new RecipeImageService(recipeRepository, recipeImageRepository, new RecipeImageProcessor(), imageStorage);
 

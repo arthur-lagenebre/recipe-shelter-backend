@@ -3,11 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { signSessionToken } from '../../src/services/auth/session-token.js';
 import { adminSessionCookieName, appSessionCookieName } from '../../src/utils/session-cookie.js';
 
-import type {
-  CreateCommunitySessionInput,
-  CreateStaffSessionInput,
-  SessionRepository
-} from '../../src/repositories/auth/session.repository.interface.js';
+import type { CreateCommunitySessionInput, CreateStaffSessionInput, SessionRepository } from '../../src/repositories/auth/session.repository.interface.js';
 import type { User } from '../../src/repositories/users/user.types.js';
 import type { SessionRealm } from '../../src/utils/session-cookie.js';
 
@@ -30,9 +26,7 @@ export class TestSessionRepository implements SessionRepository {
 
   async isStaffSessionActive(id: string, userId: number): Promise<boolean> {
     const session = this.staffSessions.get(id);
-    return Boolean(session?.userId === userId
-      && session.mfaVerifiedAt instanceof Date
-      && session.expiresAt.getTime() > Date.now());
+    return Boolean(session?.userId === userId && Boolean(session.webAuthnCredentialId) && session.mfaVerifiedAt instanceof Date && session.expiresAt.getTime() > Date.now());
   }
 
   async revokeCommunitySession(id: string, userId: number): Promise<void> {
@@ -52,7 +46,13 @@ export class TestSessionRepository implements SessionRepository {
     if (realm === 'app')
       await this.createCommunitySession({ id, userId: user.id, expiresAt });
     else
-      await this.createStaffSession({ id, userId: user.id, expiresAt, mfaVerifiedAt: new Date() });
+      await this.createStaffSession({
+        id,
+        userId: user.id,
+        expiresAt,
+        webAuthnCredentialId: 'test-staff-credential',
+        mfaVerifiedAt: new Date()
+      });
 
     const token = signSessionToken(user, realm, id);
     const cookieName = realm === 'app' ? appSessionCookieName : adminSessionCookieName;

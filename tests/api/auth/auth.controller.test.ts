@@ -116,17 +116,40 @@ describe('auth.controller', () => {
         assert.equal(res.cookies[0].options.maxAge, env.auth.app.sessionCookieMaxAgeMs);
     });
 
-    it('sets only the shorter admin cookie after password and MFA verification', async () => {
+    it('returns WebAuthn options after the password without setting a staff cookie', async () => {
+        const controller = createController({
+            async beginStaffLogin() {
+                return { flowId: 'flow-1', publicKey: { challenge: 'challenge' } };
+            }
+        });
+        const res = createResponse();
+
+        await runHandler(controller.staffLoginOptions, {
+            body: { mail: 'staff@example.com', password: 'secret' }
+        }, res);
+
+        assert.equal(res.statusCode, 200);
+        assert.deepEqual(res.body, { flowId: 'flow-1', publicKey: { challenge: 'challenge' } });
+        assert.equal(res.cookies.length, 0);
+    });
+
+    it('sets only the shorter admin cookie after WebAuthn verification', async () => {
         const staffUser = { ...user, accountType: 'staff', status: 'active' } as const;
         const controller = createController({
-            async loginStaff() {
+            async completeStaffLogin() {
                 return { user: staffUser, token: 'staff-token' };
             }
         });
         const res = createResponse();
 
-        await runHandler(controller.staffLogin, {
-            body: { mail: 'staff@example.com', password: 'secret', mfaCode: '123456' }
+        await runHandler(controller.staffLoginVerify, {
+            body: {
+                flowId: 'flow-1',
+                credential: {
+                    id: 'credential-1', rawId: 'credential-1', type: 'public-key', clientExtensionResults: {},
+                    response: { clientDataJSON: 'data', authenticatorData: 'auth-data', signature: 'signature' }
+                }
+            }
         }, res);
 
         assert.equal(res.statusCode, 200);

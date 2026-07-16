@@ -70,8 +70,12 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
                 (2, 'reader@test.local', 'reader', 'hash', 'community', 'active', CURRENT_TIMESTAMP, NULL, NULL, NULL),
                 (3, 'locked-staff@test.local', 'locked-staff', 'hash', 'staff', 'banned', CURRENT_TIMESTAMP, NULL, NULL, NULL),
                 (4, 'banned-community@test.local', 'banned-community', 'hash', 'community', 'banned', CURRENT_TIMESTAMP, 1, 'Pre-migration moderation', CURRENT_TIMESTAMP);
+            INSERT INTO StaffWebAuthnCredentials
+                (CredentialId, StaffUserId, PublicKey, SignatureCounter, DeviceType, BackedUp, Aaguid)
+            VALUES ('critical-admin-credential', 1, 0x0102, 0, 'singleDevice', FALSE,
+                    '00000000-0000-0000-0000-000000000000');
             UPDATE StaffProfiles
-            SET MfaSecretEncrypted = 0x01, MfaEnabledAt = CURRENT_TIMESTAMP
+            SET MfaEnrolledAt = CURRENT_TIMESTAMP
             WHERE UserId = 1;
             UPDATE Users SET Status = 'active' WHERE Id = 1;
             INSERT INTO StaffRoles (StaffUserId, RoleId) VALUES (1, 1);

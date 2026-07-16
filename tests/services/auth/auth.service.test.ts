@@ -12,7 +12,8 @@ import { TestSessionRepository } from '../../helpers/auth-session.js';
 import type { UserRepository } from '../../../src/repositories/users/user.repository.interface.js';
 import type { CreateUserInput, User, UserWithPassword } from '../../../src/repositories/users/user.types.js';
 import type { EmailValidationService } from '../../../src/services/auth/email-validation.service.js';
-import type { StaffMfaVerification, StaffMfaVerifier } from '../../../src/services/auth/staff-mfa.service.js';
+import type { StaffMfaManager } from '../../../src/services/auth/staff-mfa.service.js';
+import type { AuthenticationResponseJSON } from '@simplewebauthn/server';
 
 const baseUser: User = {
   id: 2,
@@ -33,6 +34,7 @@ class FakeUserRepository implements Partial<UserRepository> {
   emailTaken = false;
   usernameTaken = false;
   authUser: UserWithPassword | null = null;
+  userById: User | null = null;
 
   async isEmailTaken(): Promise<boolean> {
     return this.emailTaken;
@@ -51,6 +53,10 @@ class FakeUserRepository implements Partial<UserRepository> {
   async findAuthByEmail(): Promise<UserWithPassword | null> {
     return this.authUser;
   }
+
+  async findById(): Promise<User | null> {
+    return this.userById;
+  }
 }
 
 class FakeEmailValidationService {
@@ -61,15 +67,46 @@ class FakeEmailValidationService {
   }
 }
 
-class FakeStaffMfa implements StaffMfaVerifier {
-  result: StaffMfaVerification = 'verified';
-  received: { userId: number; code: string } | null = null;
+class FakeStaffMfa implements StaffMfaManager {
+  authenticationUserId: number | null = null;
+  authenticationCompleted = true;
 
-  async verify(userId: number, code: string): Promise<StaffMfaVerification> {
-    this.received = { userId, code };
-    return this.result;
+  async beginEnrollment() {
+    return { flowId: 'enrollment-flow', publicKey: {} as never };
+  }
+
+  async completeEnrollment() {
+    return { userId: 2, mfaEnrolled: true as const };
+  }
+
+  async beginAuthentication(userId: number) {
+    this.authenticationUserId = userId;
+    return { flowId: 'authentication-flow', publicKey: { challenge: 'challenge' } as never };
+  }
+
+  async completeAuthentication() {
+    if (!this.authenticationCompleted)
+      throw new HttpError(401, 'Invalid MFA assertion', 'AUTH_INVALID_MFA_ASSERTION');
+
+    return {
+      staffUserId: 2,
+      credentialId: 'credential-1',
+      verifiedAt: new Date('2026-07-16T12:00:00.000Z')
+    };
   }
 }
+
+const authenticationCredential = {
+  id: 'credential-1',
+  rawId: 'credential-1',
+  type: 'public-key',
+  clientExtensionResults: {},
+  response: {
+    clientDataJSON: 'client-data',
+    authenticatorData: 'authenticator-data',
+    signature: 'signature'
+  }
+} as AuthenticationResponseJSON;
 
 function assertHttpError(error: unknown, code: string, status: number): boolean {
   assert.ok(error instanceof HttpError);
@@ -165,7 +202,7 @@ describe('AuthService', () => {
     await assert.rejects(() => service.loginCommunity({ mail: 'user@example.com', password: 'Recipe42?' }), (error) => assertHttpError(error, 'USER_BANNED', 401));
   });
 
-  it('issues a shorter admin-audience session only after staff MFA', async () => {
+  it('issues WebAuthn options after the staff password but no session yet', async () => {
     users.authUser = {
       ...baseUser,
       accountType: 'staff',
@@ -173,36 +210,42 @@ describe('AuthService', () => {
       passwordHash: await bcrypt.hash('Recipe42?', 4)
     };
 
-    const result = await service.loginStaff({ mail: 'user@example.com', password: 'Recipe42?', mfaCode: '123456' });
+    const result = await service.beginStaffLogin({ mail: 'user@example.com', password: 'Recipe42?' });
+
+    assert.equal(staffMfa.authenticationUserId, baseUser.id);
+    assert.deepEqual(result, { flowId: 'authentication-flow', publicKey: { challenge: 'challenge' } });
+    assert.equal(sessions.staffSessions.size, 0);
+  });
+
+  it('issues a shorter admin-audience session only after a verified WebAuthn assertion', async () => {
+    users.userById = { ...baseUser, accountType: 'staff', status: 'active' };
+
+    const result = await service.completeStaffLogin({
+      flowId: 'authentication-flow',
+      credential: authenticationCredential
+    });
     const payload = jwt.verify(result.token, env.auth.jwtSecret, { audience: env.auth.admin.jwtAudience }) as jwt.JwtPayload;
 
-    assert.deepEqual(staffMfa.received, { userId: baseUser.id, code: '123456' });
     assert.equal(payload.accountType, 'staff');
-    assert.deepEqual(payload.amr, ['pwd', 'mfa']);
+    assert.deepEqual(payload.amr, ['pwd', 'webauthn']);
     assert.ok(payload.jti && sessions.staffSessions.has(payload.jti));
+    assert.equal(sessions.staffSessions.get(payload.jti ?? '')?.webAuthnCredentialId, 'credential-1');
     assert.ok((payload.exp ?? 0) - (payload.iat ?? 0) < env.auth.app.jwtExpiresInMs / 1000);
     assert.throws(() => jwt.verify(result.token, env.auth.jwtSecret, { audience: env.auth.app.jwtAudience }));
   });
 
-  it('refuses community identities, missing enrollment and invalid MFA on staff login', async () => {
+  it('refuses community identities and invalid WebAuthn assertions on the staff boundary', async () => {
     const passwordHash = await bcrypt.hash('Recipe42?', 4);
     users.authUser = { ...baseUser, passwordHash };
     await assert.rejects(
-      () => service.loginStaff({ mail: 'user@example.com', password: 'Recipe42?', mfaCode: '123456' }),
+      () => service.beginStaffLogin({ mail: 'user@example.com', password: 'Recipe42?' }),
       (error) => assertHttpError(error, 'AUTH_INVALID_CREDENTIALS', 401)
     );
 
-    users.authUser = { ...baseUser, accountType: 'staff', status: 'active', passwordHash };
-    staffMfa.result = 'not_enrolled';
+    staffMfa.authenticationCompleted = false;
     await assert.rejects(
-      () => service.loginStaff({ mail: 'user@example.com', password: 'Recipe42?', mfaCode: '123456' }),
-      (error) => assertHttpError(error, 'STAFF_MFA_REQUIRED', 401)
-    );
-
-    staffMfa.result = 'invalid';
-    await assert.rejects(
-      () => service.loginStaff({ mail: 'user@example.com', password: 'Recipe42?', mfaCode: '000000' }),
-      (error) => assertHttpError(error, 'AUTH_INVALID_MFA_CODE', 401)
+      () => service.completeStaffLogin({ flowId: 'flow', credential: authenticationCredential }),
+      (error) => assertHttpError(error, 'AUTH_INVALID_MFA_ASSERTION', 401)
     );
     assert.equal(sessions.staffSessions.size, 0);
   });
@@ -217,12 +260,12 @@ describe('AuthService', () => {
     ] as const) {
       users.authUser = { ...baseUser, accountType: 'staff', status, passwordHash };
       await assert.rejects(
-        () => service.loginStaff({ mail: 'user@example.com', password: 'Recipe42?', mfaCode: '123456' }),
+        () => service.beginStaffLogin({ mail: 'user@example.com', password: 'Recipe42?' }),
         (error) => assertHttpError(error, code, 401)
       );
     }
 
-    assert.equal(staffMfa.received, null);
+    assert.equal(staffMfa.authenticationUserId, null);
   });
 
   it('revokes only the session realm represented by the token', async () => {

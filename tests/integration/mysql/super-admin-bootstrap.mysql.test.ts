@@ -244,61 +244,19 @@ describe('SuperAdmin bootstrap MySQL integration', { skip: !mysqlEnabled && 'Set
             InvitationCount: 1
         }]);
 
-        await pool.query(
-            `UPDATE StaffInvitations SET ExpiresAt = DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 1 MINUTE) WHERE StaffUserId = ?`,
-            [createdAccount.Id]
-        );
-        await assert.rejects(
-            () => firstService.consumeInvitation(deliveredToken),
-            (error) => {
-                assert.ok(error instanceof HttpError);
-                assert.equal(error.code, 'BOOTSTRAP_SUPER_ADMIN_INVITATION_INVALID');
-                return true;
-            }
-        );
-        const [expiredRows] = await pool.query(`SELECT UsedAt FROM StaffInvitations WHERE StaffUserId = ?`, [createdAccount.Id]);
-        assert.deepEqual(expiredRows, [{ UsedAt: null }]);
-
-        await pool.query(
-            `UPDATE StaffInvitations SET ExpiresAt = DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 5 MINUTE) WHERE StaffUserId = ?`,
-            [createdAccount.Id]
-        );
-        assert.deepEqual(await firstService.consumeInvitation(deliveredToken), {
-            userId: createdAccount.Id,
-            requiresMfa: true
-        });
-        await assert.rejects(
-            () => firstService.consumeInvitation(deliveredToken),
-            (error) => {
-                assert.ok(error instanceof HttpError);
-                assert.equal(error.code, 'BOOTSTRAP_SUPER_ADMIN_INVITATION_INVALID');
-                return true;
-            }
-        );
-
-        const [consumedRows] = await pool.query(
-            `SELECT UsedAt, RequiresMfa FROM StaffInvitations WHERE StaffUserId = ?`,
-            [createdAccount.Id]
-        );
-        const consumed = (consumedRows as Array<{ UsedAt: Date | null; RequiresMfa: number }>)[0];
-        assert.ok(consumed?.UsedAt);
-        assert.equal(consumed.RequiresMfa, 1);
-
         const [stillInvitedRows] = await pool.query(`SELECT Status FROM StaffProfiles WHERE UserId = ?`, [createdAccount.Id]);
         assert.deepEqual(stillInvitedRows, [{ Status: 'invited' }]);
 
         await pool.query(
-            `UPDATE StaffProfiles
-             SET MfaSecretEncrypted = 0x01, MfaEnabledAt = CURRENT_TIMESTAMP
-             WHERE UserId = ?`,
+            `INSERT INTO StaffWebAuthnCredentials
+               (CredentialId, StaffUserId, PublicKey, SignatureCounter, DeviceType, BackedUp, Aaguid)
+             VALUES ('bootstrap-credential', ?, 0x0102, 0, 'singleDevice', FALSE,
+                     '00000000-0000-0000-0000-000000000000')`,
             [createdAccount.Id]
         );
-        await pool.query(
-            `UPDATE Users
-             SET Status = 'active'
-             WHERE Id = ?`,
-            [createdAccount.Id]
-        );
+        await pool.query(`UPDATE StaffProfiles SET MfaEnrolledAt = CURRENT_TIMESTAMP WHERE UserId = ?`, [createdAccount.Id]);
+        await pool.query(`UPDATE Users SET Password = 'password-hash', Status = 'active' WHERE Id = ?`, [createdAccount.Id]);
+        await pool.query(`UPDATE StaffInvitations SET UsedAt = CURRENT_TIMESTAMP WHERE StaffUserId = ?`, [createdAccount.Id]);
         await assert.rejects(
             () => firstService.bootstrap({
                 mail: 'second-active@test.local',

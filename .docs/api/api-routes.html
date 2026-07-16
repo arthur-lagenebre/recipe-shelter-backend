@@ -525,7 +525,7 @@ type PaginatedResult&lt;T&gt; = {
 
     <section aria-labelledby="auth">
       <h2 id="auth">Auth</h2>
-      <p class="section-intro">Les sessions community et staff utilisent des cookies, audiences JWT, durées et tables SQL distincts. Le login community pose <code>rs_app_session</code> pour 7 jours par défaut. Le login staff exige un TOTP et pose <code>rs_admin_session</code> pour 8 heures par défaut. Les routes sensibles sont limitées par le rate limiter auth.</p>
+      <p class="section-intro">Les sessions community et staff utilisent des cookies, audiences JWT, durées et tables SQL distincts. Le login community pose <code>rs_app_session</code> pour 7 jours par défaut. Le login staff vérifie le mot de passe puis une assertion WebAuthn avec vérification utilisateur avant de poser <code>rs_admin_session</code> pour 8 heures par défaut. Les routes sensibles sont limitées par le rate limiter auth.</p>
       <div class="table-wrap">
         <table>
           <thead>
@@ -568,10 +568,31 @@ type PaginatedResult&lt;T&gt; = {
             </tr>
             <tr>
               <td><span class="method post">POST</span></td>
-              <td><code>/api/v1/admin/auth/login</code></td>
+              <td><code>/api/v1/admin/auth/mfa/enrollment/options</code></td>
               <td><span class="auth public">Public</span></td>
-              <td><code>mail</code>, <code>password</code>, <code>mfaCode</code> TOTP à 6 chiffres.</td>
-              <td><code>200</code> <code>{ "user": ... }</code> + <code>Set-Cookie: rs_admin_session=...</code>. Erreurs : <code>STAFF_INVITED</code>, <code>STAFF_LOCKED</code>, <code>STAFF_DISABLED</code>, <code>STAFF_MFA_REQUIRED</code>, <code>AUTH_INVALID_MFA_CODE</code>.</td>
+              <td><code>invitationToken</code>.</td>
+              <td><code>200</code> <code>{ "flowId": "...", "publicKey": ... }</code>. Options de création WebAuthn avec vérification utilisateur obligatoire.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/admin/auth/mfa/enrollment/verify</code></td>
+              <td><span class="auth public">Public</span></td>
+              <td><code>flowId</code>, <code>invitationToken</code>, <code>password</code>, <code>credential</code> WebAuthn.</td>
+              <td><code>200</code> <code>{ "userId": 1, "mfaEnrolled": true }</code>. Active le staff atomiquement, sans créer de session.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/admin/auth/login/options</code></td>
+              <td><span class="auth public">Public</span></td>
+              <td><code>mail</code>, <code>password</code>.</td>
+              <td><code>200</code> <code>{ "flowId": "...", "publicKey": ... }</code>, sans cookie. Erreurs : <code>STAFF_INVITED</code>, <code>STAFF_LOCKED</code>, <code>STAFF_DISABLED</code>, <code>STAFF_MFA_REQUIRED</code>.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/admin/auth/login/verify</code></td>
+              <td><span class="auth public">Public</span></td>
+              <td><code>flowId</code>, <code>credential</code> WebAuthn.</td>
+              <td><code>200</code> <code>{ "user": ... }</code> + <code>Set-Cookie: rs_admin_session=...</code>. Erreur : <code>AUTH_INVALID_MFA_ASSERTION</code>.</td>
             </tr>
             <tr>
               <td><span class="method get">GET</span></td>
