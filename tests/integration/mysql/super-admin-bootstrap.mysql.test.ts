@@ -288,10 +288,9 @@ describe('SuperAdmin bootstrap MySQL integration', { skip: !mysqlEnabled && 'Set
         assert.deepEqual(stillInvitedRows, [{ Status: 'invited' }]);
 
         await pool.query(
-            `UPDATE Users AS u
-             INNER JOIN StaffProfiles AS sp ON sp.UserId = u.Id
-             SET u.Status = 'active', sp.Status = 'active'
-             WHERE u.Id = ?`,
+            `UPDATE Users
+             SET Status = 'active'
+             WHERE Id = ?`,
             [createdAccount.Id]
         );
         await assert.rejects(
