@@ -103,6 +103,7 @@ CREATE TABLE StaffRoles (
 CREATE TABLE StaffInvitations (
   Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   StaffUserId BIGINT UNSIGNED NOT NULL,
+  CreatedByStaffUserId BIGINT UNSIGNED NULL,
   TokenHash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   ExpiresAt DATETIME NOT NULL,
   UsedAt DATETIME NULL,
@@ -113,11 +114,17 @@ CREATE TABLE StaffInvitations (
   UNIQUE KEY staff_invitations_token_hash_UK (TokenHash),
   UNIQUE KEY staff_invitations_id_staff_user_id_UK (Id, StaffUserId),
   KEY idx_staff_invitations_expires_at (ExpiresAt),
+  KEY idx_staff_invitations_created_by_staff_user_id (CreatedByStaffUserId),
   CONSTRAINT staff_invitations_mfa_required_CK CHECK (RequiresMfa = TRUE),
+  CONSTRAINT staff_invitations_expiry_CK CHECK (ExpiresAt > CreatedAt),
   CONSTRAINT staff_invitations_staff_profile_FK
     FOREIGN KEY (StaffUserId) REFERENCES StaffProfiles(UserId)
     ON UPDATE CASCADE
-    ON DELETE CASCADE
+    ON DELETE CASCADE,
+  CONSTRAINT staff_invitations_created_by_staff_profile_FK
+    FOREIGN KEY (CreatedByStaffUserId) REFERENCES StaffProfiles(UserId)
+    ON UPDATE RESTRICT
+    ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE StaffWebAuthnCredentials (

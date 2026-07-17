@@ -22,6 +22,13 @@ export interface SuperAdminBootstrapInvitationMailInput {
     expiresInMinutes: number;
 }
 
+export interface StaffInvitationMailInput {
+    to: string;
+    displayName: string;
+    invitationUrl: string;
+    expiresInMinutes: number;
+}
+
 export interface ContactMailInput {
     name: string;
     email: string;
@@ -39,4 +46,8 @@ export interface Mailer {
 
 export interface SuperAdminBootstrapInvitationMailer {
     sendSuperAdminBootstrapInvitationEmail(input: SuperAdminBootstrapInvitationMailInput): Promise<void>;
+}
+
+export interface StaffInvitationMailer {
+    sendStaffInvitationEmail(input: StaffInvitationMailInput): Promise<void>;
 }

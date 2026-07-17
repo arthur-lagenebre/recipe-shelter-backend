@@ -426,6 +426,7 @@
         <a href="#admin-recipes">Admin recipes</a>
         <a href="#admin-comments">Admin comments</a>
         <a href="#admin-users">Admin users</a>
+        <a href="#admin-staff-invitations">Admin staff invitations</a>
         <a href="#admin-staff-sessions">Admin staff sessions</a>
         <a href="#admin-audit-logs">Admin audit logs</a>
       </nav>
@@ -1975,6 +1976,58 @@ type UnbanUserRequest = {
 
 type BanUserResponse = OkResponse;
 type UnbanUserResponse = OkResponse;</code></pre>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="admin-staff-invitations">
+      <h2 id="admin-staff-invitations">Admin staff invitations</h2>
+      <p class="section-intro">Création d'un compte staff invité avec ses rôles initiaux. La route exige la permission explicite <code>staff.create</code>, enregistre une seule invitation expirante et audite l'action sans conserver le jeton brut dans la base ou le journal.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Méthode</th>
+              <th>Route</th>
+              <th>Auth</th>
+              <th>Body / Query</th>
+              <th>Réponse</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/admin/staff/invitations</code></td>
+              <td><span class="auth admin">Admin + <code>staff.create</code></span></td>
+              <td><code>email</code>, <code>displayName</code> (3..64 caractères) et <code>roles</code>, liste non vide de codes de rôles uniques.</td>
+              <td><code>201</code> invitation créée. Conflits <code>STAFF_INVITATION_ALREADY_EXISTS</code>, <code>STAFF_EMAIL_ALREADY_EXISTS</code> ou <code>STAFF_DISPLAY_NAME_ALREADY_EXISTS</code>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="schema-grid">
+        <article class="schema">
+          <h3>CreateStaffInvitationRequest</h3>
+          <pre><code>type CreateStaffInvitationRequest = {
+  email: string;
+  displayName: string;
+  roles: string[]; // codes RBAC stables, non vides et uniques
+};</code></pre>
+        </article>
+
+        <article class="schema">
+          <h3>StaffInvitation</h3>
+          <pre><code>type StaffInvitation = {
+  id: number;
+  staffUserId: number;
+  email: string;
+  displayName: string;
+  status: "invited";
+  roles: Array&lt;{ id: number; code: string; name: string }&gt;;
+  expiresAt: ISODateString;
+  createdAt: ISODateString;
+};</code></pre>
         </article>
       </div>
     </section>

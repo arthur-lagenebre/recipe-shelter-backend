@@ -73,11 +73,17 @@ describe('SmtpMailService', () => {
             invitationUrl: 'https://front.example/auth/staff-invitation?token=ghi',
             expiresInMinutes: 30
         });
+        await service.sendStaffInvitationEmail({
+            to: 'alice@example.com',
+            displayName: 'Alice Martin',
+            invitationUrl: 'https://front.example/auth/staff-invitation?token=jkl',
+            expiresInMinutes: 1440
+        });
 
-        assert.equal(transporter.messages.length, 4);
+        assert.equal(transporter.messages.length, 5);
         assert.deepEqual(
             transporter.messages.map(({ from, to }) => ({ from, to })),
-            Array.from({ length: 4 }, () => ({ from: config.from, to: 'alice@example.com' }))
+            Array.from({ length: 5 }, () => ({ from: config.from, to: 'alice@example.com' }))
         );
         assert.match(String(transporter.messages[0]?.text), /alice/);
         assert.match(String(transporter.messages[0]?.text), /token=abc/);
@@ -86,6 +92,10 @@ describe('SmtpMailService', () => {
         assert.match(String(transporter.messages[3]?.text), /token=ghi/);
         assert.match(String(transporter.messages[3]?.text), /30 minutes/);
         assert.match(String(transporter.messages[3]?.text), /multifacteur/);
+        assert.match(String(transporter.messages[4]?.text), /Alice Martin/);
+        assert.match(String(transporter.messages[4]?.text), /token=jkl/);
+        assert.match(String(transporter.messages[4]?.text), /1440 minutes/);
+        assert.match(String(transporter.messages[4]?.text), /multifacteur/);
     });
 
     it('sends contact messages to the configured recipient with reply-to metadata', async () => {

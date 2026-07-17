@@ -182,6 +182,10 @@ export const env = {
     superAdminInvitationTtlMinutes: readPositiveInteger(process.env.BOOTSTRAP_SUPER_ADMIN_INVITATION_TTL_MINUTES, 30)
   },
 
+  staff: {
+    invitationTtlMinutes: readPositiveInteger(process.env.STAFF_INVITATION_TTL_MINUTES, 1440)
+  },
+
   smtp: {
     host: readString(process.env.SMTP_HOST, ''),
     port: readNumber(process.env.SMTP_PORT, 587),

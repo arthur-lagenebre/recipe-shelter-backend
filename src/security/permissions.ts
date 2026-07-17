@@ -13,7 +13,7 @@ export const PERMISSIONS = {
   catalogRead: 'catalog.read',
   catalogManage: 'catalog.manage',
   staffRead: 'staff.read',
-  staffManage: 'staff.manage',
+  staffCreate: 'staff.create',
   staffSessionRevoke: 'staff.session.revoke',
   auditRead: 'audit.read'
 } as const;

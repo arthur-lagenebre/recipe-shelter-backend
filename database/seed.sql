@@ -37,7 +37,7 @@ INSERT INTO Permissions (Id, Code, Description) VALUES
 (12, 'catalog.read', "Consulter le catalogue dans l'administration"),
 (13, 'catalog.manage', "Créer, modifier et supprimer des catégories, ingrédients, tags et ustensiles"),
 (14, 'staff.read', "Consulter les comptes staff et leurs rôles"),
-(15, 'staff.manage', "Inviter, modifier, désactiver et gérer les rôles des comptes staff"),
+(15, 'staff.create', "Inviter un compte staff avec ses rôles initiaux"),
 (16, 'staff.session.revoke', "Révoquer les sessions actives des comptes staff"),
 (17, 'audit.read', "Consulter le journal d'audit administratif")
 AS new_permissions
@@ -80,7 +80,7 @@ FROM (
   UNION ALL SELECT 'SuperAdmin', 'catalog.read'
   UNION ALL SELECT 'SuperAdmin', 'catalog.manage'
   UNION ALL SELECT 'SuperAdmin', 'staff.read'
-  UNION ALL SELECT 'SuperAdmin', 'staff.manage'
+  UNION ALL SELECT 'SuperAdmin', 'staff.create'
   UNION ALL SELECT 'SuperAdmin', 'staff.session.revoke'
   UNION ALL SELECT 'SuperAdmin', 'audit.read'
 ) AS role_permission_matrix

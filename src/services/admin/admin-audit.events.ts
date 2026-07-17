@@ -8,6 +8,7 @@ export const ADMIN_AUDIT_EVENT_TYPES = {
   recipesArchive: 'recipes.archive',
   recipesDelete: 'recipes.delete',
   recipesReject: 'recipes.reject',
+  staffInvitationCreate: 'staff.invitations.create',
   staffSessionRevoke: 'staff.sessions.revoke',
   usersBan: 'users.ban',
   usersUnban: 'users.unban'
@@ -19,6 +20,7 @@ export const ADMIN_AUDIT_TARGET_TYPES = {
   comment: 'comment',
   communityUser: 'community_user',
   recipe: 'recipe',
+  staffInvitation: 'staff_invitation',
   staffSession: 'staff_session'
 } as const;
 
@@ -34,6 +36,7 @@ export const ADMIN_AUDIT_EVENT_TARGET_TYPES: Readonly<Record<AdminAuditEventType
   [ADMIN_AUDIT_EVENT_TYPES.recipesArchive]: ADMIN_AUDIT_TARGET_TYPES.recipe,
   [ADMIN_AUDIT_EVENT_TYPES.recipesDelete]: ADMIN_AUDIT_TARGET_TYPES.recipe,
   [ADMIN_AUDIT_EVENT_TYPES.recipesReject]: ADMIN_AUDIT_TARGET_TYPES.recipe,
+  [ADMIN_AUDIT_EVENT_TYPES.staffInvitationCreate]: ADMIN_AUDIT_TARGET_TYPES.staffInvitation,
   [ADMIN_AUDIT_EVENT_TYPES.staffSessionRevoke]: ADMIN_AUDIT_TARGET_TYPES.staffSession,
   [ADMIN_AUDIT_EVENT_TYPES.usersBan]: ADMIN_AUDIT_TARGET_TYPES.communityUser,
   [ADMIN_AUDIT_EVENT_TYPES.usersUnban]: ADMIN_AUDIT_TARGET_TYPES.communityUser

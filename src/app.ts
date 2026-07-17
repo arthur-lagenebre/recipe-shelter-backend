@@ -11,6 +11,8 @@ import { createAdminRecipesController } from './api/admin/admin.recipes.controll
 import { createAdminRecipesRouter } from './api/admin/admin.recipes.routes.js';
 import { createAdminUsersController } from './api/admin/admin.users.controller.js';
 import { createAdminUsersRouter } from './api/admin/admin.users.routes.js';
+import { createStaffInvitationsController } from './api/admin/staff-invitations.controller.js';
+import { createStaffInvitationsRouter } from './api/admin/staff-invitations.routes.js';
 import { createStaffSessionsController } from './api/admin/staff-sessions.controller.js';
 import { createAdminStaffSessionsRouter } from './api/admin/staff-sessions.routes.js';
 import { createAuthController } from './api/auth/auth.controller.js';
@@ -45,6 +47,7 @@ import { AdminAuditRepositoryMysql } from './repositories/admin/admin-audit.repo
 import { AdminCommentRepositoryMysql } from './repositories/admin/admin.comments.repository.mysql.js';
 import { AdminRecipeRepositoryMysql } from './repositories/admin/admin.recipe.repository.mysql.js';
 import { AdminUserRepositoryMysql } from './repositories/admin/admin.users.repository.mysql.js';
+import { StaffInvitationRepositoryMysql } from './repositories/admin/staff-invitation.repository.mysql.js';
 import { EmailValidationRepositoryMysql } from './repositories/auth/email-validation.repository.mysql.js';
 import { PasswordResetRepositoryMysql } from './repositories/auth/password-reset.repository.mysql.js';
 import { SessionRepositoryMysql } from './repositories/auth/session.repository.mysql.js';
@@ -65,6 +68,7 @@ import { AdminAuditService } from './services/admin/admin-audit.service.js';
 import { AdminCommentService } from './services/admin/admin.comments.services.js';
 import { AdminRecipeService } from './services/admin/admin.recipes.services.js';
 import { AdminUserService } from './services/admin/admin.users.service.js';
+import { StaffInvitationService } from './services/admin/staff-invitation.service.js';
 import { AuthService } from './services/auth/auth.service.js';
 import { EmailValidationService } from './services/auth/email-validation.service.js';
 import { PasswordResetService } from './services/auth/password-reset.service.js';
@@ -112,6 +116,7 @@ export type AppDependencies = {
   passwordResetService: PasswordResetService;
   recipeImageService: RecipeImageService;
   recipeService: RecipeService;
+  staffInvitationService: StaffInvitationService;
   staffSessionService: StaffSessionService;
   tagService: TagService;
   usersService: UserService;
@@ -126,6 +131,7 @@ function createDefaultDependencies(): AppDependencies {
   const adminCommentRepository = new AdminCommentRepositoryMysql(pool);
   const adminRecipeRepository = new AdminRecipeRepositoryMysql(pool, getPublicImageUrl);
   const adminUserRepository = new AdminUserRepositoryMysql(pool);
+  const staffInvitationRepository = new StaffInvitationRepositoryMysql(pool);
   const adminAuditActions = new AdminAuditActionRunnerMysql(
     pool,
     (db) => new AdminAuditService(new AdminAuditRepositoryMysql(db))
@@ -170,6 +176,12 @@ function createDefaultDependencies(): AppDependencies {
     passwordResetService: new PasswordResetService(userRepository, passwordResetRepository, mailer, env.http.frontendBaseUrl),
     recipeImageService,
     recipeService: new RecipeService(recipeRepository, recipeSlugService),
+    staffInvitationService: new StaffInvitationService(
+      staffInvitationRepository,
+      mailer,
+      adminAuditActions,
+      env.http.frontendBaseUrl
+    ),
     staffSessionService: new StaffSessionService(sessionRepository, userRepository, adminAuditActions),
     tagService: new TagService(tagRepository),
     usersService: new UserService(userRepository, recipeRepository)
@@ -206,6 +218,7 @@ export function createApp(overrides: Partial<AppDependencies> = {}) {
   const adminRecipesController = createAdminRecipesController(dependencies.adminRecipeService);
   const adminUsersController = createAdminUsersController(dependencies.adminUserService);
   const authController = createAuthController(dependencies.authService, dependencies.passwordResetService, dependencies.emailValidationService);
+  const staffInvitationsController = createStaffInvitationsController(dependencies.staffInvitationService);
   const staffSessionsController = createStaffSessionsController(dependencies.staffSessionService);
   const categoryController = createCategoryController(dependencies.categoryService);
   const commentsController = createCommentsController(dependencies.commentService);
@@ -223,6 +236,7 @@ export function createApp(overrides: Partial<AppDependencies> = {}) {
   adminRouter.use('/audit-logs', createAdminAuditLogsRouter(adminAuditLogsController));
   adminRouter.use('/comments', createAdminCommentsRouter(adminCommentsController));
   adminRouter.use('/recipes', createAdminRecipesRouter(adminRecipesController));
+  adminRouter.use('/staff/invitations', createStaffInvitationsRouter(staffInvitationsController));
   adminRouter.use('/staff', createAdminStaffSessionsRouter(staffSessionsController));
   adminRouter.use('/users', createAdminUsersRouter(adminUsersController));
 

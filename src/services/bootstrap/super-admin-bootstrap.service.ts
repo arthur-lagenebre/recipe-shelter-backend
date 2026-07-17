@@ -1,6 +1,6 @@
 import { env } from '../../utils/env.js';
 import { badRequest, conflict, internalError } from '../../utils/errors.js';
-import { generateBootstrapInvitationToken, hashBootstrapInvitationToken } from '../../utils/security/bootstrap-invitation-token.js';
+import { generateStaffInvitationToken, hashStaffInvitationToken } from '../../utils/security/staff-invitation-token.js';
 import { normalizeEmail } from '../../utils/string.js';
 
 import type { SuperAdminBootstrapRepository } from '../../repositories/bootstrap/super-admin-bootstrap.repository.interface.js';
@@ -22,15 +22,10 @@ export class SuperAdminBootstrapService {
     private readonly generateToken: () => string;
     private readonly hashToken: (token: string) => string;
 
-    constructor(
-        private readonly repository: SuperAdminBootstrapRepository,
-        private readonly mailer: SuperAdminBootstrapInvitationMailer,
-        private readonly appBaseUrl: string,
-        options: BootstrapOptions = {}
-    ) {
+    constructor(private readonly repository: SuperAdminBootstrapRepository, private readonly mailer: SuperAdminBootstrapInvitationMailer, private readonly appBaseUrl: string, options: BootstrapOptions = {}) {
         this.invitationTtlMinutes = options.invitationTtlMinutes ?? env.bootstrap.superAdminInvitationTtlMinutes;
-        this.generateToken = options.generateToken ?? generateBootstrapInvitationToken;
-        this.hashToken = options.hashToken ?? hashBootstrapInvitationToken;
+        this.generateToken = options.generateToken ?? generateStaffInvitationToken;
+        this.hashToken = options.hashToken ?? hashStaffInvitationToken;
 
         if (!Number.isInteger(this.invitationTtlMinutes) || this.invitationTtlMinutes <= 0)
             throw new TypeError('SuperAdmin invitation TTL must be a positive integer');

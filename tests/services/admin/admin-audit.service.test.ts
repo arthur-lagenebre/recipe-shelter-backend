@@ -38,6 +38,7 @@ describe('administrative audit event catalog', () => {
       'recipes.archive',
       'recipes.delete',
       'recipes.reject',
+      'staff.invitations.create',
       'staff.sessions.revoke',
       'users.ban',
       'users.unban'

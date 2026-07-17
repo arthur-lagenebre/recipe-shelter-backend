@@ -6,7 +6,7 @@ import bcrypt from 'bcrypt';
 import { validatePassword } from './password-policy.js';
 import { env } from '../../utils/env.js';
 import { badRequest, conflict, unauthorized } from '../../utils/errors.js';
-import { hashBootstrapInvitationToken } from '../../utils/security/bootstrap-invitation-token.js';
+import { hashStaffInvitationToken } from '../../utils/security/staff-invitation-token.js';
 
 import type { StaffMfaRepository } from '../../repositories/auth/staff-mfa.repository.interface.js';
 import type { AuthenticationResponseJSON, PublicKeyCredentialCreationOptionsJSON, PublicKeyCredentialRequestOptionsJSON, RegistrationResponseJSON } from '@simplewebauthn/server';
@@ -71,7 +71,7 @@ export class StaffMfaService implements StaffMfaManager {
     this.challengeTtlMs = options.challengeTtlMs ?? env.auth.staffMfa.challengeTtlMs;
     this.now = options.now ?? (() => new Date());
     this.randomId = options.randomId ?? randomUUID;
-    this.hashInvitationToken = options.hashInvitationToken ?? hashBootstrapInvitationToken;
+    this.hashInvitationToken = options.hashInvitationToken ?? hashStaffInvitationToken;
     this.hashPassword = options.hashPassword ?? ((password) => bcrypt.hash(password, env.auth.bcryptCost));
     this.webAuthn = options.webAuthn ?? { generateAuthenticationOptions, generateRegistrationOptions, verifyAuthenticationResponse, verifyRegistrationResponse };
     this.webAuthnOrigin = options.webAuthnOrigin ?? env.auth.staffMfa.webAuthnOrigin;

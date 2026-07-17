@@ -9,6 +9,8 @@ import type {
   Mailer,
   PasswordChangedMailInput,
   PasswordResetMailInput,
+  StaffInvitationMailer,
+  StaffInvitationMailInput,
   SuperAdminBootstrapInvitationMailer,
   SuperAdminBootstrapInvitationMailInput
 } from './mail.types.js';
@@ -24,7 +26,7 @@ export type SmtpConfig = {
   contactRecipientEmail: string;
 };
 
-export class SmtpMailService implements Mailer, SuperAdminBootstrapInvitationMailer {
+export class SmtpMailService implements Mailer, StaffInvitationMailer, SuperAdminBootstrapInvitationMailer {
   private readonly transporter: Pick<Transporter, 'sendMail'>;
 
   constructor(private readonly config: SmtpConfig, transporter?: Pick<Transporter, 'sendMail'>) {
@@ -65,6 +67,14 @@ export class SmtpMailService implements Mailer, SuperAdminBootstrapInvitationMai
       to: input.to,
       subject: 'Invitation SuperAdmin Recipe Shelter',
       text: this.formatSuperAdminBootstrapInvitationMessage(input)
+    });
+  }
+
+  async sendStaffInvitationEmail(input: StaffInvitationMailInput): Promise<void> {
+    await this.sendApplicationMail({
+      to: input.to,
+      subject: 'Invitation à rejoindre le staff Recipe Shelter',
+      text: this.formatStaffInvitationMessage(input)
     });
   }
 
@@ -181,6 +191,19 @@ export class SmtpMailService implements Mailer, SuperAdminBootstrapInvitationMai
       `L'activation de l'authentification multifacteur est obligatoire.`,
       ``,
       `Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.`
+    ].join('\n');
+  }
+
+  private formatStaffInvitationMessage(input: StaffInvitationMailInput): string {
+    return [
+      `Bonjour ${input.displayName},`,
+      ``,
+      `Vous êtes invité à rejoindre le staff Recipe Shelter.`,
+      `Lien d'activation : ${input.invitationUrl}`,
+      `Ce lien expirera dans ${input.expiresInMinutes} minutes et ne pourra être utilisé qu'une fois.`,
+      `L'activation de l'authentification multifacteur est obligatoire.`,
+      ``,
+      `Si vous n'attendiez pas cette invitation, ignorez cet email.`
     ].join('\n');
   }
 

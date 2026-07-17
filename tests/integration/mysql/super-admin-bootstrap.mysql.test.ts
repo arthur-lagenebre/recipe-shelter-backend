@@ -8,7 +8,7 @@ import { SuperAdminBootstrapRepositoryMysql } from '../../../src/repositories/bo
 import { SuperAdminBootstrapService } from '../../../src/services/bootstrap/super-admin-bootstrap.service.js';
 import { env } from '../../../src/utils/env.js';
 import { HttpError } from '../../../src/utils/errors.js';
-import { hashBootstrapInvitationToken } from '../../../src/utils/security/bootstrap-invitation-token.js';
+import { hashStaffInvitationToken } from '../../../src/utils/security/staff-invitation-token.js';
 
 import type { SuperAdminBootstrapInvitationMailInput } from '../../../src/services/mail/mail.types.js';
 import type { Pool } from 'mysql2/promise';
@@ -217,7 +217,7 @@ describe('SuperAdmin bootstrap MySQL integration', { skip: !mysqlEnabled && 'Set
         }>)[0];
         assert.ok(invitation);
         assert.equal(invitation.StaffUserId, createdAccount.Id);
-        assert.equal(invitation.TokenHash, hashBootstrapInvitationToken(deliveredToken));
+        assert.equal(invitation.TokenHash, hashStaffInvitationToken(deliveredToken));
         assert.notEqual(invitation.TokenHash, deliveredToken);
         assert.equal(invitation.UsedAt, null);
         assert.equal(invitation.RequiresMfa, 1);
