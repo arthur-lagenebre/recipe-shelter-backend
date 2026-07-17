@@ -110,6 +110,14 @@ n’a pas été enregistré. Les sessions staff conservent aussi l’adresse IP,
 user-agent et, en cas de révocation, l’identité staff à l’origine de l’action et
 son contexte (`logout`, `self` ou `admin`).
 
+Les opérations staff les plus sensibles exigent en plus que la vérification
+forte de la session courante date de moins de 5 minutes par défaut. Le backend
+contrôle directement `StaffSessions.MfaVerifiedAt` sur une session active ; une
+nouvelle connexion staff complète (mot de passe puis WebAuthn) renouvelle cette
+preuve. Une preuve absente ou trop ancienne retourne
+`401 AUTH_RECENT_AUTHENTICATION_REQUIRED` avant toute mutation ou écriture
+d’audit.
+
 Les identités staff ne sont jamais supprimées physiquement : le schéma refuse
 la suppression d’un `StaffProfiles`, la relation avec `Users` est restrictive
 et les relations dépendantes vers l’identité staff n’utilisent aucune cascade
@@ -251,7 +259,8 @@ actif disposant de `staff.create` d'inviter un autre compte avec `email`,
 `displayName` et une liste non vide de codes de rôles dans `roles`. Le compte et
 ses rôles sont créés en statut `invited`; seul le hash SHA-256 du jeton est
 persisté. L'invitation expire après 24 heures par défaut, impose le MFA et crée
-une entrée d'audit `staff.invitations.create`. Une invitation déjà présente,
+une entrée d'audit `staff.invitations.create`. Cette création exige aussi une
+authentification forte récente. Une invitation déjà présente,
 un e-mail déjà attribué et un nom d'affichage déjà utilisé produisent des
 conflits distincts. En cas d'échec d'audit ou d'envoi SMTP, la transaction de
 création est annulée.
@@ -273,6 +282,11 @@ compte staff n’est exposé ; les routes `DELETE` relatives aux rôles et aux
 sessions révoquent uniquement des accès sans supprimer l’identité. La
 désactivation ou le retrait du rôle du dernier `SuperAdmin` actif est refusé
 atomiquement avec le statut `409` et le code stable `LAST_ACTIVE_SUPER_ADMIN`.
+La désactivation, qui réalise la révocation globale des sessions du compte, et
+toute attribution ou tout retrait du rôle `SuperAdmin` exigent une
+authentification forte récente. Les changements de rôles ordinaires conservent
+leurs contrôles de permission et d’anti-auto-escalade sans cette exigence
+supplémentaire.
 
 La commande nécessite donc une configuration SMTP applicative valide. Une fois
 le premier SuperAdmin créé, toute nouvelle exécution est refusée, y compris si
@@ -466,6 +480,7 @@ Les valeurs par défaut sont définies dans `.env.example`.
 | `AUTH_STAFF_WEBAUTHN_RP_ID` | Oui pour le staff | Domaine WebAuthn (Relying Party ID). Défaut : hostname de l’origine WebAuthn. |
 | `AUTH_STAFF_WEBAUTHN_RP_NAME` | Non | Nom affiché par l’authenticator. Défaut : `Recipe Shelter Staff`. |
 | `AUTH_STAFF_MFA_CHALLENGE_TTL_MS` | Non | Durée maximale d’une cérémonie WebAuthn, plafonnée à 10 minutes. Défaut : `300000` ms. |
+| `AUTH_STAFF_REAUTHENTICATION_MAX_AGE_MS` | Non | Âge maximal de la preuve forte pour une opération hautement sensible, plafonné à 10 minutes. Défaut : `300000` ms. |
 | `BOOTSTRAP_SUPER_ADMIN_INVITATION_TTL_MINUTES` | Non | Durée de l'invitation du premier SuperAdmin. Défaut : `30` minutes. |
 | `STAFF_INVITATION_TTL_MINUTES` | Non | Durée des invitations staff créées par l'API. Défaut : `1440` minutes. |
 | `BCRYPT_COST` | Non | Coût bcrypt pour le hash des mots de passe. Défaut : `12`. |

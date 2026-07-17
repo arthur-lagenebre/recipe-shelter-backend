@@ -59,6 +59,7 @@ class HttpStaffInvitationRepository implements StaffInvitationRepository {
 describe('POST /api/v1/admin/staff/invitations', () => {
   let server: HttpTestServer;
   let cookie: string;
+  let staleCookie: string;
   let repository: HttpStaffInvitationRepository;
   let messages: StaffInvitationMailInput[];
   let audit: TestAdminAuditRecorder;
@@ -77,6 +78,9 @@ describe('POST /api/v1/admin/staff/invitations', () => {
     const sessions = new TestSessionRepository();
     configureAuthSessionRepository(sessions);
     cookie = await sessions.issueCookie(actor, 'admin');
+    staleCookie = await sessions.issueCookie(actor, 'admin', {
+      mfaVerifiedAt: new Date(Date.now() - 301_000)
+    });
 
     repository = new HttpStaffInvitationRepository();
     messages = [];
@@ -135,6 +139,30 @@ describe('POST /api/v1/admin/staff/invitations', () => {
     assert.equal(messages.length, 1);
     assert.equal(audit.inputs[0]?.actorUserId, actor.id);
     assert.equal(audit.inputs[0]?.userAgent, 'Recipe Shelter integration client');
+  });
+
+  it('rejects staff creation without a recent strong authentication proof', async () => {
+    const repositoryCallsBefore = repository.inputs.length;
+    const messagesBefore = messages.length;
+    const auditCallsBefore = audit.inputs.length;
+    const response = await fetch(`${server.baseUrl}/api/v1/admin/staff/invitations`, {
+      method: 'POST',
+      headers: { cookie: staleCookie, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        email: 'another.staff@example.com',
+        displayName: 'Another Staff',
+        roles: ['UserAdmin']
+      })
+    });
+
+    assert.equal(response.status, 401);
+    assert.equal(
+      (await response.json() as { error: { code: string } }).error.code,
+      'AUTH_RECENT_AUTHENTICATION_REQUIRED'
+    );
+    assert.equal(repository.inputs.length, repositoryCallsBefore);
+    assert.equal(messages.length, messagesBefore);
+    assert.equal(audit.inputs.length, auditCallsBefore);
   });
 
   it('returns stable validation and existing-invitation errors without side effects', async () => {

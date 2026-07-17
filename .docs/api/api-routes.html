@@ -529,7 +529,7 @@ type PaginatedResult&lt;T&gt; = {
 
     <section aria-labelledby="auth">
       <h2 id="auth">Auth</h2>
-      <p class="section-intro">Les sessions community et staff utilisent des cookies, audiences JWT, durées et tables SQL distincts. Le login community pose <code>rs_app_session</code> pour 7 jours par défaut. Le login staff vérifie le mot de passe puis une assertion WebAuthn avec vérification utilisateur avant de poser <code>rs_admin_session</code> pour 8 heures par défaut. Les routes sensibles sont limitées par le rate limiter auth.</p>
+      <p class="section-intro">Les sessions community et staff utilisent des cookies, audiences JWT, durées et tables SQL distincts. Le login community pose <code>rs_app_session</code> pour 7 jours par défaut. Le login staff vérifie le mot de passe puis une assertion WebAuthn avec vérification utilisateur avant de poser <code>rs_admin_session</code> pour 8 heures par défaut. Les opérations staff hautement sensibles vérifient en plus que <code>StaffSessions.MfaVerifiedAt</code> date de moins de 5 minutes par défaut ; sinon elles répondent <code>401 AUTH_RECENT_AUTHENTICATION_REQUIRED</code>. Une nouvelle connexion staff complète renouvelle cette preuve. Les routes sensibles sont limitées par le rate limiter auth.</p>
       <div class="table-wrap">
         <table>
           <thead>
@@ -1983,7 +1983,7 @@ type UnbanUserResponse = OkResponse;</code></pre>
 
     <section aria-labelledby="admin-staff-invitations">
       <h2 id="admin-staff-invitations">Admin staff invitations</h2>
-      <p class="section-intro">Création d'un compte staff invité avec ses rôles initiaux. La route exige la permission explicite <code>staff.create</code>, enregistre une seule invitation expirante et audite l'action sans conserver le jeton brut dans la base ou le journal.</p>
+      <p class="section-intro">Création d'un compte staff invité avec ses rôles initiaux. La route exige la permission explicite <code>staff.create</code> et une authentification forte récente, enregistre une seule invitation expirante et audite l'action sans conserver le jeton brut dans la base ou le journal.</p>
       <div class="table-wrap">
         <table>
           <thead>
@@ -1999,9 +1999,9 @@ type UnbanUserResponse = OkResponse;</code></pre>
             <tr>
               <td><span class="method post">POST</span></td>
               <td><code>/api/v1/admin/staff/invitations</code></td>
-              <td><span class="auth admin">Admin + <code>staff.create</code></span></td>
+              <td><span class="auth admin">Admin récent + <code>staff.create</code></span></td>
               <td><code>email</code>, <code>displayName</code> (3..64 caractères) et <code>roles</code>, liste non vide de codes de rôles uniques.</td>
-              <td><code>201</code> invitation créée. Conflits <code>STAFF_INVITATION_ALREADY_EXISTS</code>, <code>STAFF_EMAIL_ALREADY_EXISTS</code> ou <code>STAFF_DISPLAY_NAME_ALREADY_EXISTS</code>.</td>
+              <td><code>201</code> invitation créée. Refus <code>401 AUTH_RECENT_AUTHENTICATION_REQUIRED</code> si la preuve forte est absente ou trop ancienne. Conflits <code>STAFF_INVITATION_ALREADY_EXISTS</code>, <code>STAFF_EMAIL_ALREADY_EXISTS</code> ou <code>STAFF_DISPLAY_NAME_ALREADY_EXISTS</code>.</td>
             </tr>
           </tbody>
         </table>
@@ -2035,7 +2035,7 @@ type UnbanUserResponse = OkResponse;</code></pre>
 
     <section aria-labelledby="admin-staff-management">
       <h2 id="admin-staff-management">Admin staff management</h2>
-      <p class="section-intro">Cycle de vie logique et rôles des comptes staff. Aucun endpoint ne supprime physiquement un compte et aucun endpoint de réinitialisation MFA n’est exposé dans le back-office. La sortie du staff passe par la désactivation et la révocation de ses accès. Chaque route exige sa permission explicite et produit un audit. Les mutations exigent un motif de 10 à 1000 caractères. Un staff ne peut ni se désactiver, ni s’attribuer, ni retirer ses propres rôles. Le dernier <code>SuperAdmin</code> actif ne peut être ni désactivé ni privé de ce rôle par un autre staff.</p>
+      <p class="section-intro">Cycle de vie logique et rôles des comptes staff. Aucun endpoint ne supprime physiquement un compte et aucun endpoint de réinitialisation MFA n’est exposé dans le back-office. La sortie du staff passe par la désactivation et la révocation de ses accès. Chaque route exige sa permission explicite et produit un audit. Les mutations exigent un motif de 10 à 1000 caractères. La désactivation, qui révoque globalement les sessions du compte, et tout changement du rôle <code>SuperAdmin</code> exigent une authentification forte récente. Un staff ne peut ni se désactiver, ni s’attribuer, ni retirer ses propres rôles. Le dernier <code>SuperAdmin</code> actif ne peut être ni désactivé ni privé de ce rôle par un autre staff.</p>
       <div class="table-wrap">
         <table>
           <thead>
@@ -2065,9 +2065,9 @@ type UnbanUserResponse = OkResponse;</code></pre>
             <tr>
               <td><span class="method post">POST</span></td>
               <td><code>/api/v1/admin/staff/:staffUserId/disable</code></td>
-              <td><span class="auth admin">Admin + <code>staff.disable</code></span></td>
+              <td><span class="auth admin">Admin récent + <code>staff.disable</code></span></td>
               <td><code>{ "reason": string }</code>. Cible obligatoirement <code>active</code>.</td>
-              <td><code>200</code> compte désactivé ; toutes ses sessions actives sont révoquées atomiquement. Refus <code>403 STAFF_DISABLE_SELF_FORBIDDEN</code> sur soi-même. Conflit <code>409 LAST_ACTIVE_SUPER_ADMIN</code> si un autre staff cible le dernier <code>SuperAdmin</code> actif.</td>
+              <td><code>200</code> compte désactivé ; toutes ses sessions actives sont révoquées atomiquement. Refus <code>401 AUTH_RECENT_AUTHENTICATION_REQUIRED</code> sans preuve forte récente, <code>403 STAFF_DISABLE_SELF_FORBIDDEN</code> sur soi-même. Conflit <code>409 LAST_ACTIVE_SUPER_ADMIN</code> si un autre staff cible le dernier <code>SuperAdmin</code> actif.</td>
             </tr>
             <tr>
               <td><span class="method post">POST</span></td>
@@ -2081,14 +2081,14 @@ type UnbanUserResponse = OkResponse;</code></pre>
               <td><code>/api/v1/admin/staff/:staffUserId/roles/:roleCode</code></td>
               <td><span class="auth admin">Admin + <code>staff.role.grant</code></span></td>
               <td>Code de rôle stable et <code>{ "reason": string }</code>.</td>
-              <td><code>200</code> compte avec ses rôles mis à jour. Refus <code>403 STAFF_ROLE_GRANT_SELF_FORBIDDEN</code> sur soi-même.</td>
+              <td><code>200</code> compte avec ses rôles mis à jour. Le rôle <code>SuperAdmin</code> exige une preuve forte récente, sinon refus <code>401 AUTH_RECENT_AUTHENTICATION_REQUIRED</code>. Refus <code>403 STAFF_ROLE_GRANT_SELF_FORBIDDEN</code> sur soi-même.</td>
             </tr>
             <tr>
               <td><span class="method delete">DELETE</span></td>
               <td><code>/api/v1/admin/staff/:staffUserId/roles/:roleCode</code></td>
               <td><span class="auth admin">Admin + <code>staff.role.revoke</code></span></td>
               <td>Code de rôle stable et <code>{ "reason": string }</code>.</td>
-              <td><code>200</code> compte avec ses rôles mis à jour. Refus <code>403 STAFF_ROLE_REVOKE_SELF_FORBIDDEN</code> sur soi-même. Conflit <code>409 LAST_ACTIVE_SUPER_ADMIN</code> si un autre staff cible le rôle du dernier <code>SuperAdmin</code> actif.</td>
+              <td><code>200</code> compte avec ses rôles mis à jour. Le rôle <code>SuperAdmin</code> exige une preuve forte récente, sinon refus <code>401 AUTH_RECENT_AUTHENTICATION_REQUIRED</code>. Refus <code>403 STAFF_ROLE_REVOKE_SELF_FORBIDDEN</code> sur soi-même. Conflit <code>409 LAST_ACTIVE_SUPER_ADMIN</code> si un autre staff cible le rôle du dernier <code>SuperAdmin</code> actif.</td>
             </tr>
           </tbody>
         </table>

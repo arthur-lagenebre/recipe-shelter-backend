@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { beforeEach, describe, it } from 'node:test';
 
-import { configureAuthRbacRepository, configureAuthSessionRepository, configureAuthUserRepository, optionalCommunityAuth, requireCommunityAuth, requireStaffAuth } from '../../src/middlewares/require-auth.js';
+import { configureAuthRbacRepository, configureAuthSessionRepository, configureAuthUserRepository, optionalCommunityAuth, requireCommunityAuth, requireRecentStaffAuthentication, requireStaffAuth } from '../../src/middlewares/require-auth.js';
 import { PERMISSIONS } from '../../src/security/permissions.js';
 import { HttpError } from '../../src/utils/errors.js';
 import { adminSessionCookieName, appSessionCookieName } from '../../src/utils/session-cookie.js';
@@ -125,6 +125,22 @@ describe('session authentication boundaries', () => {
 
     assert.equal(await getNextError(requireStaffAuth, req), undefined);
     assert.deepEqual(req.auth?.permissions, [PERMISSIONS.usersRead]);
+  });
+
+  it('requires the current MFA-backed staff session to have a recent strong authentication', async () => {
+    const freshRequest = cookieRequest(await sessions.issueCookie(staffUser, 'admin'));
+    assert.equal(await getNextError(requireStaffAuth, freshRequest), undefined);
+    assert.equal(await getNextError(requireRecentStaffAuthentication, freshRequest), undefined);
+
+    const staleRequest = cookieRequest(await sessions.issueCookie(staffUser, 'admin', {
+      mfaVerifiedAt: new Date(Date.now() - 301_000)
+    }));
+    assert.equal(await getNextError(requireStaffAuth, staleRequest), undefined);
+    const staleError = await getNextError(requireRecentStaffAuthentication, staleRequest);
+
+    assert.ok(staleError instanceof HttpError);
+    assert.equal(staleError.statusCode, 401);
+    assert.equal(staleError.code, 'AUTH_RECENT_AUTHENTICATION_REQUIRED');
   });
 
   it('rejects an app token copied into the admin cookie because its audience is wrong', async () => {

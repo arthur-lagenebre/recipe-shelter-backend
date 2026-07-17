@@ -1,4 +1,5 @@
 import { verifySessionToken } from '../services/auth/session-token.js';
+import { env } from '../utils/env.js';
 import { unauthorized } from '../utils/errors.js';
 import { getSessionToken } from '../utils/session-cookie.js';
 
@@ -118,6 +119,49 @@ export async function requireCommunityAuth(req: Request, _res: Response, next: N
 
 export async function requireStaffAuth(req: Request, _res: Response, next: NextFunction) {
   await authenticate(req, next, 'admin', false);
+}
+
+export async function requireRecentStaffAuthentication(req: Request, _res: Response, next: NextFunction) {
+  const proofRequired = () => unauthorized(
+    'Recent strong authentication is required',
+    'AUTH_RECENT_AUTHENTICATION_REQUIRED'
+  );
+
+  if (!authSessionRepository || req.auth?.accountType !== 'staff' || req.auth.status !== 'active') {
+    next(proofRequired());
+    return;
+  }
+
+  const token = getSessionToken(req, 'admin');
+  let session;
+
+  try {
+    session = token ? verifySessionToken(token, 'admin') : null;
+  } catch {
+    next(proofRequired());
+    return;
+  }
+
+  if (!session || session.userId !== req.auth.userId) {
+    next(proofRequired());
+    return;
+  }
+
+  const authenticatedAfter = new Date(
+    Math.floor((Date.now() - env.auth.staffMfa.reauthenticationMaxAgeMs) / 1000) * 1000
+  );
+
+  try {
+    const isRecent = await authSessionRepository.isStaffSessionRecentlyAuthenticated(
+      session.sessionId,
+      session.userId,
+      authenticatedAfter
+    );
+
+    next(isRecent ? undefined : proofRequired());
+  } catch (error) {
+    next(error);
+  }
 }
 
 export async function optionalCommunityAuth(req: Request, _res: Response, next: NextFunction) {

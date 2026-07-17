@@ -98,6 +98,22 @@ describe('SessionRepositoryMysql', () => {
     assert.match(fake.statements[1]?.sql ?? '', /FROM StaffSessions[\s\S]+MfaVerifiedAt IS NOT NULL[\s\S]+MfaMethod = 'webauthn'/);
   });
 
+  it('checks recent strong authentication on the exact active staff session', async () => {
+    const fake = createPool();
+    const repository = new SessionRepositoryMysql(fake.pool);
+    const authenticatedAfter = new Date('2026-07-17T09:55:00.000Z');
+
+    assert.equal(
+      await repository.isStaffSessionRecentlyAuthenticated('staff-id', 1, authenticatedAfter),
+      true
+    );
+    assert.deepEqual(fake.statements[0]?.params, ['staff-id', 1, authenticatedAfter]);
+    assert.match(
+      fake.statements[0]?.sql ?? '',
+      /FROM StaffSessions[\s\S]+RevokedAt IS NULL[\s\S]+ExpiresAt > CURRENT_TIMESTAMP[\s\S]+MfaVerifiedAt >= \?[\s\S]+MfaMethod = 'webauthn'/
+    );
+  });
+
   it('revokes only the id and owner in the selected session table', async () => {
     const fake = createPool(false);
     const repository = new SessionRepositoryMysql(fake.pool);

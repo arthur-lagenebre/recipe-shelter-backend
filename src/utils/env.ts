@@ -16,6 +16,18 @@ function readPositiveInteger(value: string | undefined, fallback: number): numbe
   return Number.isInteger(number) && number > 0 ? number : fallback;
 }
 
+function readBoundedPositiveInteger(value: string | undefined, fallback: number, maximum: number, name: string): number {
+  if (!value?.trim())
+    return fallback;
+
+  const number = Number(value);
+
+  if (!Number.isInteger(number) || number <= 0 || number > maximum)
+    throw new Error(`${name} must be a positive integer of at most ${maximum}`);
+
+  return number;
+}
+
 function readBoolean(value: string | undefined, fallback: boolean): boolean {
   const normalizedValue = value?.trim().toLowerCase();
 
@@ -106,6 +118,12 @@ const webAuthnOriginUrl = new URL(readString(process.env.AUTH_STAFF_WEBAUTHN_ORI
 const webAuthnOrigin = webAuthnOriginUrl.origin;
 const webAuthnHostname = webAuthnOriginUrl.hostname.toLowerCase();
 const webAuthnRpId = readString(process.env.AUTH_STAFF_WEBAUTHN_RP_ID, webAuthnHostname).toLowerCase();
+const staffReauthenticationMaxAgeMs = readBoundedPositiveInteger(
+  process.env.AUTH_STAFF_REAUTHENTICATION_MAX_AGE_MS,
+  300000,
+  600000,
+  'AUTH_STAFF_REAUTHENTICATION_MAX_AGE_MS'
+);
 
 if (webAuthnOriginUrl.protocol !== 'https:' && !['localhost', '127.0.0.1', '::1'].includes(webAuthnHostname))
   throw new Error('Staff WebAuthn origin must use HTTPS outside local development');
@@ -148,6 +166,7 @@ export const env = {
     jwtSecret: process.env.JWT_SECRET ?? (() => { throw new Error('JWT_SECRET is required'); })(),
     staffMfa: {
       challengeTtlMs: readPositiveInteger(process.env.AUTH_STAFF_MFA_CHALLENGE_TTL_MS, 300000),
+      reauthenticationMaxAgeMs: staffReauthenticationMaxAgeMs,
       webAuthnOrigin,
       webAuthnRpId,
       webAuthnRpName: readString(process.env.AUTH_STAFF_WEBAUTHN_RP_NAME, 'Recipe Shelter Staff')

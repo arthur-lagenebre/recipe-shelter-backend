@@ -59,6 +59,24 @@ export class SessionRepositoryMysql implements SessionRepository {
     return this.isSessionActive('StaffSessions', 'StaffUserId', id, userId, true);
   }
 
+  async isStaffSessionRecentlyAuthenticated(id: string, userId: number, authenticatedAfter: Date): Promise<boolean> {
+    const [rows] = await this.db.execute(
+      `SELECT 1 AS One
+       FROM StaffSessions
+       WHERE Id = ?
+         AND StaffUserId = ?
+         AND RevokedAt IS NULL
+         AND ExpiresAt > CURRENT_TIMESTAMP
+         AND MfaVerifiedAt >= ?
+         AND WebAuthnCredentialId IS NOT NULL
+         AND MfaMethod = 'webauthn'
+       LIMIT 1`,
+      [id, userId, authenticatedAfter]
+    );
+
+    return firstOrNull(rows as ActiveSessionRow[]) !== null;
+  }
+
   async findActiveStaffSessionsByUserId(userId: number, db?: PoolConnection): Promise<StaffSession[]> {
     const [rows] = await (db ?? this.db).execute(
       `SELECT Id, MfaMethod, MfaVerifiedAt, IpAddress, UserAgent, ExpiresAt, CreatedAt

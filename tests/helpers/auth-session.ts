@@ -31,6 +31,16 @@ export class TestSessionRepository implements SessionRepository {
     return Boolean(session?.userId === userId && Boolean(session.webAuthnCredentialId) && session.mfaVerifiedAt instanceof Date && session.expiresAt.getTime() > Date.now());
   }
 
+  async isStaffSessionRecentlyAuthenticated(id: string, userId: number, authenticatedAfter: Date): Promise<boolean> {
+    const session = this.staffSessions.get(id);
+    return Boolean(
+      session?.userId === userId
+      && Boolean(session.webAuthnCredentialId)
+      && session.mfaVerifiedAt.getTime() >= authenticatedAfter.getTime()
+      && session.expiresAt.getTime() > Date.now()
+    );
+  }
+
   async findActiveStaffSessionsByUserId(userId: number): Promise<StaffSession[]> {
     return [...this.staffSessions.values()]
       .filter((session) => session.userId === userId && session.expiresAt.getTime() > Date.now())
@@ -61,7 +71,7 @@ export class TestSessionRepository implements SessionRepository {
     return true;
   }
 
-  async issueCookie(user: User, realm: SessionRealm): Promise<string> {
+  async issueCookie(user: User, realm: SessionRealm, options: { mfaVerifiedAt?: Date } = {}): Promise<string> {
     const id = randomUUID();
     const expiresAt = new Date(Date.now() + 60_000);
 
@@ -73,7 +83,7 @@ export class TestSessionRepository implements SessionRepository {
         userId: user.id,
         expiresAt,
         webAuthnCredentialId: 'test-staff-credential',
-        mfaVerifiedAt: new Date(),
+        mfaVerifiedAt: options.mfaVerifiedAt ?? new Date(),
         ipAddress: '127.0.0.1',
         userAgent: 'Recipe Shelter test client'
       });

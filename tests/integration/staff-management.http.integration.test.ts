@@ -113,6 +113,7 @@ class HttpAdminStaffRepository implements AdminStaffRepository {
 describe('staff management HTTP integration', () => {
   let server: HttpTestServer;
   let actorCookie: string;
+  let staleActorCookie: string;
   let protectedSuperAdminCookie: string;
   let grantedPermissions: PermissionCode[] = [];
   let audit: TestAdminAuditRecorder;
@@ -136,6 +137,9 @@ describe('staff management HTTP integration', () => {
     const sessions = new TestSessionRepository();
     configureAuthSessionRepository(sessions);
     actorCookie = await sessions.issueCookie(actorUser, 'admin');
+    staleActorCookie = await sessions.issueCookie(actorUser, 'admin', {
+      mfaVerifiedAt: new Date(Date.now() - 301_000)
+    });
     protectedSuperAdminCookie = await sessions.issueCookie(protectedSuperAdminUser, 'admin');
 
     audit = new TestAdminAuditRecorder();
@@ -237,6 +241,54 @@ describe('staff management HTTP integration', () => {
     })), [
       { eventType: 'staff.roles.grant', reason: 'Temporary recipe moderation coverage.' },
       { eventType: 'staff.roles.revoke', reason: 'Temporary moderation coverage ended.' }
+    ]);
+  });
+
+  it('requires recent strong authentication for global revocation and SuperAdmin changes only', async () => {
+    audit.inputs.length = 0;
+    grantedPermissions = [PERMISSIONS.staffDisable];
+    const disable = await fetch(`${server.baseUrl}/api/v1/admin/staff/${targetUser.id}/disable`, {
+      method: 'POST',
+      headers: { cookie: staleActorCookie, 'content-type': 'application/json' },
+      body: JSON.stringify({ reason: 'Global access revocation requires fresh authentication.' })
+    });
+    assert.equal(disable.status, 401);
+    assert.equal(
+      (await disable.json() as { error: { code: string } }).error.code,
+      'AUTH_RECENT_AUTHENTICATION_REQUIRED'
+    );
+
+    grantedPermissions = [PERMISSIONS.staffRoleGrant];
+    for (const roleCode of ['SuperAdmin', 'superadmin']) {
+      const grantSuperAdmin = await fetch(`${server.baseUrl}/api/v1/admin/staff/${targetUser.id}/roles/${roleCode}`, {
+        method: 'POST',
+        headers: { cookie: staleActorCookie, 'content-type': 'application/json' },
+        body: JSON.stringify({ reason: 'SuperAdmin elevation requires fresh authentication.' })
+      });
+      assert.equal(grantSuperAdmin.status, 401);
+      assert.equal(
+        (await grantSuperAdmin.json() as { error: { code: string } }).error.code,
+        'AUTH_RECENT_AUTHENTICATION_REQUIRED'
+      );
+    }
+
+    const grantOrdinaryRole = await fetch(`${server.baseUrl}/api/v1/admin/staff/${targetUser.id}/roles/RecipeModerator`, {
+      method: 'POST',
+      headers: { cookie: staleActorCookie, 'content-type': 'application/json' },
+      body: JSON.stringify({ reason: 'Ordinary role assignment remains permission protected.' })
+    });
+    assert.equal(grantOrdinaryRole.status, 200);
+
+    grantedPermissions = [PERMISSIONS.staffRoleRevoke];
+    const revokeOrdinaryRole = await fetch(`${server.baseUrl}/api/v1/admin/staff/${targetUser.id}/roles/RecipeModerator`, {
+      method: 'DELETE',
+      headers: { cookie: staleActorCookie, 'content-type': 'application/json' },
+      body: JSON.stringify({ reason: 'Ordinary role assignment cleanup remains permitted.' })
+    });
+    assert.equal(revokeOrdinaryRole.status, 200);
+    assert.deepEqual(audit.inputs.map((input) => input.eventType), [
+      'staff.roles.grant',
+      'staff.roles.revoke'
     ]);
   });
 

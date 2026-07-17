@@ -72,4 +72,13 @@ describe('auth session environment configuration', () => {
     });
     assert.equal(parentRpId.status, 0, parentRpId.stderr);
   });
+
+  it('rejects a staff reauthentication window longer than ten minutes', () => {
+    const excessiveWindow = importEnv({
+      AUTH_STAFF_REAUTHENTICATION_MAX_AGE_MS: '600001'
+    });
+
+    assert.notEqual(excessiveWindow.status, 0);
+    assert.match(excessiveWindow.stderr, /AUTH_STAFF_REAUTHENTICATION_MAX_AGE_MS must be a positive integer of at most 600000/);
+  });
 });

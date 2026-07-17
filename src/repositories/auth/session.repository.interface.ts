@@ -35,6 +35,7 @@ export interface SessionRepository {
   createStaffSession(input: CreateStaffSessionInput): Promise<boolean>;
   isCommunitySessionActive(id: string, userId: number): Promise<boolean>;
   isStaffSessionActive(id: string, userId: number): Promise<boolean>;
+  isStaffSessionRecentlyAuthenticated(id: string, userId: number, authenticatedAfter: Date): Promise<boolean>;
   findActiveStaffSessionsByUserId(userId: number, db?: PoolConnection): Promise<StaffSession[]>;
   revokeCommunitySession(id: string, userId: number): Promise<void>;
   revokeStaffSession(input: RevokeStaffSessionInput, db?: PoolConnection): Promise<boolean>;
