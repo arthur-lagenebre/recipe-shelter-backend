@@ -9,6 +9,8 @@ import { StaffMfaRepositoryMysql } from '../../../src/repositories/auth/staff-mf
 import { PERMISSIONS } from '../../../src/security/permissions.js';
 import { env } from '../../../src/utils/env.js';
 
+import type { CompleteStaffMfaEnrollmentInput } from '../../../src/repositories/auth/staff-mfa.repository.interface.js';
+
 const baseTestDatabaseName = process.env.TEST_DB_NAME?.trim() ?? '';
 const mysqlEnabled = Boolean(baseTestDatabaseName);
 
@@ -427,7 +429,7 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
             challenge: 'registration-challenge-130',
             ttlMs: 300_000
         });
-        assert.equal(await repository.completeEnrollment({
+        const enrollmentInput: CompleteStaffMfaEnrollmentInput = {
             challengeId: '00000000-0000-4000-8000-000000000130',
             invitationTokenHash: tokenHash,
             passwordHash: 'password-hash',
@@ -441,7 +443,30 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
                 backedUp: false,
                 aaguid: '00000000-0000-0000-0000-000000000000'
             }
-        }), true);
+        };
+
+        assert.equal(await repository.completeEnrollment({
+            ...enrollmentInput,
+            invitationTokenHash: 'c'.repeat(64)
+        }), false);
+        const [pendingRows] = await connection.query(
+            `SELECT u.Password, sp.Status AS StaffStatus, sp.MfaEnrolledAt, si.UsedAt,
+                    (SELECT COUNT(*) FROM StaffWebAuthnCredentials WHERE StaffUserId = 130) AS CredentialCount
+             FROM Users AS u
+             INNER JOIN StaffProfiles AS sp ON sp.UserId = u.Id
+             INNER JOIN StaffInvitations AS si ON si.StaffUserId = u.Id
+             WHERE u.Id = 130`
+        );
+        assert.deepEqual(pendingRows, [{
+            Password: null,
+            StaffStatus: 'invited',
+            MfaEnrolledAt: null,
+            UsedAt: null,
+            CredentialCount: 0
+        }]);
+
+        assert.equal(await repository.completeEnrollment(enrollmentInput), true);
+        assert.equal(await repository.completeEnrollment(enrollmentInput), false);
 
         const [enrolledRows] = await connection.query(
             `SELECT u.Password, u.Status AS UserStatus, sp.Status AS StaffStatus,

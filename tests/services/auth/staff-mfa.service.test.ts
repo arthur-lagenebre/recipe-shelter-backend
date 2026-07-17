@@ -233,7 +233,7 @@ describe('StaffMfaService WebAuthn enrollment', () => {
       invitationToken: 'invitation-token',
       password: 'Recipe42?',
       credential: registrationResponse()
-    }), { userId: 42, mfaEnrolled: true });
+    }), { userId: 42, status: 'active', mfaEnrolled: true });
 
     assert.deepEqual(calls.registrationVerification, {
       response: registrationResponse(),

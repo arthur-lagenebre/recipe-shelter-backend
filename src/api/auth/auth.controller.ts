@@ -1,4 +1,4 @@
-import { parseLoginBody, parseRegisterBody, parseResendValidationEmailBody, parseResetPasswordBody, parseStaffLoginVerificationBody, parseStaffMfaEnrollmentOptionsBody, parseStaffMfaEnrollmentVerificationBody, parseValidateEmailBody } from './auth.dto.js';
+import { parseLoginBody, parseRegisterBody, parseResendValidationEmailBody, parseResetPasswordBody, parseStaffInvitationActivationBody, parseStaffLoginVerificationBody, parseStaffMfaEnrollmentOptionsBody, parseValidateEmailBody } from './auth.dto.js';
 import { clearSessionCookie, getSessionToken, setSessionCookie } from '../../utils/session-cookie.js';
 import { asyncHandler } from '../http/async-handler.js';
 
@@ -50,9 +50,9 @@ export function createAuthController(authService: AuthService, passwordResetServ
     res.status(200).json(result);
   });
 
-  const staffMfaEnrollmentVerify = asyncHandler(async (req, res) => {
-    const input = parseStaffMfaEnrollmentVerificationBody(req.body);
-    const result = await authService.completeStaffMfaEnrollment(input);
+  const activateStaffInvitation = asyncHandler(async (req, res) => {
+    const input = parseStaffInvitationActivationBody(req.params.token, req.body);
+    const result = await authService.activateStaffInvitation(input);
 
     res.status(200).json(result);
   });
@@ -142,7 +142,7 @@ export function createAuthController(authService: AuthService, passwordResetServ
     staffLoginOptions,
     staffLoginVerify,
     staffMfaEnrollmentOptions,
-    staffMfaEnrollmentVerify,
+    activateStaffInvitation,
     me,
     logout,
     staffLogout,

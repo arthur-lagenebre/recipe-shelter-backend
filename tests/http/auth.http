@@ -69,13 +69,12 @@ Content-Type: application/json
   "invitationToken": "{{staffInvitationToken}}"
 }
 
-### Staff MFA enrollment verification (replace credential with startRegistration() output)
-POST {{baseUrl}}/admin/auth/mfa/enrollment/verify
+### Staff invitation activation (replace credential with startRegistration() output)
+POST {{baseUrl}}/staff/invitations/{{staffInvitationToken}}/activate
 Content-Type: application/json
 
 {
   "flowId": "{{staffMfaFlowId}}",
-  "invitationToken": "{{staffInvitationToken}}",
   "password": "{{password}}",
   "credential": {}
 }

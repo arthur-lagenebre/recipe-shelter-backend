@@ -200,6 +200,9 @@ describe('staff invitation MySQL integration', { skip: !mysqlEnabled && 'Set TES
     await assert.rejects(
       () => pool.query(`UPDATE StaffInvitations SET ExpiresAt = CreatedAt WHERE Id = ?`, [invitation.id])
     );
+    await assert.rejects(
+      () => pool.query(`UPDATE StaffInvitations SET UsedAt = DATE_SUB(CreatedAt, INTERVAL 1 SECOND) WHERE Id = ?`, [invitation.id])
+    );
   });
 
   it('distinguishes existing invitations and existing account emails', async () => {

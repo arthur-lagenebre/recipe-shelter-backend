@@ -169,6 +169,36 @@ describe('auth.controller', () => {
         assert.ok(env.auth.admin.sessionCookieMaxAgeMs < env.auth.app.sessionCookieMaxAgeMs);
     });
 
+    it('activates a staff invitation with the path token and WebAuthn response without creating a session', async () => {
+        let receivedInput: unknown;
+        const controller = createController({
+            async activateStaffInvitation(input: unknown) {
+                receivedInput = input;
+                return { userId: 42, status: 'active', mfaEnrolled: true };
+            }
+        });
+        const credential = {
+            id: 'credential-1', rawId: 'credential-1', type: 'public-key', clientExtensionResults: {},
+            response: { clientDataJSON: 'data', attestationObject: 'attestation' }
+        };
+        const res = createResponse();
+
+        await runHandler(controller.activateStaffInvitation, {
+            params: { token: ' invitation-token ' },
+            body: { flowId: 'flow-1', password: 'Recipe42?', credential }
+        }, res);
+
+        assert.deepEqual(receivedInput, {
+            invitationToken: 'invitation-token',
+            flowId: 'flow-1',
+            password: 'Recipe42?',
+            credential
+        });
+        assert.equal(res.statusCode, 200);
+        assert.deepEqual(res.body, { userId: 42, status: 'active', mfaEnrolled: true });
+        assert.equal(res.cookies.length, 0);
+    });
+
     it('clears the same session cookie on logout', async () => {
         const logoutCalls: unknown[] = [];
         const controller = createController({

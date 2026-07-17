@@ -13,7 +13,7 @@ type AuthController = {
   staffLoginOptions: RequestHandler;
   staffLoginVerify: RequestHandler;
   staffMfaEnrollmentOptions: RequestHandler;
-  staffMfaEnrollmentVerify: RequestHandler;
+  activateStaffInvitation: RequestHandler;
   me: RequestHandler;
   logout: RequestHandler;
   staffLogout: RequestHandler;
@@ -46,11 +46,19 @@ export function createStaffAuthRouter(controller: AuthController, staffSessionsC
   router.post('/login/options', authRateLimiter, controller.staffLoginOptions);
   router.post('/login/verify', authRateLimiter, controller.staffLoginVerify);
   router.post('/mfa/enrollment/options', authRateLimiter, controller.staffMfaEnrollmentOptions);
-  router.post('/mfa/enrollment/verify', authRateLimiter, controller.staffMfaEnrollmentVerify);
   router.get('/me', requireStaffAuth, controller.me);
   router.get('/sessions', requireStaffAuth, staffSessionsController.listOwn);
   router.delete('/sessions/:sessionId', requireStaffAuth, staffSessionsController.revokeOwn);
   router.post('/logout', controller.staffLogout);
+
+  return router;
+}
+
+export function createStaffInvitationActivationRouter(controller: AuthController) {
+  const router = Router();
+  const authRateLimiter = rateLimiter(env.auth.rateLimitMaxAttempts, env.auth.rateLimitWindowMs);
+
+  router.post('/:token/activate', authRateLimiter, controller.activateStaffInvitation);
 
   return router;
 }

@@ -22,7 +22,7 @@ export type StaffMfaEnrollmentOptionsDto = {
   invitationToken: string;
 };
 
-export type StaffMfaEnrollmentVerificationDto = StaffMfaEnrollmentOptionsDto & {
+export type StaffInvitationActivationDto = StaffMfaEnrollmentOptionsDto & {
   flowId: string;
   password: string;
   credential: RegistrationResponseJSON;
@@ -100,12 +100,14 @@ export function parseStaffMfaEnrollmentOptionsBody(body: unknown): StaffMfaEnrol
   return { invitationToken };
 }
 
-export function parseStaffMfaEnrollmentVerificationBody(body: unknown): StaffMfaEnrollmentVerificationDto {
+export function parseStaffInvitationActivationBody(invitationTokenParam: unknown, body: unknown): StaffInvitationActivationDto {
   const obj = asObject(body);
-  const { invitationToken } = parseStaffMfaEnrollmentOptionsBody(body);
+  const invitationToken = getString(invitationTokenParam);
   const flowId = getString(obj.flowId);
   const password = typeof obj.password === 'string' ? obj.password : '';
 
+  if (!invitationToken)
+    throw badRequest('Invitation token is required', 'STAFF_MFA_INVITATION_TOKEN_REQUIRED');
   if (!flowId)
     throw badRequest('MFA flow ID is required', 'AUTH_MFA_FLOW_REQUIRED');
   if (!password)

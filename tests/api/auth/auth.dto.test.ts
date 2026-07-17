@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { parseLoginBody, parseRegisterBody, parseResendValidationEmailBody, parseResetPasswordBody, parseStaffLoginVerificationBody, parseStaffMfaEnrollmentOptionsBody, parseStaffMfaEnrollmentVerificationBody, parseValidateEmailBody } from '../../../src/api/auth/auth.dto.js';
+import { parseLoginBody, parseRegisterBody, parseResendValidationEmailBody, parseResetPasswordBody, parseStaffInvitationActivationBody, parseStaffLoginVerificationBody, parseStaffMfaEnrollmentOptionsBody, parseValidateEmailBody } from '../../../src/api/auth/auth.dto.js';
 import { HttpError } from '../../../src/utils/errors.js';
 
 function assertHttpError(error: unknown, code: string, status: number): void {
@@ -96,7 +96,7 @@ describe('auth.dto', () => {
 
         assert.deepEqual(parseStaffLoginVerificationBody({ flowId: ' flow-1 ', credential: authenticationCredential }), { flowId: 'flow-1', credential: authenticationCredential });
         assert.deepEqual(parseStaffMfaEnrollmentOptionsBody({ invitationToken: ' token ' }), { invitationToken: 'token' });
-        assert.deepEqual(parseStaffMfaEnrollmentVerificationBody({ flowId: 'flow-1', invitationToken: 'token', password: 'Recipe42?', credential: registrationCredential }), { flowId: 'flow-1', invitationToken: 'token', password: 'Recipe42?', credential: registrationCredential });
+        assert.deepEqual(parseStaffInvitationActivationBody(' token ', { flowId: 'flow-1', password: 'Recipe42?', credential: registrationCredential }), { flowId: 'flow-1', invitationToken: 'token', password: 'Recipe42?', credential: registrationCredential });
     });
 
     it('rejects missing flows and malformed WebAuthn responses', () => {
@@ -116,6 +116,13 @@ describe('auth.dto', () => {
         );
         assert.throws(
             () => parseStaffMfaEnrollmentOptionsBody({}),
+            (error) => {
+                assertHttpError(error, 'STAFF_MFA_INVITATION_TOKEN_REQUIRED', 400);
+                return true;
+            }
+        );
+        assert.throws(
+            () => parseStaffInvitationActivationBody('', { flowId: 'flow-1' }),
             (error) => {
                 assertHttpError(error, 'STAFF_MFA_INVITATION_TOKEN_REQUIRED', 400);
                 return true;

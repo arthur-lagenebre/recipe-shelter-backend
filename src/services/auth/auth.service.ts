@@ -96,12 +96,7 @@ export class AuthService {
     return this.staffMfa.beginEnrollment(invitationToken);
   }
 
-  async completeStaffMfaEnrollment(input: {
-    flowId: string;
-    invitationToken: string;
-    password: string;
-    credential: RegistrationResponseJSON;
-  }) {
+  async activateStaffInvitation(input: { flowId: string; invitationToken: string; password: string; credential: RegistrationResponseJSON; }) {
     return this.staffMfa.completeEnrollment(input);
   }
 

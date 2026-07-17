@@ -578,10 +578,10 @@ type PaginatedResult&lt;T&gt; = {
             </tr>
             <tr>
               <td><span class="method post">POST</span></td>
-              <td><code>/api/v1/admin/auth/mfa/enrollment/verify</code></td>
-              <td><span class="auth public">Public</span></td>
-              <td><code>flowId</code>, <code>invitationToken</code>, <code>password</code>, <code>credential</code> WebAuthn.</td>
-              <td><code>200</code> <code>{ "userId": 1, "mfaEnrolled": true }</code>. Active le staff atomiquement, sans créer de session.</td>
+              <td><code>/api/v1/staff/invitations/:token/activate</code></td>
+              <td><span class="auth">Jeton d’invitation + MFA</span></td>
+              <td>Jeton d’invitation dans <code>:token</code> ; body <code>flowId</code>, <code>password</code>, <code>credential</code> WebAuthn.</td>
+              <td><code>200</code> <code>{ "userId": 1, "status": "active", "mfaEnrolled": true }</code>. Consomme le jeton et active le staff atomiquement après vérification utilisateur, sans créer de session.</td>
             </tr>
             <tr>
               <td><span class="method post">POST</span></td>

@@ -16,7 +16,7 @@ import { createStaffInvitationsRouter } from './api/admin/staff-invitations.rout
 import { createStaffSessionsController } from './api/admin/staff-sessions.controller.js';
 import { createAdminStaffSessionsRouter } from './api/admin/staff-sessions.routes.js';
 import { createAuthController } from './api/auth/auth.controller.js';
-import { createAuthRouter, createStaffAuthRouter } from './api/auth/auth.routes.js';
+import { createAuthRouter, createStaffAuthRouter, createStaffInvitationActivationRouter } from './api/auth/auth.routes.js';
 import { createCategoryController } from './api/category/category.controller.js';
 import { createCategoryRouter } from './api/category/category.routes.js';
 import { createCommentsController } from './api/comments/comments.controller.js';
@@ -242,6 +242,7 @@ export function createApp(overrides: Partial<AppDependencies> = {}) {
 
   app.use('/api/v1/admin', adminRouter);
   app.use('/api/v1/auth', createAuthRouter(authController));
+  app.use('/api/v1/staff/invitations', createStaffInvitationActivationRouter(authController));
   app.use('/api/v1/categories', createCategoryRouter(categoryController));
   app.use('/api/v1/comments', createCommentsRouter(commentsController));
   app.use('/api/v1/contact', createContactRouter(contactController));

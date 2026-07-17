@@ -13,7 +13,7 @@ import type { UserRepository } from '../../../src/repositories/users/user.reposi
 import type { CreateUserInput, User, UserWithPassword } from '../../../src/repositories/users/user.types.js';
 import type { EmailValidationService } from '../../../src/services/auth/email-validation.service.js';
 import type { StaffMfaManager } from '../../../src/services/auth/staff-mfa.service.js';
-import type { AuthenticationResponseJSON } from '@simplewebauthn/server';
+import type { AuthenticationResponseJSON, RegistrationResponseJSON } from '@simplewebauthn/server';
 
 const baseUser: User = {
   id: 2,
@@ -70,13 +70,15 @@ class FakeEmailValidationService {
 class FakeStaffMfa implements StaffMfaManager {
   authenticationUserId: number | null = null;
   authenticationCompleted = true;
+  enrollmentInput: unknown = null;
 
   async beginEnrollment() {
     return { flowId: 'enrollment-flow', publicKey: {} as never };
   }
 
-  async completeEnrollment() {
-    return { userId: 2, mfaEnrolled: true as const };
+  async completeEnrollment(input: unknown) {
+    this.enrollmentInput = input;
+    return { userId: 2, status: 'active' as const, mfaEnrolled: true as const };
   }
 
   async beginAuthentication(userId: number) {
@@ -107,6 +109,17 @@ const authenticationCredential = {
     signature: 'signature'
   }
 } as AuthenticationResponseJSON;
+
+const registrationCredential = {
+  id: 'credential-1',
+  rawId: 'credential-1',
+  type: 'public-key',
+  clientExtensionResults: {},
+  response: {
+    clientDataJSON: 'client-data',
+    attestationObject: 'attestation'
+  }
+} as RegistrationResponseJSON;
 
 function assertHttpError(error: unknown, code: string, status: number): boolean {
   assert.ok(error instanceof HttpError);
@@ -214,6 +227,23 @@ describe('AuthService', () => {
 
     assert.equal(staffMfa.authenticationUserId, baseUser.id);
     assert.deepEqual(result, { flowId: 'authentication-flow', publicKey: { challenge: 'challenge' } });
+    assert.equal(sessions.staffSessions.size, 0);
+  });
+
+  it('delegates invitation activation to the mandatory MFA enrollment without issuing a session', async () => {
+    const input = {
+      flowId: 'enrollment-flow',
+      invitationToken: 'invitation-token',
+      password: 'Recipe42?',
+      credential: registrationCredential
+    };
+
+    assert.deepEqual(await service.activateStaffInvitation(input), {
+      userId: 2,
+      status: 'active',
+      mfaEnrolled: true
+    });
+    assert.deepEqual(staffMfa.enrollmentInput, input);
     assert.equal(sessions.staffSessions.size, 0);
   });
 

@@ -39,12 +39,7 @@ export type StaffMfaOptionsResult<T> = {
 
 export interface StaffMfaManager {
   beginEnrollment(invitationToken: string): Promise<StaffMfaOptionsResult<PublicKeyCredentialCreationOptionsJSON>>;
-  completeEnrollment(input: {
-    flowId: string;
-    invitationToken: string;
-    password: string;
-    credential: RegistrationResponseJSON;
-  }): Promise<{ userId: number; mfaEnrolled: true }>;
+  completeEnrollment(input: { flowId: string; invitationToken: string; password: string; credential: RegistrationResponseJSON; }): Promise<{ userId: number; status: 'active'; mfaEnrolled: true }>;
   beginAuthentication(staffUserId: number): Promise<StaffMfaOptionsResult<PublicKeyCredentialRequestOptionsJSON>>;
   completeAuthentication(flowId: string, response: AuthenticationResponseJSON): Promise<{
     staffUserId: number;
@@ -127,7 +122,7 @@ export class StaffMfaService implements StaffMfaManager {
     return { flowId, publicKey };
   }
 
-  async completeEnrollment(input: { flowId: string; invitationToken: string; password: string; credential: RegistrationResponseJSON; }): Promise<{ userId: number; mfaEnrolled: true }> {
+  async completeEnrollment(input: { flowId: string; invitationToken: string; password: string; credential: RegistrationResponseJSON; }): Promise<{ userId: number; status: 'active'; mfaEnrolled: true }> {
     const passwordError = validatePassword(input.password);
     if (passwordError)
       throw badRequest(passwordError, 'AUTH_WEAK_PASSWORD');
@@ -181,7 +176,7 @@ export class StaffMfaService implements StaffMfaManager {
       throw error;
     }
 
-    return { userId: challenge.staffUserId, mfaEnrolled: true };
+    return { userId: challenge.staffUserId, status: 'active', mfaEnrolled: true };
   }
 
   async beginAuthentication(staffUserId: number): Promise<StaffMfaOptionsResult<PublicKeyCredentialRequestOptionsJSON>> {

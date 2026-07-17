@@ -302,7 +302,7 @@ Exemples :
 - `POST /api/v1/admin/auth/login/options`
 - `POST /api/v1/admin/auth/login/verify`
 - `POST /api/v1/admin/auth/mfa/enrollment/options`
-- `POST /api/v1/admin/auth/mfa/enrollment/verify`
+- `POST /api/v1/staff/invitations/:token/activate`
 - `GET /api/v1/admin/auth/sessions`
 - `DELETE /api/v1/admin/auth/sessions/:sessionId`
 - `POST /api/v1/admin/auth/logout`
@@ -359,10 +359,12 @@ de 7 jours par défaut. Les endpoints `GET /api/v1/auth/me` et
 
 L’enrôlement initial WebAuthn se déroule via
 `POST /api/v1/admin/auth/mfa/enrollment/options`, avec le jeton d’invitation,
-puis `POST /api/v1/admin/auth/mfa/enrollment/verify`, avec le `flowId`, le jeton,
-le mot de passe choisi et la réponse de création WebAuthn. Le compte reste
-`invited` et l’invitation reste utilisable tant que la réponse cryptographique
-n’est pas validée ; l’enrôlement ne crée pas de session.
+puis `POST /api/v1/staff/invitations/:token/activate`, avec le jeton dans le
+chemin et le `flowId`, le mot de passe choisi et la réponse de création WebAuthn
+dans le body. Le compte reste `invited` et l’invitation reste utilisable tant que
+la réponse cryptographique avec vérification utilisateur n’est pas validée. La
+transaction enregistre alors le credential et le mot de passe, consomme le jeton
+une seule fois et passe le compte à `active` ; elle ne crée pas de session.
 
 Le login staff se déroule ensuite en deux appels. Le premier,
 `POST /api/v1/admin/auth/login/options`, vérifie `mail` et `password` puis

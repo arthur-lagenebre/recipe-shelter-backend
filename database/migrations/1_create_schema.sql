@@ -117,6 +117,8 @@ CREATE TABLE StaffInvitations (
   KEY idx_staff_invitations_created_by_staff_user_id (CreatedByStaffUserId),
   CONSTRAINT staff_invitations_mfa_required_CK CHECK (RequiresMfa = TRUE),
   CONSTRAINT staff_invitations_expiry_CK CHECK (ExpiresAt > CreatedAt),
+  CONSTRAINT staff_invitations_usage_CK
+    CHECK (UsedAt IS NULL OR (UsedAt >= CreatedAt AND UsedAt < ExpiresAt)),
   CONSTRAINT staff_invitations_staff_profile_FK
     FOREIGN KEY (StaffUserId) REFERENCES StaffProfiles(UserId)
     ON UPDATE CASCADE

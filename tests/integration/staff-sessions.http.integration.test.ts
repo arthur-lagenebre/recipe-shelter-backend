@@ -100,7 +100,7 @@ describe('staff session management HTTP boundaries', () => {
       staffLoginOptions: noOp,
       staffLoginVerify: noOp,
       staffMfaEnrollmentOptions: noOp,
-      staffMfaEnrollmentVerify: noOp,
+      activateStaffInvitation: noOp,
       me: noOp,
       logout: noOp,
       staffLogout: noOp,
