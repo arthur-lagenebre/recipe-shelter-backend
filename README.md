@@ -110,6 +110,13 @@ n’a pas été enregistré. Les sessions staff conservent aussi l’adresse IP,
 user-agent et, en cas de révocation, l’identité staff à l’origine de l’action et
 son contexte (`logout`, `self` ou `admin`).
 
+Les identités staff ne sont jamais supprimées physiquement : le schéma refuse
+la suppression d’un `StaffProfiles`, la relation avec `Users` est restrictive
+et les relations dépendantes vers l’identité staff n’utilisent aucune cascade
+de suppression.
+L’identité des acteurs d’audit et toutes les clés étrangères restent ainsi
+résolubles après une désactivation.
+
 Les comptes staff cumulent leurs rôles via `StaffRoles`. Leurs permissions
 effectives proviennent exclusivement de `RolePermissions` ; un compte sans rôle
 ou sans permission correspondante est refusé par défaut. Les comptes community
@@ -229,7 +236,9 @@ npm run bootstrap:superadmin -- --email superadmin@example.com --username supera
 ```
 
 La commande crée dans une transaction le premier SuperAdmin en statut `invited`
-et lui envoie un lien d'activation à usage unique. Aucun mot de passe ou jeton
+et lui envoie un lien d'activation à usage unique avant de valider cette
+transaction. Un échec SMTP ne déclenche donc aucune suppression physique et
+permet de relancer la commande. Aucun mot de passe ou jeton
 n'est accepté en argument ou écrit dans la sortie de la commande : seul le hash
 SHA-256 du jeton est conservé dans `StaffInvitations`. L'invitation expire après
 30 minutes par défaut, durée configurable avec
@@ -255,7 +264,9 @@ de 10 à 1000 caractères. Seul un compte `active` peut être désactivé et seu
 compte `disabled` avec MFA enrôlé peut être réactivé. La désactivation est
 logique, conserve son acteur, son motif et sa date dans `StaffProfiles`, et
 révoque toutes les sessions actives dans la transaction auditée. Un staff ne
-peut ni se désactiver ni retirer ses propres rôles.
+peut ni se désactiver ni retirer ses propres rôles. Aucun endpoint de suppression
+de compte staff n’est exposé ; les routes `DELETE` relatives aux rôles et aux
+sessions révoquent uniquement des accès sans supprimer l’identité.
 
 La commande nécessite donc une configuration SMTP applicative valide. Une fois
 le premier SuperAdmin créé, toute nouvelle exécution est refusée, y compris si

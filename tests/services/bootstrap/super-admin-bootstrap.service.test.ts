@@ -4,22 +4,18 @@ import { beforeEach, describe, it } from 'node:test';
 import { SuperAdminBootstrapService } from '../../../src/services/bootstrap/super-admin-bootstrap.service.js';
 import { HttpError } from '../../../src/utils/errors.js';
 
-import type { CreateFirstSuperAdminInput, CreateFirstSuperAdminResult, SuperAdminBootstrapRepository } from '../../../src/repositories/bootstrap/super-admin-bootstrap.repository.interface.js';
+import type { BeforeFirstSuperAdminCommit, CreateFirstSuperAdminInput, CreateFirstSuperAdminResult, SuperAdminBootstrapRepository } from '../../../src/repositories/bootstrap/super-admin-bootstrap.repository.interface.js';
 import type { SuperAdminBootstrapInvitationMailInput } from '../../../src/services/mail/mail.types.js';
 
 class FakeSuperAdminBootstrapRepository implements SuperAdminBootstrapRepository {
     createResult: CreateFirstSuperAdminResult = { status: 'created', userId: 42 };
     createInput: CreateFirstSuperAdminInput | null = null;
-    cancelledInvitation: { userId: number; tokenHash: string } | null = null;
 
-    async createFirst(input: CreateFirstSuperAdminInput): Promise<CreateFirstSuperAdminResult> {
+    async createFirst(input: CreateFirstSuperAdminInput, beforeCommit: BeforeFirstSuperAdminCommit): Promise<CreateFirstSuperAdminResult> {
         this.createInput = input;
+        if (this.createResult.status === 'created')
+            await beforeCommit({ userId: this.createResult.userId });
         return this.createResult;
-    }
-
-    async cancelPendingInvitation(userId: number, tokenHash: string): Promise<boolean> {
-        this.cancelledInvitation = { userId, tokenHash };
-        return true;
     }
 }
 
@@ -87,7 +83,7 @@ describe('SuperAdminBootstrapService', () => {
         assert.equal('token' in result, false);
     });
 
-    it('cancels the pending account when invitation delivery fails so bootstrap can be retried', async () => {
+    it('propagates invitation delivery failure before the repository commits creation', async () => {
         const deliveryError = new Error('mail delivery failed');
         mailer.error = deliveryError;
 
@@ -95,7 +91,7 @@ describe('SuperAdminBootstrapService', () => {
             () => service.bootstrap({ mail: 'first.admin@example.com', username: 'FirstAdmin' }),
             deliveryError
         );
-        assert.deepEqual(repository.cancelledInvitation, { userId: 42, tokenHash });
+        assert.equal(mailer.input?.to, 'first.admin@example.com');
     });
 
     it('rejects bootstrap when an active SuperAdmin already exists', async () => {
@@ -144,6 +140,7 @@ describe('SuperAdminBootstrapService', () => {
         const invalidInputs = [
             { input: { mail: '', username: 'first-admin' }, code: 'BOOTSTRAP_SUPER_ADMIN_MISSING_EMAIL' },
             { input: { mail: 'invalid', username: 'first-admin' }, code: 'BOOTSTRAP_SUPER_ADMIN_INVALID_EMAIL' },
+            { input: { mail: `${'a'.repeat(244)}@example.com`, username: 'first-admin' }, code: 'BOOTSTRAP_SUPER_ADMIN_INVALID_EMAIL' },
             { input: { mail: 'first@example.com', username: '' }, code: 'BOOTSTRAP_SUPER_ADMIN_MISSING_USERNAME' },
             { input: { mail: 'first@example.com', username: 'ab' }, code: 'BOOTSTRAP_SUPER_ADMIN_WEAK_USERNAME' },
             { input: { mail: 'first@example.com', username: 'a'.repeat(65) }, code: 'BOOTSTRAP_SUPER_ADMIN_USERNAME_TOO_LONG' }

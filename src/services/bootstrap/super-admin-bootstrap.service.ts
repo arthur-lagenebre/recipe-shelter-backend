@@ -49,29 +49,24 @@ export class SuperAdminBootstrapService {
 
         const invitationToken = this.generateToken();
         const invitationTokenHash = this.hashToken(invitationToken);
+        const invitationUrl = `${this.appBaseUrl.replace(/\/+$/, '')}/auth/staff-invitation?token=${encodeURIComponent(invitationToken)}`;
         const result = await this.repository.createFirst({
             mail,
             username,
             invitationTokenHash,
             invitationTtlMinutes: this.invitationTtlMinutes
+        }, async () => {
+            await this.mailer.sendSuperAdminBootstrapInvitationEmail({
+                to: mail,
+                username,
+                invitationUrl,
+                expiresInMinutes: this.invitationTtlMinutes
+            });
         });
 
         switch (result.status) {
-            case 'created': {
-                const invitationUrl = `${this.appBaseUrl.replace(/\/+$/, '')}/auth/staff-invitation?token=${encodeURIComponent(invitationToken)}`;
-                try {
-                    await this.mailer.sendSuperAdminBootstrapInvitationEmail({
-                        to: mail,
-                        username,
-                        invitationUrl,
-                        expiresInMinutes: this.invitationTtlMinutes
-                    });
-                } catch (error) {
-                    await this.repository.cancelPendingInvitation(result.userId, invitationTokenHash);
-                    throw error;
-                }
+            case 'created':
                 return { userId: result.userId };
-            }
             case 'super_admin_exists':
                 if (result.active)
                     throw conflict('An active SuperAdmin already exists', 'SUPER_ADMIN_ALREADY_EXISTS');

@@ -100,12 +100,19 @@ CREATE TABLE StaffProfiles (
   CONSTRAINT staff_profiles_user_account_type_FK
     FOREIGN KEY (UserId, AccountType) REFERENCES Users(Id, AccountType)
     ON UPDATE RESTRICT
-    ON DELETE CASCADE,
+    ON DELETE RESTRICT,
   CONSTRAINT staff_profiles_disabled_by_staff_profile_FK
     FOREIGN KEY (DisabledByStaffUserId) REFERENCES StaffProfiles(UserId)
     ON UPDATE RESTRICT
     ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TRIGGER staff_profiles_no_delete_BD
+BEFORE DELETE ON StaffProfiles
+FOR EACH ROW
+SIGNAL SQLSTATE '45000'
+  SET MYSQL_ERRNO = 1644,
+      MESSAGE_TEXT = 'Staff profiles cannot be physically deleted; disable access instead';
 
 CREATE TABLE StaffRoles (
   StaffUserId BIGINT UNSIGNED NOT NULL,
@@ -115,7 +122,7 @@ CREATE TABLE StaffRoles (
   CONSTRAINT staff_roles_staff_profile_FK
     FOREIGN KEY (StaffUserId) REFERENCES StaffProfiles(UserId)
     ON UPDATE CASCADE
-    ON DELETE CASCADE,
+    ON DELETE RESTRICT,
   CONSTRAINT staff_roles_role_FK
     FOREIGN KEY (RoleId) REFERENCES Roles(Id)
     ON UPDATE CASCADE
@@ -144,7 +151,7 @@ CREATE TABLE StaffInvitations (
   CONSTRAINT staff_invitations_staff_profile_FK
     FOREIGN KEY (StaffUserId) REFERENCES StaffProfiles(UserId)
     ON UPDATE CASCADE
-    ON DELETE CASCADE,
+    ON DELETE RESTRICT,
   CONSTRAINT staff_invitations_created_by_staff_profile_FK
     FOREIGN KEY (CreatedByStaffUserId) REFERENCES StaffProfiles(UserId)
     ON UPDATE RESTRICT
@@ -170,7 +177,7 @@ CREATE TABLE StaffWebAuthnCredentials (
   CONSTRAINT staff_webauthn_credentials_staff_profile_FK
     FOREIGN KEY (StaffUserId) REFERENCES StaffProfiles(UserId)
     ON UPDATE CASCADE
-    ON DELETE CASCADE
+    ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TRIGGER staff_profiles_active_webauthn_BU
@@ -210,7 +217,7 @@ CREATE TABLE StaffWebAuthnChallenges (
   CONSTRAINT staff_webauthn_challenges_staff_profile_FK
     FOREIGN KEY (StaffUserId) REFERENCES StaffProfiles(UserId)
     ON UPDATE CASCADE
-    ON DELETE CASCADE,
+    ON DELETE RESTRICT,
   CONSTRAINT staff_webauthn_challenges_invitation_FK
     FOREIGN KEY (InvitationId, StaffUserId) REFERENCES StaffInvitations(Id, StaffUserId)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -275,12 +282,12 @@ CREATE TABLE StaffSessions (
   CONSTRAINT staff_sessions_user_FK
     FOREIGN KEY (StaffUserId) REFERENCES StaffProfiles(UserId)
     ON UPDATE CASCADE
-    ON DELETE CASCADE,
+    ON DELETE RESTRICT,
   CONSTRAINT staff_sessions_webauthn_credential_FK
     FOREIGN KEY (StaffUserId, WebAuthnCredentialId)
     REFERENCES StaffWebAuthnCredentials(StaffUserId, CredentialId)
     ON UPDATE CASCADE
-    ON DELETE CASCADE,
+    ON DELETE RESTRICT,
   CONSTRAINT staff_sessions_revoked_by_user_FK
     FOREIGN KEY (RevokedByStaffUserId) REFERENCES StaffProfiles(UserId)
     ON UPDATE RESTRICT

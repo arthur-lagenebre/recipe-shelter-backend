@@ -9,10 +9,7 @@ type FakeOptions = {
     roleRows?: unknown[];
     superAdminRows?: unknown[];
     identityRows?: unknown[];
-    invitationRows?: unknown[];
-    userDeleteAffectedRows?: number;
     userInsertError?: unknown;
-    invitationReadError?: unknown;
 };
 
 type Statement = {
@@ -35,15 +32,8 @@ function createPool(options: FakeOptions = {}) {
                 return [options.roleRows ?? [{ Id: 5 }]];
             if (/FROM StaffRoles/.test(sql))
                 return [options.superAdminRows ?? []];
-            if (/DELETE FROM Users/.test(sql))
-                return [{ affectedRows: options.userDeleteAffectedRows ?? 1 }];
             if (/FROM Users/.test(sql))
                 return [options.identityRows ?? []];
-            if (/SELECT si\.Id, si\.StaffUserId[\s\S]+FROM StaffInvitations/.test(sql)) {
-                if (options.invitationReadError)
-                    throw options.invitationReadError;
-                return [options.invitationRows ?? []];
-            }
             if (/INSERT INTO Users/.test(sql)) {
                 if (options.userInsertError)
                     throw options.userInsertError;
@@ -74,12 +64,17 @@ const input = {
     invitationTtlMinutes: 30
 };
 
+async function completeCreation(): Promise<void> { }
+
 describe('SuperAdminBootstrapRepositoryMysql', () => {
     it('locks the role and atomically creates the invited account, role and expiring MFA invitation', async () => {
         const fake = createPool();
         const repository = new SuperAdminBootstrapRepositoryMysql(fake.pool);
+        let preparedUserId: number | null = null;
 
-        assert.deepEqual(await repository.createFirst(input), { status: 'created', userId: 42 });
+        assert.deepEqual(await repository.createFirst(input, async ({ userId }) => {
+            preparedUserId = userId;
+        }), { status: 'created', userId: 42 });
 
         assert.match(fake.statements[0]?.sql ?? '', /FROM Roles[\s\S]+FOR UPDATE/);
         assert.deepEqual(fake.statements[0]?.params, ['SuperAdmin']);
@@ -92,6 +87,7 @@ describe('SuperAdminBootstrapRepositoryMysql', () => {
         assert.match(fake.statements[6]?.sql ?? '', /INSERT INTO StaffInvitations/);
         assert.match(fake.statements[6]?.sql ?? '', /RequiresMfa[\s\S]+TRUE/);
         assert.deepEqual(fake.statements[6]?.params, [42, 'a'.repeat(64), 30]);
+        assert.equal(preparedUserId, 42);
         assert.equal(JSON.stringify(fake.statements).includes('raw-token'), false);
         assert.deepEqual(fake.counts(), { commits: 1, rollbacks: 0, releases: 1 });
     });
@@ -107,7 +103,7 @@ describe('SuperAdminBootstrapRepositoryMysql', () => {
             const repository = new SuperAdminBootstrapRepositoryMysql(fake.pool);
 
             assert.deepEqual(
-                await repository.createFirst(input),
+                await repository.createFirst(input, completeCreation),
                 { status: 'super_admin_exists', active: status === 'active' }
             );
             assert.equal(fake.statements.some(({ sql }) => /INSERT INTO Users/.test(sql)), false);
@@ -115,10 +111,23 @@ describe('SuperAdminBootstrapRepositoryMysql', () => {
         }
     });
 
+    it('continues when the locked role aggregate confirms that no SuperAdmin exists', async () => {
+        const fake = createPool({
+            superAdminRows: [{ SuperAdminCount: 0, ActiveSuperAdminCount: 0 }]
+        });
+
+        assert.deepEqual(
+            await new SuperAdminBootstrapRepositoryMysql(fake.pool).createFirst(input, completeCreation),
+            { status: 'created', userId: 42 }
+        );
+        assert.equal(fake.statements.some(({ sql }) => /INSERT INTO Users/.test(sql)), true);
+        assert.deepEqual(fake.counts(), { commits: 1, rollbacks: 0, releases: 1 });
+    });
+
     it('requires the central seed role and rejects identities already in use', async () => {
         const missingRole = createPool({ roleRows: [] });
         assert.deepEqual(
-            await new SuperAdminBootstrapRepositoryMysql(missingRole.pool).createFirst(input),
+            await new SuperAdminBootstrapRepositoryMysql(missingRole.pool).createFirst(input, completeCreation),
             { status: 'role_missing' }
         );
 
@@ -126,7 +135,7 @@ describe('SuperAdminBootstrapRepositoryMysql', () => {
             identityRows: [{ Mail: 'FIRST@example.com', Username: 'someone' }]
         });
         assert.deepEqual(
-            await new SuperAdminBootstrapRepositoryMysql(emailTaken.pool).createFirst(input),
+            await new SuperAdminBootstrapRepositoryMysql(emailTaken.pool).createFirst(input, completeCreation),
             { status: 'email_taken' }
         );
 
@@ -134,31 +143,22 @@ describe('SuperAdminBootstrapRepositoryMysql', () => {
             identityRows: [{ Mail: 'someone@example.com', Username: 'FIRST-ADMIN' }]
         });
         assert.deepEqual(
-            await new SuperAdminBootstrapRepositoryMysql(usernameTaken.pool).createFirst(input),
+            await new SuperAdminBootstrapRepositoryMysql(usernameTaken.pool).createFirst(input, completeCreation),
             { status: 'username_taken' }
         );
     });
 
-    it('removes only its still-pending invited account when email delivery fails', async () => {
-        const cancellable = createPool({ invitationRows: [{ Id: 7, StaffUserId: 42 }] });
-        const repository = new SuperAdminBootstrapRepositoryMysql(cancellable.pool);
+    it('rolls back uncommitted creation when invitation delivery fails without deleting a staff identity', async () => {
+        const deliveryError = new Error('mail delivery failed');
+        const fake = createPool();
+        const repository = new SuperAdminBootstrapRepositoryMysql(fake.pool);
 
-        assert.equal(await repository.cancelPendingInvitation(42, 'a'.repeat(64)), true);
-        assert.match(cancellable.statements[0]?.sql ?? '', /FROM Roles[\s\S]+FOR UPDATE/);
-        assert.match(cancellable.statements[1]?.sql ?? '', /sp\.Status = 'invited'/);
-        assert.match(cancellable.statements[1]?.sql ?? '', /si\.UsedAt IS NULL/);
-        assert.deepEqual(cancellable.statements[1]?.params, [42, 'a'.repeat(64), 5]);
-        assert.match(cancellable.statements[2]?.sql ?? '', /Password IS NULL/);
-        assert.deepEqual(cancellable.counts(), { commits: 1, rollbacks: 0, releases: 1 });
-
-        const alreadyConsumed = createPool({ invitationRows: [] });
-        assert.equal(
-            await new SuperAdminBootstrapRepositoryMysql(alreadyConsumed.pool)
-                .cancelPendingInvitation(42, 'a'.repeat(64)),
-            false
+        await assert.rejects(
+            () => repository.createFirst(input, async () => { throw deliveryError; }),
+            deliveryError
         );
-        assert.equal(alreadyConsumed.statements.some(({ sql }) => /DELETE FROM Users/.test(sql)), false);
-        assert.deepEqual(alreadyConsumed.counts(), { commits: 1, rollbacks: 0, releases: 1 });
+        assert.equal(fake.statements.some(({ sql }) => /DELETE\s+FROM/i.test(sql)), false);
+        assert.deepEqual(fake.counts(), { commits: 0, rollbacks: 1, releases: 1 });
     });
 
     it('rolls back and maps a concurrent unique email insertion', async () => {
@@ -168,7 +168,47 @@ describe('SuperAdminBootstrapRepositoryMysql', () => {
         const fake = createPool({ userInsertError: duplicateError });
         const repository = new SuperAdminBootstrapRepositoryMysql(fake.pool);
 
-        assert.deepEqual(await repository.createFirst(input), { status: 'email_taken' });
+        assert.deepEqual(await repository.createFirst(input, completeCreation), { status: 'email_taken' });
+        assert.deepEqual(fake.counts(), { commits: 0, rollbacks: 1, releases: 1 });
+    });
+
+    it('rolls back and maps a concurrent unique username insertion', async () => {
+        const duplicateError = Object.assign(new Error("Duplicate entry for key 'users_username_UK'"), {
+            code: 'ER_DUP_ENTRY'
+        });
+        const fake = createPool({ userInsertError: duplicateError });
+
+        assert.deepEqual(
+            await new SuperAdminBootstrapRepositoryMysql(fake.pool).createFirst(input, completeCreation),
+            { status: 'username_taken' }
+        );
+        assert.deepEqual(fake.counts(), { commits: 0, rollbacks: 1, releases: 1 });
+    });
+
+    it('preserves unrecognized duplicate errors with or without a database message', async () => {
+        const unknownConstraint = Object.assign(new Error("Duplicate entry for key 'other_UK'"), {
+            code: 'ER_DUP_ENTRY'
+        });
+        const noMessage = { code: 'ER_DUP_ENTRY' };
+
+        for (const error of [unknownConstraint, noMessage]) {
+            const fake = createPool({ userInsertError: error });
+            await assert.rejects(
+                () => new SuperAdminBootstrapRepositoryMysql(fake.pool).createFirst(input, completeCreation),
+                (caught) => caught === error
+            );
+            assert.deepEqual(fake.counts(), { commits: 0, rollbacks: 1, releases: 1 });
+        }
+    });
+
+    it('preserves primitive database failures', async () => {
+        const primitiveError = 'database unavailable';
+        const fake = createPool({ userInsertError: primitiveError });
+
+        await assert.rejects(
+            () => new SuperAdminBootstrapRepositoryMysql(fake.pool).createFirst(input, completeCreation),
+            (caught) => caught === primitiveError
+        );
         assert.deepEqual(fake.counts(), { commits: 0, rollbacks: 1, releases: 1 });
     });
 
@@ -176,7 +216,7 @@ describe('SuperAdminBootstrapRepositoryMysql', () => {
         const createError = new Error('database unavailable');
         const create = createPool({ userInsertError: createError });
         await assert.rejects(
-            () => new SuperAdminBootstrapRepositoryMysql(create.pool).createFirst(input),
+            () => new SuperAdminBootstrapRepositoryMysql(create.pool).createFirst(input, completeCreation),
             createError
         );
         assert.deepEqual(create.counts(), { commits: 0, rollbacks: 1, releases: 1 });

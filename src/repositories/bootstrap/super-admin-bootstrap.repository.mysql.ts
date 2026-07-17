@@ -1,6 +1,6 @@
 import { firstOrNull } from '../../utils/array.js';
 
-import type { CreateFirstSuperAdminInput, CreateFirstSuperAdminResult, SuperAdminBootstrapRepository } from './super-admin-bootstrap.repository.interface.js';
+import type { BeforeFirstSuperAdminCommit, CreateFirstSuperAdminInput, CreateFirstSuperAdminResult, SuperAdminBootstrapRepository } from './super-admin-bootstrap.repository.interface.js';
 import type { Pool, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 
 const SUPER_ADMIN_ROLE_CODE = 'SuperAdmin';
@@ -19,15 +19,10 @@ type ExistingIdentityRow = RowDataPacket & {
     Username: string;
 };
 
-type InvitationRow = RowDataPacket & {
-    Id: number;
-    StaffUserId: number;
-};
-
 export class SuperAdminBootstrapRepositoryMysql implements SuperAdminBootstrapRepository {
     constructor(private readonly db: Pool) { }
 
-    async createFirst(input: CreateFirstSuperAdminInput): Promise<CreateFirstSuperAdminResult> {
+    async createFirst(input: CreateFirstSuperAdminInput, beforeCommit: BeforeFirstSuperAdminCommit): Promise<CreateFirstSuperAdminResult> {
         const conn = await this.db.getConnection();
 
         try {
@@ -109,6 +104,7 @@ export class SuperAdminBootstrapRepositoryMysql implements SuperAdminBootstrapRe
                 [userId, input.invitationTokenHash, input.invitationTtlMinutes]
             );
 
+            await beforeCommit({ userId });
             await conn.commit();
             return { status: 'created', userId };
         } catch (error) {
@@ -118,69 +114,6 @@ export class SuperAdminBootstrapRepositoryMysql implements SuperAdminBootstrapRe
             if (duplicateStatus)
                 return { status: duplicateStatus };
 
-            throw error;
-        } finally {
-            conn.release();
-        }
-    }
-
-    async cancelPendingInvitation(userId: number, tokenHash: string): Promise<boolean> {
-        const conn = await this.db.getConnection();
-
-        try {
-            await conn.beginTransaction();
-
-            const [roleRows] = await conn.execute<RoleRow[]>(
-                `SELECT Id
-                 FROM Roles
-                 WHERE Code = ?
-                 FOR UPDATE`,
-                [SUPER_ADMIN_ROLE_CODE]
-            );
-            const role = firstOrNull(roleRows);
-
-            if (!role) {
-                await conn.commit();
-                return false;
-            }
-
-            const [invitationRows] = await conn.execute<InvitationRow[]>(
-                `SELECT si.Id, si.StaffUserId
-                 FROM StaffInvitations AS si
-                 INNER JOIN StaffProfiles AS sp ON sp.UserId = si.StaffUserId
-                 INNER JOIN StaffRoles AS sr ON sr.StaffUserId = si.StaffUserId
-                 WHERE si.StaffUserId = ?
-                   AND si.TokenHash = ?
-                   AND si.UsedAt IS NULL
-                   AND si.RequiresMfa = TRUE
-                   AND sp.Status = 'invited'
-                   AND sr.RoleId = ?
-                 FOR UPDATE`,
-                [userId, tokenHash, role.Id]
-            );
-
-            if (!firstOrNull(invitationRows)) {
-                await conn.commit();
-                return false;
-            }
-
-            const [result] = await conn.execute<ResultSetHeader>(
-                `DELETE FROM Users
-                 WHERE Id = ?
-                   AND AccountType = 'staff'
-                   AND Password IS NULL`,
-                [userId]
-            );
-
-            if (result.affectedRows !== 1) {
-                await conn.rollback();
-                return false;
-            }
-
-            await conn.commit();
-            return true;
-        } catch (error) {
-            await conn.rollback();
             throw error;
         } finally {
             conn.release();

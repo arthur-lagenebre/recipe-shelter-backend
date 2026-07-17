@@ -225,4 +225,65 @@ describe('staff management MySQL integration', { skip: !mysqlEnabled && 'Set TES
       { Action: 'staff.roles.revoke', TargetType: 'staff_user', Reason: 'Temporary moderation coverage ended.' }
     ]);
   });
+
+  it('rejects physical staff deletion and preserves every audit actor foreign key', async () => {
+    const databaseName = requireStaffManagementTestDatabaseName();
+    const protectedForeignKeys = [
+      'staff_profiles_user_account_type_FK',
+      'staff_profiles_disabled_by_staff_profile_FK',
+      'staff_roles_staff_profile_FK',
+      'staff_invitations_staff_profile_FK',
+      'staff_invitations_created_by_staff_profile_FK',
+      'staff_webauthn_credentials_staff_profile_FK',
+      'staff_webauthn_challenges_staff_profile_FK',
+      'staff_sessions_user_FK',
+      'staff_sessions_webauthn_credential_FK',
+      'staff_sessions_revoked_by_user_FK',
+      'admin_audit_logs_actor_FK'
+    ];
+    const placeholders = protectedForeignKeys.map(() => '?').join(', ');
+    const [foreignKeys] = await pool.query(
+      `SELECT CONSTRAINT_NAME AS ConstraintName, DELETE_RULE AS DeleteRule
+       FROM information_schema.REFERENTIAL_CONSTRAINTS
+       WHERE CONSTRAINT_SCHEMA = ?
+         AND CONSTRAINT_NAME IN (${placeholders})
+       ORDER BY CONSTRAINT_NAME`,
+      [databaseName, ...protectedForeignKeys]
+    );
+    assert.deepEqual(foreignKeys, [...protectedForeignKeys].sort().map((ConstraintName) => ({
+      ConstraintName,
+      DeleteRule: 'RESTRICT'
+    })));
+
+    await assert.rejects(
+      () => pool.execute(`DELETE FROM StaffProfiles WHERE UserId = ?`, [targetUserId]),
+      /Staff profiles cannot be physically deleted/
+    );
+    await assert.rejects(
+      () => pool.execute(`DELETE FROM Users WHERE Id = ?`, [actorUserId])
+    );
+
+    const [preservedActors] = await pool.query(
+      `SELECT audit.ActorUserId, staff.UserId AS StaffUserId, users.Username, COUNT(*) AS AuditCount
+       FROM AdminAuditLogs AS audit
+       INNER JOIN StaffProfiles AS staff ON staff.UserId = audit.ActorUserId
+       INNER JOIN Users AS users ON users.Id = staff.UserId
+       GROUP BY audit.ActorUserId, staff.UserId, users.Username`
+    );
+    assert.deepEqual(preservedActors, [{
+      ActorUserId: actorUserId,
+      StaffUserId: actorUserId,
+      Username: 'Staff Manager',
+      AuditCount: 6
+    }]);
+
+    const [staffRows] = await pool.query(
+      `SELECT UserId FROM StaffProfiles WHERE UserId IN (?, ?) ORDER BY UserId`,
+      [actorUserId, targetUserId]
+    );
+    assert.deepEqual(staffRows, [
+      { UserId: actorUserId },
+      { UserId: targetUserId }
+    ]);
+  });
 });

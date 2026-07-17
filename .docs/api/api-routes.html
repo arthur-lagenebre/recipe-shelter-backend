@@ -2035,7 +2035,7 @@ type UnbanUserResponse = OkResponse;</code></pre>
 
     <section aria-labelledby="admin-staff-management">
       <h2 id="admin-staff-management">Admin staff management</h2>
-      <p class="section-intro">Cycle de vie logique et rôles des comptes staff. Chaque route exige sa permission explicite et produit un audit. Les mutations exigent un motif de 10 à 1000 caractères.</p>
+      <p class="section-intro">Cycle de vie logique et rôles des comptes staff. Aucun endpoint ne supprime physiquement un compte : la sortie du staff passe par la désactivation et la révocation de ses accès. Chaque route exige sa permission explicite et produit un audit. Les mutations exigent un motif de 10 à 1000 caractères.</p>
       <div class="table-wrap">
         <table>
           <thead>

@@ -119,13 +119,13 @@ describe('SuperAdmin bootstrap MySQL integration', { skip: !mysqlEnabled && 'Set
             }),
             /SMTP unavailable/
         );
-        const [cleanedAfterDeliveryFailure] = await pool.query(
+        const [persistedAfterDeliveryFailure] = await pool.query(
             `SELECT
                 (SELECT COUNT(*) FROM Users) AS UserCount,
                 (SELECT COUNT(*) FROM StaffInvitations) AS InvitationCount,
                 (SELECT COUNT(*) FROM StaffRoles) AS AssignmentCount`
         );
-        assert.deepEqual(cleanedAfterDeliveryFailure, [{ UserCount: 0, InvitationCount: 0, AssignmentCount: 0 }]);
+        assert.deepEqual(persistedAfterDeliveryFailure, [{ UserCount: 0, InvitationCount: 0, AssignmentCount: 0 }]);
 
         const firstToken = 'first-bootstrap-raw-token';
         const secondToken = 'second-bootstrap-raw-token';

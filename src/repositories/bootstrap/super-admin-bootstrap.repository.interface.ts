@@ -12,7 +12,8 @@ export type CreateFirstSuperAdminResult =
     | { status: 'username_taken' }
     | { status: 'role_missing' };
 
+export type BeforeFirstSuperAdminCommit = (created: { userId: number }) => Promise<void>;
+
 export interface SuperAdminBootstrapRepository {
-    createFirst(input: CreateFirstSuperAdminInput): Promise<CreateFirstSuperAdminResult>;
-    cancelPendingInvitation(userId: number, tokenHash: string): Promise<boolean>;
+    createFirst(input: CreateFirstSuperAdminInput, beforeCommit: BeforeFirstSuperAdminCommit): Promise<CreateFirstSuperAdminResult>;
 }

@@ -18,6 +18,10 @@ class TestAdminStaffRepository implements AdminStaffRepository {
     ['UserAdmin', { id: 3, code: 'UserAdmin', name: 'Administrateur des utilisateurs' }],
     ['RecipeModerator', { id: 1, code: 'RecipeModerator', name: 'Modérateur de recettes' }]
   ]);
+  disableConflict = false;
+  enableConflict = false;
+  grantConflict = false;
+  revokeConflict = false;
 
   constructor() {
     this.accounts.set(actor.id, cloneStaff(actor));
@@ -39,7 +43,7 @@ class TestAdminStaffRepository implements AdminStaffRepository {
 
   async disable(staffUserId: number, actorStaffUserId: number, reason: string): Promise<number | null> {
     const account = this.accounts.get(staffUserId);
-    if (!account || account.status !== 'active')
+    if (this.disableConflict || !account || account.status !== 'active')
       return null;
 
     const revokedSessionCount = account.activeSessionCount;
@@ -54,7 +58,7 @@ class TestAdminStaffRepository implements AdminStaffRepository {
 
   async enable(staffUserId: number): Promise<boolean> {
     const account = this.accounts.get(staffUserId);
-    if (!account || account.status !== 'disabled')
+    if (this.enableConflict || !account || account.status !== 'disabled')
       return false;
 
     account.status = 'active';
@@ -68,7 +72,7 @@ class TestAdminStaffRepository implements AdminStaffRepository {
   async grantRole(staffUserId: number, roleId: number): Promise<boolean> {
     const account = this.accounts.get(staffUserId);
     const role = [...this.roles.values()].find((candidate) => candidate.id === roleId);
-    if (!account || !role || account.roles.some((candidate) => candidate.id === roleId))
+    if (this.grantConflict || !account || !role || account.roles.some((candidate) => candidate.id === roleId))
       return false;
 
     account.roles.push(role);
@@ -78,7 +82,7 @@ class TestAdminStaffRepository implements AdminStaffRepository {
 
   async revokeRole(staffUserId: number, roleId: number): Promise<boolean> {
     const account = this.accounts.get(staffUserId);
-    if (!account)
+    if (this.revokeConflict || !account)
       return false;
 
     const index = account.roles.findIndex((candidate) => candidate.id === roleId);
@@ -228,6 +232,90 @@ describe('AdminStaffService', () => {
       () => service.get(999, actor.id, testAdminAuditContext),
       (error) => assertHttpError(error, 404, 'STAFF_USER_NOT_FOUND')
     );
+    assert.equal(audit.inputs.length, 0);
+  });
+
+  it('rejects invalid and concurrent disablement transitions without auditing them', async () => {
+    const account = repository.accounts.get(target.id)!;
+
+    account.status = 'disabled';
+    account.disabledByStaffUserId = actor.id;
+    account.disabledReason = 'Previously disabled for this test.';
+    account.disabledAt = new Date('2026-07-17T12:00:00.000Z');
+    await assert.rejects(
+      () => service.disable(target.id, actor.id, 'Repeated disablement request.', testAdminAuditContext),
+      (error) => assertHttpError(error, 409, 'STAFF_ALREADY_DISABLED')
+    );
+
+    account.status = 'invited';
+    account.disabledByStaffUserId = null;
+    account.disabledReason = null;
+    account.disabledAt = null;
+    await assert.rejects(
+      () => service.disable(target.id, actor.id, 'Invitation cannot be disabled.', testAdminAuditContext),
+      (error) => assertHttpError(error, 409, 'STAFF_DISABLE_INVALID_STATUS')
+    );
+
+    account.status = 'active';
+    repository.disableConflict = true;
+    await assert.rejects(
+      () => service.disable(target.id, actor.id, 'Concurrent disablement attempt.', testAdminAuditContext),
+      (error) => assertHttpError(error, 409, 'STAFF_STATUS_CONFLICT')
+    );
+
+    assert.equal(audit.inputs.length, 0);
+  });
+
+  it('requires MFA and rejects concurrent enablement without auditing it', async () => {
+    const account = repository.accounts.get(target.id)!;
+    account.status = 'disabled';
+    account.disabledByStaffUserId = actor.id;
+    account.disabledReason = 'Disabled before this enablement test.';
+    account.disabledAt = new Date('2026-07-17T12:00:00.000Z');
+    account.mfaEnrolledAt = null;
+
+    await assert.rejects(
+      () => service.enable(target.id, actor.id, 'Enablement without enrolled MFA.', testAdminAuditContext),
+      (error) => assertHttpError(error, 409, 'STAFF_ENABLE_MFA_REQUIRED')
+    );
+
+    account.mfaEnrolledAt = new Date('2026-07-16T10:00:00.000Z');
+    repository.enableConflict = true;
+    await assert.rejects(
+      () => service.enable(target.id, actor.id, 'Concurrent enablement attempt.', testAdminAuditContext),
+      (error) => assertHttpError(error, 409, 'STAFF_STATUS_CONFLICT')
+    );
+
+    assert.equal(audit.inputs.length, 0);
+  });
+
+  it('rejects missing roles, concurrent role changes and invalid reasons without auditing them', async () => {
+    await assert.rejects(
+      () => service.revokeRole(target.id, 'RecipeModerator', actor.id, 'Role was never assigned.', testAdminAuditContext),
+      (error) => assertHttpError(error, 409, 'STAFF_ROLE_NOT_GRANTED')
+    );
+
+    repository.grantConflict = true;
+    await assert.rejects(
+      () => service.grantRole(target.id, 'RecipeModerator', actor.id, 'Concurrent role grant attempt.', testAdminAuditContext),
+      (error) => assertHttpError(error, 409, 'STAFF_ROLE_CONFLICT')
+    );
+
+    repository.revokeConflict = true;
+    await assert.rejects(
+      () => service.revokeRole(target.id, 'UserAdmin', actor.id, 'Concurrent role revoke attempt.', testAdminAuditContext),
+      (error) => assertHttpError(error, 409, 'STAFF_ROLE_CONFLICT')
+    );
+
+    await assert.rejects(
+      () => service.disable(target.id, actor.id, undefined as unknown as string, testAdminAuditContext),
+      (error) => assertHttpError(error, 400, 'STAFF_DISABLE_MISSING_REASON')
+    );
+    await assert.rejects(
+      () => service.enable(target.id, actor.id, 'x'.repeat(1001), testAdminAuditContext),
+      (error) => assertHttpError(error, 400, 'STAFF_ENABLE_REASON_TOO_LONG')
+    );
+
     assert.equal(audit.inputs.length, 0);
   });
 });
