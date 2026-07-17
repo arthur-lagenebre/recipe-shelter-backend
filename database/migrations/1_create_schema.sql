@@ -323,6 +323,64 @@ SET Status = CASE NEW.Status
              END
 WHERE UserId = NEW.Id AND NEW.AccountType = 'staff';
 
+-- ---------- Administrative audit ----------
+-- BeforeValues and AfterValues contain only the redacted state required for
+-- investigation. Secrets and authentication material must never be recorded.
+CREATE TABLE AdminAuditLogs (
+  Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  ActorUserId BIGINT UNSIGNED NOT NULL,
+  Action VARCHAR(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  TargetType VARCHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  TargetId VARCHAR(255) NOT NULL,
+  Reason TEXT NULL,
+  BeforeValues JSON NULL,
+  AfterValues JSON NULL,
+  IpAddress VARCHAR(45) CHARACTER SET ascii COLLATE ascii_bin NULL,
+  UserAgent VARCHAR(512) NULL,
+  CorrelationId CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  CreatedAt DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (Id),
+  KEY idx_admin_audit_logs_created_at (CreatedAt),
+  KEY idx_admin_audit_logs_actor_created_at (ActorUserId, CreatedAt),
+  KEY idx_admin_audit_logs_action_created_at (Action, CreatedAt),
+  KEY idx_admin_audit_logs_target_created_at (TargetType, TargetId, CreatedAt),
+  KEY idx_admin_audit_logs_correlation_id (CorrelationId),
+  CONSTRAINT admin_audit_logs_action_CK
+    CHECK (CHAR_LENGTH(TRIM(Action)) > 0),
+  CONSTRAINT admin_audit_logs_target_type_CK
+    CHECK (CHAR_LENGTH(TRIM(TargetType)) > 0),
+  CONSTRAINT admin_audit_logs_target_id_CK
+    CHECK (CHAR_LENGTH(TRIM(TargetId)) > 0),
+  CONSTRAINT admin_audit_logs_reason_CK
+    CHECK (Reason IS NULL OR CHAR_LENGTH(TRIM(Reason)) > 0),
+  CONSTRAINT admin_audit_logs_before_values_CK
+    CHECK (BeforeValues IS NULL OR JSON_TYPE(BeforeValues) = 'OBJECT'),
+  CONSTRAINT admin_audit_logs_after_values_CK
+    CHECK (AfterValues IS NULL OR JSON_TYPE(AfterValues) = 'OBJECT'),
+  CONSTRAINT admin_audit_logs_ip_address_CK
+    CHECK (IpAddress IS NULL OR CHAR_LENGTH(TRIM(IpAddress)) > 0),
+  CONSTRAINT admin_audit_logs_user_agent_CK
+    CHECK (UserAgent IS NULL OR CHAR_LENGTH(TRIM(UserAgent)) > 0),
+  CONSTRAINT admin_audit_logs_correlation_id_CK
+    CHECK (CHAR_LENGTH(TRIM(CorrelationId)) = 36),
+  CONSTRAINT admin_audit_logs_actor_FK
+    FOREIGN KEY (ActorUserId) REFERENCES StaffProfiles(UserId)
+    ON UPDATE RESTRICT
+    ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TRIGGER admin_audit_logs_immutable_BU
+BEFORE UPDATE ON AdminAuditLogs
+FOR EACH ROW
+SIGNAL SQLSTATE '45000'
+  SET MESSAGE_TEXT = 'Admin audit logs are immutable';
+
+CREATE TRIGGER admin_audit_logs_immutable_BD
+BEFORE DELETE ON AdminAuditLogs
+FOR EACH ROW
+SIGNAL SQLSTATE '45000'
+  SET MESSAGE_TEXT = 'Admin audit logs are immutable';
+
 CREATE TABLE UserModerationLogs (
   Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   UserId BIGINT UNSIGNED NOT NULL,
