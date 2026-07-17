@@ -72,7 +72,7 @@ export class AdminUserRepositoryMysql implements AdminUserRepository {
         return (rows as UserModerationLogRow[]).map(mapUserModerationLog);
     }
 
-    async ban(userId: number, adminUserId: number, reason: string): Promise<boolean> {
+    async ban(userId: number, adminUserId: number, reason: string, db?: PoolConnection): Promise<boolean> {
         return this.updateUserWithModerationLog('ban', userId, adminUserId, reason, async (conn) => {
             const [result] = await conn.execute<ResultSetHeader>(
                 `UPDATE CommunityProfiles
@@ -94,10 +94,10 @@ export class AdminUserRepositoryMysql implements AdminUserRepository {
             }
 
             return result.affectedRows > 0;
-        });
+        }, db);
     }
 
-    async unban(userId: number, adminUserId: number, reason: string): Promise<boolean> {
+    async unban(userId: number, adminUserId: number, reason: string, db?: PoolConnection): Promise<boolean> {
         return this.updateUserWithModerationLog('unban', userId, adminUserId, reason, async (conn) => {
             const [result] = await conn.execute<ResultSetHeader>(
                 `UPDATE CommunityProfiles
@@ -119,16 +119,19 @@ export class AdminUserRepositoryMysql implements AdminUserRepository {
             }
 
             return result.affectedRows > 0;
-        });
+        }, db);
     }
 
-    private async updateUserWithModerationLog(
-        action: UserModerationAction,
-        userId: number,
-        adminUserId: number,
-        reason: string,
-        updateUser: (conn: PoolConnection) => Promise<boolean>
-    ): Promise<boolean> {
+    private async updateUserWithModerationLog(action: UserModerationAction, userId: number, adminUserId: number, reason: string, updateUser: (conn: PoolConnection) => Promise<boolean>, db?: PoolConnection): Promise<boolean> {
+        if (db) {
+            const updated = await updateUser(db);
+
+            if (updated)
+                await this.createModerationLog(db, { userId, adminId: adminUserId, action, reason });
+
+            return updated;
+        }
+
         const conn = await this.db.getConnection();
 
         try {

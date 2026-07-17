@@ -12,6 +12,7 @@ import { RecipeSlugService } from '../../src/services/recipes/recipe-slug.servic
 import { RecipeService } from '../../src/services/recipes/recipes.services.js';
 import { PERMISSIONS } from '../../src/security/permissions.js';
 import { createPaginatedResult } from '../../src/utils/pagination.js';
+import { TestAdminAuditRecorder } from '../helpers/admin-audit.js';
 import { startHttpTestServer } from '../helpers/http-test-server.js';
 import { TestSessionRepository } from '../helpers/auth-session.js';
 
@@ -349,6 +350,20 @@ describe('critical user journey E2E', () => {
         const recipes = new CriticalFlowRecipeRepository();
         const recipeRepository = recipes as unknown as RecipeRepository;
         const adminRecipeRepository = {
+            async findAuditStateById(id: number) {
+                const recipe = await recipeRepository.findById(id);
+
+                return recipe ? {
+                    id: recipe.id,
+                    userId: recipe.userId,
+                    categoryId: recipe.categoryId,
+                    title: recipe.title,
+                    slug: recipe.slug,
+                    status: recipe.status,
+                    moderatedByUserId: recipe.moderatedByUserId,
+                    rejectionReason: recipe.rejectionReason
+                } : null;
+            },
             async publish(id: number, adminUserId: number) { return recipes.publish(id, adminUserId); },
             async reject(id: number, adminUserId: number, reason: string) { return recipes.reject(id, adminUserId, reason); }
         } as unknown as AdminRecipeRepository;
@@ -377,7 +392,11 @@ describe('critical user journey E2E', () => {
             authSessionRepository: sessions,
             authUserRepository: users as Pick<UserRepository, 'findById'>,
             recipeService: new RecipeService(recipeRepository, new RecipeSlugService(recipeRepository)),
-            adminRecipeService: new AdminRecipeService(recipeRepository, adminRecipeRepository),
+            adminRecipeService: new AdminRecipeService(
+                recipeRepository,
+                adminRecipeRepository,
+                new TestAdminAuditRecorder()
+            ),
             favoriteService: new FavoriteService(new CriticalFlowFavoriteRepository(recipes)),
             commentService: new CommentService(new CriticalFlowCommentRepository())
         });

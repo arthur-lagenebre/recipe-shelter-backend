@@ -3,11 +3,12 @@ import { firstOrNull } from '../../utils/array.js';
 
 import type { AdminCommentRepository } from './admin.comments.repository.interface.js';
 import type { AdminComment, AdminCommentRow, AdminUpdateCommentInput } from './admin.comments.types.js';
+import type { Queryable } from '../../db/query.js';
 import type { ResultSetHeader } from 'mysql2';
-import type { Pool } from 'mysql2/promise';
+import type { PoolConnection } from 'mysql2/promise';
 
 export class AdminCommentRepositoryMysql implements AdminCommentRepository {
-    constructor(private readonly db: Pool) { }
+    constructor(private readonly db: Queryable) { }
 
     async findModeratedForAdmin(): Promise<AdminComment[]> {
         const [rows] = await this.db.execute(
@@ -61,15 +62,16 @@ export class AdminCommentRepositoryMysql implements AdminCommentRepository {
         return row?.Count ?? 0;
     }
 
-    async findByIdForAdmin(id: number): Promise<AdminComment | null> {
-        const [rows] = await this.db.execute(
+    async findByIdForAdmin(id: number, db?: PoolConnection): Promise<AdminComment | null> {
+        const [rows] = await (db ?? this.db).execute(
             `SELECT c.Id, c.RecipeId, r.Title AS RecipeTitle, r.Slug AS RecipeSlug, c.UserId, u.Username, c.ParentCommentId, c.ModeratedAt, c.ModeratedByUserId, moderator.Username AS ModeratedByUsername, c.DeletedAt, c.DeletedByUserId, deletedBy.Username AS DeletedByUsername, c.Rating, c.Comment, c.CreatedAt, c.UpdatedAt
              FROM Comments AS c
              INNER JOIN Recipes AS r ON c.RecipeId = r.Id
              INNER JOIN Users AS u ON c.UserId = u.Id
              LEFT JOIN Users AS moderator ON c.ModeratedByUserId = moderator.Id
              LEFT JOIN Users AS deletedBy ON c.DeletedByUserId = deletedBy.Id
-             WHERE c.Id = ?`,
+             WHERE c.Id = ?
+             ${db ? 'FOR UPDATE' : ''}`,
             [id]
         );
 
@@ -77,8 +79,8 @@ export class AdminCommentRepositoryMysql implements AdminCommentRepository {
         return row ? mapAdminComment(row) : null;
     }
 
-    async hide(id: number, moderatedByUserId: number): Promise<boolean> {
-        const [result] = await this.db.execute<ResultSetHeader>(
+    async hide(id: number, moderatedByUserId: number, db?: PoolConnection): Promise<boolean> {
+        const [result] = await (db ?? this.db).execute<ResultSetHeader>(
             `UPDATE Comments
              SET ModeratedAt = CURRENT_TIMESTAMP, ModeratedByUserId = ?
              WHERE Id = ?`,
@@ -88,8 +90,8 @@ export class AdminCommentRepositoryMysql implements AdminCommentRepository {
         return result.affectedRows > 0;
     }
 
-    async unmoderate(id: number): Promise<boolean> {
-        const [result] = await this.db.execute<ResultSetHeader>(
+    async unmoderate(id: number, db?: PoolConnection): Promise<boolean> {
+        const [result] = await (db ?? this.db).execute<ResultSetHeader>(
             `UPDATE Comments
              SET ModeratedAt = NULL, ModeratedByUserId = NULL
              WHERE Id = ? AND ModeratedAt IS NOT NULL`,
@@ -99,8 +101,8 @@ export class AdminCommentRepositoryMysql implements AdminCommentRepository {
         return result.affectedRows > 0;
     }
 
-    async restore(id: number): Promise<boolean> {
-        const [result] = await this.db.execute<ResultSetHeader>(
+    async restore(id: number, db?: PoolConnection): Promise<boolean> {
+        const [result] = await (db ?? this.db).execute<ResultSetHeader>(
             `UPDATE Comments
              SET DeletedAt = NULL, DeletedByUserId = NULL
              WHERE Id = ? AND DeletedAt IS NOT NULL`,
@@ -110,8 +112,8 @@ export class AdminCommentRepositoryMysql implements AdminCommentRepository {
         return result.affectedRows > 0;
     }
 
-    async update(input: AdminUpdateCommentInput): Promise<AdminComment | null> {
-        const [result] = await this.db.execute<ResultSetHeader>(
+    async update(input: AdminUpdateCommentInput, db?: PoolConnection): Promise<AdminComment | null> {
+        const [result] = await (db ?? this.db).execute<ResultSetHeader>(
             `UPDATE Comments
              SET Comment = ?, Rating = ?
              WHERE Id = ?`,
@@ -121,11 +123,11 @@ export class AdminCommentRepositoryMysql implements AdminCommentRepository {
         if (result.affectedRows === 0)
             return null;
 
-        return this.findByIdForAdmin(input.id);
+        return this.findByIdForAdmin(input.id, db);
     }
 
-    async delete(id: number): Promise<boolean> {
-        const [result] = await this.db.execute<ResultSetHeader>(
+    async delete(id: number, db?: PoolConnection): Promise<boolean> {
+        const [result] = await (db ?? this.db).execute<ResultSetHeader>(
             `DELETE FROM Comments
              WHERE Id = ?`,
             [id]

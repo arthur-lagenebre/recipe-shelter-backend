@@ -1,10 +1,12 @@
-import type { RecipeAdmin, RecipePending } from "./admin.recipe.types.js";
+import type { AdminRecipeAuditState, RecipeAdmin, RecipePending } from "./admin.recipe.types.js";
+import type { PoolConnection } from 'mysql2/promise';
 
 export interface AdminRecipeRepository {
     findPendingForAdmin(): Promise<RecipePending[]>;
     countPendingForAdmin(): Promise<number>;
     findByIdForAdmin(id: number): Promise<RecipeAdmin | null>;
-    publish(id: number, moderatedByUserId: number): Promise<boolean>;
-    reject(id: number, moderatedByUserId: number, rejectionReason: string): Promise<boolean>;
-    delete(id: number): Promise<boolean>;
+    findAuditStateById(id: number, db: PoolConnection): Promise<AdminRecipeAuditState | null>;
+    publish(id: number, moderatedByUserId: number, db?: PoolConnection): Promise<boolean>;
+    reject(id: number, moderatedByUserId: number, rejectionReason: string, db?: PoolConnection): Promise<boolean>;
+    delete(id: number, db?: PoolConnection): Promise<boolean>;
 }

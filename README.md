@@ -169,7 +169,14 @@ stables en minuscules. Le service normalise les champs d'investigation, masque
 récursivement les secrets connus et génère un identifiant de corrélation absent.
 La politique d'échec est `fail-closed` : l'écriture est synchrone et obligatoire,
 une panne est journalisée sans les snapshots ni le détail de base, puis remontée
-sous le code générique `ADMIN_AUDIT_RECORD_FAILED`.
+sous le code générique `ADMIN_AUDIT_RECORD_FAILED`. Chaque mutation sensible
+effective des recettes, commentaires, utilisateurs et sessions staff crée une
+seule entrée avec l'acteur, la cible, l'état avant/après, l'adresse IP, le
+user-agent et le `correlationId`. La mutation métier et cette entrée utilisent
+la même transaction ; un échec d'audit annule donc aussi la mutation. Les APIs
+actuelles des tags, ingrédients et catégories restent en lecture seule et aucun
+modèle d'alias n'est encore présent : il n'existe pas d'action applicative de ces
+domaines à journaliser à ce stade.
 
 Le schéma d'installation est consolidé dans l'unique fichier
 `database/migrations/1_create_schema.sql`. Les auteurs de recettes et de

@@ -12,6 +12,7 @@ import { errorHandler } from '../../src/middlewares/error-handler.js';
 import { configureAuthRbacRepository, configureAuthSessionRepository, configureAuthUserRepository, requireCommunityAuth, requireStaffAuth } from '../../src/middlewares/require-auth.js';
 import { PERMISSIONS } from '../../src/security/permissions.js';
 import { AdminUserService } from '../../src/services/admin/admin.users.service.js';
+import { TestAdminAuditRecorder } from '../helpers/admin-audit.js';
 import { TestSessionRepository } from '../helpers/auth-session.js';
 import { startHttpTestServer } from '../helpers/http-test-server.js';
 
@@ -81,7 +82,8 @@ describe('admin user access HTTP integration', () => {
         } as unknown as AdminUserRepository;
         const service = new AdminUserService(
             userRepository as unknown as UserRepository,
-            adminRepository
+            adminRepository,
+            new TestAdminAuditRecorder()
         );
         const app = express();
 

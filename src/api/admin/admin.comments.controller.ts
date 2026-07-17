@@ -1,3 +1,4 @@
+import { getAdminAuditRequestContext } from './admin-audit.context.js';
 import { parseAdminCommentIdParam, parseAdminUpdateCommentBody } from './admin.comments.dto.js';
 import { asyncHandler } from '../http/async-handler.js';
 
@@ -31,21 +32,21 @@ export function createAdminCommentsController(adminCommentService: AdminCommentS
 
         hideComment: asyncHandler(async (req, res) => {
             const commentId = parseAdminCommentIdParam(req.params.id);
-            const result = await adminCommentService.hide(commentId, req.auth!.userId);
+            const result = await adminCommentService.hide(commentId, req.auth!.userId, getAdminAuditRequestContext(req));
 
             res.status(200).json({ ok: result });
         }),
 
         unmoderateComment: asyncHandler(async (req, res) => {
             const commentId = parseAdminCommentIdParam(req.params.id);
-            const result = await adminCommentService.unmoderate(commentId);
+            const result = await adminCommentService.unmoderate(commentId, req.auth!.userId, getAdminAuditRequestContext(req));
 
             res.status(200).json({ ok: result });
         }),
 
         restoreComment: asyncHandler(async (req, res) => {
             const commentId = parseAdminCommentIdParam(req.params.id);
-            const result = await adminCommentService.restore(commentId);
+            const result = await adminCommentService.restore(commentId, req.auth!.userId, getAdminAuditRequestContext(req));
 
             res.status(200).json({ ok: result });
         }),
@@ -53,14 +54,14 @@ export function createAdminCommentsController(adminCommentService: AdminCommentS
         updateComment: asyncHandler(async (req, res) => {
             const commentId = parseAdminCommentIdParam(req.params.id);
             const body = parseAdminUpdateCommentBody(req.body);
-            const comment = await adminCommentService.update({ id: commentId, rating: body.rating, comment: body.comment });
+            const comment = await adminCommentService.update({ id: commentId, rating: body.rating, comment: body.comment }, req.auth!.userId, getAdminAuditRequestContext(req));
 
             res.status(200).json(comment);
         }),
 
         deleteComment: asyncHandler(async (req, res) => {
             const commentId = parseAdminCommentIdParam(req.params.id);
-            const result = await adminCommentService.hardDelete(commentId);
+            const result = await adminCommentService.hardDelete(commentId, req.auth!.userId, getAdminAuditRequestContext(req));
 
             res.status(200).json({ ok: result });
         })

@@ -4,9 +4,13 @@ import { after, before, describe, it } from 'node:test';
 
 import mysql from 'mysql2/promise';
 
+import { AdminUserRepositoryMysql } from '../../../src/repositories/admin/admin.users.repository.mysql.js';
 import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin-audit.repository.mysql.js';
+import { UserRepositoryMysql } from '../../../src/repositories/users/user.repository.mysql.js';
+import { AdminAuditActionRunnerMysql } from '../../../src/services/admin/admin-audit-action.runner.js';
 import { ADMIN_AUDIT_EVENT_TYPES, ADMIN_AUDIT_TARGET_TYPES } from '../../../src/services/admin/admin-audit.events.js';
 import { AdminAuditService } from '../../../src/services/admin/admin-audit.service.js';
+import { AdminUserService } from '../../../src/services/admin/admin.users.service.js';
 import { env } from '../../../src/utils/env.js';
 
 import type { Queryable } from '../../../src/db/query.js';
@@ -34,6 +38,7 @@ function targetDatabase(sql: string, databaseName: string): string {
 
 describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TEST_DB_NAME to run isolated MySQL tests' }, () => {
     let connection: mysql.Connection;
+    let pool: mysql.Pool;
 
     before(async () => {
         const databaseName = requireAuditTestDatabaseName();
@@ -63,9 +68,19 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
                (900, 'audit-staff@test.local', 'audit-staff', 'non-secret-test-hash', 'staff', 'inactive'),
                (901, 'audit-community@test.local', 'audit-community', 'non-secret-test-hash', 'community', 'active')`
         );
+        pool = mysql.createPool({
+            host: env.db.host,
+            port: env.db.port,
+            user: env.db.user,
+            password: env.db.password,
+            database: databaseName,
+            connectionLimit: 2
+        });
     });
 
     after(async () => {
+        if (pool)
+            await pool.end();
         if (connection) {
             await connection.query(`DROP DATABASE IF EXISTS \`${requireAuditTestDatabaseName()}\``);
             await connection.end();
@@ -176,6 +191,81 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
         assert.equal(receipt.id, log?.Id);
         assert.equal(receipt.correlationId, '00000000-0000-4000-8000-000000000900');
         assert.ok(log?.CreatedAt instanceof Date);
+    });
+
+    it('commits exactly one audit entry with a sensitive action and rolls both back on audit failure', async () => {
+        const auditActions = new AdminAuditActionRunnerMysql(
+            pool,
+            (db) => new AdminAuditService(new AdminAuditRepositoryMysql(db))
+        );
+        const service = new AdminUserService(
+            new UserRepositoryMysql(pool),
+            new AdminUserRepositoryMysql(pool),
+            auditActions
+        );
+
+        await service.ban(
+            901,
+            900,
+            'Repeated violation confirmed by integration test.',
+            {
+                ipAddress: '192.0.2.90',
+                userAgent: 'Recipe Shelter audited action integration test',
+                correlationId: '00000000-0000-4000-8000-000000000905'
+            }
+        );
+
+        const [committed] = await connection.query(
+            `SELECT cp.Status,
+                    (SELECT COUNT(*) FROM AdminAuditLogs WHERE CorrelationId = ?) AS AuditCount
+             FROM CommunityProfiles AS cp
+             WHERE cp.UserId = 901`,
+            ['00000000-0000-4000-8000-000000000905']
+        );
+        assert.deepEqual(committed, [{ Status: 'banned', AuditCount: 1 }]);
+
+        await service.unban(
+            901,
+            900,
+            'Integration test restores the account after review.',
+            {
+                correlationId: '00000000-0000-4000-8000-000000000906'
+            }
+        );
+
+        const failingService = new AdminUserService(
+            new UserRepositoryMysql(pool),
+            new AdminUserRepositoryMysql(pool),
+            new AdminAuditActionRunnerMysql(pool, () => ({
+                async record() {
+                    throw new Error('forced audit failure');
+                }
+            }))
+        );
+        const [moderationLogsBefore] = await connection.query(
+            'SELECT COUNT(*) AS LogCount FROM UserModerationLogs WHERE UserId = 901'
+        );
+
+        await assert.rejects(
+            () => failingService.ban(
+                901,
+                900,
+                'This moderation must be rolled back with its failed audit.',
+                {}
+            ),
+            /forced audit failure/
+        );
+
+        const [rolledBack] = await connection.query(
+            `SELECT cp.Status,
+                    (SELECT COUNT(*) FROM UserModerationLogs WHERE UserId = 901) AS ModerationLogCount
+             FROM CommunityProfiles AS cp
+             WHERE cp.UserId = 901`
+        );
+        assert.deepEqual(rolledBack, [{
+            Status: 'active',
+            ModerationLogCount: (moderationLogsBefore as Array<{ LogCount: number }>)[0]?.LogCount
+        }]);
     });
 
     it('rejects invalid actors and malformed investigation values', async () => {

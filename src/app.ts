@@ -38,6 +38,7 @@ import { EnforceAuthorizationPolicies } from './middlewares/authorization.js';
 import { errorHandler } from './middlewares/error-handler.js';
 import { notFound } from './middlewares/not-found.js';
 import { configureAuthRbacRepository, configureAuthSessionRepository, configureAuthUserRepository, requireStaffAuth } from './middlewares/require-auth.js';
+import { AdminAuditRepositoryMysql } from './repositories/admin/admin-audit.repository.mysql.js';
 import { AdminCommentRepositoryMysql } from './repositories/admin/admin.comments.repository.mysql.js';
 import { AdminRecipeRepositoryMysql } from './repositories/admin/admin.recipe.repository.mysql.js';
 import { AdminUserRepositoryMysql } from './repositories/admin/admin.users.repository.mysql.js';
@@ -55,6 +56,8 @@ import { RecipeImageRepositoryMysql } from './repositories/recipe-images/recipe-
 import { RecipeRepositoryMysql } from './repositories/recipes/recipe.repository.mysql.js';
 import { TagRepositoryMysql } from './repositories/tag/tag.repository.mysql.js';
 import { UserRepositoryMysql } from './repositories/users/user.repository.mysql.js';
+import { AdminAuditActionRunnerMysql } from './services/admin/admin-audit-action.runner.js';
+import { AdminAuditService } from './services/admin/admin-audit.service.js';
 import { AdminCommentService } from './services/admin/admin.comments.services.js';
 import { AdminRecipeService } from './services/admin/admin.recipes.services.js';
 import { AdminUserService } from './services/admin/admin.users.service.js';
@@ -117,6 +120,10 @@ function createDefaultDependencies(): AppDependencies {
   const adminCommentRepository = new AdminCommentRepositoryMysql(pool);
   const adminRecipeRepository = new AdminRecipeRepositoryMysql(pool, getPublicImageUrl);
   const adminUserRepository = new AdminUserRepositoryMysql(pool);
+  const adminAuditActions = new AdminAuditActionRunnerMysql(
+    pool,
+    (db) => new AdminAuditService(new AdminAuditRepositoryMysql(db))
+  );
   const categoryRepository = new CategoryRepositoryMysql(pool);
   const commentRepository = new CommentRepositoryMysql(pool);
   const equipmentRepository = new EquipmentRepositoryMysql(pool);
@@ -138,9 +145,9 @@ function createDefaultDependencies(): AppDependencies {
   const recipeImageService = new RecipeImageService(recipeRepository, recipeImageRepository, new RecipeImageProcessor(), imageStorage);
 
   return {
-    adminCommentService: new AdminCommentService(adminCommentRepository),
-    adminRecipeService: new AdminRecipeService(recipeRepository, adminRecipeRepository, recipeImageService),
-    adminUserService: new AdminUserService(userRepository, adminUserRepository),
+    adminCommentService: new AdminCommentService(adminCommentRepository, adminAuditActions),
+    adminRecipeService: new AdminRecipeService(recipeRepository, adminRecipeRepository, adminAuditActions, recipeImageService),
+    adminUserService: new AdminUserService(userRepository, adminUserRepository, adminAuditActions),
     authService: new AuthService(userRepository, emailValidationService, sessionRepository, staffMfaService),
     authRbacRepository: rbacRepository,
     authSessionRepository: sessionRepository,
@@ -156,7 +163,7 @@ function createDefaultDependencies(): AppDependencies {
     passwordResetService: new PasswordResetService(userRepository, passwordResetRepository, mailer, env.http.frontendBaseUrl),
     recipeImageService,
     recipeService: new RecipeService(recipeRepository, recipeSlugService),
-    staffSessionService: new StaffSessionService(sessionRepository, userRepository),
+    staffSessionService: new StaffSessionService(sessionRepository, userRepository, adminAuditActions),
     tagService: new TagService(tagRepository),
     usersService: new UserService(userRepository, recipeRepository)
   };

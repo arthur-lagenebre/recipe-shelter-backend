@@ -3,22 +3,9 @@ import { assertAccountType, assertCommunityStatus, assertStaffStatus } from './u
 import { firstOrNull } from '../../utils/array.js';
 
 import type { UserRepository } from './user.repository.interface.js';
-import type {
-    CommunityProfile,
-    CommunityProfileRow,
-    CommunityStatus,
-    CreateUserInput,
-    ExistsRow,
-    StaffProfile,
-    StaffProfileRow,
-    StaffStatus,
-    User,
-    UserRow,
-    UserWithPassword,
-    UserWithPasswordRow
-} from './user.types.js';
+import type { CommunityProfile, CommunityProfileRow, CommunityStatus, CreateUserInput, ExistsRow, StaffProfile, StaffProfileRow, StaffStatus, User, UserRow, UserWithPassword, UserWithPasswordRow } from './user.types.js';
 import type { ResultSetHeader } from 'mysql2';
-import type { Pool } from 'mysql2/promise';
+import type { Pool, PoolConnection } from 'mysql2/promise';
 
 const USER_SELECT = `u.Id, u.Mail, u.Username, u.AccountType, u.EmailValidatedAt,
                      cp.UserId AS CommunityProfileUserId, cp.Status AS CommunityStatus,
@@ -32,12 +19,13 @@ const USER_PROFILE_JOINS = `LEFT JOIN CommunityProfiles AS cp ON cp.UserId = u.I
 export class UserRepositoryMysql implements UserRepository {
     constructor(private readonly db: Pool) { }
 
-    async findById(id: number): Promise<User | null> {
-        const [rows] = await this.db.execute(
+    async findById(id: number, db?: PoolConnection): Promise<User | null> {
+        const [rows] = await (db ?? this.db).execute(
             `SELECT ${USER_SELECT}
              FROM Users AS u
              ${USER_PROFILE_JOINS}
-             WHERE u.Id = ?`,
+             WHERE u.Id = ?
+             ${db ? 'FOR UPDATE' : ''}`,
             [id]
         );
 

@@ -1,3 +1,4 @@
+import { getAdminAuditRequestContext } from './admin-audit.context.js';
 import { parseAdminUserIdParam, parseBanUserBody, parseUnbanUserBody } from './admin.users.dto.js';
 import { asyncHandler } from '../http/async-handler.js';
 
@@ -27,7 +28,7 @@ export function createAdminUsersController(adminUserService: AdminUserService) {
         banUser: asyncHandler(async (req, res) => {
             const userId = parseAdminUserIdParam(req.params.id);
             const reason = parseBanUserBody(req.body);
-            const result = await adminUserService.ban(userId, req.auth!.userId, reason);
+            const result = await adminUserService.ban(userId, req.auth!.userId, reason, getAdminAuditRequestContext(req));
 
             res.status(200).json({ ok: result });
         }),
@@ -35,7 +36,7 @@ export function createAdminUsersController(adminUserService: AdminUserService) {
         unbanUser: asyncHandler(async (req, res) => {
             const userId = parseAdminUserIdParam(req.params.id);
             const reason = parseUnbanUserBody(req.body);
-            const result = await adminUserService.unban(userId, req.auth!.userId, reason);
+            const result = await adminUserService.unban(userId, req.auth!.userId, reason, getAdminAuditRequestContext(req));
 
             res.status(200).json({ ok: result });
         })

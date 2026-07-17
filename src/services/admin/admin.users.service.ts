@@ -1,8 +1,12 @@
+import { ADMIN_AUDIT_EVENT_TYPES, ADMIN_AUDIT_TARGET_TYPES } from './admin-audit.events.js';
 import { badRequest, forbidden, notFound } from '../../utils/errors.js';
 
+import type { AdminAuditActionRunner } from './admin-audit-action.runner.js';
+import type { AdminAuditRequestContext } from './admin-audit.service.js';
 import type { AdminUserRepository } from '../../repositories/admin/admin.users.repository.interface.js';
 import type { AdminUserDetails, BannedUser, UserModerationAction } from '../../repositories/admin/admin.users.types.js';
 import type { UserRepository } from '../../repositories/users/user.repository.interface.js';
+import type { User } from '../../repositories/users/user.types.js';
 
 const MODERATION_REASON_MIN_LENGTH = 10;
 const MODERATION_REASON_MAX_LENGTH = 1000;
@@ -21,7 +25,7 @@ export type AdminUserProfileDto = AdminUserDetails & {
 };
 
 export class AdminUserService {
-    constructor(private readonly users: UserRepository, private readonly adminUsers: AdminUserRepository) { }
+    constructor(private readonly users: UserRepository, private readonly adminUsers: AdminUserRepository, private readonly auditActions: AdminAuditActionRunner) { }
 
     async getBannedUsersForAdmin(): Promise<BannedUser[]> {
         return this.adminUsers.findBannedForAdmin();
@@ -58,36 +62,87 @@ export class AdminUserService {
         };
     }
 
-    async ban(userId: number, adminUserId: number, reason: string): Promise<boolean> {
+    async ban(userId: number, adminUserId: number, reason: string, context: AdminAuditRequestContext): Promise<boolean> {
         const cleanReason = validateModerationReason(reason, 'ban');
 
         if (userId === adminUserId)
             throw forbidden('Admin users cannot ban themselves', 'ADMIN_USERS_BAN_SELF_FORBIDDEN');
 
-        const user = await this.users.findById(userId);
+        return this.auditActions.run(async ({ db, audit }) => {
+            const user = await this.users.findById(userId, db);
 
-        if (!user)
-            throw notFound('User not found', 'USER_NOT_FOUND');
+            if (!user)
+                throw notFound('User not found', 'USER_NOT_FOUND');
 
-        if (user.accountType !== 'community')
-            throw forbidden('Staff accounts cannot be community-moderated', 'ADMIN_USERS_STAFF_MODERATION_FORBIDDEN');
+            if (user.accountType !== 'community')
+                throw forbidden('Staff accounts cannot be community-moderated', 'ADMIN_USERS_STAFF_MODERATION_FORBIDDEN');
 
-        return this.adminUsers.ban(userId, adminUserId, cleanReason);
+            const banned = await this.adminUsers.ban(userId, adminUserId, cleanReason, db);
+
+            if (banned)
+                await audit.record({
+                    actorUserId: adminUserId,
+                    eventType: ADMIN_AUDIT_EVENT_TYPES.usersBan,
+                    targetType: ADMIN_AUDIT_TARGET_TYPES.communityUser,
+                    targetId: userId,
+                    reason: cleanReason,
+                    beforeValues: snapshotUserModeration(user),
+                    afterValues: {
+                        ...snapshotUserModeration(user),
+                        status: 'banned',
+                        bannedByUserId: adminUserId,
+                        bannedReason: cleanReason
+                    },
+                    ...context
+                });
+
+            return banned;
+        });
     }
 
-    async unban(userId: number, adminUserId: number, reason: string): Promise<boolean> {
+    async unban(userId: number, adminUserId: number, reason: string, context: AdminAuditRequestContext): Promise<boolean> {
         const cleanReason = validateModerationReason(reason, 'unban');
 
-        const user = await this.users.findById(userId);
+        return this.auditActions.run(async ({ db, audit }) => {
+            const user = await this.users.findById(userId, db);
 
-        if (!user)
-            throw notFound('User not found', 'USER_NOT_FOUND');
+            if (!user)
+                throw notFound('User not found', 'USER_NOT_FOUND');
 
-        if (user.accountType !== 'community')
-            throw forbidden('Staff accounts cannot be community-moderated', 'ADMIN_USERS_STAFF_MODERATION_FORBIDDEN');
+            if (user.accountType !== 'community')
+                throw forbidden('Staff accounts cannot be community-moderated', 'ADMIN_USERS_STAFF_MODERATION_FORBIDDEN');
 
-        return this.adminUsers.unban(userId, adminUserId, cleanReason);
+            const unbanned = await this.adminUsers.unban(userId, adminUserId, cleanReason, db);
+
+            if (unbanned)
+                await audit.record({
+                    actorUserId: adminUserId,
+                    eventType: ADMIN_AUDIT_EVENT_TYPES.usersUnban,
+                    targetType: ADMIN_AUDIT_TARGET_TYPES.communityUser,
+                    targetId: userId,
+                    reason: cleanReason,
+                    beforeValues: snapshotUserModeration(user),
+                    afterValues: {
+                        ...snapshotUserModeration(user),
+                        status: 'active',
+                        bannedByUserId: null,
+                        bannedReason: null
+                    },
+                    ...context
+                });
+
+            return unbanned;
+        });
     }
+}
+
+function snapshotUserModeration(user: User) {
+    return {
+        username: user.username,
+        status: user.status,
+        bannedByUserId: user.bannedByUserId,
+        bannedReason: user.bannedReason
+    };
 }
 
 function validateModerationReason(reason: string, action: 'ban' | 'unban'): string {

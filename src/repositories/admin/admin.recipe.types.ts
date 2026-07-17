@@ -38,6 +38,17 @@ export type RecipeAdmin = {
     equipments: AdminRecipeEquipment[];
 }
 
+export type AdminRecipeAuditState = {
+    id: number;
+    userId: number;
+    categoryId: number | null;
+    title: string;
+    slug: string;
+    status: string;
+    moderatedByUserId: number | null;
+    rejectionReason: string | null;
+};
+
 export type AdminRecipeIngredient = {
     id: number;
     name: string;
@@ -118,4 +129,15 @@ export type RecipeAdminRow = RowDataPacket & RecipeImageJoinedRow & {
     UpdatedAt: Date;
     Username: string;
     Category: string | null;
+};
+
+export type AdminRecipeAuditStateRow = RowDataPacket & {
+    Id: number;
+    UserId: number;
+    CategoryId: number | null;
+    Title: string;
+    Slug: string;
+    Status: string;
+    ModeratedByUserId: number | null;
+    RejectionReason: string | null;
 };

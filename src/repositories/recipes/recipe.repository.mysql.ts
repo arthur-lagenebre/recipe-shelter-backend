@@ -165,8 +165,8 @@ export class RecipeRepositoryMysql implements RecipeRepository {
         return recipe;
     }
 
-    async archive(id: number): Promise<boolean> {
-        const [result] = await this.db.execute<ResultSetHeader>(
+    async archive(id: number, db?: PoolConnection): Promise<boolean> {
+        const [result] = await (db ?? this.db).execute<ResultSetHeader>(
             `UPDATE Recipes
              SET Status = 'archived', ArchivedAt = CURRENT_TIMESTAMP
              WHERE Id = ?`,

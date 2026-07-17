@@ -3,6 +3,7 @@ import { beforeEach, describe, it } from 'node:test';
 
 import { StaffSessionService } from '../../../src/services/auth/staff-session.service.js';
 import { HttpError } from '../../../src/utils/errors.js';
+import { TestAdminAuditRecorder, testAdminAuditContext } from '../../helpers/admin-audit.js';
 import { TestSessionRepository } from '../../helpers/auth-session.js';
 
 import type { User } from '../../../src/repositories/users/user.types.js';
@@ -38,11 +39,13 @@ const community: User = {
 
 describe('StaffSessionService', () => {
   let repository: TestSessionRepository;
+  let audit: TestAdminAuditRecorder;
   let service: StaffSessionService;
   const users = new Map<number, User>();
 
   beforeEach(async () => {
     repository = new TestSessionRepository();
+    audit = new TestAdminAuditRecorder();
     users.clear();
     users.set(actor.id, actor);
     users.set(target.id, target);
@@ -51,7 +54,7 @@ describe('StaffSessionService', () => {
       async findById(id) {
         return users.get(id) ?? null;
       }
-    });
+    }, audit);
 
     await repository.createStaffSession({
       id: '00000000-0000-4000-8000-000000000001',
@@ -108,8 +111,13 @@ describe('StaffSessionService', () => {
   });
 
   it('records self and administrative revocation actors and scopes', async () => {
-    await service.revokeOwn(actor.id, '00000000-0000-4000-8000-000000000001');
-    await service.revokeManaged(target.id, '00000000-0000-4000-8000-000000000002', actor.id);
+    await service.revokeOwn(actor.id, '00000000-0000-4000-8000-000000000001', testAdminAuditContext);
+    await service.revokeManaged(
+      target.id,
+      '00000000-0000-4000-8000-000000000002',
+      actor.id,
+      testAdminAuditContext
+    );
 
     assert.deepEqual(repository.staffRevocations, [
       {
@@ -125,6 +133,39 @@ describe('StaffSessionService', () => {
         revocationType: 'admin'
       }
     ]);
+    assert.equal(audit.inputs.length, 2);
+    assert.deepEqual(audit.inputs.map((input) => ({
+      actorUserId: input.actorUserId,
+      eventType: input.eventType,
+      targetType: input.targetType,
+      targetId: input.targetId,
+      afterValues: input.afterValues
+    })), [
+      {
+        actorUserId: actor.id,
+        eventType: 'staff.sessions.revoke',
+        targetType: 'staff_session',
+        targetId: '00000000-0000-4000-8000-000000000001',
+        afterValues: {
+          staffUserId: actor.id,
+          isRevoked: true,
+          revokedByStaffUserId: actor.id,
+          revocationType: 'self'
+        }
+      },
+      {
+        actorUserId: actor.id,
+        eventType: 'staff.sessions.revoke',
+        targetType: 'staff_session',
+        targetId: '00000000-0000-4000-8000-000000000002',
+        afterValues: {
+          staffUserId: target.id,
+          isRevoked: true,
+          revokedByStaffUserId: actor.id,
+          revocationType: 'admin'
+        }
+      }
+    ]);
   });
 
   it('rejects unknown, community-owned, expired and cross-owner sessions', async () => {
@@ -137,13 +178,14 @@ describe('StaffSessionService', () => {
       (error) => assertHttpError(error, 'STAFF_USER_NOT_FOUND')
     );
     await assert.rejects(
-      () => service.revokeOwn(actor.id, '00000000-0000-4000-8000-000000000002'),
+      () => service.revokeOwn(actor.id, '00000000-0000-4000-8000-000000000002', testAdminAuditContext),
       (error) => assertHttpError(error, 'STAFF_SESSION_NOT_FOUND')
     );
     await assert.rejects(
-      () => service.revokeOwn(actor.id, '00000000-0000-4000-8000-000000000003'),
+      () => service.revokeOwn(actor.id, '00000000-0000-4000-8000-000000000003', testAdminAuditContext),
       (error) => assertHttpError(error, 'STAFF_SESSION_NOT_FOUND')
     );
+    assert.equal(audit.inputs.length, 0);
   });
 });
 

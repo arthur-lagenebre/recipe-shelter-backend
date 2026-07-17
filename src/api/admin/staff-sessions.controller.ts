@@ -1,3 +1,4 @@
+import { getAdminAuditRequestContext } from './admin-audit.context.js';
 import { parseStaffSessionIdParam, parseStaffUserIdParam } from './staff-sessions.dto.js';
 import { verifySessionToken } from '../../services/auth/session-token.js';
 import { unauthorized } from '../../utils/errors.js';
@@ -20,7 +21,7 @@ export function createStaffSessionsController(staffSessions: StaffSessionService
       const currentSessionId = getCurrentStaffSessionId(req);
       const sessionId = parseStaffSessionIdParam(req.params.sessionId);
 
-      await staffSessions.revokeOwn(req.auth!.userId, sessionId);
+      await staffSessions.revokeOwn(req.auth!.userId, sessionId, getAdminAuditRequestContext(req));
       if (sessionId === currentSessionId)
         clearSessionCookie(res, 'admin');
 
@@ -40,7 +41,7 @@ export function createStaffSessionsController(staffSessions: StaffSessionService
       const staffUserId = parseStaffUserIdParam(req.params.staffUserId);
       const sessionId = parseStaffSessionIdParam(req.params.sessionId);
 
-      await staffSessions.revokeManaged(staffUserId, sessionId, req.auth!.userId);
+      await staffSessions.revokeManaged(staffUserId, sessionId, req.auth!.userId, getAdminAuditRequestContext(req));
       if (staffUserId === req.auth!.userId && sessionId === currentSessionId)
         clearSessionCookie(res, 'admin');
 

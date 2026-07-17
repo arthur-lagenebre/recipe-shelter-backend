@@ -3,13 +3,14 @@ import { firstOrNull } from '../../utils/array.js';
 import { mapRecipe } from '../recipes/recipe.mapper.js';
 
 import type { AdminRecipeRepository } from "./admin.recipe.repository.interface.js";
-import type { RecipeAdmin, RecipeAdminRow, RecipeIngredientRow, RecipePending, RecipePendingRow, RecipeStepRow, RecipeTagRow, RecipeEquipmentRow } from './admin.recipe.types.js';
+import type { AdminRecipeAuditState, AdminRecipeAuditStateRow, RecipeAdmin, RecipeAdminRow, RecipeIngredientRow, RecipePending, RecipePendingRow, RecipeStepRow, RecipeTagRow, RecipeEquipmentRow } from './admin.recipe.types.js';
+import type { Queryable } from '../../db/query.js';
 import type { PublicImageUrlBuilder } from '../recipe-images/recipe-image.types.js';
 import type { ResultSetHeader } from 'mysql2';
-import type { Pool } from 'mysql2/promise';
+import type { PoolConnection } from 'mysql2/promise';
 
 export class AdminRecipeRepositoryMysql implements AdminRecipeRepository {
-    constructor(private readonly db: Pool, private readonly getPublicImageUrl: PublicImageUrlBuilder = missingPublicImageUrlBuilder) { }
+    constructor(private readonly db: Queryable, private readonly getPublicImageUrl: PublicImageUrlBuilder = missingPublicImageUrlBuilder) { }
 
     async findPendingForAdmin(): Promise<RecipePending[]> {
         const [rows] = await this.db.execute(
@@ -77,8 +78,30 @@ export class AdminRecipeRepositoryMysql implements AdminRecipeRepository {
         };
     }
 
-    async publish(id: number, moderatedByUserId: number): Promise<boolean> {
-        const [result] = await this.db.execute<ResultSetHeader>(
+    async findAuditStateById(id: number, db: PoolConnection): Promise<AdminRecipeAuditState | null> {
+        const [rows] = await db.execute(
+            `SELECT Id, UserId, CategoryId, Title, Slug, Status, ModeratedByUserId, RejectionReason
+             FROM Recipes
+             WHERE Id = ?
+             FOR UPDATE`,
+            [id]
+        );
+        const row = firstOrNull(rows as AdminRecipeAuditStateRow[]);
+
+        return row ? {
+            id: row.Id,
+            userId: row.UserId,
+            categoryId: row.CategoryId,
+            title: row.Title,
+            slug: row.Slug,
+            status: row.Status,
+            moderatedByUserId: row.ModeratedByUserId,
+            rejectionReason: row.RejectionReason
+        } : null;
+    }
+
+    async publish(id: number, moderatedByUserId: number, db?: PoolConnection): Promise<boolean> {
+        const [result] = await (db ?? this.db).execute<ResultSetHeader>(
             `UPDATE Recipes
                  SET Status = ?, PublishedAt = CURRENT_TIMESTAMP, ModeratedByUserId = ?
                  WHERE Id = ?`,
@@ -88,8 +111,8 @@ export class AdminRecipeRepositoryMysql implements AdminRecipeRepository {
         return result.affectedRows > 0;
     }
 
-    async reject(id: number, moderatedByUserId: number, rejectionReason: string): Promise<boolean> {
-        const [result] = await this.db.execute<ResultSetHeader>(
+    async reject(id: number, moderatedByUserId: number, rejectionReason: string, db?: PoolConnection): Promise<boolean> {
+        const [result] = await (db ?? this.db).execute<ResultSetHeader>(
             `UPDATE Recipes
                  SET Status = ?, ModeratedAt = CURRENT_TIMESTAMP, ModeratedByUserId = ?, RejectionReason = ?
                  WHERE Id = ?`,
@@ -99,8 +122,8 @@ export class AdminRecipeRepositoryMysql implements AdminRecipeRepository {
         return result.affectedRows > 0;
     }
 
-    async delete(id: number): Promise<boolean> {
-        const [result] = await this.db.execute<ResultSetHeader>(
+    async delete(id: number, db?: PoolConnection): Promise<boolean> {
+        const [result] = await (db ?? this.db).execute<ResultSetHeader>(
             `DELETE FROM Recipes
              WHERE Id = ?`,
             [id]

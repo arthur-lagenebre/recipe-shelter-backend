@@ -16,6 +16,6 @@ export function canEditRecipe(recipe: Recipe, auth: AuthContext): boolean {
     return isRecipeOwner(recipe, auth) && (recipe.status === 'draft' || recipe.status === 'rejected');
 }
 
-export function canArchiveRecipe(recipe: Recipe): boolean {
+export function canArchiveRecipe(recipe: Pick<Recipe, 'status'>): boolean {
     return recipe.status === 'published' || recipe.status === 'rejected';
 }

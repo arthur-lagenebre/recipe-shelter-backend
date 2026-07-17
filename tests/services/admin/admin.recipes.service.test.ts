@@ -3,9 +3,10 @@ import { beforeEach, describe, it } from 'node:test';
 
 import { AdminRecipeService } from '../../../src/services/admin/admin.recipes.services.js';
 import { HttpError } from '../../../src/utils/errors.js';
+import { TestAdminAuditRecorder, testAdminAuditContext } from '../../helpers/admin-audit.js';
 
 import type { AdminRecipeRepository } from '../../../src/repositories/admin/admin.recipe.repository.interface.js';
-import type { RecipeAdmin, RecipePending } from '../../../src/repositories/admin/admin.recipe.types.js';
+import type { AdminRecipeAuditState, RecipeAdmin, RecipePending } from '../../../src/repositories/admin/admin.recipe.types.js';
 import type { RecipeImage } from '../../../src/repositories/recipe-images/recipe-image.types.js';
 import type { RecipeRepository } from '../../../src/repositories/recipes/recipe.repository.interface.js';
 import type { Recipe } from '../../../src/repositories/recipes/recipe.types.js';
@@ -88,6 +89,8 @@ class FakeAdminRecipeRepository implements AdminRecipeRepository {
     deletedId: number | null = null;
     recipeAdmin: RecipeAdmin | null = adminRecipe;
 
+    constructor(private readonly recipes: FakeRecipeRepository) { }
+
     async findPendingForAdmin(): Promise<RecipePending[]> {
         return [pendingRecipe];
     }
@@ -98,6 +101,21 @@ class FakeAdminRecipeRepository implements AdminRecipeRepository {
 
     async findByIdForAdmin(): Promise<RecipeAdmin | null> {
         return this.recipeAdmin;
+    }
+
+    async findAuditStateById(): Promise<AdminRecipeAuditState | null> {
+        const recipe = this.recipes.recipe;
+
+        return recipe ? {
+            id: recipe.id,
+            userId: recipe.userId,
+            categoryId: recipe.categoryId,
+            title: recipe.title,
+            slug: recipe.slug,
+            status: recipe.status,
+            moderatedByUserId: recipe.moderatedByUserId,
+            rejectionReason: recipe.rejectionReason
+        } : null;
     }
 
     async publish(id: number, adminUserId: number): Promise<boolean> {
@@ -127,12 +145,14 @@ function assertHttpError(error: unknown, code: string, status: number): boolean 
 describe('AdminRecipeService', () => {
     let recipes: FakeRecipeRepository;
     let adminRecipes: FakeAdminRecipeRepository;
+    let audit: TestAdminAuditRecorder;
     let service: AdminRecipeService;
 
     beforeEach(() => {
         recipes = new FakeRecipeRepository();
-        adminRecipes = new FakeAdminRecipeRepository();
-        service = new AdminRecipeService(recipes as unknown as RecipeRepository, adminRecipes);
+        adminRecipes = new FakeAdminRecipeRepository(recipes);
+        audit = new TestAdminAuditRecorder();
+        service = new AdminRecipeService(recipes as unknown as RecipeRepository, adminRecipes, audit);
     });
 
     it('lists, counts and gets recipes for admin', async () => {
@@ -145,35 +165,59 @@ describe('AdminRecipeService', () => {
     });
 
     it('approves and rejects pending recipes', async () => {
-        assert.equal(await service.approve(10, 1), true);
+        assert.equal(await service.approve(10, 1, testAdminAuditContext), true);
         assert.deepEqual(adminRecipes.publishedInput, { id: 10, adminUserId: 1 });
+        assert.equal(audit.inputs.length, 1);
+        assert.equal(audit.inputs[0]?.eventType, 'recipes.approve');
 
-        assert.equal(await service.reject(10, 1, 'Missing details'), true);
+        assert.equal(await service.reject(10, 1, 'Missing details', testAdminAuditContext), true);
         assert.deepEqual(adminRecipes.rejectedInput, { id: 10, adminUserId: 1, reason: 'Missing details' });
+        assert.equal(audit.inputs.length, 2);
+        assert.deepEqual(audit.inputs[1], {
+            actorUserId: 1,
+            eventType: 'recipes.reject',
+            targetType: 'recipe',
+            targetId: 10,
+            reason: 'Missing details',
+            beforeValues: snapshotBaseRecipe(),
+            afterValues: {
+                ...snapshotBaseRecipe(),
+                status: 'rejected',
+                moderatedByUserId: 1,
+                rejectionReason: 'Missing details'
+            },
+            ...testAdminAuditContext
+        });
     });
 
     it('rejects moderation when recipe is missing or not pending', async () => {
         recipes.recipe = null;
-        await assert.rejects(() => service.approve(10, 1), (error) => assertHttpError(error, 'RECIPES_NOT_FOUND', 404));
+        await assert.rejects(() => service.approve(10, 1, testAdminAuditContext), (error) => assertHttpError(error, 'RECIPES_NOT_FOUND', 404));
 
         recipes.recipe = { ...baseRecipe, status: 'draft' };
-        await assert.rejects(() => service.reject(10, 1, 'Reason'), (error) => assertHttpError(error, 'RECIPES_MODERATE_FORBIDDEN', 403));
+        await assert.rejects(() => service.reject(10, 1, 'Reason', testAdminAuditContext), (error) => assertHttpError(error, 'RECIPES_MODERATE_FORBIDDEN', 403));
+        assert.equal(audit.inputs.length, 0);
     });
 
     it('archives only published or rejected recipes and deletes existing recipes', async () => {
         recipes.recipe = { ...baseRecipe, status: 'published' };
-        assert.equal(await service.archive(10), true);
+        assert.equal(await service.archive(10, 1, testAdminAuditContext), true);
         assert.equal(recipes.archivedId, 10);
+        assert.equal(audit.inputs.length, 1);
+        assert.equal(audit.inputs[0]?.eventType, 'recipes.archive');
 
         recipes.recipe = { ...baseRecipe, status: 'draft' };
-        await assert.rejects(() => service.archive(10), (error) => assertHttpError(error, 'RECIPES_ARCHIVE_FORBIDDEN', 403));
+        await assert.rejects(() => service.archive(10, 1, testAdminAuditContext), (error) => assertHttpError(error, 'RECIPES_ARCHIVE_FORBIDDEN', 403));
 
         recipes.recipe = baseRecipe;
-        assert.equal(await service.delete(10), true);
+        assert.equal(await service.delete(10, 1, testAdminAuditContext), true);
         assert.equal(adminRecipes.deletedId, 10);
+        assert.equal(audit.inputs.length, 2);
+        assert.equal(audit.inputs[1]?.eventType, 'recipes.delete');
 
         recipes.recipe = null;
-        await assert.rejects(() => service.delete(99), (error) => assertHttpError(error, 'RECIPES_NOT_FOUND', 404));
+        await assert.rejects(() => service.delete(99, 1, testAdminAuditContext), (error) => assertHttpError(error, 'RECIPES_NOT_FOUND', 404));
+        assert.equal(audit.inputs.length, 2);
     });
 
     it('cleans image objects only after a physical recipe deletion', async () => {
@@ -206,9 +250,45 @@ describe('AdminRecipeService', () => {
             events.push('db:delete');
             return true;
         };
-        service = new AdminRecipeService(recipes as unknown as RecipeRepository, adminRecipes, cleanup);
+        const recordAudit = audit.record.bind(audit);
+        audit.record = async (input) => {
+            events.push('audit:record');
+            return recordAudit(input);
+        };
+        service = new AdminRecipeService(recipes as unknown as RecipeRepository, adminRecipes, audit, cleanup);
 
-        assert.equal(await service.delete(10), true);
-        assert.deepEqual(events, ['image:read', 'db:delete', 'storage:delete']);
+        assert.equal(await service.delete(10, 1, testAdminAuditContext), true);
+        assert.deepEqual(events, ['image:read', 'db:delete', 'audit:record', 'storage:delete']);
+    });
+
+    it('propagates audit failures and does not continue recipe deletion cleanup', async () => {
+        audit.error = new Error('audit unavailable');
+        const cleanup = {
+            async findForCleanup() {
+                return null;
+            },
+            async cleanupAfterRecipeDeletion() {
+                assert.fail('cleanup must not run');
+            }
+        };
+        service = new AdminRecipeService(recipes as unknown as RecipeRepository, adminRecipes, audit, cleanup);
+
+        await assert.rejects(
+            () => service.delete(10, 1, testAdminAuditContext),
+            /audit unavailable/
+        );
+        assert.equal(adminRecipes.deletedId, 10);
     });
 });
+
+function snapshotBaseRecipe() {
+    return {
+        userId: baseRecipe.userId,
+        categoryId: baseRecipe.categoryId,
+        title: baseRecipe.title,
+        slug: baseRecipe.slug,
+        status: baseRecipe.status,
+        moderatedByUserId: baseRecipe.moderatedByUserId,
+        rejectionReason: baseRecipe.rejectionReason
+    };
+}

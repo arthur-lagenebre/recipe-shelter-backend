@@ -32,9 +32,18 @@ export type AdminAuditRecordInput = {
   correlationId?: string;
 };
 
+export type AdminAuditRequestContext = Pick<
+  AdminAuditRecordInput,
+  'correlationId' | 'ipAddress' | 'userAgent'
+>;
+
 export type AdminAuditRecordReceipt = {
   id: number;
   correlationId: string;
+};
+
+export type AdminAuditRecorder = {
+  record(input: AdminAuditRecordInput): Promise<AdminAuditRecordReceipt>;
 };
 
 export class AdminAuditService {

@@ -37,5 +37,6 @@ export interface SessionRepository {
   isStaffSessionActive(id: string, userId: number): Promise<boolean>;
   findActiveStaffSessionsByUserId(userId: number): Promise<StaffSession[]>;
   revokeCommunitySession(id: string, userId: number): Promise<void>;
-  revokeStaffSession(input: RevokeStaffSessionInput): Promise<boolean>;
+  revokeStaffSession(input: RevokeStaffSessionInput, db?: PoolConnection): Promise<boolean>;
 }
+import type { PoolConnection } from 'mysql2/promise';

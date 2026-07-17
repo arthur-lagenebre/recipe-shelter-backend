@@ -1,3 +1,4 @@
+import { getAdminAuditRequestContext } from './admin-audit.context.js';
 import { parseRejectRecipeBody } from './admin.recipes.dto.js';
 import { asyncHandler } from '../http/async-handler.js';
 import { parseRecipeIdParam } from '../recipes/recipes.dto.js';
@@ -26,7 +27,7 @@ export function createAdminRecipesController(adminRecipeService: AdminRecipeServ
         approveRecipe: asyncHandler(async (req, res) => {
             const recipeId = parseRecipeIdParam(req.params.id);
             
-            const result = await adminRecipeService.approve(recipeId, req.auth!.userId);
+            const result = await adminRecipeService.approve(recipeId, req.auth!.userId, getAdminAuditRequestContext(req));
 
             res.status(200).json({ ok: result });
         }),
@@ -35,7 +36,7 @@ export function createAdminRecipesController(adminRecipeService: AdminRecipeServ
             const recipeId = parseRecipeIdParam(req.params.id);
             const rejectionReason = parseRejectRecipeBody(req.body);
 
-             const result = await adminRecipeService.reject(recipeId, req.auth!.userId, rejectionReason);
+             const result = await adminRecipeService.reject(recipeId, req.auth!.userId, rejectionReason, getAdminAuditRequestContext(req));
 
             res.status(200).json({ ok: result });
         }),
@@ -43,14 +44,14 @@ export function createAdminRecipesController(adminRecipeService: AdminRecipeServ
         archiveRecipe: asyncHandler(async (req, res) => {
             const recipeId = parseRecipeIdParam(req.params.id);
 
-            const result = await adminRecipeService.archive(recipeId);
+            const result = await adminRecipeService.archive(recipeId,req.auth!.userId,getAdminAuditRequestContext(req));
 
             res.status(200).json({ ok: result });
         }),
 
         deleteRecipe: asyncHandler(async (req, res) => {
             const recipeId = parseRecipeIdParam(req.params.id);
-            const result = await adminRecipeService.delete(recipeId);
+            const result = await adminRecipeService.delete(recipeId, req.auth!.userId, getAdminAuditRequestContext(req));
 
             res.status(200).json({ ok: result });
         })

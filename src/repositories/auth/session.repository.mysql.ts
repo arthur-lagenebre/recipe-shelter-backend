@@ -2,7 +2,7 @@ import { firstOrNull } from '../../utils/array.js';
 
 import type { CreateCommunitySessionInput, CreateStaffSessionInput, RevokeStaffSessionInput, StaffSession, SessionRepository } from './session.repository.interface.js';
 import type { RowDataPacket } from 'mysql2';
-import type { Pool, ResultSetHeader } from 'mysql2/promise';
+import type { Pool, PoolConnection, ResultSetHeader } from 'mysql2/promise';
 
 type ActiveSessionRow = RowDataPacket & {
   One: number;
@@ -83,8 +83,8 @@ export class SessionRepositoryMysql implements SessionRepository {
     await this.revokeSession('CommunitySessions', 'CommunityUserId', id, userId);
   }
 
-  async revokeStaffSession(input: RevokeStaffSessionInput): Promise<boolean> {
-    const [result] = await this.db.execute<ResultSetHeader>(
+  async revokeStaffSession(input: RevokeStaffSessionInput, db?: PoolConnection): Promise<boolean> {
+    const [result] = await (db ?? this.db).execute<ResultSetHeader>(
       `UPDATE StaffSessions
        SET RevokedAt = CURRENT_TIMESTAMP,
            RevokedByStaffUserId = ?,

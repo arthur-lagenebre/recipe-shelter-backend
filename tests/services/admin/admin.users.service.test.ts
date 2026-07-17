@@ -3,6 +3,7 @@ import { beforeEach, describe, it } from 'node:test';
 
 import { AdminUserService } from '../../../src/services/admin/admin.users.service.js';
 import { HttpError } from '../../../src/utils/errors.js';
+import { TestAdminAuditRecorder, testAdminAuditContext } from '../../helpers/admin-audit.js';
 
 import type { AdminUserRepository } from '../../../src/repositories/admin/admin.users.repository.interface.js';
 import type { AdminUserDetails, BannedUser, UserModerationLog } from '../../../src/repositories/admin/admin.users.types.js';
@@ -191,12 +192,14 @@ function assertHttpError(error: unknown, code: string, status: number): void {
 describe('AdminUserService', () => {
     let users: FakeUserRepository;
     let adminUsers: FakeAdminUserRepository;
+    let audit: TestAdminAuditRecorder;
     let service: AdminUserService;
 
     beforeEach(() => {
         users = new FakeUserRepository();
         adminUsers = new FakeAdminUserRepository();
-        service = new AdminUserService(users, adminUsers);
+        audit = new TestAdminAuditRecorder();
+        service = new AdminUserService(users, adminUsers, audit);
     });
 
     it('lists banned users', async () => {
@@ -246,7 +249,7 @@ describe('AdminUserService', () => {
     });
 
     it('bans an existing user through the admin repository', async () => {
-        const result = await service.ban(2, 1, '  Repeated abuse of the platform rules.  ');
+        const result = await service.ban(2, 1, '  Repeated abuse of the platform rules.  ', testAdminAuditContext);
 
         assert.equal(result, true);
         assert.equal(users.findByIdInput, 2);
@@ -255,11 +258,27 @@ describe('AdminUserService', () => {
             adminUserId: 1,
             reason: 'Repeated abuse of the platform rules.'
         });
+        assert.equal(audit.inputs.length, 1);
+        assert.deepEqual(audit.inputs[0], {
+            actorUserId: 1,
+            eventType: 'users.ban',
+            targetType: 'community_user',
+            targetId: 2,
+            reason: 'Repeated abuse of the platform rules.',
+            beforeValues: snapshotBaseUser(),
+            afterValues: {
+                ...snapshotBaseUser(),
+                status: 'banned',
+                bannedByUserId: 1,
+                bannedReason: 'Repeated abuse of the platform rules.'
+            },
+            ...testAdminAuditContext
+        });
     });
 
     it('rejects self-ban before updating the user', async () => {
         await assert.rejects(
-            () => service.ban(1, 1, 'Repeated abuse of the platform rules.'),
+            () => service.ban(1, 1, 'Repeated abuse of the platform rules.', testAdminAuditContext),
             (error) => {
                 assertHttpError(error, 'ADMIN_USERS_BAN_SELF_FORBIDDEN', 403);
 
@@ -274,7 +293,7 @@ describe('AdminUserService', () => {
         users.user = null;
 
         await assert.rejects(
-            () => service.ban(2, 1, 'Repeated abuse of the platform rules.'),
+            () => service.ban(2, 1, 'Repeated abuse of the platform rules.', testAdminAuditContext),
             (error) => {
                 assertHttpError(error, 'USER_NOT_FOUND', 404);
 
@@ -288,14 +307,14 @@ describe('AdminUserService', () => {
         users.user = { ...baseUser, accountType: 'staff', status: 'locked' };
 
         await assert.rejects(
-            () => service.ban(2, 1, 'Repeated abuse of the platform rules.'),
+            () => service.ban(2, 1, 'Repeated abuse of the platform rules.', testAdminAuditContext),
             (error) => {
                 assertHttpError(error, 'ADMIN_USERS_STAFF_MODERATION_FORBIDDEN', 403);
                 return true;
             }
         );
         await assert.rejects(
-            () => service.unban(2, 1, 'Appeal accepted after review.'),
+            () => service.unban(2, 1, 'Appeal accepted after review.', testAdminAuditContext),
             (error) => {
                 assertHttpError(error, 'ADMIN_USERS_STAFF_MODERATION_FORBIDDEN', 403);
                 return true;
@@ -306,7 +325,13 @@ describe('AdminUserService', () => {
     });
 
     it('unbans an existing user through the admin repository', async () => {
-        const result = await service.unban(2, 1, '  Appeal accepted after review.  ');
+        users.user = {
+            ...baseUser,
+            status: 'banned',
+            bannedByUserId: 1,
+            bannedReason: 'Repeated abuse of the platform rules.'
+        };
+        const result = await service.unban(2, 1, '  Appeal accepted after review.  ', testAdminAuditContext);
 
         assert.equal(result, true);
         assert.equal(users.findByIdInput, 2);
@@ -315,11 +340,13 @@ describe('AdminUserService', () => {
             adminUserId: 1,
             reason: 'Appeal accepted after review.'
         });
+        assert.equal(audit.inputs.length, 1);
+        assert.equal(audit.inputs[0]?.eventType, 'users.unban');
     });
 
     it('rejects unban when the reason is missing', async () => {
         await assert.rejects(
-            () => service.unban(2, 1, '   '),
+            () => service.unban(2, 1, '   ', testAdminAuditContext),
             (error) => {
                 assertHttpError(error, 'ADMIN_USERS_UNBAN_MISSING_REASON', 400);
 
@@ -334,7 +361,7 @@ describe('AdminUserService', () => {
         users.user = null;
 
         await assert.rejects(
-            () => service.unban(2, 1, 'Appeal accepted after review.'),
+            () => service.unban(2, 1, 'Appeal accepted after review.', testAdminAuditContext),
             (error) => {
                 assertHttpError(error, 'USER_NOT_FOUND', 404);
 
@@ -343,4 +370,23 @@ describe('AdminUserService', () => {
         );
         assert.equal(adminUsers.unbanInput, null);
     });
+
+    it('does not audit a moderation repository no-op', async () => {
+        adminUsers.banResult = false;
+
+        assert.equal(
+            await service.ban(2, 1, 'Repeated abuse of the platform rules.', testAdminAuditContext),
+            false
+        );
+        assert.equal(audit.inputs.length, 0);
+    });
 });
+
+function snapshotBaseUser() {
+    return {
+        username: baseUser.username,
+        status: baseUser.status,
+        bannedByUserId: baseUser.bannedByUserId,
+        bannedReason: baseUser.bannedReason
+    };
+}

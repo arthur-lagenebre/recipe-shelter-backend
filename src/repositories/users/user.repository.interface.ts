@@ -1,8 +1,9 @@
 import type { CommunityProfile, CreateUserInput, StaffProfile, User, UserWithPassword } from './user.types.js';
+import type { PoolConnection } from 'mysql2/promise';
 
 export interface UserRepository {
     create(input: CreateUserInput): Promise<User>;
-    findById(id: number): Promise<User | null>;
+    findById(id: number, db?: PoolConnection): Promise<User | null>;
     findByEmail(mail: string): Promise<User | null>;
     findByUsername(username: string): Promise<User | null>;
     findCommunityProfileByUserId(userId: number): Promise<CommunityProfile | null>;
