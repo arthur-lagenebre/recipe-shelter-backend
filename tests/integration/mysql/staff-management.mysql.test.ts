@@ -11,6 +11,7 @@ import { AdminAuditActionRunnerMysql } from '../../../src/services/admin/admin-a
 import { AdminAuditService } from '../../../src/services/admin/admin-audit.service.js';
 import { AdminStaffService } from '../../../src/services/admin/admin.staff.service.js';
 import { env } from '../../../src/utils/env.js';
+import { HttpError } from '../../../src/utils/errors.js';
 import { testAdminAuditContext } from '../../helpers/admin-audit.js';
 
 const baseTestDatabaseName = process.env.TEST_DB_NAME?.trim() ?? '';
@@ -226,6 +227,49 @@ describe('staff management MySQL integration', { skip: !mysqlEnabled && 'Set TES
     ]);
   });
 
+  it('rejects both ways of removing the last active SuperAdmin without mutation or audit', async () => {
+    await assert.rejects(
+      () => service.disable(
+        actorUserId,
+        targetUserId,
+        'Attempt to disable the final active administrator.',
+        testAdminAuditContext
+      ),
+      (error) => assertHttpError(error, 409, 'LAST_ACTIVE_SUPER_ADMIN')
+    );
+    await assert.rejects(
+      () => service.revokeRole(
+        actorUserId,
+        'superadmin',
+        targetUserId,
+        'Attempt to revoke the final administration role.',
+        testAdminAuditContext
+      ),
+      (error) => assertHttpError(error, 409, 'LAST_ACTIVE_SUPER_ADMIN')
+    );
+
+    const [protectedRows] = await pool.query(
+      `SELECT sp.Status, role.Code
+       FROM StaffProfiles AS sp
+       INNER JOIN StaffRoles AS sr ON sr.StaffUserId = sp.UserId
+       INNER JOIN Roles AS role ON role.Id = sr.RoleId
+       WHERE sp.UserId = ? AND role.Code = 'SuperAdmin'`,
+      [actorUserId]
+    );
+    assert.deepEqual(protectedRows, [{ Status: 'active', Code: 'SuperAdmin' }]);
+
+    const [rejectedAuditRows] = await pool.query(
+      `SELECT Id
+       FROM AdminAuditLogs
+       WHERE Reason IN (?, ?)`,
+      [
+        'Attempt to disable the final active administrator.',
+        'Attempt to revoke the final administration role.'
+      ]
+    );
+    assert.deepEqual(rejectedAuditRows, []);
+  });
+
   it('rejects physical staff deletion and preserves every audit actor foreign key', async () => {
     const databaseName = requireStaffManagementTestDatabaseName();
     const protectedForeignKeys = [
@@ -286,4 +330,66 @@ describe('staff management MySQL integration', { skip: !mysqlEnabled && 'Set TES
       { UserId: targetUserId }
     ]);
   });
+
+  it('serializes concurrent disablement and role revocation so one active SuperAdmin always remains', async () => {
+    await service.grantRole(
+      targetUserId,
+      'SuperAdmin',
+      actorUserId,
+      'Second active SuperAdmin added for concurrency validation.',
+      testAdminAuditContext
+    );
+
+    const results = await Promise.allSettled([
+      service.disable(
+        actorUserId,
+        targetUserId,
+        'Concurrent SuperAdmin disablement validation.',
+        testAdminAuditContext
+      ),
+      service.revokeRole(
+        targetUserId,
+        'SuperAdmin',
+        actorUserId,
+        'Concurrent SuperAdmin role revocation validation.',
+        testAdminAuditContext
+      )
+    ]);
+    const fulfilled = results.filter((result) => result.status === 'fulfilled');
+    const rejected = results.filter((result) => result.status === 'rejected');
+
+    assert.equal(fulfilled.length, 1);
+    assert.equal(rejected.length, 1);
+    assertHttpError(rejected[0]?.reason, 409, 'LAST_ACTIVE_SUPER_ADMIN');
+
+    const [activeSuperAdmins] = await pool.query(
+      `SELECT sr.StaffUserId
+       FROM StaffRoles AS sr
+       INNER JOIN Roles AS role ON role.Id = sr.RoleId
+       INNER JOIN StaffProfiles AS sp ON sp.UserId = sr.StaffUserId
+       WHERE role.Code = 'SuperAdmin' AND sp.Status = 'active'`
+    );
+    assert.equal((activeSuperAdmins as unknown[]).length, 1);
+
+    const [concurrencyAuditRows] = await pool.query(
+      `SELECT Action, Reason
+       FROM AdminAuditLogs
+       WHERE Reason IN (?, ?, ?)
+       ORDER BY Id`,
+      [
+        'Second active SuperAdmin added for concurrency validation.',
+        'Concurrent SuperAdmin disablement validation.',
+        'Concurrent SuperAdmin role revocation validation.'
+      ]
+    );
+    assert.equal((concurrencyAuditRows as unknown[]).length, 2);
+    assert.deepEqual((concurrencyAuditRows as Array<{ Action: string }>)[0]?.Action, 'staff.roles.grant');
+  });
 });
+
+function assertHttpError(error: unknown, status: number, code: string): boolean {
+  assert.ok(error instanceof HttpError);
+  assert.equal(error.statusCode, status);
+  assert.equal(error.code, code);
+  return true;
+}

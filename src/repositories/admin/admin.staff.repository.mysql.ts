@@ -2,8 +2,10 @@ import { mapAdminStaffAccount, mapAdminStaffRole } from './admin.staff.mapper.js
 import { firstOrNull } from '../../utils/array.js';
 
 import type { AdminStaffRepository } from './admin.staff.repository.interface.js';
-import type { AdminStaffAccount, AdminStaffAccountRow, AdminStaffRole, AdminStaffRoleRow } from './admin.staff.types.js';
+import type { ActiveSuperAdminRow, AdminStaffAccount, AdminStaffAccountRow, AdminStaffRole, AdminStaffRoleRow, SuperAdminRoleIdRow } from './admin.staff.types.js';
 import type { Pool, PoolConnection, ResultSetHeader } from 'mysql2/promise';
+
+const SUPER_ADMIN_ROLE_CODE = 'SuperAdmin';
 
 const STAFF_ACCOUNT_SELECT = `u.Id,
                               u.Mail AS Email,
@@ -69,6 +71,33 @@ export class AdminStaffRepositoryMysql implements AdminStaffRepository {
     const row = firstOrNull(rows);
 
     return row ? mapAdminStaffRole(row) : null;
+  }
+
+  async lockAndCheckLastActiveSuperAdmin(staffUserId: number, db: PoolConnection): Promise<boolean> {
+    const [roleRows] = await db.execute<SuperAdminRoleIdRow[]>(
+      `SELECT Id
+       FROM Roles
+       WHERE Code = ?
+       FOR UPDATE`,
+      [SUPER_ADMIN_ROLE_CODE]
+    );
+    const role = firstOrNull(roleRows);
+
+    if (!role)
+      return false;
+
+    const [activeSuperAdmins] = await db.execute<ActiveSuperAdminRow[]>(
+      `SELECT sr.StaffUserId
+       FROM StaffRoles AS sr
+       INNER JOIN StaffProfiles AS sp ON sp.UserId = sr.StaffUserId
+       WHERE sr.RoleId = ? AND sp.Status = 'active'
+       ORDER BY sr.StaffUserId
+       FOR UPDATE`,
+      [role.Id]
+    );
+
+    return activeSuperAdmins.length === 1
+      && Number(activeSuperAdmins[0]?.StaffUserId) === staffUserId;
   }
 
   async disable(staffUserId: number, actorStaffUserId: number, reason: string, db: PoolConnection): Promise<number | null> {

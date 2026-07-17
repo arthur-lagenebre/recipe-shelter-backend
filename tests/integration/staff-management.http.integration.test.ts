@@ -24,11 +24,13 @@ import type { HttpTestServer } from '../helpers/http-test-server.js';
 
 const actorUser = createUser(1, 'staff-manager');
 const targetUser = createUser(2, 'managed-staff');
+const protectedSuperAdminUser = createUser(3, 'protected-super-admin');
 
 class HttpAdminStaffRepository implements AdminStaffRepository {
   readonly accounts = new Map<number, AdminStaffAccount>([
-    [actorUser.id, createAccount(actorUser, [{ id: 5, code: 'SuperAdmin', name: 'Super administrateur' }])],
-    [targetUser.id, createAccount(targetUser, [{ id: 3, code: 'UserAdmin', name: 'Administrateur des utilisateurs' }])]
+    [actorUser.id, createAccount(actorUser, [{ id: 3, code: 'UserAdmin', name: 'Administrateur des utilisateurs' }])],
+    [targetUser.id, createAccount(targetUser, [{ id: 3, code: 'UserAdmin', name: 'Administrateur des utilisateurs' }])],
+    [protectedSuperAdminUser.id, createAccount(protectedSuperAdminUser, [{ id: 5, code: 'SuperAdmin', name: 'Super administrateur' }])]
   ]);
   readonly roles = new Map<string, AdminStaffRole>([
     ['SuperAdmin', { id: 5, code: 'SuperAdmin', name: 'Super administrateur' }],
@@ -47,6 +49,15 @@ class HttpAdminStaffRepository implements AdminStaffRepository {
 
   async findRoleByCode(roleCode: string): Promise<AdminStaffRole | null> {
     return this.roles.get(roleCode) ?? null;
+  }
+
+  async lockAndCheckLastActiveSuperAdmin(staffUserId: number): Promise<boolean> {
+    const activeSuperAdmins = [...this.accounts.values()].filter((account) =>
+      account.status === 'active'
+      && account.roles.some((role) => role.code === 'SuperAdmin')
+    );
+
+    return activeSuperAdmins.length === 1 && activeSuperAdmins[0]?.id === staffUserId;
   }
 
   async disable(staffUserId: number, actorStaffUserId: number, reason: string): Promise<number | null> {
@@ -102,13 +113,15 @@ class HttpAdminStaffRepository implements AdminStaffRepository {
 describe('staff management HTTP integration', () => {
   let server: HttpTestServer;
   let actorCookie: string;
+  let protectedSuperAdminCookie: string;
   let grantedPermissions: PermissionCode[] = [];
   let audit: TestAdminAuditRecorder;
 
   before(async () => {
     const users = new Map<number, User>([
       [actorUser.id, actorUser],
-      [targetUser.id, targetUser]
+      [targetUser.id, targetUser],
+      [protectedSuperAdminUser.id, protectedSuperAdminUser]
     ]);
     configureAuthUserRepository({
       async findById(id) {
@@ -123,6 +136,7 @@ describe('staff management HTTP integration', () => {
     const sessions = new TestSessionRepository();
     configureAuthSessionRepository(sessions);
     actorCookie = await sessions.issueCookie(actorUser, 'admin');
+    protectedSuperAdminCookie = await sessions.issueCookie(protectedSuperAdminUser, 'admin');
 
     audit = new TestAdminAuditRecorder();
     const service = new AdminStaffService(new HttpAdminStaffRepository(), audit);
@@ -153,7 +167,7 @@ describe('staff management HTTP integration', () => {
       headers: { cookie: actorCookie }
     });
     assert.equal(list.status, 200);
-    assert.equal((await list.json() as { staff: unknown[] }).staff.length, 2);
+    assert.equal((await list.json() as { staff: unknown[] }).staff.length, 3);
 
     const details = await fetch(`${server.baseUrl}/api/v1/admin/staff/${targetUser.id}`, {
       headers: { cookie: actorCookie }
@@ -225,6 +239,34 @@ describe('staff management HTTP integration', () => {
       { eventType: 'staff.roles.revoke', reason: 'Temporary moderation coverage ended.' }
     ]);
   });
+
+  it('returns LAST_ACTIVE_SUPER_ADMIN for every route that could remove the final active administrator', async () => {
+    audit.inputs.length = 0;
+    grantedPermissions = [PERMISSIONS.staffDisable];
+    const disable = await fetch(`${server.baseUrl}/api/v1/admin/staff/${protectedSuperAdminUser.id}/disable`, {
+      method: 'POST',
+      headers: { cookie: actorCookie, 'content-type': 'application/json' },
+      body: JSON.stringify({ reason: 'Attempt to disable the final active administrator.' })
+    });
+    assert.equal(disable.status, 409);
+    assert.equal(
+      (await disable.json() as { error: { code: string } }).error.code,
+      'LAST_ACTIVE_SUPER_ADMIN'
+    );
+
+    grantedPermissions = [PERMISSIONS.staffRoleRevoke];
+    const revoke = await fetch(`${server.baseUrl}/api/v1/admin/staff/${protectedSuperAdminUser.id}/roles/SuperAdmin`, {
+      method: 'DELETE',
+      headers: { cookie: protectedSuperAdminCookie, 'content-type': 'application/json' },
+      body: JSON.stringify({ reason: 'Attempt to revoke the final administration role.' })
+    });
+    assert.equal(revoke.status, 409);
+    assert.equal(
+      (await revoke.json() as { error: { code: string } }).error.code,
+      'LAST_ACTIVE_SUPER_ADMIN'
+    );
+    assert.equal(audit.inputs.length, 0);
+  });
 });
 
 function createUser(id: number, username: string): User {
@@ -264,4 +306,3 @@ function createAccount(user: User, roles: AdminStaffRole[]): AdminStaffAccount {
 function cloneAccount(account: AdminStaffAccount): AdminStaffAccount {
   return { ...account, roles: account.roles.map((role) => ({ ...role })) };
 }
-

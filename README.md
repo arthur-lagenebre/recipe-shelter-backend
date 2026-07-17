@@ -266,7 +266,9 @@ logique, conserve son acteur, son motif et sa date dans `StaffProfiles`, et
 révoque toutes les sessions actives dans la transaction auditée. Un staff ne
 peut ni se désactiver ni retirer ses propres rôles. Aucun endpoint de suppression
 de compte staff n’est exposé ; les routes `DELETE` relatives aux rôles et aux
-sessions révoquent uniquement des accès sans supprimer l’identité.
+sessions révoquent uniquement des accès sans supprimer l’identité. La
+désactivation ou le retrait du rôle du dernier `SuperAdmin` actif est refusé
+atomiquement avec le statut `409` et le code stable `LAST_ACTIVE_SUPER_ADMIN`.
 
 La commande nécessite donc une configuration SMTP applicative valide. Une fois
 le premier SuperAdmin créé, toute nouvelle exécution est refusée, y compris si

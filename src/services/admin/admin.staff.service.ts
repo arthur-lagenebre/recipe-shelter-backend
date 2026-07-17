@@ -8,6 +8,7 @@ import type { AdminStaffAccount, AdminStaffRole } from '../../repositories/admin
 
 const ACTION_REASON_MIN_LENGTH = 10;
 const ACTION_REASON_MAX_LENGTH = 1000;
+const SUPER_ADMIN_ROLE_CODE = 'SuperAdmin';
 
 type StaffLifecycleAction = 'disable' | 'enable';
 type StaffRoleAction = 'grant' | 'revoke';
@@ -52,10 +53,14 @@ export class AdminStaffService {
   async disable(staffUserId: number, actorStaffUserId: number, reason: string, context: AdminAuditRequestContext): Promise<AdminStaffAccount> {
     const cleanReason = validateActionReason(reason, 'disable');
 
-    if (staffUserId === actorStaffUserId)
-      throw forbidden('Staff users cannot disable themselves', 'STAFF_DISABLE_SELF_FORBIDDEN');
-
     return this.auditActions.run(async ({ db, audit }) => {
+      const isLastActiveSuperAdmin = await this.staff.lockAndCheckLastActiveSuperAdmin(staffUserId, db);
+
+      if (isLastActiveSuperAdmin)
+        throw lastActiveSuperAdminConflict();
+      if (staffUserId === actorStaffUserId)
+        throw forbidden('Staff users cannot disable themselves', 'STAFF_DISABLE_SELF_FORBIDDEN');
+
       const before = await this.requireStaff(staffUserId, db);
 
       if (before.status === 'disabled')
@@ -117,9 +122,6 @@ export class AdminStaffService {
   }
 
   async revokeRole(staffUserId: number, roleCode: string, actorStaffUserId: number, reason: string, context: AdminAuditRequestContext): Promise<AdminStaffAccount> {
-    if (staffUserId === actorStaffUserId)
-      throw forbidden('Staff users cannot revoke their own roles', 'STAFF_ROLE_REVOKE_SELF_FORBIDDEN');
-
     return this.changeRole('revoke', staffUserId, roleCode, actorStaffUserId, reason, context);
   }
 
@@ -127,10 +129,21 @@ export class AdminStaffService {
     const cleanReason = validateActionReason(reason, action === 'grant' ? 'role grant' : 'role revoke');
 
     return this.auditActions.run(async ({ db, audit }) => {
+      const isLastActiveSuperAdmin = action === 'revoke'
+        ? await this.staff.lockAndCheckLastActiveSuperAdmin(staffUserId, db)
+        : false;
+
+      if (action === 'revoke' && staffUserId === actorStaffUserId && !isLastActiveSuperAdmin)
+        throw forbidden('Staff users cannot revoke their own roles', 'STAFF_ROLE_REVOKE_SELF_FORBIDDEN');
+
       const before = await this.requireStaff(staffUserId, db);
       const role = await this.requireRole(roleCode, db);
       const hasRole = before.roles.some((candidate) => candidate.id === role.id);
 
+      if (action === 'revoke' && role.code === SUPER_ADMIN_ROLE_CODE && isLastActiveSuperAdmin)
+        throw lastActiveSuperAdminConflict();
+      if (action === 'revoke' && staffUserId === actorStaffUserId)
+        throw forbidden('Staff users cannot revoke their own roles', 'STAFF_ROLE_REVOKE_SELF_FORBIDDEN');
       if (action === 'grant' && hasRole)
         throw conflict('Staff role is already granted', 'STAFF_ROLE_ALREADY_GRANTED');
       if (action === 'revoke' && !hasRole)
@@ -194,6 +207,13 @@ export class AdminStaffService {
       ...context
     });
   }
+}
+
+function lastActiveSuperAdminConflict() {
+  return conflict(
+    'The last active SuperAdmin cannot be disabled or lose the SuperAdmin role',
+    'LAST_ACTIVE_SUPER_ADMIN'
+  );
 }
 
 function snapshotStaff(account: AdminStaffAccount) {

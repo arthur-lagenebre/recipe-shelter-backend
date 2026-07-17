@@ -41,6 +41,15 @@ class TestAdminStaffRepository implements AdminStaffRepository {
     return this.roles.get(roleCode) ?? null;
   }
 
+  async lockAndCheckLastActiveSuperAdmin(staffUserId: number): Promise<boolean> {
+    const activeSuperAdmins = [...this.accounts.values()].filter((account) =>
+      account.status === 'active'
+      && account.roles.some((role) => role.code === 'SuperAdmin')
+    );
+
+    return activeSuperAdmins.length === 1 && activeSuperAdmins[0]?.id === staffUserId;
+  }
+
   async disable(staffUserId: number, actorStaffUserId: number, reason: string): Promise<number | null> {
     const account = this.accounts.get(staffUserId);
     if (this.disableConflict || !account || account.status !== 'active')
@@ -203,7 +212,72 @@ describe('AdminStaffService', () => {
     ]);
   });
 
+  it('rejects disabling or revoking the role of the last active SuperAdmin with the same conflict', async () => {
+    repository.accounts.get(actor.id)!.roles = [repository.roles.get('UserAdmin')!];
+    repository.accounts.get(target.id)!.roles = [repository.roles.get('SuperAdmin')!];
+
+    await assert.rejects(
+      () => service.disable(
+        target.id,
+        actor.id,
+        'Attempt to disable the final active administrator.',
+        testAdminAuditContext
+      ),
+      (error) => assertHttpError(error, 409, 'LAST_ACTIVE_SUPER_ADMIN')
+    );
+    await assert.rejects(
+      () => service.revokeRole(
+        target.id,
+        'SuperAdmin',
+        actor.id,
+        'Attempt to revoke the final administration role.',
+        testAdminAuditContext
+      ),
+      (error) => assertHttpError(error, 409, 'LAST_ACTIVE_SUPER_ADMIN')
+    );
+    await assert.rejects(
+      () => service.disable(
+        target.id,
+        target.id,
+        'Self-attempt to disable the final active administrator.',
+        testAdminAuditContext
+      ),
+      (error) => assertHttpError(error, 409, 'LAST_ACTIVE_SUPER_ADMIN')
+    );
+    await assert.rejects(
+      () => service.revokeRole(
+        target.id,
+        'SuperAdmin',
+        target.id,
+        'Self-attempt to revoke the final administration role.',
+        testAdminAuditContext
+      ),
+      (error) => assertHttpError(error, 409, 'LAST_ACTIVE_SUPER_ADMIN')
+    );
+
+    assert.equal(repository.accounts.get(target.id)!.status, 'active');
+    assert.deepEqual(repository.accounts.get(target.id)!.roles.map((role) => role.code), ['SuperAdmin']);
+    assert.equal(audit.inputs.length, 0);
+  });
+
+  it('allows a SuperAdmin to lose access when another active SuperAdmin remains', async () => {
+    repository.accounts.get(target.id)!.roles = [repository.roles.get('SuperAdmin')!];
+
+    const revoked = await service.revokeRole(
+      target.id,
+      'SuperAdmin',
+      actor.id,
+      'A second active SuperAdmin remains available.',
+      testAdminAuditContext
+    );
+
+    assert.deepEqual(revoked.roles, []);
+    assert.equal(audit.inputs[0]?.eventType, 'staff.roles.revoke');
+  });
+
   it('rejects unsafe lifecycle and role transitions without producing an audit', async () => {
+    repository.accounts.get(target.id)!.roles = [repository.roles.get('SuperAdmin')!];
+
     await assert.rejects(
       () => service.disable(actor.id, actor.id, 'Self disable attempt is forbidden.', testAdminAuditContext),
       (error) => assertHttpError(error, 403, 'STAFF_DISABLE_SELF_FORBIDDEN')
@@ -212,6 +286,9 @@ describe('AdminStaffService', () => {
       () => service.revokeRole(actor.id, 'SuperAdmin', actor.id, 'Self role removal is forbidden.', testAdminAuditContext),
       (error) => assertHttpError(error, 403, 'STAFF_ROLE_REVOKE_SELF_FORBIDDEN')
     );
+
+    repository.accounts.get(target.id)!.roles = [repository.roles.get('UserAdmin')!];
+
     await assert.rejects(
       () => service.disable(target.id, actor.id, 'short', testAdminAuditContext),
       (error) => assertHttpError(error, 400, 'STAFF_DISABLE_REASON_TOO_SHORT')

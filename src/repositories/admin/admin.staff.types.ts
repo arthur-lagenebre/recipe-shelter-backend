@@ -45,3 +45,10 @@ export type AdminStaffRoleRow = RowDataPacket & {
   Name: string;
 };
 
+export type SuperAdminRoleIdRow = RowDataPacket & {
+  Id: number;
+};
+
+export type ActiveSuperAdminRow = RowDataPacket & {
+  StaffUserId: number;
+};
