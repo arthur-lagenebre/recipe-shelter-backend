@@ -288,6 +288,15 @@ authentification forte récente. Les changements de rôles ordinaires conservent
 leurs contrôles de permission et d’anti-auto-escalade sans cette exigence
 supplémentaire.
 
+Le schéma prépare par ailleurs un futur workflow d’approbation à deux personnes
+avec `StaffPrivilegeChangeRequests`. Une demande d’attribution ou de retrait de
+rôle peut y être `requested`, `approved` ou `rejected`; le demandeur, la cible et
+le validateur doivent être des identités staff distinctes. Ce modèle est dormant :
+aucune route ne l’utilise encore et une approbation ne modifie jamais
+automatiquement `StaffRoles`. Les mutations actuelles restent immédiates et
+conservent les protections transactionnelles contre l’auto-escalade et la perte
+du dernier `SuperAdmin` actif.
+
 La commande nécessite donc une configuration SMTP applicative valide. Une fois
 le premier SuperAdmin créé, toute nouvelle exécution est refusée, y compris si
 ce premier compte est encore invité ou s'il a ensuite été désactivé.

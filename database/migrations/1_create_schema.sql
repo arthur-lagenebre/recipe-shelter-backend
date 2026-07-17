@@ -129,6 +129,71 @@ CREATE TABLE StaffRoles (
     ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Dormant persistence model for a future two-person approval workflow.
+-- Changing a request status never changes StaffRoles by itself.
+CREATE TABLE StaffPrivilegeChangeRequests (
+  Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  TargetStaffUserId BIGINT UNSIGNED NOT NULL,
+  RoleId BIGINT UNSIGNED NOT NULL,
+  ChangeType ENUM('grant', 'revoke') NOT NULL,
+  Status ENUM('requested', 'approved', 'rejected') NOT NULL DEFAULT 'requested',
+  RequestedByStaffUserId BIGINT UNSIGNED NOT NULL,
+  RequestReason TEXT NOT NULL,
+  ReviewedByStaffUserId BIGINT UNSIGNED NULL,
+  ReviewReason TEXT NULL,
+  RequestedAt DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  ReviewedAt DATETIME(6) NULL,
+  PRIMARY KEY (Id),
+  KEY idx_staff_privilege_change_requests_queue (Status, RequestedAt, Id),
+  KEY idx_staff_privilege_change_requests_target (TargetStaffUserId, Status, RequestedAt, Id),
+  KEY idx_staff_privilege_change_requests_role_id (RoleId),
+  KEY idx_staff_privilege_change_requests_requester (RequestedByStaffUserId, RequestedAt, Id),
+  KEY idx_staff_privilege_change_requests_reviewer (ReviewedByStaffUserId, ReviewedAt, Id),
+  CONSTRAINT staff_privilege_change_requests_request_reason_CK
+    CHECK (
+      CHAR_LENGTH(TRIM(RequestReason)) >= 10
+      AND CHAR_LENGTH(RequestReason) <= 1000
+    ),
+  CONSTRAINT staff_privilege_change_requests_no_self_request_CK
+    CHECK (RequestedByStaffUserId <> TargetStaffUserId),
+  CONSTRAINT staff_privilege_change_requests_review_separation_CK
+    CHECK (
+      ReviewedByStaffUserId IS NULL
+      OR (ReviewedByStaffUserId <> RequestedByStaffUserId
+          AND ReviewedByStaffUserId <> TargetStaffUserId)
+    ),
+  CONSTRAINT staff_privilege_change_requests_lifecycle_CK
+    CHECK (
+      (Status = 'requested'
+        AND ReviewedByStaffUserId IS NULL
+        AND ReviewReason IS NULL
+        AND ReviewedAt IS NULL)
+      OR (Status IN ('approved', 'rejected')
+        AND ReviewedByStaffUserId IS NOT NULL
+        AND ReviewReason IS NOT NULL
+        AND CHAR_LENGTH(TRIM(ReviewReason)) >= 10
+        AND CHAR_LENGTH(ReviewReason) <= 1000
+        AND ReviewedAt IS NOT NULL
+        AND ReviewedAt >= RequestedAt)
+    ),
+  CONSTRAINT staff_privilege_change_requests_target_FK
+    FOREIGN KEY (TargetStaffUserId) REFERENCES StaffProfiles(UserId)
+    ON UPDATE RESTRICT
+    ON DELETE RESTRICT,
+  CONSTRAINT staff_privilege_change_requests_role_FK
+    FOREIGN KEY (RoleId) REFERENCES Roles(Id)
+    ON UPDATE RESTRICT
+    ON DELETE RESTRICT,
+  CONSTRAINT staff_privilege_change_requests_requester_FK
+    FOREIGN KEY (RequestedByStaffUserId) REFERENCES StaffProfiles(UserId)
+    ON UPDATE RESTRICT
+    ON DELETE RESTRICT,
+  CONSTRAINT staff_privilege_change_requests_reviewer_FK
+    FOREIGN KEY (ReviewedByStaffUserId) REFERENCES StaffProfiles(UserId)
+    ON UPDATE RESTRICT
+    ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE StaffInvitations (
   Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   StaffUserId BIGINT UNSIGNED NOT NULL,
