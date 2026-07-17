@@ -185,6 +185,13 @@ en outre tout `UPDATE` ou `DELETE` de `AdminAuditLogs` par des triggers dédiés
 et la clé étrangère de l'acteur empêche la suppression d'un staff encore
 référencé par le journal.
 
+`GET /api/v1/admin/audit-logs` expose cette consultation avec pagination et
+filtres exacts sur l'acteur, l'action, la cible, la période et le
+`correlationId`. La projection conserve les snapshots expurgés nécessaires à
+l'investigation, mais ne sélectionne ni adresse IP, ni user-agent, ni e-mail.
+La lecture utilise un repository dédié, séparé de la frontière append-only
+d'écriture.
+
 Le schéma d'installation est consolidé dans l'unique fichier
 `database/migrations/1_create_schema.sql`. Les auteurs de recettes et de
 commentaires ainsi que les propriétaires de favoris référencent exclusivement

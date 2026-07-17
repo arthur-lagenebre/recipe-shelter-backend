@@ -3,6 +3,7 @@ import { PERMISSIONS } from '../../security/permissions.js';
 import type { AuthorizationPolicy } from '../../middlewares/authorization.js';
 
 export const adminAuthorizationPolicies = [
+  { method: 'get', path: '/audit-logs', permission: PERMISSIONS.auditRead },
   { method: 'get', path: '/comments/moderated', permission: PERMISSIONS.commentsRead },
   { method: 'get', path: '/comments/moderated/count', permission: PERMISSIONS.commentsRead },
   { method: 'get', path: '/comments/soft-deleted', permission: PERMISSIONS.commentsRead },

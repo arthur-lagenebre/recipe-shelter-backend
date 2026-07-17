@@ -4,6 +4,7 @@ import { after, before, describe, it } from 'node:test';
 import cookieParser from 'cookie-parser';
 import express from 'express';
 
+import { createAdminAuditLogsRouter } from '../../src/api/admin/admin-audit-logs.routes.js';
 import { createAdminCommentsRouter } from '../../src/api/admin/admin.comments.routes.js';
 import { adminAuthorizationPolicies } from '../../src/api/admin/admin.authorization.js';
 import { createAdminRecipesRouter } from '../../src/api/admin/admin.recipes.routes.js';
@@ -30,6 +31,7 @@ type AdminPolicy = {
 };
 
 const ADMIN_POLICIES: AdminPolicy[] = [
+    { method: 'GET', path: '/api/v1/admin/audit-logs', permission: PERMISSIONS.auditRead },
     { method: 'GET', path: '/api/v1/admin/comments/moderated', permission: PERMISSIONS.commentsRead },
     { method: 'GET', path: '/api/v1/admin/comments/moderated/count', permission: PERMISSIONS.commentsRead },
     { method: 'GET', path: '/api/v1/admin/comments/soft-deleted', permission: PERMISSIONS.commentsRead },
@@ -111,6 +113,7 @@ describe('administrative endpoint authorization policies', () => {
                 permission: 'unknown.permission' as PermissionCode
             }
         ]));
+        adminRouter.use('/audit-logs', createAdminAuditLogsRouter({ list: endpointHandler }));
         adminRouter.use('/comments', createAdminCommentsRouter({
             listModeratedComments: endpointHandler,
             countModeratedComments: endpointHandler,
@@ -252,7 +255,7 @@ describe('administrative endpoint authorization policies', () => {
 
         try {
             for (const method of ['DELETE', 'PATCH', 'POST', 'PUT']) {
-                const response = await fetch(`${server.baseUrl}/api/v1/admin/audit/1`, {
+                const response = await fetch(`${server.baseUrl}/api/v1/admin/audit-logs/1`, {
                     method,
                     headers: { cookie }
                 });
@@ -280,7 +283,7 @@ describe('administrative endpoint authorization policies', () => {
             Array.from({ length: 4 }, () => ({
                 message: '[authz] Administrative request denied',
                 code: 'AUTH_POLICY_REQUIRED',
-                path: '/api/v1/admin/audit/1',
+                path: '/api/v1/admin/audit-logs/1',
                 reason: 'policy_missing',
                 userId: staff.id
             }))

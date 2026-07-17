@@ -5,6 +5,7 @@ import { after, before, describe, it } from 'node:test';
 import mysql from 'mysql2/promise';
 
 import { AdminUserRepositoryMysql } from '../../../src/repositories/admin/admin.users.repository.mysql.js';
+import { AdminAuditQueryRepositoryMysql } from '../../../src/repositories/admin/admin-audit-query.repository.mysql.js';
 import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin-audit.repository.mysql.js';
 import { UserRepositoryMysql } from '../../../src/repositories/users/user.repository.mysql.js';
 import { AdminAuditActionRunnerMysql } from '../../../src/services/admin/admin-audit-action.runner.js';
@@ -149,6 +150,24 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
             ]
         );
 
+        const [indexColumns] = await connection.query(
+            `SELECT INDEX_NAME AS IndexName,
+                    GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX SEPARATOR ',') AS ColumnNames
+             FROM information_schema.STATISTICS
+             WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'AdminAuditLogs'
+             GROUP BY INDEX_NAME
+             ORDER BY INDEX_NAME`,
+            [databaseName]
+        );
+        assert.deepEqual(indexColumns, [
+            { IndexName: 'idx_admin_audit_logs_action_created_at', ColumnNames: 'Action,CreatedAt,Id' },
+            { IndexName: 'idx_admin_audit_logs_actor_created_at', ColumnNames: 'ActorUserId,CreatedAt,Id' },
+            { IndexName: 'idx_admin_audit_logs_correlation_id', ColumnNames: 'CorrelationId,CreatedAt,Id' },
+            { IndexName: 'idx_admin_audit_logs_created_at', ColumnNames: 'CreatedAt,Id' },
+            { IndexName: 'idx_admin_audit_logs_target_created_at', ColumnNames: 'TargetType,TargetId,CreatedAt,Id' },
+            { IndexName: 'PRIMARY', ColumnNames: 'Id' }
+        ]);
+
         const [immutabilityTriggers] = await connection.query(
             `SELECT TRIGGER_NAME AS TriggerName,
                     ACTION_TIMING AS ActionTiming,
@@ -231,6 +250,63 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
         assert.equal(receipt.id, log?.Id);
         assert.equal(receipt.correlationId, '00000000-0000-4000-8000-000000000900');
         assert.ok(log?.CreatedAt instanceof Date);
+    });
+
+    it('queries a minimized paginated investigation view with every supported filter', async () => {
+        const correlationId = '00000000-0000-4000-8000-000000000915';
+        await new AdminAuditService(
+            new AdminAuditRepositoryMysql(connection as unknown as Queryable)
+        ).record({
+            actorUserId: 900,
+            eventType: ADMIN_AUDIT_EVENT_TYPES.usersBan,
+            targetType: ADMIN_AUDIT_TARGET_TYPES.communityUser,
+            targetId: 901,
+            reason: 'Audit consultation integration fixture.',
+            beforeValues: { status: 'active', accessToken: 'must-not-be-returned' },
+            afterValues: { status: 'banned' },
+            ipAddress: '2001:db8::905',
+            userAgent: 'Sensitive audit integration user agent',
+            correlationId
+        });
+
+        const result = await new AdminAuditQueryRepositoryMysql(pool).find({
+            actorUserId: 900,
+            action: ADMIN_AUDIT_EVENT_TYPES.usersBan,
+            targetType: ADMIN_AUDIT_TARGET_TYPES.communityUser,
+            targetId: '901',
+            from: new Date('2020-01-01T00:00:00.000Z'),
+            to: new Date('2030-01-01T00:00:00.000Z'),
+            correlationId
+        }, { page: 1, limit: 25, offset: 0 });
+
+        assert.deepEqual(result.pagination, {
+            page: 1,
+            limit: 25,
+            totalItems: 1,
+            totalPages: 1,
+            hasNextPage: false,
+            hasPreviousPage: false
+        });
+        assert.deepEqual(result.items[0] && {
+            actor: result.items[0].actor,
+            action: result.items[0].action,
+            target: result.items[0].target,
+            reason: result.items[0].reason,
+            beforeValues: result.items[0].beforeValues,
+            afterValues: result.items[0].afterValues,
+            correlationId: result.items[0].correlationId
+        }, {
+            actor: { id: 900, username: 'audit-staff' },
+            action: 'users.ban',
+            target: { type: 'community_user', id: '901' },
+            reason: 'Audit consultation integration fixture.',
+            beforeValues: { status: 'active', accessToken: '[REDACTED]' },
+            afterValues: { status: 'banned' },
+            correlationId
+        });
+        assert.ok(result.items[0]?.createdAt instanceof Date);
+        assert.equal('ipAddress' in (result.items[0] ?? {}), false);
+        assert.equal('userAgent' in (result.items[0] ?? {}), false);
     });
 
     it('commits exactly one audit entry with a sensitive action and rolls both back on audit failure', async () => {

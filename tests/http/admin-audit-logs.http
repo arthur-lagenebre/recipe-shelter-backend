@@ -1,0 +1,10 @@
+# ============================================
+# Admin audit logs
+# ============================================
+
+@baseUrl = http://localhost:3000/api/v1
+@adminSessionCookie = PASTE_RS_ADMIN_SESSION_COOKIE_HERE
+
+### Audit logs — paginated investigation filters
+GET {{baseUrl}}/admin/audit-logs?actorUserId=1&action=users.ban&targetType=community_user&targetId=2&from=2026-07-01T00:00:00.000Z&to=2026-07-31T23:59:59.999Z&correlationId=00000000-0000-4000-8000-000000000001&page=1&limit=25
+Cookie: rs_admin_session={{adminSessionCookie}}

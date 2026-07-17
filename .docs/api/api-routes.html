@@ -385,8 +385,8 @@
       <div class="meta">
         <span class="pill">Base URL: <code>http://localhost:3000</code></span>
         <span class="pill">Préfixe API: <code>/api/v1</code></span>
-        <span class="pill">Mise à jour: 2026-07-16</span>
-        <span class="pill">Routes documentées: 70</span>
+        <span class="pill">Mise à jour: 2026-07-17</span>
+        <span class="pill">Routes documentées: 71</span>
       </div>
     </div>
   </header>
@@ -396,15 +396,15 @@
       <h2 id="overview">Vue d’ensemble</h2>
       <div class="summary-grid">
         <div class="summary-card">
-          <strong>15</strong>
+          <strong>16</strong>
           <span>Domaines de routes montés dans <code>src/app.ts</code></span>
         </div>
         <div class="summary-card">
-          <strong>70</strong>
+          <strong>71</strong>
           <span>Endpoints HTTP actifs</span>
         </div>
         <div class="summary-card">
-          <strong>23</strong>
+          <strong>24</strong>
           <span>Routes admin protégées</span>
         </div>
         <div class="summary-card">
@@ -427,6 +427,7 @@
         <a href="#admin-comments">Admin comments</a>
         <a href="#admin-users">Admin users</a>
         <a href="#admin-staff-sessions">Admin staff sessions</a>
+        <a href="#admin-audit-logs">Admin audit logs</a>
       </nav>
 
       <p class="note">Les routes marquées "Auth optionnelle" acceptent uniquement le cookie community <code>rs_app_session</code> mais fonctionnent aussi sans session. Le cookie staff <code>rs_admin_session</code> n'est jamais interprété par les routes applicatives.</p>
@@ -2009,6 +2010,64 @@ type UnbanUserResponse = OkResponse;</code></pre>
             </tr>
           </tbody>
         </table>
+      </div>
+    </section>
+
+    <section aria-labelledby="admin-audit-logs">
+      <h2 id="admin-audit-logs">Admin audit logs</h2>
+      <p class="section-intro">Consultation paginée du journal administratif avec <code>audit.read</code>. Les états avant/après sont ceux déjà expurgés lors de l’écriture ; l’adresse IP, le user-agent et l’e-mail de l’acteur ne sont pas exposés par cette API.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Méthode</th>
+              <th>Route</th>
+              <th>Auth</th>
+              <th>Body / Query</th>
+              <th>Réponse</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/admin/audit-logs</code></td>
+              <td><span class="auth admin">Admin + <code>audit.read</code></span></td>
+              <td><code>actorUserId</code>, <code>action</code>, <code>targetType</code>, <code>targetId</code>, <code>from</code>, <code>to</code>, <code>correlationId</code>, <code>page</code>, <code>limit</code>. Les bornes de période sont des instants ISO 8601 inclusifs. Limite par défaut 25, maximum 50.</td>
+              <td><code>200</code> <code>PaginatedResult&lt;AdminAuditLog&gt;</code>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="schema-grid">
+        <article class="schema">
+          <h3>AdminAuditLog</h3>
+          <pre><code>type AdminAuditLog = {
+  id: number;
+  actor: { id: number; username: string };
+  action: string;
+  target: { type: string; id: string };
+  reason: string | null;
+  beforeValues: JsonObject | null;
+  afterValues: JsonObject | null;
+  correlationId: string;
+  createdAt: string; // ISO 8601
+};</code></pre>
+        </article>
+
+        <article class="schema">
+          <h3>Filtres d’investigation</h3>
+          <p>Les filtres sont optionnels, exacts et cumulables. <code>action</code> et <code>targetType</code> doivent appartenir aux catalogues d’audit applicatifs ; <code>correlationId</code> doit être un UUID.</p>
+          <pre><code>type AdminAuditLogQuery = PaginationQuery &amp; {
+  actorUserId?: number;
+  action?: string;
+  targetType?: string;
+  targetId?: string;
+  from?: string;
+  to?: string;
+  correlationId?: string;
+};</code></pre>
+        </article>
       </div>
     </section>
 

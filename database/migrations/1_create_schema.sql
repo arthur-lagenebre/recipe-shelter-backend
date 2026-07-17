@@ -340,11 +340,11 @@ CREATE TABLE AdminAuditLogs (
   CorrelationId CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   CreatedAt DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   PRIMARY KEY (Id),
-  KEY idx_admin_audit_logs_created_at (CreatedAt),
-  KEY idx_admin_audit_logs_actor_created_at (ActorUserId, CreatedAt),
-  KEY idx_admin_audit_logs_action_created_at (Action, CreatedAt),
-  KEY idx_admin_audit_logs_target_created_at (TargetType, TargetId, CreatedAt),
-  KEY idx_admin_audit_logs_correlation_id (CorrelationId),
+  KEY idx_admin_audit_logs_created_at (CreatedAt, Id),
+  KEY idx_admin_audit_logs_actor_created_at (ActorUserId, CreatedAt, Id),
+  KEY idx_admin_audit_logs_action_created_at (Action, CreatedAt, Id),
+  KEY idx_admin_audit_logs_target_created_at (TargetType, TargetId, CreatedAt, Id),
+  KEY idx_admin_audit_logs_correlation_id (CorrelationId, CreatedAt, Id),
   CONSTRAINT admin_audit_logs_action_CK
     CHECK (CHAR_LENGTH(TRIM(Action)) > 0),
   CONSTRAINT admin_audit_logs_target_type_CK
