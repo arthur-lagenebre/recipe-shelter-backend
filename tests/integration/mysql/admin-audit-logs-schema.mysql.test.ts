@@ -36,6 +36,24 @@ function targetDatabase(sql: string, databaseName: string): string {
     return sql.replace(/USE\s+recipe_shelter\s*;/i, `USE \`${databaseName}\`;`);
 }
 
+function assertImmutableAuditError(error: unknown, operation: 'DELETE' | 'UPDATE'): boolean {
+    assert.ok(error instanceof Error);
+
+    const mysqlError = error as Error & {
+        errno?: number;
+        sqlMessage?: string;
+        sqlState?: string;
+    };
+
+    assert.equal(mysqlError.errno, 1644);
+    assert.equal(mysqlError.sqlState, '45000');
+    assert.equal(
+        mysqlError.sqlMessage,
+        `Admin audit logs are append-only: ${operation} is forbidden`
+    );
+    return true;
+}
+
 describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TEST_DB_NAME to run isolated MySQL tests' }, () => {
     let connection: mysql.Connection;
     let pool: mysql.Pool;
@@ -130,6 +148,28 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
                 'PRIMARY'
             ]
         );
+
+        const [immutabilityTriggers] = await connection.query(
+            `SELECT TRIGGER_NAME AS TriggerName,
+                    ACTION_TIMING AS ActionTiming,
+                    EVENT_MANIPULATION AS EventManipulation
+             FROM information_schema.TRIGGERS
+             WHERE TRIGGER_SCHEMA = ? AND EVENT_OBJECT_TABLE = 'AdminAuditLogs'
+             ORDER BY TRIGGER_NAME`,
+            [databaseName]
+        );
+        assert.deepEqual(immutabilityTriggers, [
+            {
+                TriggerName: 'admin_audit_logs_immutable_BD',
+                ActionTiming: 'BEFORE',
+                EventManipulation: 'DELETE'
+            },
+            {
+                TriggerName: 'admin_audit_logs_immutable_BU',
+                ActionTiming: 'BEFORE',
+                EventManipulation: 'UPDATE'
+            }
+        ]);
 
         const [seededLogs] = await connection.query('SELECT COUNT(*) AS LogCount FROM AdminAuditLogs');
         assert.deepEqual(seededLogs, [{ LogCount: 0 }]);
@@ -311,11 +351,11 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
             `UPDATE AdminAuditLogs
              SET Reason = 'A rewritten reason.'
              WHERE CorrelationId = '00000000-0000-4000-8000-000000000900'`
-        ));
+        ), (error) => assertImmutableAuditError(error, 'UPDATE'));
         await assert.rejects(() => connection.query(
             `DELETE FROM AdminAuditLogs
              WHERE CorrelationId = '00000000-0000-4000-8000-000000000900'`
-        ));
+        ), (error) => assertImmutableAuditError(error, 'DELETE'));
         await assert.rejects(() => connection.query('DELETE FROM Users WHERE Id = 900'));
 
         const [remainingLogs] = await connection.query(

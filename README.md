@@ -178,6 +178,13 @@ actuelles des tags, ingrédients et catégories restent en lecture seule et aucu
 modèle d'alias n'est encore présent : il n'existe pas d'action applicative de ces
 domaines à journaliser à ce stade.
 
+Le journal est append-only. Le repository applicatif n'expose que la création
+d'une entrée ; aucune route HTTP de modification ou de suppression n'est
+déclarée et `audit.read` ne donne qu'un droit de consultation. Le schéma refuse
+en outre tout `UPDATE` ou `DELETE` de `AdminAuditLogs` par des triggers dédiés,
+et la clé étrangère de l'acteur empêche la suppression d'un staff encore
+référencé par le journal.
+
 Le schéma d'installation est consolidé dans l'unique fichier
 `database/migrations/1_create_schema.sql`. Les auteurs de recettes et de
 commentaires ainsi que les propriétaires de favoris référencent exclusivement

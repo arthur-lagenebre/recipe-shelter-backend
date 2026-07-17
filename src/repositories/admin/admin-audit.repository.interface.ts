@@ -3,18 +3,19 @@ export type AdminAuditJsonValue = AdminAuditJsonPrimitive | readonly AdminAuditJ
 export type AdminAuditSnapshot = Readonly<Record<string, AdminAuditJsonValue>>;
 
 export type CreateAdminAuditLogInput = {
-  actorUserId: number;
-  action: string;
-  targetType: string;
-  targetId: string;
-  reason: string | null;
-  beforeValues: AdminAuditSnapshot | null;
-  afterValues: AdminAuditSnapshot | null;
-  ipAddress: string | null;
-  userAgent: string | null;
-  correlationId: string;
+  readonly actorUserId: number;
+  readonly action: string;
+  readonly targetType: string;
+  readonly targetId: string;
+  readonly reason: string | null;
+  readonly beforeValues: AdminAuditSnapshot | null;
+  readonly afterValues: AdminAuditSnapshot | null;
+  readonly ipAddress: string | null;
+  readonly userAgent: string | null;
+  readonly correlationId: string;
 };
 
+/** Append-only persistence boundary: audit records have no update or delete operation. */
 export interface AdminAuditRepository {
   create(input: CreateAdminAuditLogInput): Promise<number>;
 }

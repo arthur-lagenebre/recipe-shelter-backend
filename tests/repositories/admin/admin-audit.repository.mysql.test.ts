@@ -3,9 +3,23 @@ import { describe, it } from 'node:test';
 
 import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin-audit.repository.mysql.js';
 
+import type { AdminAuditRepository } from '../../../src/repositories/admin/admin-audit.repository.interface.js';
 import type { Queryable } from '../../../src/db/query.js';
 
+type HasExactKeys<T, Expected extends PropertyKey> =
+  Exclude<keyof T, Expected> extends never
+    ? Exclude<Expected, keyof T> extends never
+      ? true
+      : false
+    : false;
+
 describe('AdminAuditRepositoryMysql', () => {
+  it('exposes only the append operation at the application persistence boundary', () => {
+    const isAppendOnly: HasExactKeys<AdminAuditRepository, 'create'> = true;
+
+    assert.equal(isAppendOnly, true);
+  });
+
   it('uses the single append-only insert and serializes investigation snapshots', async () => {
     const statements: Array<{ sql: string; params: unknown }> = [];
     const db = {

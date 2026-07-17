@@ -51,6 +51,11 @@ describe('RBAC seed catalog', () => {
         assert.ok(applicationCodes.every((code) => isPermissionCode(code)));
         assert.equal(isPermissionCode('unknown.permission'), false);
         assert.equal(isPermissionCode(null), false);
+        assert.deepEqual(
+            applicationCodes.filter((code) => code.startsWith('audit.')),
+            [PERMISSIONS.auditRead],
+            'The audit domain must expose read access only'
+        );
     });
 
     it('defines the validated role-permission matrix with no duplicate or unknown association', async () => {

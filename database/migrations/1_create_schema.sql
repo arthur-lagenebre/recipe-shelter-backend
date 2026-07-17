@@ -373,13 +373,15 @@ CREATE TRIGGER admin_audit_logs_immutable_BU
 BEFORE UPDATE ON AdminAuditLogs
 FOR EACH ROW
 SIGNAL SQLSTATE '45000'
-  SET MESSAGE_TEXT = 'Admin audit logs are immutable';
+  SET MYSQL_ERRNO = 1644,
+      MESSAGE_TEXT = 'Admin audit logs are append-only: UPDATE is forbidden';
 
 CREATE TRIGGER admin_audit_logs_immutable_BD
 BEFORE DELETE ON AdminAuditLogs
 FOR EACH ROW
 SIGNAL SQLSTATE '45000'
-  SET MESSAGE_TEXT = 'Admin audit logs are immutable';
+  SET MYSQL_ERRNO = 1644,
+      MESSAGE_TEXT = 'Admin audit logs are append-only: DELETE is forbidden';
 
 CREATE TABLE UserModerationLogs (
   Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,

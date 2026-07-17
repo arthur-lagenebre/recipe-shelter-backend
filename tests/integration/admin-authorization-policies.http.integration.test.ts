@@ -244,6 +244,49 @@ describe('administrative endpoint authorization policies', () => {
         }]);
     });
 
+    it('exposes no audit modification or deletion endpoint to staff with audit.read', async () => {
+        grantedPermissions = [PERMISSIONS.auditRead];
+        const warnings: Array<{ message: string; meta?: unknown }> = [];
+        const originalWarn = logger.warn;
+        logger.warn = (message, meta) => warnings.push({ message, meta });
+
+        try {
+            for (const method of ['DELETE', 'PATCH', 'POST', 'PUT']) {
+                const response = await fetch(`${server.baseUrl}/api/v1/admin/audit/1`, {
+                    method,
+                    headers: { cookie }
+                });
+
+                assert.equal(response.status, 403, `${method} must not be exposed for administrative audit records`);
+                assert.deepEqual(await response.json(), {
+                    error: {
+                        message: 'Administrative authorization policy is required',
+                        code: 'AUTH_POLICY_REQUIRED'
+                    }
+                });
+            }
+        } finally {
+            logger.warn = originalWarn;
+        }
+
+        assert.deepEqual(
+            warnings.map(({ message, meta }) => ({
+                message,
+                code: (meta as { code?: string }).code,
+                path: (meta as { path?: string }).path,
+                reason: (meta as { reason?: string }).reason,
+                userId: (meta as { userId?: number }).userId
+            })),
+            Array.from({ length: 4 }, () => ({
+                message: '[authz] Administrative request denied',
+                code: 'AUTH_POLICY_REQUIRED',
+                path: '/api/v1/admin/audit/1',
+                reason: 'policy_missing',
+                userId: staff.id
+            }))
+        );
+    });
+
     it('denies and logs a policy that references an unknown permission', async () => {
         grantedPermissions = ['unknown.permission' as PermissionCode];
         const warnings: Array<{ message: string; meta?: unknown }> = [];
