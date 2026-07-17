@@ -81,6 +81,7 @@ export class TestSessionRepository implements SessionRepository {
       await this.createStaffSession({
         id,
         userId: user.id,
+        sessionVersion: 1,
         expiresAt,
         webAuthnCredentialId: 'test-staff-credential',
         mfaVerifiedAt: options.mfaVerifiedAt ?? new Date(),

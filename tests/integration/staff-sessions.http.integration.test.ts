@@ -202,7 +202,7 @@ describe('staff session management HTTP boundaries', () => {
       id: targetSessionId,
       staffUserId: target.id,
       revokedByStaffUserId: actor.id,
-      revocationType: 'admin'
+      revocationType: 'suspected_compromise'
     });
   });
 

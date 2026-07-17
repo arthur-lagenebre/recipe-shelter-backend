@@ -165,6 +165,7 @@ describe('staff management MySQL integration', { skip: !mysqlEnabled && 'Set TES
     assert.equal(await new SessionRepositoryMysql(pool).createStaffSession({
       id: '00000000-0000-4000-8000-000000000534',
       userId: targetUserId,
+      sessionVersion: 1,
       webAuthnCredentialId: 'managed-staff-credential',
       mfaVerifiedAt: new Date(),
       ipAddress: '192.0.2.34',
@@ -181,7 +182,7 @@ describe('staff management MySQL integration', { skip: !mysqlEnabled && 'Set TES
     );
     assert.deepEqual(revokedSessions, [{
       RevokedByStaffUserId: actorUserId,
-      RevocationType: 'admin',
+      RevocationType: 'account_disabled',
       SessionCount: 2
     }]);
 

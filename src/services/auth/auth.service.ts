@@ -72,7 +72,11 @@ export class AuthService {
 
     this.assertStaffCanAuthenticate(authUser);
 
-    return this.staffMfa.beginAuthentication(authUser.id);
+    const sessionVersion = authUser.staffSessionVersion;
+    if (typeof sessionVersion !== 'number' || !Number.isSafeInteger(sessionVersion) || sessionVersion <= 0)
+      throw unauthorized('Staff security state is invalid', 'STAFF_SESSION_CREATION_FORBIDDEN');
+
+    return this.staffMfa.beginAuthentication(authUser.id, sessionVersion);
   }
 
   async completeStaffLogin(input: { flowId: string; credential: AuthenticationResponseJSON; ipAddress: string | null; userAgent: string | null; }): Promise<{ user: User; token: string }> {
@@ -147,7 +151,11 @@ export class AuthService {
   }
 
   private withoutPassword(authUser: UserWithPassword): User {
-    const { passwordHash: _passwordHash, ...user } = authUser;
+    const {
+      passwordHash: _passwordHash,
+      staffSessionVersion: _staffSessionVersion,
+      ...user
+    } = authUser;
     return user;
   }
 
@@ -162,7 +170,7 @@ export class AuthService {
       throw unauthorized('Staff account is disabled', 'STAFF_DISABLED');
   }
 
-  private async createSession( user: User, realm: SessionRealm, mfa?: { credentialId: string; verifiedAt: Date; ipAddress: string | null; userAgent: string | null; }): Promise<string> {
+  private async createSession( user: User, realm: SessionRealm, mfa?: { sessionVersion: number; credentialId: string; verifiedAt: Date; ipAddress: string | null; userAgent: string | null; }): Promise<string> {
     const sessionId = randomUUID();
     const realmConfig = realm === 'app' ? env.auth.app : env.auth.admin;
     const expiresAt = new Date(Date.now() + realmConfig.jwtExpiresInMs);
@@ -175,6 +183,7 @@ export class AuthService {
       const created = await this.sessions.createStaffSession({
         id: sessionId,
         userId: user.id,
+        sessionVersion: mfa.sessionVersion,
         expiresAt,
         webAuthnCredentialId: mfa.credentialId,
         mfaVerifiedAt: mfa.verifiedAt,

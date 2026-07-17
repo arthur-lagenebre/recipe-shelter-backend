@@ -69,6 +69,7 @@ class FakeEmailValidationService {
 
 class FakeStaffMfa implements StaffMfaManager {
   authenticationUserId: number | null = null;
+  authenticationSessionVersion: number | null = null;
   authenticationCompleted = true;
   enrollmentInput: unknown = null;
 
@@ -81,8 +82,9 @@ class FakeStaffMfa implements StaffMfaManager {
     return { userId: 2, status: 'active' as const, mfaEnrolled: true as const };
   }
 
-  async beginAuthentication(userId: number) {
+  async beginAuthentication(userId: number, expectedSessionVersion: number) {
     this.authenticationUserId = userId;
+    this.authenticationSessionVersion = expectedSessionVersion;
     return { flowId: 'authentication-flow', publicKey: { challenge: 'challenge' } as never };
   }
 
@@ -92,6 +94,7 @@ class FakeStaffMfa implements StaffMfaManager {
 
     return {
       staffUserId: 2,
+      sessionVersion: 1,
       credentialId: 'credential-1',
       verifiedAt: new Date('2026-07-16T12:00:00.000Z')
     };
@@ -180,6 +183,7 @@ describe('AuthService', () => {
 
     assert.equal(result.user.mail, 'user@example.com');
     assert.equal('passwordHash' in result.user, false);
+    assert.equal('staffSessionVersion' in result.user, false);
     assert.equal(payload.accountType, 'community');
     assert.deepEqual(payload.amr, ['pwd']);
     assert.ok(payload.jti && sessions.communitySessions.has(payload.jti));
@@ -191,6 +195,7 @@ describe('AuthService', () => {
       ...baseUser,
       accountType: 'staff',
       status: 'active',
+      staffSessionVersion: 3,
       passwordHash: await bcrypt.hash('Recipe42?', 4)
     };
 
@@ -220,12 +225,14 @@ describe('AuthService', () => {
       ...baseUser,
       accountType: 'staff',
       status: 'active',
+      staffSessionVersion: 3,
       passwordHash: await bcrypt.hash('Recipe42?', 4)
     };
 
     const result = await service.beginStaffLogin({ mail: 'user@example.com', password: 'Recipe42?' });
 
     assert.equal(staffMfa.authenticationUserId, baseUser.id);
+    assert.equal(staffMfa.authenticationSessionVersion, 3);
     assert.deepEqual(result, { flowId: 'authentication-flow', publicKey: { challenge: 'challenge' } });
     assert.equal(sessions.staffSessions.size, 0);
   });
@@ -261,6 +268,7 @@ describe('AuthService', () => {
     assert.equal(payload.accountType, 'staff');
     assert.deepEqual(payload.amr, ['pwd', 'webauthn']);
     assert.ok(payload.jti && sessions.staffSessions.has(payload.jti));
+    assert.equal(sessions.staffSessions.get(payload.jti ?? '')?.sessionVersion, 1);
     assert.equal(sessions.staffSessions.get(payload.jti ?? '')?.webAuthnCredentialId, 'credential-1');
     assert.equal(sessions.staffSessions.get(payload.jti ?? '')?.ipAddress, '192.0.2.10');
     assert.equal(sessions.staffSessions.get(payload.jti ?? '')?.userAgent, 'Recipe Shelter test client');

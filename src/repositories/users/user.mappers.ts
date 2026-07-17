@@ -76,6 +76,7 @@ export function mapUser(row: UserRow): User {
 export function mapUserWithPassword(row: UserWithPasswordRow): UserWithPassword {
   return {
     ...mapUser(row),
-    passwordHash: row.Password
+    passwordHash: row.Password,
+    staffSessionVersion: row.AccountType === 'staff' ? Number(row.StaffSessionVersion) : null
   };
 }

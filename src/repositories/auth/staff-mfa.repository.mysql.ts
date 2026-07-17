@@ -26,6 +26,7 @@ type ChallengeRow = RowDataPacket & {
   Id: string;
   StaffUserId: number;
   InvitationId: number | null;
+  SessionVersion: number | string;
   Challenge: string;
   ExpiresAt: Date;
 };
@@ -91,7 +92,7 @@ export class StaffMfaRepositoryMysql implements StaffMfaRepository {
     return row ? mapCredential(row) : null;
   }
 
-  async saveChallenge(input: CreateStaffWebAuthnChallengeInput): Promise<void> {
+  async saveChallenge(input: CreateStaffWebAuthnChallengeInput): Promise<boolean> {
     const conn = await this.db.getConnection();
 
     try {
@@ -102,20 +103,32 @@ export class StaffMfaRepositoryMysql implements StaffMfaRepository {
          WHERE StaffUserId = ? AND Purpose = ? AND ConsumedAt IS NULL`,
         [input.staffUserId, input.purpose]
       );
-      await conn.execute(
+      const [challengeResult] = await conn.execute<ResultSetHeader>(
         `INSERT INTO StaffWebAuthnChallenges
-           (Id, StaffUserId, InvitationId, Purpose, Challenge, ExpiresAt)
-         VALUES (?, ?, ?, ?, ?, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL ? MICROSECOND))`,
+           (Id, StaffUserId, InvitationId, Purpose, SessionVersion, Challenge, ExpiresAt)
+         SELECT ?, ?, ?, ?, profile.SessionVersion, ?,
+                DATE_ADD(CURRENT_TIMESTAMP, INTERVAL ? MICROSECOND)
+         FROM StaffProfiles AS profile
+         WHERE profile.UserId = ?
+           AND (? IS NULL OR profile.SessionVersion = ?)`,
         [
           input.id,
           input.staffUserId,
           input.invitationId,
           input.purpose,
           input.challenge,
-          input.ttlMs * 1000
+          input.ttlMs * 1000,
+          input.staffUserId,
+          input.expectedSessionVersion,
+          input.expectedSessionVersion
         ]
       );
+      if (challengeResult.affectedRows !== 1) {
+        await conn.rollback();
+        return false;
+      }
       await conn.commit();
+      return true;
     } catch (error) {
       await conn.rollback();
       throw error;
@@ -126,7 +139,7 @@ export class StaffMfaRepositoryMysql implements StaffMfaRepository {
 
   async findRegistrationChallenge(id: string, invitationTokenHash: string): Promise<StaffWebAuthnChallenge | null> {
     return this.findChallenge(
-      `SELECT c.Id, c.StaffUserId, c.InvitationId, c.Challenge, c.ExpiresAt
+      `SELECT c.Id, c.StaffUserId, c.InvitationId, c.SessionVersion, c.Challenge, c.ExpiresAt
        FROM StaffWebAuthnChallenges AS c
        INNER JOIN StaffInvitations AS si
          ON si.Id = c.InvitationId AND si.StaffUserId = c.StaffUserId
@@ -137,6 +150,11 @@ export class StaffMfaRepositoryMysql implements StaffMfaRepository {
          AND si.TokenHash = ?
          AND si.UsedAt IS NULL
          AND si.ExpiresAt > CURRENT_TIMESTAMP
+         AND c.SessionVersion = (
+           SELECT profile.SessionVersion
+           FROM StaffProfiles AS profile
+           WHERE profile.UserId = c.StaffUserId
+         )
        LIMIT 1`,
       [id, invitationTokenHash]
     );
@@ -144,7 +162,7 @@ export class StaffMfaRepositoryMysql implements StaffMfaRepository {
 
   async findAuthenticationChallenge(id: string): Promise<StaffWebAuthnChallenge | null> {
     return this.findChallenge(
-      `SELECT c.Id, c.StaffUserId, c.InvitationId, c.Challenge, c.ExpiresAt
+      `SELECT c.Id, c.StaffUserId, c.InvitationId, c.SessionVersion, c.Challenge, c.ExpiresAt
        FROM StaffWebAuthnChallenges AS c
        INNER JOIN StaffProfiles AS sp ON sp.UserId = c.StaffUserId
        WHERE c.Id = ?
@@ -153,6 +171,7 @@ export class StaffMfaRepositoryMysql implements StaffMfaRepository {
          AND c.ExpiresAt > CURRENT_TIMESTAMP
          AND sp.Status = 'active'
          AND sp.MfaEnrolledAt IS NOT NULL
+         AND c.SessionVersion = sp.SessionVersion
        LIMIT 1`,
       [id]
     );
@@ -164,7 +183,7 @@ export class StaffMfaRepositoryMysql implements StaffMfaRepository {
     try {
       await conn.beginTransaction();
       const [challengeRows] = await conn.execute<ChallengeRow[]>(
-        `SELECT c.Id, c.StaffUserId, c.InvitationId, c.Challenge, c.ExpiresAt
+        `SELECT c.Id, c.StaffUserId, c.InvitationId, c.SessionVersion, c.Challenge, c.ExpiresAt
          FROM StaffWebAuthnChallenges AS c
          INNER JOIN StaffInvitations AS si
            ON si.Id = c.InvitationId AND si.StaffUserId = c.StaffUserId
@@ -179,6 +198,7 @@ export class StaffMfaRepositoryMysql implements StaffMfaRepository {
            AND si.ExpiresAt > CURRENT_TIMESTAMP
            AND sp.Status = 'invited'
            AND sp.MfaEnrolledAt IS NULL
+           AND c.SessionVersion = sp.SessionVersion
            AND u.AccountType = 'staff'
            AND u.Password IS NULL
          FOR UPDATE`,
@@ -258,7 +278,7 @@ export class StaffMfaRepositoryMysql implements StaffMfaRepository {
     try {
       await conn.beginTransaction();
       const [challengeRows] = await conn.execute<ChallengeRow[]>(
-        `SELECT c.Id, c.StaffUserId, c.InvitationId, c.Challenge, c.ExpiresAt
+        `SELECT c.Id, c.StaffUserId, c.InvitationId, c.SessionVersion, c.Challenge, c.ExpiresAt
          FROM StaffWebAuthnChallenges AS c
          INNER JOIN StaffProfiles AS sp ON sp.UserId = c.StaffUserId
          WHERE c.Id = ?
@@ -268,6 +288,7 @@ export class StaffMfaRepositoryMysql implements StaffMfaRepository {
            AND c.ExpiresAt > CURRENT_TIMESTAMP
            AND sp.Status = 'active'
            AND sp.MfaEnrolledAt IS NOT NULL
+           AND c.SessionVersion = sp.SessionVersion
          FOR UPDATE`,
         [input.challengeId, input.staffUserId]
       );
@@ -329,6 +350,7 @@ export class StaffMfaRepositoryMysql implements StaffMfaRepository {
       id: row.Id,
       staffUserId: Number(row.StaffUserId),
       invitationId: row.InvitationId === null ? null : Number(row.InvitationId),
+      sessionVersion: Number(row.SessionVersion),
       challenge: row.Challenge,
       expiresAt: row.ExpiresAt
     } : null;

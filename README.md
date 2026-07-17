@@ -107,8 +107,23 @@ de vérification MFA et référence obligatoirement le credential de
 `StaffWebAuthnCredentials` utilisé. Un profil staff ne peut pas devenir actif
 tant qu’un passkey ou une clé de sécurité WebAuthn avec vérification utilisateur
 n’a pas été enregistré. Les sessions staff conservent aussi l’adresse IP, le
-user-agent et, en cas de révocation, l’identité staff à l’origine de l’action et
-son contexte (`logout`, `self` ou `admin`).
+user-agent et, en cas de révocation, sa cause ainsi que l’identité staff à
+l’origine de l’action lorsqu’elle existe. Les causes distinguent la déconnexion,
+la révocation volontaire, la désactivation ou le verrouillage du compte, le
+changement de mot de passe, le reset MFA, la suspicion de compromission et le
+retrait du dernier rôle.
+
+Toute modification du hash de mot de passe révoque immédiatement les sessions
+du domaine correspondant : `CommunitySessions` pour une identité community et
+`StaffSessions` pour une identité staff. Les deux stockages ne sont jamais
+révoqués transversalement. Côté staff, le passage à `disabled` ou `locked`, la
+remise à zéro de `MfaEnrolledAt` et le retrait du dernier `StaffRoles` révoquent
+également toutes les sessions actives. Chaque requête authentifiée revalide la
+session persistée ; un JWT déjà émis devient donc inutilisable immédiatement.
+Les challenges d’authentification et les sessions staff capturent aussi la
+`SessionVersion` du profil. Chaque événement global de sécurité l’incrémente :
+une cérémonie MFA commencée avant l’événement ne peut donc pas recréer une
+session dans une fenêtre de concurrence.
 
 Les opérations staff les plus sensibles exigent en plus que la vérification
 forte de la session courante date de moins de 5 minutes par défaut. Le backend
@@ -272,7 +287,8 @@ rôle et retrait de rôle exigent respectivement `staff.disable`, `staff.enable`
 de 10 à 1000 caractères. Seul un compte `active` peut être désactivé et seul un
 compte `disabled` avec MFA enrôlé peut être réactivé. La désactivation est
 logique, conserve son acteur, son motif et sa date dans `StaffProfiles`, et
-révoque toutes les sessions actives dans la transaction auditée. Un staff ne
+révoque toutes les sessions actives dans la transaction auditée. Le retrait du
+dernier rôle révoque lui aussi toutes les sessions actives du compte. Un staff ne
 peut ni se désactiver, ni s’attribuer, ni retirer ses propres rôles : ces
 tentatives retournent respectivement `STAFF_DISABLE_SELF_FORBIDDEN`,
 `STAFF_ROLE_GRANT_SELF_FORBIDDEN` et `STAFF_ROLE_REVOKE_SELF_FORBIDDEN` avec le

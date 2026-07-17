@@ -35,6 +35,7 @@ const challengeRow = {
   Id: 'flow-1',
   StaffUserId: 42,
   InvitationId: 7,
+  SessionVersion: 1,
   Challenge: 'challenge',
   ExpiresAt: new Date('2026-07-16T12:05:00.000Z')
 };
@@ -71,6 +72,7 @@ describe('StaffMfaRepositoryMysql', () => {
       staffUserId: 42,
       invitationId: null,
       purpose: 'authentication',
+      expectedSessionVersion: 3,
       challenge: 'challenge',
       ttlMs: 300_000
     });
@@ -78,8 +80,9 @@ describe('StaffMfaRepositoryMysql', () => {
     assert.match(fake.statements[0]?.sql ?? '', /UPDATE StaffWebAuthnChallenges[\s\S]+ConsumedAt/);
     assert.match(fake.statements[1]?.sql ?? '', /INSERT INTO StaffWebAuthnChallenges[\s\S]+DATE_ADD\(CURRENT_TIMESTAMP/);
     assert.deepEqual(fake.statements[1]?.params, [
-      'flow-1', 42, null, 'authentication', 'challenge', 300_000_000
+      'flow-1', 42, null, 'authentication', 'challenge', 300_000_000, 42, 3, 3
     ]);
+    assert.match(fake.statements[1]?.sql ?? '', /profile\.SessionVersion/);
     assert.deepEqual(fake.counts(), { commits: 1, rollbacks: 0, releases: 1 });
   });
 

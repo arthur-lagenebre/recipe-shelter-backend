@@ -39,6 +39,7 @@ function createUser(id: number, mail: string, username: string, accountType: Use
         username,
         accountType,
         passwordHash,
+        staffSessionVersion: accountType === 'staff' ? 1 : null,
         status: 'active',
         emailValidatedAt: now,
         bannedByUserId: null,
@@ -377,7 +378,7 @@ describe('critical user journey E2E', () => {
                     return { flowId: 'staff-login-flow', publicKey: { challenge: 'challenge' } as never };
                 },
                 async completeAuthentication() {
-                    return { staffUserId: 1, credentialId: 'credential-1', verifiedAt: new Date() };
+                    return { staffUserId: 1, sessionVersion: 1, credentialId: 'credential-1', verifiedAt: new Date() };
                 }
             } as unknown as StaffMfaManager
         );

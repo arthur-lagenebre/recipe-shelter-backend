@@ -14,7 +14,7 @@ function createPool(active = true) {
       statements.push({ sql, params });
       if (/^SELECT 1/.test(sql.trim()))
         return [active ? [{ One: 1 }] : [], []];
-      if (/^SELECT Id/.test(sql.trim())) {
+      if (/^SELECT session\.Id/.test(sql.trim())) {
         return [[{
           Id: 'staff-id',
           MfaMethod: 'webauthn',
@@ -44,6 +44,7 @@ describe('SessionRepositoryMysql', () => {
     assert.equal(await repository.createStaffSession({
       id: 'staff-id',
       userId: 1,
+      sessionVersion: 7,
       expiresAt,
       webAuthnCredentialId: 'credential-id',
       mfaVerifiedAt,
@@ -57,14 +58,16 @@ describe('SessionRepositoryMysql', () => {
     assert.deepEqual(fake.statements[1]?.params, [
       'staff-id',
       1,
+      7,
       'credential-id',
       mfaVerifiedAt,
       '192.0.2.10',
       'Recipe Shelter test client',
       expiresAt,
-      1
+      1,
+      7
     ]);
-    assert.match(fake.statements[1]?.sql ?? '', /FROM StaffProfiles[\s\S]+Status = 'active'/);
+    assert.match(fake.statements[1]?.sql ?? '', /FROM StaffProfiles[\s\S]+Status = 'active'[\s\S]+SessionVersion = \?[\s\S]+FROM StaffRoles/);
   });
 
   it('lists only active MFA-backed staff sessions without selecting credential secrets', async () => {
@@ -96,6 +99,7 @@ describe('SessionRepositoryMysql', () => {
 
     assert.match(fake.statements[0]?.sql ?? '', /FROM CommunitySessions[\s\S]+RevokedAt IS NULL[\s\S]+ExpiresAt > CURRENT_TIMESTAMP/);
     assert.match(fake.statements[1]?.sql ?? '', /FROM StaffSessions[\s\S]+MfaVerifiedAt IS NOT NULL[\s\S]+MfaMethod = 'webauthn'/);
+    assert.match(fake.statements[1]?.sql ?? '', /profile\.SessionVersion = session\.SessionVersion[\s\S]+FROM StaffRoles/);
   });
 
   it('checks recent strong authentication on the exact active staff session', async () => {
@@ -123,14 +127,15 @@ describe('SessionRepositoryMysql', () => {
       id: 'staff-id',
       staffUserId: 1,
       revokedByStaffUserId: 9,
-      revocationType: 'admin'
+      revocationType: 'suspected_compromise'
     });
 
     assert.match(fake.statements[0]?.sql ?? '', /UPDATE CommunitySessions/);
+    assert.match(fake.statements[0]?.sql ?? '', /RevocationType = COALESCE\(RevocationType, 'logout'\)/);
     assert.deepEqual(fake.statements[0]?.params, ['community-id', 2]);
     assert.match(fake.statements[1]?.sql ?? '', /UPDATE StaffSessions/);
     assert.match(fake.statements[1]?.sql ?? '', /RevokedByStaffUserId = \?[\s\S]+RevocationType = \?/);
-    assert.deepEqual(fake.statements[1]?.params, [9, 'admin', 'staff-id', 1]);
+    assert.deepEqual(fake.statements[1]?.params, [9, 'suspected_compromise', 'staff-id', 1]);
     assert.equal(revoked, false);
   });
 });

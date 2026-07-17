@@ -2035,7 +2035,7 @@ type UnbanUserResponse = OkResponse;</code></pre>
 
     <section aria-labelledby="admin-staff-management">
       <h2 id="admin-staff-management">Admin staff management</h2>
-      <p class="section-intro">Cycle de vie logique et rôles des comptes staff. Aucun endpoint ne supprime physiquement un compte et aucun endpoint de réinitialisation MFA n’est exposé dans le back-office. La sortie du staff passe par la désactivation et la révocation de ses accès. Chaque route exige sa permission explicite et produit un audit. Les mutations exigent un motif de 10 à 1000 caractères. La désactivation, qui révoque globalement les sessions du compte, et tout changement du rôle <code>SuperAdmin</code> exigent une authentification forte récente. Un staff ne peut ni se désactiver, ni s’attribuer, ni retirer ses propres rôles. Le dernier <code>SuperAdmin</code> actif ne peut être ni désactivé ni privé de ce rôle par un autre staff.</p>
+      <p class="section-intro">Cycle de vie logique et rôles des comptes staff. Aucun endpoint ne supprime physiquement un compte et aucun endpoint de réinitialisation MFA n’est exposé dans le back-office. La sortie du staff passe par la désactivation et la révocation de ses accès. Chaque route exige sa permission explicite et produit un audit. Les mutations exigent un motif de 10 à 1000 caractères. La désactivation et le retrait du dernier rôle révoquent globalement les sessions du compte ; tout changement du rôle <code>SuperAdmin</code> exige une authentification forte récente. Un staff ne peut ni se désactiver, ni s’attribuer, ni retirer ses propres rôles. Le dernier <code>SuperAdmin</code> actif ne peut être ni désactivé ni privé de ce rôle par un autre staff.</p>
       <div class="table-wrap">
         <table>
           <thead>
@@ -2118,7 +2118,7 @@ type UnbanUserResponse = OkResponse;</code></pre>
 
     <section aria-labelledby="admin-staff-sessions">
       <h2 id="admin-staff-sessions">Admin staff sessions</h2>
-      <p class="section-intro">Consultation des sessions actives d’un compte staff avec <code>staff.read</code> et révocation administrative avec <code>staff.session.revoke</code>. Le credential WebAuthn, les clés, challenges, cookies et JWT ne sont jamais exposés.</p>
+      <p class="section-intro">Consultation des sessions actives d’un compte staff avec <code>staff.read</code> et révocation d’une session suspectée compromise avec <code>staff.session.revoke</code>. Les sessions sont aussi révoquées automatiquement après désactivation ou verrouillage, changement de mot de passe, reset MFA et retrait du dernier rôle. Une version de sécurité invalide également toute cérémonie MFA commencée avant l’événement. Le credential WebAuthn, les clés, challenges, cookies et JWT ne sont jamais exposés.</p>
       <div class="table-wrap">
         <table>
           <thead>

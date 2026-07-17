@@ -5,6 +5,7 @@ export type CreateCommunitySessionInput = {
 };
 
 export type CreateStaffSessionInput = CreateCommunitySessionInput & {
+  sessionVersion: number;
   webAuthnCredentialId: string;
   mfaVerifiedAt: Date;
   ipAddress: string | null;
@@ -21,7 +22,7 @@ export type StaffSession = {
   createdAt: Date;
 };
 
-export type StaffSessionRevocationType = 'logout' | 'self' | 'admin';
+export type StaffSessionRevocationType = 'logout' | 'self' | 'suspected_compromise';
 
 export type RevokeStaffSessionInput = {
   id: string;

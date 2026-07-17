@@ -54,6 +54,7 @@ class FakeStaffMfaRepository implements StaffMfaRepository {
 
   async saveChallenge(input: CreateStaffWebAuthnChallengeInput) {
     this.savedChallenge = input;
+    return true;
   }
 
   async findRegistrationChallenge() {
@@ -184,6 +185,7 @@ describe('StaffMfaService WebAuthn enrollment', () => {
       staffUserId: 42,
       invitationId: 7,
       purpose: 'registration',
+      expectedSessionVersion: null,
       challenge: 'registration-challenge',
       ttlMs: 120_000
     });
@@ -222,6 +224,7 @@ describe('StaffMfaService WebAuthn enrollment', () => {
       id: 'flow-1',
       staffUserId: 42,
       invitationId: 7,
+      sessionVersion: 1,
       challenge: 'registration-challenge',
       expiresAt: new Date('2026-07-16T12:02:00.000Z')
     };
@@ -266,6 +269,7 @@ describe('StaffMfaService WebAuthn enrollment', () => {
 
     repository.registrationChallenge = {
       id: 'flow-1', staffUserId: 42, invitationId: 7,
+      sessionVersion: 1,
       challenge: 'registration-challenge', expiresAt: new Date('2026-07-16T12:02:00.000Z')
     };
     const calls = { registrationFailure: true };
@@ -286,7 +290,7 @@ describe('StaffMfaService WebAuthn authentication', () => {
     const service = createService(repository);
 
     await assert.rejects(
-      () => service.beginAuthentication(42),
+      () => service.beginAuthentication(42, 3),
       (error) => assertHttpError(error, 'STAFF_MFA_REQUIRED', 401)
     );
     assert.equal(repository.savedChallenge, null);
@@ -298,7 +302,7 @@ describe('StaffMfaService WebAuthn authentication', () => {
     const calls: Record<string, unknown> = {};
     const service = createService(repository, calls);
 
-    await service.beginAuthentication(42);
+    await service.beginAuthentication(42, 3);
 
     assert.deepEqual(calls.authenticationOptions, {
       rpID: 'staff.example.com',
@@ -308,6 +312,7 @@ describe('StaffMfaService WebAuthn authentication', () => {
     });
     assert.equal(repository.savedChallenge?.purpose, 'authentication');
     assert.equal(repository.savedChallenge?.invitationId, null);
+    assert.equal(repository.savedChallenge?.expectedSessionVersion, 3);
   });
 
   it('verifies origin, RP, challenge and credential before atomically consuming the flow', async () => {
@@ -317,6 +322,7 @@ describe('StaffMfaService WebAuthn authentication', () => {
       id: 'flow-1',
       staffUserId: 42,
       invitationId: null,
+      sessionVersion: 3,
       challenge: 'authentication-challenge',
       expiresAt: new Date('2026-07-16T12:02:00.000Z')
     };
@@ -325,6 +331,7 @@ describe('StaffMfaService WebAuthn authentication', () => {
 
     assert.deepEqual(await service.completeAuthentication('flow-1', authenticationResponse()), {
       staffUserId: 42,
+      sessionVersion: 3,
       credentialId: 'credential-1',
       verifiedAt: now
     });
@@ -361,6 +368,7 @@ describe('StaffMfaService WebAuthn authentication', () => {
 
     repository.authenticationChallenge = {
       id: 'flow-1', staffUserId: 42, invitationId: null,
+      sessionVersion: 3,
       challenge: 'authentication-challenge', expiresAt: new Date('2026-07-16T12:02:00.000Z')
     };
     await assert.rejects(

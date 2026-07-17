@@ -3,9 +3,13 @@ import { firstOrNull } from '../../utils/array.js';
 
 import type { AdminStaffRepository } from './admin.staff.repository.interface.js';
 import type { ActiveSuperAdminRow, AdminStaffAccount, AdminStaffAccountRow, AdminStaffRole, AdminStaffRoleRow, SuperAdminRoleIdRow } from './admin.staff.types.js';
-import type { Pool, PoolConnection, ResultSetHeader } from 'mysql2/promise';
+import type { Pool, PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 
 const SUPER_ADMIN_ROLE_CODE = 'SuperAdmin';
+
+type ActiveSessionCountRow = RowDataPacket & {
+  ActiveSessionCount: number | string;
+};
 
 const STAFF_ACCOUNT_SELECT = `u.Id,
                               u.Mail AS Email,
@@ -101,6 +105,15 @@ export class AdminStaffRepositoryMysql implements AdminStaffRepository {
   }
 
   async disable(staffUserId: number, actorStaffUserId: number, reason: string, db: PoolConnection): Promise<number | null> {
+    const [sessionCountRows] = await db.execute<ActiveSessionCountRow[]>(
+      `SELECT COUNT(*) AS ActiveSessionCount
+       FROM StaffSessions
+       WHERE StaffUserId = ?
+         AND RevokedAt IS NULL
+         AND ExpiresAt > CURRENT_TIMESTAMP`,
+      [staffUserId]
+    );
+    const activeSessionCount = Number(sessionCountRows[0]?.ActiveSessionCount ?? 0);
     const [profileResult] = await db.execute<ResultSetHeader>(
       `UPDATE StaffProfiles
        SET Status = 'disabled',
@@ -114,18 +127,7 @@ export class AdminStaffRepositoryMysql implements AdminStaffRepository {
     if (profileResult.affectedRows === 0)
       return null;
 
-    const [sessionResult] = await db.execute<ResultSetHeader>(
-      `UPDATE StaffSessions
-       SET RevokedAt = CURRENT_TIMESTAMP,
-           RevokedByStaffUserId = ?,
-           RevocationType = 'admin'
-       WHERE StaffUserId = ?
-         AND RevokedAt IS NULL
-         AND ExpiresAt > CURRENT_TIMESTAMP`,
-      [actorStaffUserId, staffUserId]
-    );
-
-    return sessionResult.affectedRows;
+    return activeSessionCount;
   }
 
   async enable(staffUserId: number, db: PoolConnection): Promise<boolean> {

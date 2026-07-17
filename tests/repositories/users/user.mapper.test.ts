@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { mapCommunityProfile, mapStaffProfile, mapUser } from '../../../src/repositories/users/user.mappers.js';
+import { mapCommunityProfile, mapStaffProfile, mapUser, mapUserWithPassword } from '../../../src/repositories/users/user.mappers.js';
 
-import type { CommunityProfileRow, StaffProfileRow, UserRow } from '../../../src/repositories/users/user.types.js';
+import type { CommunityProfileRow, StaffProfileRow, UserRow, UserWithPasswordRow } from '../../../src/repositories/users/user.types.js';
 
 const now = new Date('2026-07-14T10:00:00.000Z');
 const baseRow = {
@@ -82,6 +82,22 @@ describe('user mapper', () => {
 
         assert.equal(community.status, 'active');
         assert.equal(staff.status, 'locked');
+    });
+
+    it('binds staff password authentication to the current session version', () => {
+        const user = mapUserWithPassword({
+            ...baseRow,
+            AccountType: 'staff',
+            CommunityProfileUserId: null,
+            CommunityStatus: null,
+            StaffProfileUserId: 2,
+            StaffStatus: 'active',
+            StaffSessionVersion: 4,
+            Password: 'password-hash'
+        } as unknown as UserWithPasswordRow);
+
+        assert.equal(user.passwordHash, 'password-hash');
+        assert.equal(user.staffSessionVersion, 4);
     });
 
     it('rejects unsupported statuses and cross-profile assignments', () => {

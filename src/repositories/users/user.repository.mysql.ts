@@ -11,6 +11,7 @@ const USER_SELECT = `u.Id, u.Mail, u.Username, u.AccountType, u.EmailValidatedAt
                      cp.UserId AS CommunityProfileUserId, cp.Status AS CommunityStatus,
                      cp.BannedByUserId, cp.BannedReason, cp.BannedAt,
                      sp.UserId AS StaffProfileUserId, sp.Status AS StaffStatus,
+                     sp.SessionVersion AS StaffSessionVersion,
                      u.CreatedAt, u.UpdatedAt`;
 
 const USER_PROFILE_JOINS = `LEFT JOIN CommunityProfiles AS cp ON cp.UserId = u.Id

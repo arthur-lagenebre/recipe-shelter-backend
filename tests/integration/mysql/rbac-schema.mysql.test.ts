@@ -331,6 +331,8 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
              UPDATE StaffProfiles
              SET MfaEnrolledAt = CURRENT_TIMESTAMP
              WHERE UserId = 121;
+             INSERT INTO StaffRoles (StaffUserId, RoleId)
+             SELECT 121, Id FROM Roles WHERE Code = 'UserAdmin';
              UPDATE Users SET Status = 'active' WHERE Id = 121`
         );
 
@@ -426,6 +428,7 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
             staffUserId: 130,
             invitationId: context.invitationId,
             purpose: 'registration',
+            expectedSessionVersion: null,
             challenge: 'registration-challenge-130',
             ttlMs: 300_000
         });
@@ -494,6 +497,7 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
             staffUserId: 130,
             invitationId: null,
             purpose: 'authentication',
+            expectedSessionVersion: 2,
             challenge: 'authentication-challenge-130',
             ttlMs: 300_000
         });

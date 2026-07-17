@@ -63,6 +63,7 @@ export type User = {
 
 export type UserWithPassword = User & {
   passwordHash: string | null;
+  staffSessionVersion?: number | null;
 };
 
 type CreateUserBaseInput = {
@@ -85,6 +86,7 @@ export type UserRow = RowDataPacket & {
   CommunityStatus: unknown;
   StaffProfileUserId: number | null;
   StaffStatus: unknown;
+  StaffSessionVersion: number | string | null;
   EmailValidatedAt: Date | null;
   BannedByUserId: number | null;
   BannedReason: string | null;

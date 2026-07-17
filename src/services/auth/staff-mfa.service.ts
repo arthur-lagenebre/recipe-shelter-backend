@@ -40,12 +40,8 @@ export type StaffMfaOptionsResult<T> = {
 export interface StaffMfaManager {
   beginEnrollment(invitationToken: string): Promise<StaffMfaOptionsResult<PublicKeyCredentialCreationOptionsJSON>>;
   completeEnrollment(input: { flowId: string; invitationToken: string; password: string; credential: RegistrationResponseJSON; }): Promise<{ userId: number; status: 'active'; mfaEnrolled: true }>;
-  beginAuthentication(staffUserId: number): Promise<StaffMfaOptionsResult<PublicKeyCredentialRequestOptionsJSON>>;
-  completeAuthentication(flowId: string, response: AuthenticationResponseJSON): Promise<{
-    staffUserId: number;
-    credentialId: string;
-    verifiedAt: Date;
-  }>;
+  beginAuthentication(staffUserId: number, expectedSessionVersion: number): Promise<StaffMfaOptionsResult<PublicKeyCredentialRequestOptionsJSON>>;
+  completeAuthentication(flowId: string, response: AuthenticationResponseJSON): Promise<{ staffUserId: number; sessionVersion: number; credentialId: string; verifiedAt: Date; }>;
 }
 
 export class StaffMfaService implements StaffMfaManager {
@@ -59,10 +55,7 @@ export class StaffMfaService implements StaffMfaManager {
   private readonly webAuthnRpId: string;
   private readonly webAuthnRpName: string;
 
-  constructor(
-    private readonly repository: StaffMfaRepository,
-    options: StaffMfaServiceOptions = {}
-  ) {
+  constructor(private readonly repository: StaffMfaRepository,options: StaffMfaServiceOptions = {}) {
     this.challengeTtlMs = options.challengeTtlMs ?? env.auth.staffMfa.challengeTtlMs;
     this.now = options.now ?? (() => new Date());
     this.randomId = options.randomId ?? randomUUID;
@@ -73,13 +66,8 @@ export class StaffMfaService implements StaffMfaManager {
     this.webAuthnRpId = options.webAuthnRpId ?? env.auth.staffMfa.webAuthnRpId;
     this.webAuthnRpName = options.webAuthnRpName ?? env.auth.staffMfa.webAuthnRpName;
 
-    if (
-      !Number.isInteger(this.challengeTtlMs)
-      || this.challengeTtlMs <= 0
-      || this.challengeTtlMs > MAX_CHALLENGE_TTL_MS
-    ) {
+    if (!Number.isInteger(this.challengeTtlMs) || this.challengeTtlMs <= 0 || this.challengeTtlMs > MAX_CHALLENGE_TTL_MS)
       throw new TypeError('Staff MFA challenge TTL must be a positive integer of at most 10 minutes');
-    }
   }
 
   async beginEnrollment(invitationToken: string): Promise<StaffMfaOptionsResult<PublicKeyCredentialCreationOptionsJSON>> {
@@ -110,14 +98,17 @@ export class StaffMfaService implements StaffMfaManager {
       }))
     });
     const flowId = this.randomId();
-    await this.repository.saveChallenge({
+    const saved = await this.repository.saveChallenge({
       id: flowId,
       staffUserId: context.staffUserId,
       invitationId: context.invitationId,
       purpose: 'registration',
+      expectedSessionVersion: null,
       challenge: publicKey.challenge,
       ttlMs: this.challengeTtlMs
     });
+    if (!saved)
+      throw badRequest('Invalid or expired staff invitation', 'STAFF_MFA_INVITATION_INVALID');
 
     return { flowId, publicKey };
   }
@@ -179,7 +170,7 @@ export class StaffMfaService implements StaffMfaManager {
     return { userId: challenge.staffUserId, status: 'active', mfaEnrolled: true };
   }
 
-  async beginAuthentication(staffUserId: number): Promise<StaffMfaOptionsResult<PublicKeyCredentialRequestOptionsJSON>> {
+  async beginAuthentication(staffUserId: number, expectedSessionVersion: number): Promise<StaffMfaOptionsResult<PublicKeyCredentialRequestOptionsJSON>> {
     const credentials = await this.repository.findCredentialsByStaffUserId(staffUserId);
     if (!credentials.length)
       throw unauthorized('Staff MFA enrollment is required', 'STAFF_MFA_REQUIRED');
@@ -194,19 +185,22 @@ export class StaffMfaService implements StaffMfaManager {
       }))
     });
     const flowId = this.randomId();
-    await this.repository.saveChallenge({
+    const saved = await this.repository.saveChallenge({
       id: flowId,
       staffUserId,
       invitationId: null,
       purpose: 'authentication',
+      expectedSessionVersion,
       challenge: publicKey.challenge,
       ttlMs: this.challengeTtlMs
     });
+    if (!saved)
+      throw unauthorized('Staff security state changed', 'STAFF_SESSION_CREATION_FORBIDDEN');
 
     return { flowId, publicKey };
   }
 
-  async completeAuthentication(flowId: string, response: AuthenticationResponseJSON): Promise<{ staffUserId: number; credentialId: string; verifiedAt: Date; }> {
+  async completeAuthentication(flowId: string, response: AuthenticationResponseJSON): Promise<{ staffUserId: number; sessionVersion: number; credentialId: string; verifiedAt: Date; }> {
     const challenge = await this.repository.findAuthenticationChallenge(flowId);
     if (!challenge)
       throw unauthorized('Invalid or expired MFA authentication flow', 'AUTH_INVALID_MFA_ASSERTION');
@@ -253,6 +247,7 @@ export class StaffMfaService implements StaffMfaManager {
 
     return {
       staffUserId: challenge.staffUserId,
+      sessionVersion: challenge.sessionVersion,
       credentialId: credential.credentialId,
       verifiedAt: this.now()
     };

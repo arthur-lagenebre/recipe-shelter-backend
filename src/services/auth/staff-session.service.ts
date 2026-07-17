@@ -75,13 +75,13 @@ export class StaffSessionService {
         id: sessionId,
         staffUserId: targetStaffUserId,
         revokedByStaffUserId: actorStaffUserId,
-        revocationType: 'admin'
+        revocationType: 'suspected_compromise'
       }, db);
 
       if (!revoked)
         throw notFound('Active staff session not found', 'STAFF_SESSION_NOT_FOUND');
 
-      await this.recordRevocation(audit, sessionId, targetStaffUserId, actorStaffUserId, 'admin', context, cleanReason);
+      await this.recordRevocation(audit, sessionId, targetStaffUserId, actorStaffUserId, 'suspected_compromise', context, cleanReason);
     });
   }
 
@@ -103,7 +103,7 @@ export class StaffSessionService {
     return user;
   }
 
-  private async recordRevocation(audit: AdminAuditRecorder, sessionId: string, targetStaffUserId: number, actorStaffUserId: number, revocationType: 'admin' | 'self', context: AdminAuditRequestContext, reason?: string): Promise<void> {
+  private async recordRevocation(audit: AdminAuditRecorder, sessionId: string, targetStaffUserId: number, actorStaffUserId: number, revocationType: 'suspected_compromise' | 'self', context: AdminAuditRequestContext, reason?: string): Promise<void> {
     await audit.record({
       actorUserId: actorStaffUserId,
       eventType: ADMIN_AUDIT_EVENT_TYPES.staffSessionRevoke,

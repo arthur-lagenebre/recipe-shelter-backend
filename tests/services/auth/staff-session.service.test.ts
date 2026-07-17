@@ -59,6 +59,7 @@ describe('StaffSessionService', () => {
     await repository.createStaffSession({
       id: '00000000-0000-4000-8000-000000000001',
       userId: actor.id,
+      sessionVersion: 1,
       webAuthnCredentialId: 'actor-secret-credential-id',
       mfaVerifiedAt: new Date('2026-07-16T10:00:00.000Z'),
       ipAddress: '192.0.2.1',
@@ -68,6 +69,7 @@ describe('StaffSessionService', () => {
     await repository.createStaffSession({
       id: '00000000-0000-4000-8000-000000000002',
       userId: target.id,
+      sessionVersion: 1,
       webAuthnCredentialId: 'target-secret-credential-id',
       mfaVerifiedAt: new Date('2026-07-16T11:00:00.000Z'),
       ipAddress: '2001:db8::2',
@@ -77,6 +79,7 @@ describe('StaffSessionService', () => {
     await repository.createStaffSession({
       id: '00000000-0000-4000-8000-000000000003',
       userId: actor.id,
+      sessionVersion: 1,
       webAuthnCredentialId: 'expired-secret-credential-id',
       mfaVerifiedAt: new Date('2025-07-16T10:00:00.000Z'),
       ipAddress: null,
@@ -147,7 +150,7 @@ describe('StaffSessionService', () => {
         id: '00000000-0000-4000-8000-000000000002',
         staffUserId: target.id,
         revokedByStaffUserId: actor.id,
-        revocationType: 'admin'
+        revocationType: 'suspected_compromise'
       }
     ]);
     assert.equal(audit.inputs.length, 2);
@@ -182,7 +185,7 @@ describe('StaffSessionService', () => {
           staffUserId: target.id,
           isRevoked: true,
           revokedByStaffUserId: actor.id,
-          revocationType: 'admin'
+          revocationType: 'suspected_compromise'
         }
       }
     ]);

@@ -22,12 +22,14 @@ export type StaffWebAuthnChallenge = {
   id: string;
   staffUserId: number;
   invitationId: number | null;
+  sessionVersion: number;
   challenge: string;
   expiresAt: Date;
 };
 
-export type CreateStaffWebAuthnChallengeInput = Omit<StaffWebAuthnChallenge, 'expiresAt'> & {
+export type CreateStaffWebAuthnChallengeInput = Omit<StaffWebAuthnChallenge, 'expiresAt' | 'sessionVersion'> & {
   purpose: 'registration' | 'authentication';
+  expectedSessionVersion: number | null;
   ttlMs: number;
 };
 
@@ -50,7 +52,7 @@ export interface StaffMfaRepository {
   findEnrollmentContext(invitationTokenHash: string): Promise<StaffMfaEnrollmentContext | null>;
   findCredentialsByStaffUserId(staffUserId: number): Promise<StaffWebAuthnCredential[]>;
   findCredential(staffUserId: number, credentialId: string): Promise<StaffWebAuthnCredential | null>;
-  saveChallenge(input: CreateStaffWebAuthnChallengeInput): Promise<void>;
+  saveChallenge(input: CreateStaffWebAuthnChallengeInput): Promise<boolean>;
   findRegistrationChallenge(id: string, invitationTokenHash: string): Promise<StaffWebAuthnChallenge | null>;
   findAuthenticationChallenge(id: string): Promise<StaffWebAuthnChallenge | null>;
   completeEnrollment(input: CompleteStaffMfaEnrollmentInput): Promise<boolean>;

@@ -72,6 +72,7 @@ CREATE TABLE StaffProfiles (
   AccountType ENUM('community', 'staff') NOT NULL DEFAULT 'staff',
   Status ENUM('invited', 'active', 'locked', 'disabled') NOT NULL DEFAULT 'invited',
   MfaEnrolledAt DATETIME NULL,
+  SessionVersion BIGINT UNSIGNED NOT NULL DEFAULT 1,
   DisabledByStaffUserId BIGINT UNSIGNED NULL,
   DisabledReason TEXT NULL,
   DisabledAt DATETIME NULL,
@@ -83,6 +84,7 @@ CREATE TABLE StaffProfiles (
   CONSTRAINT staff_profiles_account_type_CK CHECK (AccountType = 'staff'),
   CONSTRAINT staff_profiles_active_mfa_CK
     CHECK (Status <> 'active' OR MfaEnrolledAt IS NOT NULL),
+  CONSTRAINT staff_profiles_session_version_CK CHECK (SessionVersion > 0),
   CONSTRAINT staff_profiles_disablement_CK
     CHECK (
       (Status = 'disabled'
@@ -257,6 +259,12 @@ SET NEW.MfaEnrolledAt = CASE
     )
   THEN NULL
   ELSE NEW.MfaEnrolledAt
+END,
+NEW.SessionVersion = CASE
+  WHEN (OLD.Status <> NEW.Status AND NEW.Status IN ('locked', 'disabled'))
+    OR (OLD.MfaEnrolledAt IS NOT NULL AND NEW.MfaEnrolledAt IS NULL)
+  THEN OLD.SessionVersion + 1
+  ELSE GREATEST(OLD.SessionVersion, NEW.SessionVersion)
 END;
 
 CREATE TABLE StaffWebAuthnChallenges (
@@ -264,6 +272,7 @@ CREATE TABLE StaffWebAuthnChallenges (
   StaffUserId BIGINT UNSIGNED NOT NULL,
   InvitationId BIGINT UNSIGNED NULL,
   Purpose ENUM('registration', 'authentication') NOT NULL,
+  SessionVersion BIGINT UNSIGNED NOT NULL DEFAULT 1,
   Challenge VARCHAR(255) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   ExpiresAt DATETIME NOT NULL,
   ConsumedAt DATETIME NULL,
@@ -279,6 +288,7 @@ CREATE TABLE StaffWebAuthnChallenges (
       OR (Purpose = 'authentication' AND InvitationId IS NULL)
     ),
   CONSTRAINT staff_webauthn_challenges_expiry_CK CHECK (ExpiresAt > CreatedAt),
+  CONSTRAINT staff_webauthn_challenges_session_version_CK CHECK (SessionVersion > 0),
   CONSTRAINT staff_webauthn_challenges_staff_profile_FK
     FOREIGN KEY (StaffUserId) REFERENCES StaffProfiles(UserId)
     ON UPDATE CASCADE
@@ -315,20 +325,27 @@ CREATE TABLE CommunitySessions (
   CommunityUserId BIGINT UNSIGNED NOT NULL,
   ExpiresAt DATETIME NOT NULL,
   RevokedAt DATETIME NULL,
+  RevocationType ENUM('logout', 'password_changed') NULL,
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (Id),
-  KEY idx_community_sessions_user_id (CommunityUserId),
+  KEY idx_community_sessions_user_active (CommunityUserId, RevokedAt, ExpiresAt),
   KEY idx_community_sessions_expires_at (ExpiresAt),
   CONSTRAINT community_sessions_user_FK
     FOREIGN KEY (CommunityUserId) REFERENCES CommunityProfiles(UserId)
     ON UPDATE CASCADE
     ON DELETE CASCADE,
-  CONSTRAINT community_sessions_expiry_CK CHECK (ExpiresAt > CreatedAt)
+  CONSTRAINT community_sessions_expiry_CK CHECK (ExpiresAt > CreatedAt),
+  CONSTRAINT community_sessions_revocation_CK
+    CHECK (
+      (RevokedAt IS NULL AND RevocationType IS NULL)
+      OR (RevokedAt IS NOT NULL AND RevocationType IS NOT NULL)
+    )
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE StaffSessions (
   Id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   StaffUserId BIGINT UNSIGNED NOT NULL,
+  SessionVersion BIGINT UNSIGNED NOT NULL DEFAULT 1,
   WebAuthnCredentialId VARCHAR(2048) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   MfaMethod ENUM('webauthn') NOT NULL DEFAULT 'webauthn',
   MfaVerifiedAt DATETIME NOT NULL,
@@ -337,10 +354,19 @@ CREATE TABLE StaffSessions (
   ExpiresAt DATETIME NOT NULL,
   RevokedAt DATETIME NULL,
   RevokedByStaffUserId BIGINT UNSIGNED NULL,
-  RevocationType ENUM('logout', 'self', 'admin') NULL,
+  RevocationType ENUM(
+    'logout',
+    'self',
+    'account_disabled',
+    'account_locked',
+    'password_changed',
+    'mfa_reset',
+    'suspected_compromise',
+    'roles_removed'
+  ) NULL,
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (Id),
-  KEY idx_staff_sessions_user_id (StaffUserId),
+  KEY idx_staff_sessions_user_active (StaffUserId, RevokedAt, ExpiresAt),
   KEY idx_staff_sessions_user_credential (StaffUserId, WebAuthnCredentialId),
   KEY idx_staff_sessions_expires_at (ExpiresAt),
   KEY idx_staff_sessions_revoked_by_user_id (RevokedByStaffUserId),
@@ -358,12 +384,122 @@ CREATE TABLE StaffSessions (
     ON UPDATE RESTRICT
     ON DELETE RESTRICT,
   CONSTRAINT staff_sessions_expiry_CK CHECK (ExpiresAt > CreatedAt),
+  CONSTRAINT staff_sessions_session_version_CK CHECK (SessionVersion > 0),
   CONSTRAINT staff_sessions_revocation_CK
     CHECK (
       (RevokedAt IS NULL AND RevokedByStaffUserId IS NULL AND RevocationType IS NULL)
-      OR (RevokedAt IS NOT NULL AND RevocationType IS NOT NULL)
+      OR (RevokedAt IS NOT NULL
+        AND RevocationType IN ('password_changed', 'mfa_reset', 'account_locked', 'roles_removed')
+        AND RevokedByStaffUserId IS NULL)
+      OR (RevokedAt IS NOT NULL
+        AND RevocationType IN ('logout', 'self', 'account_disabled', 'suspected_compromise')
+        AND RevokedByStaffUserId IS NOT NULL)
     )
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Authentication changes revoke only the matching session realm. The triggers
+-- also cover password resets because they persist a new password hash.
+CREATE TRIGGER users_community_password_sessions_AU
+AFTER UPDATE ON Users
+FOR EACH ROW
+UPDATE CommunitySessions
+SET RevokedAt = CURRENT_TIMESTAMP,
+    RevocationType = 'password_changed'
+WHERE CommunityUserId = NEW.Id
+  AND NEW.AccountType = 'community'
+  AND NOT (OLD.Password <=> NEW.Password)
+  AND RevokedAt IS NULL
+  AND ExpiresAt > CURRENT_TIMESTAMP;
+
+CREATE TRIGGER users_staff_password_sessions_AU
+AFTER UPDATE ON Users
+FOR EACH ROW
+UPDATE StaffSessions
+SET RevokedAt = CURRENT_TIMESTAMP,
+    RevokedByStaffUserId = NULL,
+    RevocationType = 'password_changed'
+WHERE StaffUserId = NEW.Id
+  AND NEW.AccountType = 'staff'
+  AND NOT (OLD.Password <=> NEW.Password)
+  AND RevokedAt IS NULL
+  AND ExpiresAt > CURRENT_TIMESTAMP;
+
+CREATE TRIGGER users_staff_password_session_version_AU
+AFTER UPDATE ON Users
+FOR EACH ROW
+UPDATE StaffProfiles
+SET SessionVersion = SessionVersion + 1
+WHERE UserId = NEW.Id
+  AND NEW.AccountType = 'staff'
+  AND NOT (OLD.Password <=> NEW.Password);
+
+CREATE TRIGGER staff_profiles_disabled_sessions_AU
+AFTER UPDATE ON StaffProfiles
+FOR EACH ROW
+UPDATE StaffSessions
+SET RevokedAt = CURRENT_TIMESTAMP,
+    RevokedByStaffUserId = NEW.DisabledByStaffUserId,
+    RevocationType = 'account_disabled'
+WHERE StaffUserId = NEW.UserId
+  AND OLD.Status <> 'disabled'
+  AND NEW.Status = 'disabled'
+  AND RevokedAt IS NULL
+  AND ExpiresAt > CURRENT_TIMESTAMP;
+
+CREATE TRIGGER staff_profiles_locked_sessions_AU
+AFTER UPDATE ON StaffProfiles
+FOR EACH ROW
+UPDATE StaffSessions
+SET RevokedAt = CURRENT_TIMESTAMP,
+    RevokedByStaffUserId = NULL,
+    RevocationType = 'account_locked'
+WHERE StaffUserId = NEW.UserId
+  AND OLD.Status <> 'locked'
+  AND NEW.Status = 'locked'
+  AND NEW.MfaEnrolledAt IS NOT NULL
+  AND RevokedAt IS NULL
+  AND ExpiresAt > CURRENT_TIMESTAMP;
+
+CREATE TRIGGER staff_profiles_mfa_reset_sessions_AU
+AFTER UPDATE ON StaffProfiles
+FOR EACH ROW
+UPDATE StaffSessions
+SET RevokedAt = CURRENT_TIMESTAMP,
+    RevokedByStaffUserId = NULL,
+    RevocationType = 'mfa_reset'
+WHERE StaffUserId = NEW.UserId
+  AND OLD.MfaEnrolledAt IS NOT NULL
+  AND NEW.MfaEnrolledAt IS NULL
+  AND RevokedAt IS NULL
+  AND ExpiresAt > CURRENT_TIMESTAMP;
+
+CREATE TRIGGER staff_roles_removed_session_version_AD
+AFTER DELETE ON StaffRoles
+FOR EACH ROW
+UPDATE StaffProfiles
+SET SessionVersion = SessionVersion + 1
+WHERE UserId = OLD.StaffUserId
+  AND NOT EXISTS (
+    SELECT 1
+    FROM StaffRoles
+    WHERE StaffUserId = OLD.StaffUserId
+  );
+
+CREATE TRIGGER staff_roles_removed_sessions_AD
+AFTER DELETE ON StaffRoles
+FOR EACH ROW
+UPDATE StaffSessions
+SET RevokedAt = CURRENT_TIMESTAMP,
+    RevokedByStaffUserId = NULL,
+    RevocationType = 'roles_removed'
+WHERE StaffUserId = OLD.StaffUserId
+  AND NOT EXISTS (
+    SELECT 1
+    FROM StaffRoles
+    WHERE StaffUserId = OLD.StaffUserId
+  )
+  AND RevokedAt IS NULL
+  AND ExpiresAt > CURRENT_TIMESTAMP;
 
 CREATE TRIGGER users_community_profile_AI
 AFTER INSERT ON Users
