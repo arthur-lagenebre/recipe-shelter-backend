@@ -162,6 +162,15 @@ ainsi que toute permission absente du catalogue applicatif avec
 `AUTH_PERMISSION_UNKNOWN`. Ces refus produisent une trace structurée contenant
 le code, la méthode, le chemin, la raison et l'identifiant du compte authentifié.
 
+Les écritures du journal d'audit administratif passent exclusivement par
+`AdminAuditService.record`. Les types d'événements et de cibles autorisés sont
+centralisés dans `src/services/admin/admin-audit.events.ts` avec des codes
+stables en minuscules. Le service normalise les champs d'investigation, masque
+récursivement les secrets connus et génère un identifiant de corrélation absent.
+La politique d'échec est `fail-closed` : l'écriture est synchrone et obligatoire,
+une panne est journalisée sans les snapshots ni le détail de base, puis remontée
+sous le code générique `ADMIN_AUDIT_RECORD_FAILED`.
+
 Le schéma d'installation est consolidé dans l'unique fichier
 `database/migrations/1_create_schema.sql`. Les auteurs de recettes et de
 commentaires ainsi que les propriétaires de favoris référencent exclusivement

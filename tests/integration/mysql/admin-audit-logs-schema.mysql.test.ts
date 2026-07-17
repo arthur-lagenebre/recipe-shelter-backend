@@ -4,7 +4,12 @@ import { after, before, describe, it } from 'node:test';
 
 import mysql from 'mysql2/promise';
 
+import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin-audit.repository.mysql.js';
+import { ADMIN_AUDIT_EVENT_TYPES, ADMIN_AUDIT_TARGET_TYPES } from '../../../src/services/admin/admin-audit.events.js';
+import { AdminAuditService } from '../../../src/services/admin/admin-audit.service.js';
 import { env } from '../../../src/utils/env.js';
+
+import type { Queryable } from '../../../src/db/query.js';
 
 const baseTestDatabaseName = process.env.TEST_DB_NAME?.trim() ?? '';
 const mysqlEnabled = Boolean(baseTestDatabaseName);
@@ -116,28 +121,26 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
     });
 
     it('stores a redacted audit event with all investigation fields', async () => {
-        await connection.execute(
-            `INSERT INTO AdminAuditLogs
-               (ActorUserId, Action, TargetType, TargetId, Reason, BeforeValues, AfterValues,
-                IpAddress, UserAgent, CorrelationId)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
-                900,
-                'users.ban',
-                'community_user',
-                '901',
-                'Repeated violation of the test policy.',
-                JSON.stringify({ status: 'active' }),
-                JSON.stringify({ status: 'banned' }),
-                '2001:db8::900',
-                'Recipe Shelter audit integration test',
-                '00000000-0000-4000-8000-000000000900'
-            ]
+        const audit = new AdminAuditService(
+            new AdminAuditRepositoryMysql(connection as unknown as Queryable)
         );
+        const receipt = await audit.record({
+            actorUserId: 900,
+            eventType: ADMIN_AUDIT_EVENT_TYPES.usersBan,
+            targetType: ADMIN_AUDIT_TARGET_TYPES.communityUser,
+            targetId: 901,
+            reason: 'Repeated violation of the test policy.',
+            beforeValues: { status: 'active', passwordHash: 'must-not-be-persisted' },
+            afterValues: { status: 'banned' },
+            ipAddress: '2001:db8::900',
+            userAgent: 'Recipe Shelter audit integration test',
+            correlationId: '00000000-0000-4000-8000-000000000900'
+        });
 
         const [logs] = await connection.query(
-            `SELECT ActorUserId, Action, TargetType, TargetId, Reason,
+            `SELECT Id, ActorUserId, Action, TargetType, TargetId, Reason,
                     JSON_UNQUOTE(JSON_EXTRACT(BeforeValues, '$.status')) AS BeforeStatus,
+                    JSON_UNQUOTE(JSON_EXTRACT(BeforeValues, '$.passwordHash')) AS BeforePasswordHash,
                     JSON_UNQUOTE(JSON_EXTRACT(AfterValues, '$.status')) AS AfterStatus,
                     IpAddress, UserAgent, CorrelationId, CreatedAt
              FROM AdminAuditLogs
@@ -152,6 +155,7 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
             targetId: log.TargetId,
             reason: log.Reason,
             beforeStatus: log.BeforeStatus,
+            beforePasswordHash: log.BeforePasswordHash,
             afterStatus: log.AfterStatus,
             ipAddress: log.IpAddress,
             userAgent: log.UserAgent,
@@ -163,11 +167,14 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
             targetId: '901',
             reason: 'Repeated violation of the test policy.',
             beforeStatus: 'active',
+            beforePasswordHash: '[REDACTED]',
             afterStatus: 'banned',
             ipAddress: '2001:db8::900',
             userAgent: 'Recipe Shelter audit integration test',
             correlationId: '00000000-0000-4000-8000-000000000900'
         });
+        assert.equal(receipt.id, log?.Id);
+        assert.equal(receipt.correlationId, '00000000-0000-4000-8000-000000000900');
         assert.ok(log?.CreatedAt instanceof Date);
     });
 
