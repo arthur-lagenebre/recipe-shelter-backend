@@ -406,7 +406,14 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
     });
 
     it('keeps linked community content after specialized profile state changes', async () => {
-        await pool.query(`UPDATE StaffProfiles SET Status = 'disabled' WHERE UserId = 3`);
+        await pool.query(
+            `UPDATE StaffProfiles
+             SET Status = 'disabled',
+                 DisabledByStaffUserId = 3,
+                 DisabledReason = 'MySQL specialized profile lifecycle test',
+                 DisabledAt = CURRENT_TIMESTAMP
+             WHERE UserId = 3`
+        );
 
         const [profileTables] = await pool.query(
             `SELECT TABLE_NAME AS TableName

@@ -268,6 +268,22 @@ describe('AuthService', () => {
     assert.throws(() => jwt.verify(result.token, env.auth.jwtSecret, { audience: env.auth.app.jwtAudience }));
   });
 
+  it('refuses session creation when the staff account is disabled during the MFA flow', async () => {
+    users.userById = { ...baseUser, accountType: 'staff', status: 'active' };
+    sessions.createStaffSession = async () => false;
+
+    await assert.rejects(
+      () => service.completeStaffLogin({
+        flowId: 'authentication-flow',
+        credential: authenticationCredential,
+        ipAddress: '192.0.2.10',
+        userAgent: 'Recipe Shelter test client'
+      }),
+      (error) => assertHttpError(error, 'STAFF_SESSION_CREATION_FORBIDDEN', 401)
+    );
+    assert.equal(sessions.staffSessions.size, 0);
+  });
+
   it('refuses community identities and invalid WebAuthn assertions on the staff boundary', async () => {
     const passwordHash = await bcrypt.hash('Recipe42?', 4);
     users.authUser = { ...baseUser, passwordHash };

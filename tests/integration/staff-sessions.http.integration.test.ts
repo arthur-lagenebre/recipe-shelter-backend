@@ -112,6 +112,7 @@ describe('staff session management HTTP boundaries', () => {
 
     const app = express();
     app.use(cookieParser());
+    app.use(express.json());
     const adminRouter = express.Router();
     adminRouter.use('/auth', createStaffAuthRouter(authController, controller));
     adminRouter.use(requireStaffAuth, EnforceAuthorizationPolicies(adminAuthorizationPolicies));
@@ -191,7 +192,8 @@ describe('staff session management HTTP boundaries', () => {
     grantedPermissions = [PERMISSIONS.staffSessionRevoke];
     response = await fetch(`${server.baseUrl}/api/v1/admin/staff/${target.id}/sessions/${targetSessionId}`, {
       method: 'DELETE',
-      headers: { cookie: actorCookie }
+      headers: { cookie: actorCookie, 'content-type': 'application/json' },
+      body: JSON.stringify({ reason: 'Compromised browser session.' })
     });
     assert.equal(response.status, 204);
     assert.equal(sessions.staffSessions.has(targetSessionId), false);

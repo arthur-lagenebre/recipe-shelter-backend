@@ -72,17 +72,39 @@ CREATE TABLE StaffProfiles (
   AccountType ENUM('community', 'staff') NOT NULL DEFAULT 'staff',
   Status ENUM('invited', 'active', 'locked', 'disabled') NOT NULL DEFAULT 'invited',
   MfaEnrolledAt DATETIME NULL,
+  DisabledByStaffUserId BIGINT UNSIGNED NULL,
+  DisabledReason TEXT NULL,
+  DisabledAt DATETIME NULL,
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (UserId),
   KEY idx_staff_profiles_status (Status),
+  KEY idx_staff_profiles_disabled_by_staff_user_id (DisabledByStaffUserId),
   CONSTRAINT staff_profiles_account_type_CK CHECK (AccountType = 'staff'),
   CONSTRAINT staff_profiles_active_mfa_CK
     CHECK (Status <> 'active' OR MfaEnrolledAt IS NOT NULL),
+  CONSTRAINT staff_profiles_disablement_CK
+    CHECK (
+      (Status = 'disabled'
+        AND DisabledByStaffUserId IS NOT NULL
+        AND DisabledReason IS NOT NULL
+        AND CHAR_LENGTH(TRIM(DisabledReason)) > 0
+        AND CHAR_LENGTH(DisabledReason) <= 1000
+        AND DisabledAt IS NOT NULL
+        AND DisabledAt >= CreatedAt)
+      OR (Status <> 'disabled'
+        AND DisabledByStaffUserId IS NULL
+        AND DisabledReason IS NULL
+        AND DisabledAt IS NULL)
+    ),
   CONSTRAINT staff_profiles_user_account_type_FK
     FOREIGN KEY (UserId, AccountType) REFERENCES Users(Id, AccountType)
     ON UPDATE RESTRICT
-    ON DELETE CASCADE
+    ON DELETE CASCADE,
+  CONSTRAINT staff_profiles_disabled_by_staff_profile_FK
+    FOREIGN KEY (DisabledByStaffUserId) REFERENCES StaffProfiles(UserId)
+    ON UPDATE RESTRICT
+    ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE StaffRoles (
@@ -325,10 +347,13 @@ CREATE TRIGGER users_staff_profile_AU
 AFTER UPDATE ON Users
 FOR EACH ROW
 UPDATE StaffProfiles
-SET Status = CASE NEW.Status
-               WHEN 'active' THEN 'active'
-               WHEN 'banned' THEN 'locked'
-               ELSE 'invited'
+SET Status = CASE
+               WHEN Status = 'disabled' THEN 'disabled'
+               ELSE CASE NEW.Status
+                 WHEN 'active' THEN 'active'
+                 WHEN 'banned' THEN 'locked'
+                 ELSE 'invited'
+               END
              END
 WHERE UserId = NEW.Id AND NEW.AccountType = 'staff';
 

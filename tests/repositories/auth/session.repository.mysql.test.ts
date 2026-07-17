@@ -41,7 +41,7 @@ describe('SessionRepositoryMysql', () => {
     const mfaVerifiedAt = new Date('2026-07-16T10:00:00.000Z');
 
     await repository.createCommunitySession({ id: 'community-id', userId: 2, expiresAt });
-    await repository.createStaffSession({
+    assert.equal(await repository.createStaffSession({
       id: 'staff-id',
       userId: 1,
       expiresAt,
@@ -49,7 +49,7 @@ describe('SessionRepositoryMysql', () => {
       mfaVerifiedAt,
       ipAddress: '192.0.2.10',
       userAgent: 'Recipe Shelter test client'
-    });
+    }), true);
 
     assert.match(fake.statements[0]?.sql ?? '', /INSERT INTO CommunitySessions/);
     assert.deepEqual(fake.statements[0]?.params, ['community-id', 2, expiresAt]);
@@ -61,8 +61,10 @@ describe('SessionRepositoryMysql', () => {
       mfaVerifiedAt,
       '192.0.2.10',
       'Recipe Shelter test client',
-      expiresAt
+      expiresAt,
+      1
     ]);
+    assert.match(fake.statements[1]?.sql ?? '', /FROM StaffProfiles[\s\S]+Status = 'active'/);
   });
 
   it('lists only active MFA-backed staff sessions without selecting credential secrets', async () => {

@@ -8,6 +8,7 @@ import { createAdminAuditLogsRouter } from '../../src/api/admin/admin-audit-logs
 import { createAdminCommentsRouter } from '../../src/api/admin/admin.comments.routes.js';
 import { adminAuthorizationPolicies } from '../../src/api/admin/admin.authorization.js';
 import { createAdminRecipesRouter } from '../../src/api/admin/admin.recipes.routes.js';
+import { createAdminStaffRouter } from '../../src/api/admin/admin.staff.routes.js';
 import { createAdminUsersRouter } from '../../src/api/admin/admin.users.routes.js';
 import { createStaffInvitationsRouter } from '../../src/api/admin/staff-invitations.routes.js';
 import { createAdminStaffSessionsRouter } from '../../src/api/admin/staff-sessions.routes.js';
@@ -55,6 +56,12 @@ const ADMIN_POLICIES: AdminPolicy[] = [
     { method: 'POST', path: '/api/v1/admin/users/2/ban', permission: PERMISSIONS.usersModerate },
     { method: 'POST', path: '/api/v1/admin/users/2/unban', permission: PERMISSIONS.usersModerate },
     { method: 'POST', path: '/api/v1/admin/staff/invitations', permission: PERMISSIONS.staffCreate },
+    { method: 'GET', path: '/api/v1/admin/staff', permission: PERMISSIONS.staffRead },
+    { method: 'GET', path: '/api/v1/admin/staff/2', permission: PERMISSIONS.staffRead },
+    { method: 'POST', path: '/api/v1/admin/staff/2/disable', permission: PERMISSIONS.staffDisable },
+    { method: 'POST', path: '/api/v1/admin/staff/2/enable', permission: PERMISSIONS.staffEnable },
+    { method: 'POST', path: '/api/v1/admin/staff/2/roles/UserAdmin', permission: PERMISSIONS.staffRoleGrant },
+    { method: 'DELETE', path: '/api/v1/admin/staff/2/roles/UserAdmin', permission: PERMISSIONS.staffRoleRevoke },
     { method: 'GET', path: '/api/v1/admin/staff/2/sessions', permission: PERMISSIONS.staffRead },
     { method: 'DELETE', path: '/api/v1/admin/staff/2/sessions/00000000-0000-4000-8000-000000000002', permission: PERMISSIONS.staffSessionRevoke },
     { method: 'GET', path: '/api/v1/health/live', permission: PERMISSIONS.systemHealthRead },
@@ -145,6 +152,14 @@ describe('administrative endpoint authorization policies', () => {
         }));
         adminRouter.use('/staff/invitations', createStaffInvitationsRouter({
             create: endpointHandler
+        }));
+        adminRouter.use('/staff', createAdminStaffRouter({
+            list: endpointHandler,
+            get: endpointHandler,
+            disable: endpointHandler,
+            enable: endpointHandler,
+            grantRole: endpointHandler,
+            revokeRole: endpointHandler
         }));
         adminRouter.use('/staff', createAdminStaffSessionsRouter({
             listOwn: endpointHandler,

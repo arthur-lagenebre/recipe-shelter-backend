@@ -16,8 +16,9 @@ export class TestSessionRepository implements SessionRepository {
     this.communitySessions.set(input.id, input);
   }
 
-  async createStaffSession(input: CreateStaffSessionInput): Promise<void> {
+  async createStaffSession(input: CreateStaffSessionInput): Promise<boolean> {
     this.staffSessions.set(input.id, { ...input, createdAt: new Date() });
+    return true;
   }
 
   async isCommunitySessionActive(id: string, userId: number): Promise<boolean> {

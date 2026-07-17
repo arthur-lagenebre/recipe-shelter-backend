@@ -427,6 +427,7 @@
         <a href="#admin-comments">Admin comments</a>
         <a href="#admin-users">Admin users</a>
         <a href="#admin-staff-invitations">Admin staff invitations</a>
+        <a href="#admin-staff-management">Admin staff management</a>
         <a href="#admin-staff-sessions">Admin staff sessions</a>
         <a href="#admin-audit-logs">Admin audit logs</a>
       </nav>
@@ -2032,6 +2033,89 @@ type UnbanUserResponse = OkResponse;</code></pre>
       </div>
     </section>
 
+    <section aria-labelledby="admin-staff-management">
+      <h2 id="admin-staff-management">Admin staff management</h2>
+      <p class="section-intro">Cycle de vie logique et rôles des comptes staff. Chaque route exige sa permission explicite et produit un audit. Les mutations exigent un motif de 10 à 1000 caractères.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Méthode</th>
+              <th>Route</th>
+              <th>Auth</th>
+              <th>Body / Query</th>
+              <th>Réponse</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/admin/staff</code></td>
+              <td><span class="auth admin">Admin + <code>staff.read</code></span></td>
+              <td>Aucun.</td>
+              <td><code>200</code> <code>{ "staff": AdminStaffAccount[] }</code>.</td>
+            </tr>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/admin/staff/:staffUserId</code></td>
+              <td><span class="auth admin">Admin + <code>staff.read</code></span></td>
+              <td><code>staffUserId</code> entier positif.</td>
+              <td><code>200</code> <code>AdminStaffAccount</code> ou <code>404 STAFF_USER_NOT_FOUND</code>.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/admin/staff/:staffUserId/disable</code></td>
+              <td><span class="auth admin">Admin + <code>staff.disable</code></span></td>
+              <td><code>{ "reason": string }</code>. Cible obligatoirement <code>active</code>.</td>
+              <td><code>200</code> compte désactivé ; toutes ses sessions actives sont révoquées atomiquement.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/admin/staff/:staffUserId/enable</code></td>
+              <td><span class="auth admin">Admin + <code>staff.enable</code></span></td>
+              <td><code>{ "reason": string }</code>. Cible obligatoirement <code>disabled</code> avec MFA enrôlé.</td>
+              <td><code>200</code> compte réactivé.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/admin/staff/:staffUserId/roles/:roleCode</code></td>
+              <td><span class="auth admin">Admin + <code>staff.role.grant</code></span></td>
+              <td>Code de rôle stable et <code>{ "reason": string }</code>.</td>
+              <td><code>200</code> compte avec ses rôles mis à jour.</td>
+            </tr>
+            <tr>
+              <td><span class="method delete">DELETE</span></td>
+              <td><code>/api/v1/admin/staff/:staffUserId/roles/:roleCode</code></td>
+              <td><span class="auth admin">Admin + <code>staff.role.revoke</code></span></td>
+              <td>Code de rôle stable et <code>{ "reason": string }</code>.</td>
+              <td><code>200</code> compte avec ses rôles mis à jour. Le retrait de ses propres rôles est interdit.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="schema-grid">
+        <article class="schema">
+          <h3>AdminStaffAccount</h3>
+          <pre><code>type AdminStaffAccount = {
+  id: number;
+  email: string;
+  displayName: string;
+  status: "invited" | "active" | "locked" | "disabled";
+  mfaEnrolledAt: ISODateString | null;
+  disabledByStaffUserId: number | null;
+  disabledByDisplayName: string | null;
+  disabledReason: string | null;
+  disabledAt: ISODateString | null;
+  activeSessionCount: number;
+  roles: Array&lt;{ id: number; code: string; name: string }&gt;;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+};</code></pre>
+        </article>
+      </div>
+    </section>
+
     <section aria-labelledby="admin-staff-sessions">
       <h2 id="admin-staff-sessions">Admin staff sessions</h2>
       <p class="section-intro">Consultation des sessions actives d’un compte staff avec <code>staff.read</code> et révocation administrative avec <code>staff.session.revoke</code>. Le credential WebAuthn, les clés, challenges, cookies et JWT ne sont jamais exposés.</p>
@@ -2058,7 +2142,7 @@ type UnbanUserResponse = OkResponse;</code></pre>
               <td><span class="method delete">DELETE</span></td>
               <td><code>/api/v1/admin/staff/:staffUserId/sessions/:sessionId</code></td>
               <td><span class="auth admin">Admin + <code>staff.session.revoke</code></span></td>
-              <td><code>staffUserId</code> entier positif et <code>sessionId</code> UUID.</td>
+              <td><code>staffUserId</code> entier positif, <code>sessionId</code> UUID et body <code>{ "reason": string }</code> de 10 à 1000 caractères.</td>
               <td><code>204</code>, ou <code>404 STAFF_SESSION_NOT_FOUND</code> si cette session active n’appartient pas au compte ciblé.</td>
             </tr>
           </tbody>

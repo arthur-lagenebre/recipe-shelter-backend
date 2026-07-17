@@ -172,7 +172,7 @@ export class AuthService {
     } else {
       if (!mfa)
         throw new TypeError('MFA verification is required for a staff session');
-      await this.sessions.createStaffSession({
+      const created = await this.sessions.createStaffSession({
         id: sessionId,
         userId: user.id,
         expiresAt,
@@ -181,6 +181,8 @@ export class AuthService {
         ipAddress: mfa.ipAddress,
         userAgent: mfa.userAgent
       });
+      if (!created)
+        throw unauthorized('Staff account is no longer active', 'STAFF_SESSION_CREATION_FORBIDDEN');
     }
 
     return signSessionToken(user, realm, sessionId);

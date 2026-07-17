@@ -40,6 +40,9 @@ export type StaffProfile = {
   userId: number;
   status: StaffStatus;
   mfaEnrolledAt: Date | null;
+  disabledByStaffUserId: number | null;
+  disabledReason: string | null;
+  disabledAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -108,6 +111,9 @@ export type StaffProfileRow = RowDataPacket & {
   UserId: number;
   Status: unknown;
   MfaEnrolledAt: Date | null;
+  DisabledByStaffUserId: number | null;
+  DisabledReason: string | null;
+  DisabledAt: Date | null;
   CreatedAt: Date;
   UpdatedAt: Date;
 };

@@ -14,6 +14,10 @@ export const PERMISSIONS = {
   catalogManage: 'catalog.manage',
   staffRead: 'staff.read',
   staffCreate: 'staff.create',
+  staffDisable: 'staff.disable',
+  staffEnable: 'staff.enable',
+  staffRoleGrant: 'staff.role.grant',
+  staffRoleRevoke: 'staff.role.revoke',
   staffSessionRevoke: 'staff.session.revoke',
   auditRead: 'audit.read'
 } as const;

@@ -32,6 +32,9 @@ export function mapStaffProfile(row: StaffProfileRow): StaffProfile {
     userId: row.UserId,
     status: row.Status,
     mfaEnrolledAt: row.MfaEnrolledAt,
+    disabledByStaffUserId: row.DisabledByStaffUserId,
+    disabledReason: row.DisabledReason,
+    disabledAt: row.DisabledAt,
     createdAt: row.CreatedAt,
     updatedAt: row.UpdatedAt
   };

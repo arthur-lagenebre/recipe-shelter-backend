@@ -29,11 +29,13 @@ export class SessionRepositoryMysql implements SessionRepository {
     );
   }
 
-  async createStaffSession(input: CreateStaffSessionInput): Promise<void> {
-    await this.db.execute(
+  async createStaffSession(input: CreateStaffSessionInput): Promise<boolean> {
+    const [result] = await this.db.execute<ResultSetHeader>(
       `INSERT INTO StaffSessions
          (Id, StaffUserId, WebAuthnCredentialId, MfaVerifiedAt, IpAddress, UserAgent, ExpiresAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+       SELECT ?, ?, ?, ?, ?, ?, ?
+       FROM StaffProfiles
+       WHERE UserId = ? AND Status = 'active'`,
       [
         input.id,
         input.userId,
@@ -41,9 +43,12 @@ export class SessionRepositoryMysql implements SessionRepository {
         input.mfaVerifiedAt,
         input.ipAddress,
         input.userAgent,
-        input.expiresAt
+        input.expiresAt,
+        input.userId
       ]
     );
+
+    return result.affectedRows > 0;
   }
 
   async isCommunitySessionActive(id: string, userId: number): Promise<boolean> {
@@ -54,8 +59,8 @@ export class SessionRepositoryMysql implements SessionRepository {
     return this.isSessionActive('StaffSessions', 'StaffUserId', id, userId, true);
   }
 
-  async findActiveStaffSessionsByUserId(userId: number): Promise<StaffSession[]> {
-    const [rows] = await this.db.execute(
+  async findActiveStaffSessionsByUserId(userId: number, db?: PoolConnection): Promise<StaffSession[]> {
+    const [rows] = await (db ?? this.db).execute(
       `SELECT Id, MfaMethod, MfaVerifiedAt, IpAddress, UserAgent, ExpiresAt, CreatedAt
        FROM StaffSessions
        WHERE StaffUserId = ?

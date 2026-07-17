@@ -72,6 +72,10 @@ describe('user mapper', () => {
         const staff = mapStaffProfile({
             UserId: 1,
             Status: 'locked',
+            MfaEnrolledAt: now,
+            DisabledByStaffUserId: null,
+            DisabledReason: null,
+            DisabledAt: null,
             CreatedAt: now,
             UpdatedAt: now
         } as StaffProfileRow);

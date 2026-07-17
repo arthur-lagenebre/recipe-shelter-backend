@@ -131,7 +131,7 @@ le backend. Le catalogue initial est le suivant :
 | Commentaires | `comments.read`, `comments.moderate`, `comments.update`, `comments.delete` |
 | Utilisateurs community | `users.read`, `users.moderate` |
 | Catalogue | `catalog.read`, `catalog.manage` |
-| Staff | `staff.read`, `staff.create`, `staff.session.revoke` |
+| Staff | `staff.read`, `staff.create`, `staff.disable`, `staff.enable`, `staff.role.grant`, `staff.role.revoke`, `staff.session.revoke` |
 | Audit | `audit.read` |
 
 La matrice initiale est explicite et insérée de manière idempotente par le seed :
@@ -177,6 +177,10 @@ la même transaction ; un échec d'audit annule donc aussi la mutation. Les APIs
 actuelles des tags, ingrédients et catégories restent en lecture seule et aucun
 modèle d'alias n'est encore présent : il n'existe pas d'action applicative de ces
 domaines à journaliser à ce stade.
+
+Les lectures de la liste, d'un profil staff et de ses sessions administrées
+sont également auditées. Elles n'enregistrent ni e-mail ni secret : seulement la
+cible, le statut ou le nombre de résultats utile à l'investigation.
 
 Le journal est append-only. Le repository applicatif n'expose que la création
 d'une entrée ; aucune route HTTP de modification ou de suppression n'est
@@ -243,6 +247,16 @@ un e-mail déjà attribué et un nom d'affichage déjà utilisé produisent des
 conflits distincts. En cas d'échec d'audit ou d'envoi SMTP, la transaction de
 création est annulée.
 
+La gestion du cycle de vie est exposée sous `/api/v1/admin/staff`. La liste et
+le détail exigent `staff.read`. Les actions `disable`, `enable`, attribution de
+rôle et retrait de rôle exigent respectivement `staff.disable`, `staff.enable`,
+`staff.role.grant` et `staff.role.revoke`, ainsi qu'un body `{ "reason": string }`
+de 10 à 1000 caractères. Seul un compte `active` peut être désactivé et seul un
+compte `disabled` avec MFA enrôlé peut être réactivé. La désactivation est
+logique, conserve son acteur, son motif et sa date dans `StaffProfiles`, et
+révoque toutes les sessions actives dans la transaction auditée. Un staff ne
+peut ni se désactiver ni retirer ses propres rôles.
+
 La commande nécessite donc une configuration SMTP applicative valide. Une fois
 le premier SuperAdmin créé, toute nouvelle exécution est refusée, y compris si
 ce premier compte est encore invité ou s'il a ensuite été désactivé.
@@ -307,6 +321,12 @@ Exemples :
 - `DELETE /api/v1/admin/auth/sessions/:sessionId`
 - `POST /api/v1/admin/auth/logout`
 - `POST /api/v1/admin/staff/invitations`
+- `GET /api/v1/admin/staff`
+- `GET /api/v1/admin/staff/:staffUserId`
+- `POST /api/v1/admin/staff/:staffUserId/disable`
+- `POST /api/v1/admin/staff/:staffUserId/enable`
+- `POST /api/v1/admin/staff/:staffUserId/roles/:roleCode`
+- `DELETE /api/v1/admin/staff/:staffUserId/roles/:roleCode`
 - `GET /api/v1/admin/staff/:staffUserId/sessions`
 - `DELETE /api/v1/admin/staff/:staffUserId/sessions/:sessionId`
 - `GET /api/v1/categories`
@@ -384,7 +404,8 @@ l’une de ses propres sessions et supprime le cookie admin lorsqu’il s’agit
 session courante. L’administration utilise
 `GET /api/v1/admin/staff/:staffUserId/sessions` avec `staff.read` et
 `DELETE /api/v1/admin/staff/:staffUserId/sessions/:sessionId` avec
-`staff.session.revoke`. Les réponses exposent uniquement l’identifiant de
+`staff.session.revoke`; cette dernière exige un body `{ "reason": string }` de
+10 à 1000 caractères. Les réponses exposent uniquement l’identifiant de
 gestion, l’IP, le user-agent, la méthode et la date MFA, les dates de création et
 d’expiration et l’indicateur de session courante ; elles ne contiennent jamais
 le JWT, le cookie, le credential WebAuthn, sa clé publique ou un challenge.

@@ -280,7 +280,15 @@ describe('SuperAdmin bootstrap MySQL integration', { skip: !mysqlEnabled && 'Set
         assert.deepEqual(accountsAfterActiveRetry, [{ UserCount: 1, SuperAdminCount: 1 }]);
         assert.equal(firstMailer.messages.length + secondMailer.messages.length, 1);
 
-        await pool.query(`UPDATE StaffProfiles SET Status = 'disabled' WHERE UserId = ?`, [createdAccount.Id]);
+        await pool.query(
+            `UPDATE StaffProfiles
+             SET Status = 'disabled',
+                 DisabledByStaffUserId = ?,
+                 DisabledReason = 'Bootstrap remains closed after staff disablement',
+                 DisabledAt = CURRENT_TIMESTAMP
+             WHERE UserId = ?`,
+            [createdAccount.Id, createdAccount.Id]
+        );
         await assert.rejects(
             () => firstService.bootstrap({
                 mail: 'replacement@test.local',

@@ -122,6 +122,20 @@ describe('UserRepositoryMysql', () => {
         assert.deepEqual(fake.statements, []);
     });
 
+    it('refuses direct staff disablement outside lifecycle management', async () => {
+        const fake = createTransactionalPool();
+        const repository = new UserRepositoryMysql(fake.pool);
+
+        await assert.rejects(() => repository.create({
+            mail: 'disabled-staff@example.com',
+            username: 'disabled-staff',
+            passwordHash: 'hash',
+            accountType: 'staff',
+            status: 'disabled'
+        }), /disabled through staff lifecycle management/);
+        assert.deepEqual(fake.statements, []);
+    });
+
     it('rolls back identity creation when profile creation fails', async () => {
         const fake = createTransactionalPool(new Error('profile insert failed'));
         const repository = new UserRepositoryMysql(fake.pool);

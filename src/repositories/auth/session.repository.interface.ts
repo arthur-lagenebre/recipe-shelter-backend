@@ -32,10 +32,10 @@ export type RevokeStaffSessionInput = {
 
 export interface SessionRepository {
   createCommunitySession(input: CreateCommunitySessionInput): Promise<void>;
-  createStaffSession(input: CreateStaffSessionInput): Promise<void>;
+  createStaffSession(input: CreateStaffSessionInput): Promise<boolean>;
   isCommunitySessionActive(id: string, userId: number): Promise<boolean>;
   isStaffSessionActive(id: string, userId: number): Promise<boolean>;
-  findActiveStaffSessionsByUserId(userId: number): Promise<StaffSession[]>;
+  findActiveStaffSessionsByUserId(userId: number, db?: PoolConnection): Promise<StaffSession[]>;
   revokeCommunitySession(id: string, userId: number): Promise<void>;
   revokeStaffSession(input: RevokeStaffSessionInput, db?: PoolConnection): Promise<boolean>;
 }

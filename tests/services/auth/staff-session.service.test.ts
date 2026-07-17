@@ -103,11 +103,27 @@ describe('StaffSessionService', () => {
   });
 
   it('returns the managed staff identity and never marks another user session as current', async () => {
-    const result = await service.listManaged(target.id, actor.id, '00000000-0000-4000-8000-000000000001');
+    const result = await service.listManaged(
+      target.id,
+      actor.id,
+      '00000000-0000-4000-8000-000000000001',
+      testAdminAuditContext
+    );
 
     assert.deepEqual(result.staff, { id: target.id, username: target.username });
     assert.equal(result.sessions.length, 1);
     assert.equal(result.sessions[0]?.isCurrent, false);
+    assert.deepEqual(audit.inputs.map((input) => ({
+      eventType: input.eventType,
+      targetType: input.targetType,
+      targetId: input.targetId,
+      afterValues: input.afterValues
+    })), [{
+      eventType: 'staff.sessions.list',
+      targetType: 'staff_user',
+      targetId: target.id,
+      afterValues: { activeSessionCount: 1 }
+    }]);
   });
 
   it('records self and administrative revocation actors and scopes', async () => {
@@ -116,6 +132,7 @@ describe('StaffSessionService', () => {
       target.id,
       '00000000-0000-4000-8000-000000000002',
       actor.id,
+      'Compromised browser session.',
       testAdminAuditContext
     );
 
@@ -139,6 +156,7 @@ describe('StaffSessionService', () => {
       eventType: input.eventType,
       targetType: input.targetType,
       targetId: input.targetId,
+      reason: input.reason,
       afterValues: input.afterValues
     })), [
       {
@@ -146,6 +164,7 @@ describe('StaffSessionService', () => {
         eventType: 'staff.sessions.revoke',
         targetType: 'staff_session',
         targetId: '00000000-0000-4000-8000-000000000001',
+        reason: undefined,
         afterValues: {
           staffUserId: actor.id,
           isRevoked: true,
@@ -158,6 +177,7 @@ describe('StaffSessionService', () => {
         eventType: 'staff.sessions.revoke',
         targetType: 'staff_session',
         targetId: '00000000-0000-4000-8000-000000000002',
+        reason: 'Compromised browser session.',
         afterValues: {
           staffUserId: target.id,
           isRevoked: true,
@@ -170,11 +190,11 @@ describe('StaffSessionService', () => {
 
   it('rejects unknown, community-owned, expired and cross-owner sessions', async () => {
     await assert.rejects(
-      () => service.listManaged(community.id, actor.id, ''),
+      () => service.listManaged(community.id, actor.id, '', testAdminAuditContext),
       (error) => assertHttpError(error, 'STAFF_USER_NOT_FOUND')
     );
     await assert.rejects(
-      () => service.listManaged(999, actor.id, ''),
+      () => service.listManaged(999, actor.id, '', testAdminAuditContext),
       (error) => assertHttpError(error, 'STAFF_USER_NOT_FOUND')
     );
     await assert.rejects(

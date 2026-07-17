@@ -1,5 +1,5 @@
 import { getAdminAuditRequestContext } from './admin-audit.context.js';
-import { parseStaffSessionIdParam, parseStaffUserIdParam } from './staff-sessions.dto.js';
+import { parseManagedStaffSessionRevocationBody, parseStaffSessionIdParam, parseStaffUserIdParam } from './staff-sessions.dto.js';
 import { verifySessionToken } from '../../services/auth/session-token.js';
 import { unauthorized } from '../../utils/errors.js';
 import { clearSessionCookie, getSessionToken } from '../../utils/session-cookie.js';
@@ -31,7 +31,7 @@ export function createStaffSessionsController(staffSessions: StaffSessionService
     listManaged: asyncHandler(async (req, res) => {
       const currentSessionId = getCurrentStaffSessionId(req);
       const staffUserId = parseStaffUserIdParam(req.params.staffUserId);
-      const result = await staffSessions.listManaged(staffUserId, req.auth!.userId, currentSessionId);
+      const result = await staffSessions.listManaged(staffUserId, req.auth!.userId, currentSessionId, getAdminAuditRequestContext(req));
 
       res.status(200).json(result);
     }),
@@ -40,8 +40,10 @@ export function createStaffSessionsController(staffSessions: StaffSessionService
       const currentSessionId = getCurrentStaffSessionId(req);
       const staffUserId = parseStaffUserIdParam(req.params.staffUserId);
       const sessionId = parseStaffSessionIdParam(req.params.sessionId);
+      const reason = parseManagedStaffSessionRevocationBody(req.body);
 
-      await staffSessions.revokeManaged(staffUserId, sessionId, req.auth!.userId, getAdminAuditRequestContext(req));
+      await staffSessions.revokeManaged(staffUserId, sessionId, req.auth!.userId, reason, getAdminAuditRequestContext(req));
+      
       if (staffUserId === req.auth!.userId && sessionId === currentSessionId)
         clearSessionCookie(res, 'admin');
 

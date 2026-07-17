@@ -81,6 +81,9 @@ class AccountUserRepository implements UserRepository {
             userId,
             status: user.status === 'invited' || user.status === 'active' || user.status === 'locked' || user.status === 'disabled' ? user.status : 'invited',
             mfaEnrolledAt: null,
+            disabledByStaffUserId: null,
+            disabledReason: null,
+            disabledAt: null,
             createdAt: user.createdAt,
             updatedAt: user.updatedAt
         };

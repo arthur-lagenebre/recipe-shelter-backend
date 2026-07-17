@@ -116,6 +116,55 @@ Cookie: rs_admin_session={{adminSessionCookie}}
 ### Revoke a managed staff session (staff.session.revoke)
 DELETE {{baseUrl}}/admin/staff/{{managedStaffUserId}}/sessions/{{staffSessionId}}
 Cookie: rs_admin_session={{adminSessionCookie}}
+Content-Type: application/json
+
+{
+  "reason": "Compromised browser session confirmed"
+}
+
+### List staff accounts (staff.read)
+GET {{baseUrl}}/admin/staff
+Cookie: rs_admin_session={{adminSessionCookie}}
+
+### Get a staff account (staff.read)
+GET {{baseUrl}}/admin/staff/{{managedStaffUserId}}
+Cookie: rs_admin_session={{adminSessionCookie}}
+
+### Disable a staff account (staff.disable)
+POST {{baseUrl}}/admin/staff/{{managedStaffUserId}}/disable
+Cookie: rs_admin_session={{adminSessionCookie}}
+Content-Type: application/json
+
+{
+  "reason": "Confirmed departure from the staff team"
+}
+
+### Enable a staff account (staff.enable)
+POST {{baseUrl}}/admin/staff/{{managedStaffUserId}}/enable
+Cookie: rs_admin_session={{adminSessionCookie}}
+Content-Type: application/json
+
+{
+  "reason": "Return to the staff team approved"
+}
+
+### Grant a staff role (staff.role.grant)
+POST {{baseUrl}}/admin/staff/{{managedStaffUserId}}/roles/RecipeModerator
+Cookie: rs_admin_session={{adminSessionCookie}}
+Content-Type: application/json
+
+{
+  "reason": "Temporary recipe moderation coverage"
+}
+
+### Revoke a staff role (staff.role.revoke)
+DELETE {{baseUrl}}/admin/staff/{{managedStaffUserId}}/roles/RecipeModerator
+Cookie: rs_admin_session={{adminSessionCookie}}
+Content-Type: application/json
+
+{
+  "reason": "Temporary recipe moderation coverage ended"
+}
 
 ### Staff logout
 POST {{baseUrl}}/admin/auth/logout

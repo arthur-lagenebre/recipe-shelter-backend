@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { parseStaffSessionIdParam, parseStaffUserIdParam } from '../../../src/api/admin/staff-sessions.dto.js';
+import { parseManagedStaffSessionRevocationBody, parseStaffSessionIdParam, parseStaffUserIdParam } from '../../../src/api/admin/staff-sessions.dto.js';
 import { HttpError } from '../../../src/utils/errors.js';
 
 describe('staff sessions DTO', () => {
@@ -25,6 +25,24 @@ describe('staff sessions DTO', () => {
       assert.throws(
         () => parseStaffSessionIdParam(value),
         (error) => assertHttpError(error, 'STAFF_SESSION_BAD_ID')
+      );
+    }
+  });
+
+  it('requires a meaningful reason for an administrative revocation', () => {
+    assert.equal(
+      parseManagedStaffSessionRevocationBody({ reason: '  Compromised browser session.  ' }),
+      'Compromised browser session.'
+    );
+
+    for (const body of [null, {}, { reason: 'short' }, { reason: 'x'.repeat(1001) }]) {
+      assert.throws(
+        () => parseManagedStaffSessionRevocationBody(body),
+        (error) => {
+          assert.ok(error instanceof HttpError);
+          assert.equal(error.statusCode, 400);
+          return true;
+        }
       );
     }
   });

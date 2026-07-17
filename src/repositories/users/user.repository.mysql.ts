@@ -86,7 +86,8 @@ export class UserRepositoryMysql implements UserRepository {
 
     async findStaffProfileByUserId(userId: number): Promise<StaffProfile | null> {
         const [rows] = await this.db.execute(
-            `SELECT UserId, Status, MfaEnrolledAt, CreatedAt, UpdatedAt
+            `SELECT UserId, Status, MfaEnrolledAt, DisabledByStaffUserId, DisabledReason, DisabledAt,
+                    CreatedAt, UpdatedAt
              FROM StaffProfiles
              WHERE UserId = ?`,
             [userId]
@@ -252,6 +253,8 @@ function getProfileStatus(input: CreateUserInput): CommunityStatus | StaffStatus
     assertStaffStatus(status);
     if (status === 'active')
         throw new TypeError('Staff accounts must be activated through MFA enrollment');
+    if (status === 'disabled')
+        throw new TypeError('Staff accounts must be disabled through staff lifecycle management');
     return status;
 }
 

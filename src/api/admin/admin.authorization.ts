@@ -26,6 +26,12 @@ export const adminAuthorizationPolicies = [
   { method: 'post', path: '/users/:id/ban', permission: PERMISSIONS.usersModerate },
   { method: 'post', path: '/users/:id/unban', permission: PERMISSIONS.usersModerate },
   { method: 'post', path: '/staff/invitations', permission: PERMISSIONS.staffCreate },
+  { method: 'get', path: '/staff', permission: PERMISSIONS.staffRead },
+  { method: 'get', path: '/staff/:staffUserId', permission: PERMISSIONS.staffRead },
+  { method: 'post', path: '/staff/:staffUserId/disable', permission: PERMISSIONS.staffDisable },
+  { method: 'post', path: '/staff/:staffUserId/enable', permission: PERMISSIONS.staffEnable },
+  { method: 'post', path: '/staff/:staffUserId/roles/:roleCode', permission: PERMISSIONS.staffRoleGrant },
+  { method: 'delete', path: '/staff/:staffUserId/roles/:roleCode', permission: PERMISSIONS.staffRoleRevoke },
   { method: 'get', path: '/staff/:staffUserId/sessions', permission: PERMISSIONS.staffRead },
   { method: 'delete', path: '/staff/:staffUserId/sessions/:sessionId', permission: PERMISSIONS.staffSessionRevoke }
 ] as const satisfies readonly AuthorizationPolicy[];
