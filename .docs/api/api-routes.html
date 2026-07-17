@@ -2035,7 +2035,7 @@ type UnbanUserResponse = OkResponse;</code></pre>
 
     <section aria-labelledby="admin-staff-management">
       <h2 id="admin-staff-management">Admin staff management</h2>
-      <p class="section-intro">Cycle de vie logique et rôles des comptes staff. Aucun endpoint ne supprime physiquement un compte : la sortie du staff passe par la désactivation et la révocation de ses accès. Chaque route exige sa permission explicite et produit un audit. Les mutations exigent un motif de 10 à 1000 caractères. Le dernier <code>SuperAdmin</code> actif ne peut être ni désactivé ni privé de ce rôle.</p>
+      <p class="section-intro">Cycle de vie logique et rôles des comptes staff. Aucun endpoint ne supprime physiquement un compte et aucun endpoint de réinitialisation MFA n’est exposé dans le back-office. La sortie du staff passe par la désactivation et la révocation de ses accès. Chaque route exige sa permission explicite et produit un audit. Les mutations exigent un motif de 10 à 1000 caractères. Un staff ne peut ni se désactiver, ni s’attribuer, ni retirer ses propres rôles. Le dernier <code>SuperAdmin</code> actif ne peut être ni désactivé ni privé de ce rôle par un autre staff.</p>
       <div class="table-wrap">
         <table>
           <thead>
@@ -2067,7 +2067,7 @@ type UnbanUserResponse = OkResponse;</code></pre>
               <td><code>/api/v1/admin/staff/:staffUserId/disable</code></td>
               <td><span class="auth admin">Admin + <code>staff.disable</code></span></td>
               <td><code>{ "reason": string }</code>. Cible obligatoirement <code>active</code>.</td>
-              <td><code>200</code> compte désactivé ; toutes ses sessions actives sont révoquées atomiquement. Conflit <code>409 LAST_ACTIVE_SUPER_ADMIN</code> si la cible est le dernier <code>SuperAdmin</code> actif.</td>
+              <td><code>200</code> compte désactivé ; toutes ses sessions actives sont révoquées atomiquement. Refus <code>403 STAFF_DISABLE_SELF_FORBIDDEN</code> sur soi-même. Conflit <code>409 LAST_ACTIVE_SUPER_ADMIN</code> si un autre staff cible le dernier <code>SuperAdmin</code> actif.</td>
             </tr>
             <tr>
               <td><span class="method post">POST</span></td>
@@ -2081,14 +2081,14 @@ type UnbanUserResponse = OkResponse;</code></pre>
               <td><code>/api/v1/admin/staff/:staffUserId/roles/:roleCode</code></td>
               <td><span class="auth admin">Admin + <code>staff.role.grant</code></span></td>
               <td>Code de rôle stable et <code>{ "reason": string }</code>.</td>
-              <td><code>200</code> compte avec ses rôles mis à jour.</td>
+              <td><code>200</code> compte avec ses rôles mis à jour. Refus <code>403 STAFF_ROLE_GRANT_SELF_FORBIDDEN</code> sur soi-même.</td>
             </tr>
             <tr>
               <td><span class="method delete">DELETE</span></td>
               <td><code>/api/v1/admin/staff/:staffUserId/roles/:roleCode</code></td>
               <td><span class="auth admin">Admin + <code>staff.role.revoke</code></span></td>
               <td>Code de rôle stable et <code>{ "reason": string }</code>.</td>
-              <td><code>200</code> compte avec ses rôles mis à jour. Le retrait de ses propres rôles est interdit. Conflit <code>409 LAST_ACTIVE_SUPER_ADMIN</code> si le rôle visé est celui du dernier <code>SuperAdmin</code> actif.</td>
+              <td><code>200</code> compte avec ses rôles mis à jour. Refus <code>403 STAFF_ROLE_REVOKE_SELF_FORBIDDEN</code> sur soi-même. Conflit <code>409 LAST_ACTIVE_SUPER_ADMIN</code> si un autre staff cible le rôle du dernier <code>SuperAdmin</code> actif.</td>
             </tr>
           </tbody>
         </table>

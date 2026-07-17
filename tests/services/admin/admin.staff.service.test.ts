@@ -212,7 +212,7 @@ describe('AdminStaffService', () => {
     ]);
   });
 
-  it('rejects disabling or revoking the role of the last active SuperAdmin with the same conflict', async () => {
+  it('rejects disabling or revoking the role of another last active SuperAdmin with the same conflict', async () => {
     repository.accounts.get(actor.id)!.roles = [repository.roles.get('UserAdmin')!];
     repository.accounts.get(target.id)!.roles = [repository.roles.get('SuperAdmin')!];
 
@@ -235,28 +235,35 @@ describe('AdminStaffService', () => {
       ),
       (error) => assertHttpError(error, 409, 'LAST_ACTIVE_SUPER_ADMIN')
     );
-    await assert.rejects(
-      () => service.disable(
-        target.id,
-        target.id,
-        'Self-attempt to disable the final active administrator.',
-        testAdminAuditContext
-      ),
-      (error) => assertHttpError(error, 409, 'LAST_ACTIVE_SUPER_ADMIN')
-    );
-    await assert.rejects(
-      () => service.revokeRole(
-        target.id,
-        'SuperAdmin',
-        target.id,
-        'Self-attempt to revoke the final administration role.',
-        testAdminAuditContext
-      ),
-      (error) => assertHttpError(error, 409, 'LAST_ACTIVE_SUPER_ADMIN')
-    );
 
     assert.equal(repository.accounts.get(target.id)!.status, 'active');
     assert.deepEqual(repository.accounts.get(target.id)!.roles.map((role) => role.code), ['SuperAdmin']);
+    assert.equal(audit.inputs.length, 0);
+  });
+
+  it('returns explicit self-action errors even for the last active SuperAdmin', async () => {
+    await assert.rejects(
+      () => service.disable(
+        actor.id,
+        actor.id,
+        'Self-attempt to disable the final active administrator.',
+        testAdminAuditContext
+      ),
+      (error) => assertHttpError(error, 403, 'STAFF_DISABLE_SELF_FORBIDDEN')
+    );
+    await assert.rejects(
+      () => service.revokeRole(
+        actor.id,
+        'SuperAdmin',
+        actor.id,
+        'Self-attempt to revoke the final administration role.',
+        testAdminAuditContext
+      ),
+      (error) => assertHttpError(error, 403, 'STAFF_ROLE_REVOKE_SELF_FORBIDDEN')
+    );
+
+    assert.equal(repository.accounts.get(actor.id)!.status, 'active');
+    assert.deepEqual(repository.accounts.get(actor.id)!.roles.map((role) => role.code), ['SuperAdmin']);
     assert.equal(audit.inputs.length, 0);
   });
 
@@ -275,7 +282,7 @@ describe('AdminStaffService', () => {
     assert.equal(audit.inputs[0]?.eventType, 'staff.roles.revoke');
   });
 
-  it('rejects unsafe lifecycle and role transitions without producing an audit', async () => {
+  it('rejects every self role mutation to prevent privilege escalation without producing an audit', async () => {
     repository.accounts.get(target.id)!.roles = [repository.roles.get('SuperAdmin')!];
 
     await assert.rejects(
@@ -283,10 +290,20 @@ describe('AdminStaffService', () => {
       (error) => assertHttpError(error, 403, 'STAFF_DISABLE_SELF_FORBIDDEN')
     );
     await assert.rejects(
+      () => service.grantRole(actor.id, 'RecipeModerator', actor.id, 'Self role grant is forbidden.', testAdminAuditContext),
+      (error) => assertHttpError(error, 403, 'STAFF_ROLE_GRANT_SELF_FORBIDDEN')
+    );
+    await assert.rejects(
       () => service.revokeRole(actor.id, 'SuperAdmin', actor.id, 'Self role removal is forbidden.', testAdminAuditContext),
       (error) => assertHttpError(error, 403, 'STAFF_ROLE_REVOKE_SELF_FORBIDDEN')
     );
 
+    assert.equal(repository.accounts.get(actor.id)!.status, 'active');
+    assert.deepEqual(repository.accounts.get(actor.id)!.roles.map((role) => role.code), ['SuperAdmin']);
+    assert.equal(audit.inputs.length, 0);
+  });
+
+  it('rejects unsafe lifecycle and role transitions without producing an audit', async () => {
     repository.accounts.get(target.id)!.roles = [repository.roles.get('UserAdmin')!];
 
     await assert.rejects(

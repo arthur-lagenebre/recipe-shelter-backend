@@ -53,13 +53,14 @@ export class AdminStaffService {
   async disable(staffUserId: number, actorStaffUserId: number, reason: string, context: AdminAuditRequestContext): Promise<AdminStaffAccount> {
     const cleanReason = validateActionReason(reason, 'disable');
 
+    if (staffUserId === actorStaffUserId)
+      throw forbidden('Staff users cannot disable themselves', 'STAFF_DISABLE_SELF_FORBIDDEN');
+
     return this.auditActions.run(async ({ db, audit }) => {
       const isLastActiveSuperAdmin = await this.staff.lockAndCheckLastActiveSuperAdmin(staffUserId, db);
 
       if (isLastActiveSuperAdmin)
         throw lastActiveSuperAdminConflict();
-      if (staffUserId === actorStaffUserId)
-        throw forbidden('Staff users cannot disable themselves', 'STAFF_DISABLE_SELF_FORBIDDEN');
 
       const before = await this.requireStaff(staffUserId, db);
 
@@ -118,10 +119,16 @@ export class AdminStaffService {
   }
 
   async grantRole(staffUserId: number, roleCode: string, actorStaffUserId: number, reason: string, context: AdminAuditRequestContext): Promise<AdminStaffAccount> {
+    if (staffUserId === actorStaffUserId)
+      throw forbidden('Staff users cannot grant roles to themselves', 'STAFF_ROLE_GRANT_SELF_FORBIDDEN');
+
     return this.changeRole('grant', staffUserId, roleCode, actorStaffUserId, reason, context);
   }
 
   async revokeRole(staffUserId: number, roleCode: string, actorStaffUserId: number, reason: string, context: AdminAuditRequestContext): Promise<AdminStaffAccount> {
+    if (staffUserId === actorStaffUserId)
+      throw forbidden('Staff users cannot revoke their own roles', 'STAFF_ROLE_REVOKE_SELF_FORBIDDEN');
+
     return this.changeRole('revoke', staffUserId, roleCode, actorStaffUserId, reason, context);
   }
 
@@ -133,17 +140,12 @@ export class AdminStaffService {
         ? await this.staff.lockAndCheckLastActiveSuperAdmin(staffUserId, db)
         : false;
 
-      if (action === 'revoke' && staffUserId === actorStaffUserId && !isLastActiveSuperAdmin)
-        throw forbidden('Staff users cannot revoke their own roles', 'STAFF_ROLE_REVOKE_SELF_FORBIDDEN');
-
       const before = await this.requireStaff(staffUserId, db);
       const role = await this.requireRole(roleCode, db);
       const hasRole = before.roles.some((candidate) => candidate.id === role.id);
 
       if (action === 'revoke' && role.code === SUPER_ADMIN_ROLE_CODE && isLastActiveSuperAdmin)
         throw lastActiveSuperAdminConflict();
-      if (action === 'revoke' && staffUserId === actorStaffUserId)
-        throw forbidden('Staff users cannot revoke their own roles', 'STAFF_ROLE_REVOKE_SELF_FORBIDDEN');
       if (action === 'grant' && hasRole)
         throw conflict('Staff role is already granted', 'STAFF_ROLE_ALREADY_GRANTED');
       if (action === 'revoke' && !hasRole)

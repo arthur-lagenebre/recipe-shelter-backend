@@ -240,7 +240,58 @@ describe('staff management HTTP integration', () => {
     ]);
   });
 
-  it('returns LAST_ACTIVE_SUPER_ADMIN for every route that could remove the final active administrator', async () => {
+  it('rejects every privileged self-action with a stable business error and no side effect', async () => {
+    audit.inputs.length = 0;
+    grantedPermissions = [PERMISSIONS.staffDisable];
+    const disableSelf = await fetch(`${server.baseUrl}/api/v1/admin/staff/${actorUser.id}/disable`, {
+      method: 'POST',
+      headers: { cookie: actorCookie, 'content-type': 'application/json' },
+      body: JSON.stringify({ reason: 'Self disablement must be rejected explicitly.' })
+    });
+    assert.equal(disableSelf.status, 403);
+    assert.equal(
+      (await disableSelf.json() as { error: { code: string } }).error.code,
+      'STAFF_DISABLE_SELF_FORBIDDEN'
+    );
+
+    grantedPermissions = [PERMISSIONS.staffRoleGrant];
+    const grantSelf = await fetch(`${server.baseUrl}/api/v1/admin/staff/${actorUser.id}/roles/SuperAdmin`, {
+      method: 'POST',
+      headers: { cookie: actorCookie, 'content-type': 'application/json' },
+      body: JSON.stringify({ reason: 'Self privilege escalation must be rejected.' })
+    });
+    assert.equal(grantSelf.status, 403);
+    assert.equal(
+      (await grantSelf.json() as { error: { code: string } }).error.code,
+      'STAFF_ROLE_GRANT_SELF_FORBIDDEN'
+    );
+
+    grantedPermissions = [PERMISSIONS.staffRoleRevoke];
+    const revokeOwnRole = await fetch(`${server.baseUrl}/api/v1/admin/staff/${actorUser.id}/roles/UserAdmin`, {
+      method: 'DELETE',
+      headers: { cookie: actorCookie, 'content-type': 'application/json' },
+      body: JSON.stringify({ reason: 'Self role removal must be rejected explicitly.' })
+    });
+    assert.equal(revokeOwnRole.status, 403);
+    assert.equal(
+      (await revokeOwnRole.json() as { error: { code: string } }).error.code,
+      'STAFF_ROLE_REVOKE_SELF_FORBIDDEN'
+    );
+
+    const revokeOwnLastSuperAdminRole = await fetch(`${server.baseUrl}/api/v1/admin/staff/${protectedSuperAdminUser.id}/roles/SuperAdmin`, {
+      method: 'DELETE',
+      headers: { cookie: protectedSuperAdminCookie, 'content-type': 'application/json' },
+      body: JSON.stringify({ reason: 'Self SuperAdmin removal must be rejected explicitly.' })
+    });
+    assert.equal(revokeOwnLastSuperAdminRole.status, 403);
+    assert.equal(
+      (await revokeOwnLastSuperAdminRole.json() as { error: { code: string } }).error.code,
+      'STAFF_ROLE_REVOKE_SELF_FORBIDDEN'
+    );
+    assert.equal(audit.inputs.length, 0);
+  });
+
+  it('returns LAST_ACTIVE_SUPER_ADMIN when another actor targets the final active administrator', async () => {
     audit.inputs.length = 0;
     grantedPermissions = [PERMISSIONS.staffDisable];
     const disable = await fetch(`${server.baseUrl}/api/v1/admin/staff/${protectedSuperAdminUser.id}/disable`, {
@@ -257,7 +308,7 @@ describe('staff management HTTP integration', () => {
     grantedPermissions = [PERMISSIONS.staffRoleRevoke];
     const revoke = await fetch(`${server.baseUrl}/api/v1/admin/staff/${protectedSuperAdminUser.id}/roles/SuperAdmin`, {
       method: 'DELETE',
-      headers: { cookie: protectedSuperAdminCookie, 'content-type': 'application/json' },
+      headers: { cookie: actorCookie, 'content-type': 'application/json' },
       body: JSON.stringify({ reason: 'Attempt to revoke the final administration role.' })
     });
     assert.equal(revoke.status, 409);

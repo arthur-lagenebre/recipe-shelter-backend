@@ -264,8 +264,12 @@ de 10 à 1000 caractères. Seul un compte `active` peut être désactivé et seu
 compte `disabled` avec MFA enrôlé peut être réactivé. La désactivation est
 logique, conserve son acteur, son motif et sa date dans `StaffProfiles`, et
 révoque toutes les sessions actives dans la transaction auditée. Un staff ne
-peut ni se désactiver ni retirer ses propres rôles. Aucun endpoint de suppression
-de compte staff n’est exposé ; les routes `DELETE` relatives aux rôles et aux
+peut ni se désactiver, ni s’attribuer, ni retirer ses propres rôles : ces
+tentatives retournent respectivement `STAFF_DISABLE_SELF_FORBIDDEN`,
+`STAFF_ROLE_GRANT_SELF_FORBIDDEN` et `STAFF_ROLE_REVOKE_SELF_FORBIDDEN` avec le
+statut `403`. Aucun endpoint de réinitialisation MFA n’est exposé dans le
+back-office, y compris pour son propre compte. Aucun endpoint de suppression de
+compte staff n’est exposé ; les routes `DELETE` relatives aux rôles et aux
 sessions révoquent uniquement des accès sans supprimer l’identité. La
 désactivation ou le retrait du rôle du dernier `SuperAdmin` actif est refusé
 atomiquement avec le statut `409` et le code stable `LAST_ACTIVE_SUPER_ADMIN`.

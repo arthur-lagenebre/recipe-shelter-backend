@@ -350,6 +350,48 @@ describe('administrative endpoint authorization policies', () => {
         }]);
     });
 
+    it('exposes no autonomous MFA reset endpoint from the back-office', async () => {
+        grantedPermissions = [...Object.values(PERMISSIONS)];
+        const warnings: Array<{ message: string; meta?: unknown }> = [];
+        const originalWarn = logger.warn;
+        logger.warn = (message, meta) => warnings.push({ message, meta });
+        const controllerCallsBeforeRequest = controllerCalls;
+
+        try {
+            const response = await fetch(`${server.baseUrl}/api/v1/admin/staff/${staff.id}/mfa/reset`, {
+                method: 'POST',
+                headers: { cookie }
+            });
+
+            assert.equal(response.status, 403);
+            assert.deepEqual(await response.json(), {
+                error: {
+                    message: 'Administrative authorization policy is required',
+                    code: 'AUTH_POLICY_REQUIRED'
+                }
+            });
+            assert.equal(controllerCalls, controllerCallsBeforeRequest);
+        } finally {
+            logger.warn = originalWarn;
+        }
+
+        assert.deepEqual(warnings.map(({ message, meta }) => ({
+            message,
+            code: (meta as { code?: string }).code,
+            method: (meta as { method?: string }).method,
+            path: (meta as { path?: string }).path,
+            reason: (meta as { reason?: string }).reason,
+            userId: (meta as { userId?: number }).userId
+        })), [{
+            message: '[authz] Administrative request denied',
+            code: 'AUTH_POLICY_REQUIRED',
+            method: 'POST',
+            path: `/api/v1/admin/staff/${staff.id}/mfa/reset`,
+            reason: 'policy_missing',
+            userId: staff.id
+        }]);
+    });
+
     it('denies and logs a policy that references an unknown permission', async () => {
         grantedPermissions = ['unknown.permission' as PermissionCode];
         const warnings: Array<{ message: string; meta?: unknown }> = [];
