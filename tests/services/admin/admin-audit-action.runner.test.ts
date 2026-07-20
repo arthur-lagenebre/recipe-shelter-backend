@@ -57,6 +57,46 @@ describe('AdminAuditActionRunnerMysql', () => {
     assert.deepEqual(events, ['begin', 'action', 'rollback', 'release']);
   });
 
+  it('rolls back before commit when a sensitive action creates more than one audit entry', async () => {
+    const events: string[] = [];
+    const connection = createConnection(events);
+    const runner = createRunner(connection, events);
+
+    await assert.rejects(
+      () => runner.run(async ({ audit }) => {
+        events.push('action');
+        await audit.record(createAuditInput());
+        await audit.record(createAuditInput());
+      }),
+      (error) => {
+        assert.equal((error as { code?: string }).code, 'ADMIN_AUDIT_RECORD_FAILED');
+        return true;
+      }
+    );
+
+    assert.deepEqual(events, ['begin', 'action', 'audit', 'rollback', 'release']);
+  });
+
+  it('rolls back a no-op result that incorrectly creates an audit entry', async () => {
+    const events: string[] = [];
+    const connection = createConnection(events);
+    const runner = createRunner(connection, events);
+
+    await assert.rejects(
+      () => runner.run(async ({ audit }) => {
+        events.push('action');
+        await audit.record(createAuditInput());
+        return false;
+      }),
+      (error) => {
+        assert.equal((error as { code?: string }).code, 'ADMIN_AUDIT_RECORD_FAILED');
+        return true;
+      }
+    );
+
+    assert.deepEqual(events, ['begin', 'action', 'audit', 'rollback', 'release']);
+  });
+
   it('commits a no-op result only when it creates no audit entry', async () => {
     const events: string[] = [];
     const connection = createConnection(events);

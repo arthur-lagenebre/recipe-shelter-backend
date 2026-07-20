@@ -135,6 +135,38 @@ describe('AdminAuditService', () => {
     assert.equal(beforeValues.nested.clientSecret, 'must-not-be-recorded');
   });
 
+  it('redacts sensitive key variants recursively, including objects nested in arrays', async () => {
+    const afterValues = {
+      apiKey: 'must-not-be-recorded',
+      request: {
+        Authorization: 'must-not-be-recorded',
+        'private-key': 'must-not-be-recorded'
+      },
+      attempts: [{ credentialId: 'must-not-be-recorded', outcome: 'denied' }],
+      labels: ['security', 'staff']
+    } as const;
+
+    await service.record({
+      actorUserId: 7,
+      eventType: ADMIN_AUDIT_EVENT_TYPES.staffRoleRevoke,
+      targetType: ADMIN_AUDIT_TARGET_TYPES.staffUser,
+      targetId: 12,
+      afterValues
+    });
+
+    assert.deepEqual(repository.inputs[0]?.afterValues, {
+      apiKey: '[REDACTED]',
+      request: {
+        Authorization: '[REDACTED]',
+        'private-key': '[REDACTED]'
+      },
+      attempts: [{ credentialId: '[REDACTED]', outcome: 'denied' }],
+      labels: ['security', 'staff']
+    });
+    assert.equal(afterValues.request.Authorization, 'must-not-be-recorded');
+    assert.equal(afterValues.attempts[0]?.credentialId, 'must-not-be-recorded');
+  });
+
   it('normalizes a supplied correlation id and persists nullable investigation fields', async () => {
     const receipt = await service.record({
       actorUserId: 7,
@@ -163,7 +195,16 @@ describe('AdminAuditService', () => {
   });
 
   it('fails closed before persistence for invalid events and investigation values', async () => {
-    const invalidSnapshots: unknown[] = [new Date(), { score: Number.NaN }];
+    const circularObject: Record<string, unknown> = {};
+    circularObject.self = circularObject;
+    const circularArray: unknown[] = [];
+    circularArray.push(circularArray);
+    const invalidSnapshots: unknown[] = [
+      new Date(),
+      { score: Number.NaN },
+      circularObject,
+      { values: circularArray }
+    ];
     const originalError = logger.error;
     logger.error = () => undefined;
 

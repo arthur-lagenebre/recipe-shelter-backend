@@ -40,6 +40,9 @@ class FakeAdminIngredientRepository implements AdminIngredientRepository {
   };
   createStatus: 'normalized_name_taken' | 'slug_taken' | null = null;
   aliasTaken = false;
+  deprecateConflict = false;
+  restoreConflict = false;
+  deleteAliasConflict = false;
   mergedSourceTargets = new Set<number>([1]);
 
   async find(filters: AdminIngredientListFilters, page: PaginationOptions): Promise<ReturnType<typeof createPaginatedResult<Ingredient>>> {
@@ -93,7 +96,7 @@ class FakeAdminIngredientRepository implements AdminIngredientRepository {
 
   async deprecate(ingredientId: number): Promise<boolean> {
     const ingredient = this.ingredients.get(ingredientId);
-    if (!ingredient || ingredient.status !== 'active')
+    if (this.deprecateConflict || !ingredient || ingredient.status !== 'active')
       return false;
 
     ingredient.status = 'deprecated';
@@ -103,7 +106,7 @@ class FakeAdminIngredientRepository implements AdminIngredientRepository {
 
   async restore(ingredientId: number) {
     const ingredient = this.ingredients.get(ingredientId);
-    if (!ingredient || ingredient.status !== 'deprecated')
+    if (this.restoreConflict || !ingredient || ingredient.status !== 'deprecated')
       return 'not_updated' as const;
     if (this.createStatus === 'normalized_name_taken')
       return 'normalized_name_taken' as const;
@@ -197,7 +200,9 @@ class FakeAdminIngredientRepository implements AdminIngredientRepository {
 
   async deleteAlias(ingredientId: number, aliasId: number): Promise<boolean> {
     const alias = this.aliases.get(aliasId);
-    return alias?.ingredientId === ingredientId ? this.aliases.delete(aliasId) : false;
+    return !this.deleteAliasConflict && alias?.ingredientId === ingredientId
+      ? this.aliases.delete(aliasId)
+      : false;
   }
 }
 
@@ -282,6 +287,29 @@ describe('AdminIngredientService', () => {
     assert.equal(audit.inputs.length, 0);
   });
 
+  it('rejects canonical and alias names that cannot produce a bounded normalized value', async () => {
+    await assert.rejects(
+      () => service.create({ name: '--- !!! ---' }, actorUserId, testAdminAuditContext),
+      matchesHttpError(400, 'ADMIN_INGREDIENTS_NAME_INVALID')
+    );
+    await assert.rejects(
+      () => service.create({ name: 'ß'.repeat(128) }, actorUserId, testAdminAuditContext),
+      matchesHttpError(400, 'ADMIN_INGREDIENTS_NAME_TOO_LONG')
+    );
+    await assert.rejects(
+      () => service.createAlias(1, { name: '--- !!! ---', languageCode: 'fr' }, actorUserId, testAdminAuditContext),
+      matchesHttpError(400, 'ADMIN_INGREDIENT_ALIASES_NAME_INVALID')
+    );
+    await assert.rejects(
+      () => service.createAlias(1, { name: 'ß'.repeat(128), languageCode: 'fr' }, actorUserId, testAdminAuditContext),
+      matchesHttpError(400, 'ADMIN_INGREDIENT_ALIASES_NAME_TOO_LONG')
+    );
+
+    assert.equal(repository.ingredients.size, 4);
+    assert.equal(repository.aliases.size, 2);
+    assert.equal(audit.inputs.length, 0);
+  });
+
   it('deprecates and restores an unused ingredient with reasons in distinct audit events', async () => {
     repository.mergedSourceTargets.clear();
     repository.aliases.delete(11);
@@ -306,6 +334,41 @@ describe('AdminIngredientService', () => {
       () => service.deprecate(2, 'Alias encore rattaché à retirer.', actorUserId, testAdminAuditContext),
       matchesHttpError(409, 'ADMIN_INGREDIENTS_DEPRECATE_HAS_ALIASES')
     );
+    assert.equal(audit.inputs.length, 0);
+  });
+
+  it('rejects invalid and concurrent lifecycle transitions without audit', async () => {
+    await assert.rejects(
+      () => service.deprecate(3, 'Already outside the active catalogue.', actorUserId, testAdminAuditContext),
+      matchesHttpError(409, 'ADMIN_INGREDIENTS_DEPRECATE_INVALID_STATUS')
+    );
+    await assert.rejects(
+      () => service.restore(2, 'Still active in the canonical catalogue.', actorUserId, testAdminAuditContext),
+      matchesHttpError(409, 'ADMIN_INGREDIENTS_RESTORE_INVALID_STATUS')
+    );
+
+    repository.createStatus = 'normalized_name_taken';
+    await assert.rejects(
+      () => service.restore(3, 'Canonical name was assigned elsewhere.', actorUserId, testAdminAuditContext),
+      matchesHttpError(409, 'ADMIN_INGREDIENTS_NORMALIZED_NAME_TAKEN')
+    );
+
+    repository.createStatus = null;
+    repository.restoreConflict = true;
+    await assert.rejects(
+      () => service.restore(3, 'Concurrent restore must be rejected.', actorUserId, testAdminAuditContext),
+      matchesHttpError(409, 'ADMIN_INGREDIENTS_STATUS_CONFLICT')
+    );
+
+    repository.restoreConflict = false;
+    repository.mergedSourceTargets.clear();
+    repository.aliases.delete(11);
+    repository.deprecateConflict = true;
+    await assert.rejects(
+      () => service.deprecate(2, 'Concurrent deprecation must be rejected.', actorUserId, testAdminAuditContext),
+      matchesHttpError(409, 'ADMIN_INGREDIENTS_STATUS_CONFLICT')
+    );
+
     assert.equal(audit.inputs.length, 0);
   });
 
@@ -485,12 +548,20 @@ describe('AdminIngredientService', () => {
       name: 'Tomate de table'
     }, actorUserId, testAdminAuditContext);
     assert.equal(updated.normalizedName, 'tomate de table');
+
+    const localized = await service.updateAlias(1, created.id, {
+      languageCode: 'fr-CA'
+    }, actorUserId, testAdminAuditContext);
+    assert.equal(localized.name, 'Tomate de table');
+    assert.equal(localized.normalizedName, 'tomate de table');
+    assert.equal(localized.languageCode, 'fr-ca');
     await service.deleteAlias(1, created.id, actorUserId, testAdminAuditContext);
     assert.equal(repository.aliases.has(created.id), false);
 
     assert.deepEqual(audit.inputs.map(({ eventType }) => eventType), [
       'ingredients.aliases.list',
       'ingredients.aliases.create',
+      'ingredients.aliases.update',
       'ingredients.aliases.update',
       'ingredients.aliases.delete'
     ]);
@@ -510,6 +581,19 @@ describe('AdminIngredientService', () => {
     await assert.rejects(
       () => service.updateAlias(1, 11, { name: 'Mauvais parent' }, actorUserId, testAdminAuditContext),
       matchesHttpError(404, 'ADMIN_INGREDIENT_ALIASES_NOT_FOUND')
+    );
+
+    repository.aliasTaken = true;
+    await assert.rejects(
+      () => service.updateAlias(1, 10, { name: 'Tomato duplicate' }, actorUserId, testAdminAuditContext),
+      matchesHttpError(409, 'ADMIN_INGREDIENT_ALIASES_TAKEN')
+    );
+
+    repository.aliasTaken = false;
+    repository.deleteAliasConflict = true;
+    await assert.rejects(
+      () => service.deleteAlias(1, 10, actorUserId, testAdminAuditContext),
+      matchesHttpError(409, 'ADMIN_INGREDIENT_ALIASES_CONFLICT')
     );
     assert.equal(audit.inputs.length, 0);
   });

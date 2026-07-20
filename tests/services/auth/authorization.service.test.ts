@@ -71,7 +71,13 @@ const ROLE_PERMISSIONS = {
         PERMISSIONS.tagCreate,
         PERMISSIONS.tagUpdate,
         PERMISSIONS.tagDeprecate,
-        PERMISSIONS.tagMerge
+        PERMISSIONS.tagMerge,
+        PERMISSIONS.ingredientRead,
+        PERMISSIONS.ingredientCreate,
+        PERMISSIONS.ingredientUpdate,
+        PERMISSIONS.ingredientDeprecate,
+        PERMISSIONS.ingredientMerge,
+        PERMISSIONS.ingredientAliasManage
     ],
     SuperAdmin: ALL_PERMISSIONS
 } as const satisfies Record<string, readonly PermissionCode[]>;
