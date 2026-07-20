@@ -41,6 +41,37 @@ function assertActiveNormalizedDuplicateRejected(error: unknown): boolean {
     return true;
 }
 
+function assertAliasNormalizedDuplicateRejected(error: unknown): boolean {
+    assert.ok(error instanceof Error);
+
+    const mysqlError = error as Error & {
+        errno?: number;
+        sqlMessage?: string;
+    };
+
+    assert.equal(mysqlError.errno, 1062);
+    assert.match(mysqlError.sqlMessage ?? '', /ingredient_aliases_language_normalized_name_UK/);
+    return true;
+}
+
+function assertAliasTargetRejected(error: unknown): boolean {
+    assert.ok(error instanceof Error);
+
+    const mysqlError = error as Error & {
+        errno?: number;
+        sqlMessage?: string;
+        sqlState?: string;
+    };
+
+    assert.equal(mysqlError.errno, 1644);
+    assert.equal(mysqlError.sqlState, '45000');
+    assert.equal(
+        mysqlError.sqlMessage,
+        'Ingredient aliases can only reference active canonical ingredients'
+    );
+    return true;
+}
+
 function assertIngredientDeletionRejected(error: unknown): boolean {
     assert.ok(error instanceof Error);
 
@@ -169,6 +200,59 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
         assert.ok(freshCream.updatedAt instanceof Date);
     });
 
+    it('defines localized ingredient aliases in the final schema', async () => {
+        const databaseName = requireIngredientCatalogTestDatabaseName();
+        const [columns] = await connection.query(
+            `SELECT COLUMN_NAME AS ColumnName, COLUMN_TYPE AS ColumnType, IS_NULLABLE AS IsNullable,
+                    COLUMN_DEFAULT AS ColumnDefault
+             FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'IngredientAliases'
+             ORDER BY ORDINAL_POSITION`,
+            [databaseName]
+        );
+
+        assert.deepEqual(columns, [
+            { ColumnName: 'Id', ColumnType: 'bigint unsigned', IsNullable: 'NO', ColumnDefault: null },
+            { ColumnName: 'IngredientId', ColumnType: 'bigint unsigned', IsNullable: 'NO', ColumnDefault: null },
+            { ColumnName: 'Name', ColumnType: 'varchar(255)', IsNullable: 'NO', ColumnDefault: null },
+            { ColumnName: 'NormalizedName', ColumnType: 'varchar(255)', IsNullable: 'NO', ColumnDefault: null },
+            { ColumnName: 'LanguageCode', ColumnType: 'varchar(35)', IsNullable: 'NO', ColumnDefault: null },
+            { ColumnName: 'CreatedAt', ColumnType: 'datetime', IsNullable: 'NO', ColumnDefault: 'CURRENT_TIMESTAMP' },
+            { ColumnName: 'UpdatedAt', ColumnType: 'datetime', IsNullable: 'NO', ColumnDefault: 'CURRENT_TIMESTAMP' }
+        ]);
+
+        const [indexes] = await connection.query(
+            `SELECT DISTINCT INDEX_NAME AS IndexName
+             FROM information_schema.STATISTICS
+             WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'IngredientAliases'
+             ORDER BY INDEX_NAME`,
+            [databaseName]
+        );
+        assert.deepEqual(
+            (indexes as Array<{ IndexName: string }>).map(({ IndexName }) => IndexName),
+            [
+                'idx_ingredient_aliases_ingredient_language',
+                'ingredient_aliases_language_normalized_name_UK',
+                'PRIMARY'
+            ]
+        );
+
+        const [foreignKeys] = await connection.query(
+            `SELECT COLUMN_NAME AS ColumnName, LOWER(REFERENCED_TABLE_NAME) AS ReferencedTableName,
+                    REFERENCED_COLUMN_NAME AS ReferencedColumnName
+             FROM information_schema.KEY_COLUMN_USAGE
+             WHERE TABLE_SCHEMA = ?
+               AND TABLE_NAME = 'IngredientAliases'
+               AND REFERENCED_TABLE_NAME IS NOT NULL`,
+            [databaseName]
+        );
+        assert.deepEqual(foreignKeys, [{
+            ColumnName: 'IngredientId',
+            ReferencedTableName: 'ingredients',
+            ReferencedColumnName: 'Id'
+        }]);
+    });
+
     it('rejects equivalent active names while preserving deprecated and merged variants', async () => {
         await connection.query(
             `INSERT INTO Ingredients (Id, Name, NormalizedName, Slug)
@@ -281,5 +365,128 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
             () => connection.query(`DELETE FROM Ingredients WHERE Id = 901`),
             assertIngredientDeletionRejected
         );
+    });
+
+    it('accepts valid localized aliases and rejects normalized conflicts', async () => {
+        await connection.query(
+            `INSERT INTO Ingredients (Id, Name, NormalizedName, Slug) VALUES
+               (920, 'Canonical alias target', 'canonical alias target', 'canonical-alias-target'),
+               (921, 'Second canonical alias target', 'second canonical alias target', 'second-canonical-alias-target')`
+        );
+
+        await connection.query(
+            `INSERT INTO IngredientAliases (IngredientId, Name, NormalizedName, LanguageCode)
+             VALUES (920, 'Pois chiche', 'pois chiche', 'fr')`
+        );
+
+        const normalizedVariants = [
+            'POIS CHICHE',
+            'Pois   chiche',
+            'Pois---chiche!!!'
+        ];
+        for (const name of normalizedVariants) {
+            await assert.rejects(
+                () => connection.query(
+                    `INSERT INTO IngredientAliases (IngredientId, Name, NormalizedName, LanguageCode)
+                     VALUES (921, ?, 'pois chiche', 'fr')`,
+                    [name]
+                ),
+                assertAliasNormalizedDuplicateRejected
+            );
+        }
+
+        await connection.query(
+            `INSERT INTO IngredientAliases (IngredientId, Name, NormalizedName, LanguageCode)
+             VALUES (921, 'Pois chiche', 'pois chiche', 'en')`
+        );
+
+        const [aliases] = await connection.query(
+            `SELECT IngredientId, Name, NormalizedName, LanguageCode
+             FROM IngredientAliases
+             WHERE NormalizedName = 'pois chiche'
+             ORDER BY LanguageCode`
+        );
+        assert.deepEqual(aliases, [
+            { IngredientId: 921, Name: 'Pois chiche', NormalizedName: 'pois chiche', LanguageCode: 'en' },
+            { IngredientId: 920, Name: 'Pois chiche', NormalizedName: 'pois chiche', LanguageCode: 'fr' }
+        ]);
+    });
+
+    it('only allows aliases of active canonical ingredients', async () => {
+        await connection.query(
+            `INSERT INTO Ingredients (Id, Name, NormalizedName, Slug, Status) VALUES
+               (930, 'Active alias fixture', 'active alias fixture', 'active-alias-fixture', 'active'),
+               (931, 'Deprecated alias fixture', 'deprecated alias fixture', 'deprecated-alias-fixture', 'deprecated'),
+               (933, 'Independent alias fixture', 'independent alias fixture', 'independent-alias-fixture', 'active');
+             INSERT INTO Ingredients (Id, Name, NormalizedName, Slug, Status, MergedIntoIngredientId)
+             VALUES (932, 'Merged alias fixture', 'merged alias fixture', 'merged-alias-fixture', 'merged', 930)`
+        );
+
+        await assert.rejects(
+            () => connection.query(
+                `INSERT INTO IngredientAliases (IngredientId, Name, NormalizedName, LanguageCode)
+                 VALUES (999999, 'Unknown target alias', 'unknown target alias', 'fr')`
+            ),
+            assertAliasTargetRejected
+        );
+        await assert.rejects(
+            () => connection.query(
+                `INSERT INTO IngredientAliases (IngredientId, Name, NormalizedName, LanguageCode)
+                 VALUES (931, 'Deprecated target alias', 'deprecated target alias', 'fr')`
+            ),
+            assertAliasTargetRejected
+        );
+        await assert.rejects(
+            () => connection.query(
+                `INSERT INTO IngredientAliases (IngredientId, Name, NormalizedName, LanguageCode)
+                 VALUES (932, 'Merged target alias', 'merged target alias', 'fr')`
+            ),
+            assertAliasTargetRejected
+        );
+
+        await connection.query(
+            `INSERT INTO IngredientAliases (IngredientId, Name, NormalizedName, LanguageCode)
+             VALUES (933, 'Valid target alias', 'valid target alias', 'fr')`
+        );
+        await assert.rejects(
+            () => connection.query(
+                `UPDATE IngredientAliases
+                 SET IngredientId = 931
+                 WHERE NormalizedName = 'valid target alias' AND LanguageCode = 'fr'`
+            ),
+            assertAliasTargetRejected
+        );
+        await assert.rejects(
+            () => connection.query(`UPDATE Ingredients SET Status = 'deprecated' WHERE Id = 933`),
+            (error: unknown) => {
+                assert.ok(error instanceof Error);
+                const mysqlError = error as Error & { errno?: number; sqlMessage?: string };
+                assert.equal(mysqlError.errno, 1644);
+                assert.equal(mysqlError.sqlMessage, 'An ingredient with aliases must remain active');
+                return true;
+            }
+        );
+    });
+
+    it('validates alias names, normalized names and language codes', async () => {
+        await connection.query(
+            `INSERT INTO Ingredients (Id, Name, NormalizedName, Slug)
+             VALUES (940, 'Alias validation fixture', 'alias validation fixture', 'alias-validation-fixture')`
+        );
+
+        const invalidAliases = [
+            { name: '   ', normalizedName: 'blank alias', languageCode: 'fr' },
+            { name: 'Mismatched alias', normalizedName: 'another value', languageCode: 'fr' },
+            { name: 'Uppercase language', normalizedName: 'uppercase language', languageCode: 'FR' },
+            { name: 'Malformed language', normalizedName: 'malformed language', languageCode: 'fr_' }
+        ];
+
+        for (const alias of invalidAliases) {
+            await assert.rejects(() => connection.query(
+                `INSERT INTO IngredientAliases (IngredientId, Name, NormalizedName, LanguageCode)
+                 VALUES (940, ?, ?, ?)`,
+                [alias.name, alias.normalizedName, alias.languageCode]
+            ));
+        }
     });
 });

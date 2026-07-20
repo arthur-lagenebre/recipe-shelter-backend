@@ -461,6 +461,14 @@ liste `GET /api/v1/ingredients` ne renvoie que les ingrédients actifs, alors qu
 }
 ```
 
+Les variantes lexicales et linguistiques sont conservées séparément dans
+`IngredientAliases`, avec leur libellé, leur nom normalisé et un code de langue
+BCP 47 en minuscules. Un même nom normalisé ne peut apparaître qu'une fois par
+langue. Chaque alias référence obligatoirement un ingrédient actif ; le schéma
+empêche aussi de déprécier ou fusionner cette cible tant que ses alias n'ont pas
+été réaffectés. Les libellés propres aux recettes restent distincts de ce
+catalogue afin de pouvoir conserver la rédaction de leur auteur.
+
 Les tags sont rattachés à un groupe. Leur nom normalisé est produit en ignorant
 la casse et les accents, puis en remplaçant toute suite d'espaces ou de
 ponctuation par un espace simple. Cette identité est unique parmi les tags

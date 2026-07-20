@@ -905,6 +905,77 @@ CREATE TABLE Ingredients (
     ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IngredientAliases (
+  Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  IngredientId BIGINT UNSIGNED NOT NULL,
+  Name VARCHAR(255) NOT NULL,
+  NormalizedName VARCHAR(255) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  LanguageCode VARCHAR(35) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (Id),
+  UNIQUE KEY ingredient_aliases_language_normalized_name_UK (LanguageCode, NormalizedName),
+  KEY idx_ingredient_aliases_ingredient_language (IngredientId, LanguageCode, Name),
+  CONSTRAINT ingredient_aliases_name_CK
+    CHECK (CHAR_LENGTH(Name) = CHAR_LENGTH(TRIM(Name)) AND CHAR_LENGTH(TRIM(Name)) > 0),
+  CONSTRAINT ingredient_aliases_normalized_name_CK
+    CHECK (
+      CHAR_LENGTH(NormalizedName) = CHAR_LENGTH(TRIM(NormalizedName))
+      AND CHAR_LENGTH(TRIM(NormalizedName)) > 0
+      AND BINARY NormalizedName = BINARY LOWER(NormalizedName)
+      AND NormalizedName REGEXP '^[a-z0-9]+( [a-z0-9]+)*$'
+      AND CONVERT(NormalizedName USING utf8mb4) COLLATE utf8mb4_0900_ai_ci = TRIM(REGEXP_REPLACE(LOWER(Name), '[^[:alnum:]]+', ' ')) COLLATE utf8mb4_0900_ai_ci
+    ),
+  CONSTRAINT ingredient_aliases_language_code_CK
+    CHECK (
+      CHAR_LENGTH(LanguageCode) = CHAR_LENGTH(TRIM(LanguageCode))
+      AND BINARY LanguageCode = BINARY LOWER(LanguageCode)
+      AND LanguageCode REGEXP '^[a-z]{2,8}(-[a-z0-9]{1,8})*$'
+    ),
+  CONSTRAINT ingredient_aliases_ingredient_FK
+    FOREIGN KEY (IngredientId) REFERENCES Ingredients(Id)
+    ON UPDATE CASCADE
+    ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TRIGGER ingredient_aliases_canonical_ingredient_BI
+BEFORE INSERT ON IngredientAliases
+FOR EACH ROW
+BEGIN
+  DECLARE canonical_ingredient_status VARCHAR(16) DEFAULT NULL;
+
+  SELECT Status
+  INTO canonical_ingredient_status
+  FROM Ingredients
+  WHERE Id = NEW.IngredientId
+  FOR SHARE;
+
+  IF canonical_ingredient_status IS NULL OR canonical_ingredient_status <> 'active' THEN
+    SIGNAL SQLSTATE '45000'
+      SET MYSQL_ERRNO = 1644,
+          MESSAGE_TEXT = 'Ingredient aliases can only reference active canonical ingredients';
+  END IF;
+END;
+
+CREATE TRIGGER ingredient_aliases_canonical_ingredient_BU
+BEFORE UPDATE ON IngredientAliases
+FOR EACH ROW
+BEGIN
+  DECLARE canonical_ingredient_status VARCHAR(16) DEFAULT NULL;
+
+  SELECT Status
+  INTO canonical_ingredient_status
+  FROM Ingredients
+  WHERE Id = NEW.IngredientId
+  FOR SHARE;
+
+  IF canonical_ingredient_status IS NULL OR canonical_ingredient_status <> 'active' THEN
+    SIGNAL SQLSTATE '45000'
+      SET MYSQL_ERRNO = 1644,
+          MESSAGE_TEXT = 'Ingredient aliases can only reference active canonical ingredients';
+  END IF;
+END;
+
 CREATE TRIGGER ingredients_merge_integrity_BI
 BEFORE INSERT ON Ingredients
 FOR EACH ROW
@@ -964,6 +1035,16 @@ BEGIN
     SIGNAL SQLSTATE '45000'
       SET MYSQL_ERRNO = 1644,
           MESSAGE_TEXT = 'A canonical ingredient merge target must remain active';
+  END IF;
+  IF NEW.Status <> 'active'
+     AND EXISTS (
+       SELECT 1
+       FROM IngredientAliases AS ingredient_alias
+       WHERE ingredient_alias.IngredientId = NEW.Id
+     ) THEN
+    SIGNAL SQLSTATE '45000'
+      SET MYSQL_ERRNO = 1644,
+          MESSAGE_TEXT = 'An ingredient with aliases must remain active';
   END IF;
 END;
 
