@@ -155,6 +155,12 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
             CatalogManager: [
                 PERMISSIONS.catalogManage,
                 PERMISSIONS.catalogRead,
+                PERMISSIONS.ingredientAliasManage,
+                PERMISSIONS.ingredientCreate,
+                PERMISSIONS.ingredientDeprecate,
+                PERMISSIONS.ingredientMerge,
+                PERMISSIONS.ingredientRead,
+                PERMISSIONS.ingredientUpdate,
                 PERMISSIONS.tagCreate,
                 PERMISSIONS.tagDeprecate,
                 PERMISSIONS.tagMerge,

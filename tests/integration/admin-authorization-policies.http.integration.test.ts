@@ -6,6 +6,7 @@ import express from 'express';
 
 import { createAdminAuditLogsRouter } from '../../src/api/admin/admin-audit-logs.routes.js';
 import { createAdminCommentsRouter } from '../../src/api/admin/admin.comments.routes.js';
+import { createAdminIngredientsRouter } from '../../src/api/admin/admin.ingredients.routes.js';
 import { adminAuthorizationPolicies } from '../../src/api/admin/admin.authorization.js';
 import { createAdminRecipesRouter } from '../../src/api/admin/admin.recipes.routes.js';
 import { createAdminStaffRouter } from '../../src/api/admin/admin.staff.routes.js';
@@ -71,6 +72,16 @@ const ADMIN_POLICIES: AdminPolicy[] = [
     { method: 'POST', path: '/api/v1/admin/tags/1/deprecate', permission: PERMISSIONS.tagDeprecate },
     { method: 'POST', path: '/api/v1/admin/tags/1/restore', permission: PERMISSIONS.tagDeprecate },
     { method: 'POST', path: '/api/v1/admin/tags/1/merge', permission: PERMISSIONS.tagMerge },
+    { method: 'GET', path: '/api/v1/admin/ingredients', permission: PERMISSIONS.ingredientRead },
+    { method: 'POST', path: '/api/v1/admin/ingredients', permission: PERMISSIONS.ingredientCreate },
+    { method: 'PATCH', path: '/api/v1/admin/ingredients/1', permission: PERMISSIONS.ingredientUpdate },
+    { method: 'POST', path: '/api/v1/admin/ingredients/1/deprecate', permission: PERMISSIONS.ingredientDeprecate },
+    { method: 'POST', path: '/api/v1/admin/ingredients/1/restore', permission: PERMISSIONS.ingredientDeprecate },
+    { method: 'POST', path: '/api/v1/admin/ingredients/1/merge', permission: PERMISSIONS.ingredientMerge },
+    { method: 'GET', path: '/api/v1/admin/ingredients/1/aliases', permission: PERMISSIONS.ingredientRead },
+    { method: 'POST', path: '/api/v1/admin/ingredients/1/aliases', permission: PERMISSIONS.ingredientAliasManage },
+    { method: 'PATCH', path: '/api/v1/admin/ingredients/1/aliases/2', permission: PERMISSIONS.ingredientAliasManage },
+    { method: 'DELETE', path: '/api/v1/admin/ingredients/1/aliases/2', permission: PERMISSIONS.ingredientAliasManage },
     { method: 'GET', path: '/api/v1/health/live', permission: PERMISSIONS.systemHealthRead },
     { method: 'GET', path: '/api/v1/health/ready', permission: PERMISSIONS.systemHealthRead },
     { method: 'GET', path: '/api/v1/health', permission: PERMISSIONS.systemHealthRead }
@@ -181,6 +192,18 @@ describe('administrative endpoint authorization policies', () => {
             deprecate: endpointHandler,
             restore: endpointHandler,
             merge: endpointHandler
+        }));
+        adminRouter.use('/ingredients', createAdminIngredientsRouter({
+            list: endpointHandler,
+            create: endpointHandler,
+            update: endpointHandler,
+            deprecate: endpointHandler,
+            restore: endpointHandler,
+            merge: endpointHandler,
+            listAliases: endpointHandler,
+            createAlias: endpointHandler,
+            updateAlias: endpointHandler,
+            deleteAlias: endpointHandler
         }));
         const defaultDenyHandler: RequestHandler = (_req, res) => {
             defaultDenyControllerCalls += 1;
@@ -347,6 +370,45 @@ describe('administrative endpoint authorization policies', () => {
             });
 
             assert.equal(response.status, 403, `${policy.method} ${policy.path} must reject other tag permissions`);
+            assert.equal(
+                (await response.json() as { error: { code: string } }).error.code,
+                'AUTH_PERMISSION_REQUIRED'
+            );
+            assert.equal(controllerCalls, controllerCallsBeforeRequest);
+        }
+    });
+
+    it('keeps ingredient catalog permissions isolated by action', async () => {
+        const ingredientPolicies = [
+            { method: 'GET', path: '/api/v1/admin/ingredients', permission: PERMISSIONS.ingredientRead },
+            { method: 'POST', path: '/api/v1/admin/ingredients', permission: PERMISSIONS.ingredientCreate },
+            { method: 'PATCH', path: '/api/v1/admin/ingredients/1', permission: PERMISSIONS.ingredientUpdate },
+            { method: 'POST', path: '/api/v1/admin/ingredients/1/deprecate', permission: PERMISSIONS.ingredientDeprecate },
+            { method: 'POST', path: '/api/v1/admin/ingredients/1/restore', permission: PERMISSIONS.ingredientDeprecate },
+            { method: 'POST', path: '/api/v1/admin/ingredients/1/merge', permission: PERMISSIONS.ingredientMerge },
+            { method: 'GET', path: '/api/v1/admin/ingredients/1/aliases', permission: PERMISSIONS.ingredientRead },
+            { method: 'POST', path: '/api/v1/admin/ingredients/1/aliases', permission: PERMISSIONS.ingredientAliasManage },
+            { method: 'PATCH', path: '/api/v1/admin/ingredients/1/aliases/2', permission: PERMISSIONS.ingredientAliasManage },
+            { method: 'DELETE', path: '/api/v1/admin/ingredients/1/aliases/2', permission: PERMISSIONS.ingredientAliasManage }
+        ] as const;
+        const ingredientPermissions = [
+            PERMISSIONS.ingredientRead,
+            PERMISSIONS.ingredientCreate,
+            PERMISSIONS.ingredientUpdate,
+            PERMISSIONS.ingredientDeprecate,
+            PERMISSIONS.ingredientMerge,
+            PERMISSIONS.ingredientAliasManage
+        ];
+
+        for (const policy of ingredientPolicies) {
+            grantedPermissions = ingredientPermissions.filter((permission) => permission !== policy.permission);
+            const controllerCallsBeforeRequest = controllerCalls;
+            const response = await fetch(`${server.baseUrl}${policy.path}`, {
+                method: policy.method,
+                headers: { cookie }
+            });
+
+            assert.equal(response.status, 403, `${policy.method} ${policy.path} must reject other ingredient permissions`);
             assert.equal(
                 (await response.json() as { error: { code: string } }).error.code,
                 'AUTH_PERMISSION_REQUIRED'

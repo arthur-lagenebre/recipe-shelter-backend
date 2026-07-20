@@ -39,5 +39,15 @@ export const adminAuthorizationPolicies = [
   { method: 'patch', path: '/tags/:id', permission: PERMISSIONS.tagUpdate },
   { method: 'post', path: '/tags/:id/deprecate', permission: PERMISSIONS.tagDeprecate },
   { method: 'post', path: '/tags/:id/restore', permission: PERMISSIONS.tagDeprecate },
-  { method: 'post', path: '/tags/:id/merge', permission: PERMISSIONS.tagMerge }
+  { method: 'post', path: '/tags/:id/merge', permission: PERMISSIONS.tagMerge },
+  { method: 'get', path: '/ingredients', permission: PERMISSIONS.ingredientRead },
+  { method: 'post', path: '/ingredients', permission: PERMISSIONS.ingredientCreate },
+  { method: 'patch', path: '/ingredients/:id', permission: PERMISSIONS.ingredientUpdate },
+  { method: 'post', path: '/ingredients/:id/deprecate', permission: PERMISSIONS.ingredientDeprecate },
+  { method: 'post', path: '/ingredients/:id/restore', permission: PERMISSIONS.ingredientDeprecate },
+  { method: 'post', path: '/ingredients/:id/merge', permission: PERMISSIONS.ingredientMerge },
+  { method: 'get', path: '/ingredients/:id/aliases', permission: PERMISSIONS.ingredientRead },
+  { method: 'post', path: '/ingredients/:id/aliases', permission: PERMISSIONS.ingredientAliasManage },
+  { method: 'patch', path: '/ingredients/:id/aliases/:aliasId', permission: PERMISSIONS.ingredientAliasManage },
+  { method: 'delete', path: '/ingredients/:id/aliases/:aliasId', permission: PERMISSIONS.ingredientAliasManage }
 ] as const satisfies readonly AuthorizationPolicy[];

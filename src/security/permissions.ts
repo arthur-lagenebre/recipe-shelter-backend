@@ -27,7 +27,13 @@ export const PERMISSIONS = {
   tagCreate: 'tag.create',
   tagUpdate: 'tag.update',
   tagDeprecate: 'tag.deprecate',
-  tagMerge: 'tag.merge'
+  tagMerge: 'tag.merge',
+  ingredientRead: 'ingredient.read',
+  ingredientCreate: 'ingredient.create',
+  ingredientUpdate: 'ingredient.update',
+  ingredientDeprecate: 'ingredient.deprecate',
+  ingredientMerge: 'ingredient.merge',
+  ingredientAliasManage: 'ingredient.alias.manage'
 } as const;
 
 export type PermissionCode = typeof PERMISSIONS[keyof typeof PERMISSIONS];

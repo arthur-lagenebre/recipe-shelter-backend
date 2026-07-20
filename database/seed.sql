@@ -51,7 +51,13 @@ INSERT INTO Permissions (Id, Code, Description) VALUES
 (26, 'tag.create', "Créer un tag canonique"),
 (27, 'tag.update', "Modifier un tag canonique actif"),
 (28, 'tag.deprecate', "Déprécier ou restaurer un tag"),
-(29, 'tag.merge', "Fusionner un tag dans un tag canonique actif")
+(29, 'tag.merge', "Fusionner un tag dans un tag canonique actif"),
+(30, 'ingredient.read', "Consulter le catalogue complet des ingrédients et leurs alias dans l'administration"),
+(31, 'ingredient.create', "Créer un ingrédient canonique"),
+(32, 'ingredient.update', "Modifier un ingrédient canonique actif"),
+(33, 'ingredient.deprecate', "Déprécier ou restaurer un ingrédient"),
+(34, 'ingredient.merge', "Fusionner un ingrédient dans un ingrédient canonique actif"),
+(35, 'ingredient.alias.manage', "Créer, modifier et supprimer les alias d'ingrédients")
 AS new_permissions
 ON DUPLICATE KEY UPDATE
   Code = new_permissions.Code,
@@ -85,6 +91,12 @@ FROM (
   UNION ALL SELECT 'CatalogManager', 'tag.update'
   UNION ALL SELECT 'CatalogManager', 'tag.deprecate'
   UNION ALL SELECT 'CatalogManager', 'tag.merge'
+  UNION ALL SELECT 'CatalogManager', 'ingredient.read'
+  UNION ALL SELECT 'CatalogManager', 'ingredient.create'
+  UNION ALL SELECT 'CatalogManager', 'ingredient.update'
+  UNION ALL SELECT 'CatalogManager', 'ingredient.deprecate'
+  UNION ALL SELECT 'CatalogManager', 'ingredient.merge'
+  UNION ALL SELECT 'CatalogManager', 'ingredient.alias.manage'
   -- SuperAdmin: catalogue explicite complet, sans wildcard ni héritage de rôle.
   UNION ALL SELECT 'SuperAdmin', 'system.health.read'
   UNION ALL SELECT 'SuperAdmin', 'user.read'
@@ -115,6 +127,12 @@ FROM (
   UNION ALL SELECT 'SuperAdmin', 'tag.update'
   UNION ALL SELECT 'SuperAdmin', 'tag.deprecate'
   UNION ALL SELECT 'SuperAdmin', 'tag.merge'
+  UNION ALL SELECT 'SuperAdmin', 'ingredient.read'
+  UNION ALL SELECT 'SuperAdmin', 'ingredient.create'
+  UNION ALL SELECT 'SuperAdmin', 'ingredient.update'
+  UNION ALL SELECT 'SuperAdmin', 'ingredient.deprecate'
+  UNION ALL SELECT 'SuperAdmin', 'ingredient.merge'
+  UNION ALL SELECT 'SuperAdmin', 'ingredient.alias.manage'
 ) AS role_permission_matrix
 INNER JOIN Roles AS roles ON roles.Code = role_permission_matrix.RoleCode
 INNER JOIN Permissions AS permissions ON permissions.Code = role_permission_matrix.PermissionCode

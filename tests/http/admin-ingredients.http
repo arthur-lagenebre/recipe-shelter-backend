@@ -1,0 +1,89 @@
+# ============================================
+# Admin ingredients
+# ============================================
+
+@baseUrl = http://localhost:3000/api/v1
+@adminSessionCookie = PASTE_RS_ADMIN_SESSION_COOKIE_HERE
+@ingredientId = 1
+@targetIngredientId = 2
+@aliasId = 1
+
+### Paginated canonical ingredient catalog (matches canonical names and aliases)
+GET {{baseUrl}}/admin/ingredients?page=1&limit=25&status=active&q=tomate
+Cookie: rs_admin_session={{adminSessionCookie}}
+
+### Create a canonical ingredient
+POST {{baseUrl}}/admin/ingredients
+Content-Type: application/json
+Cookie: rs_admin_session={{adminSessionCookie}}
+
+{
+  "name": "Tomate cœur de bœuf"
+}
+
+### Update an active canonical ingredient
+PATCH {{baseUrl}}/admin/ingredients/{{ingredientId}}
+Content-Type: application/json
+Cookie: rs_admin_session={{adminSessionCookie}}
+
+{
+  "name": "Tomate cœur-de-bœuf",
+  "slug": "tomate-coeur-de-boeuf"
+}
+
+### Deprecate an ingredient without aliases or merged sources
+POST {{baseUrl}}/admin/ingredients/{{ingredientId}}/deprecate
+Content-Type: application/json
+Cookie: rs_admin_session={{adminSessionCookie}}
+
+{
+  "reason": "Cette référence n'est plus utilisée dans le catalogue éditorial."
+}
+
+### Restore a deprecated ingredient
+POST {{baseUrl}}/admin/ingredients/{{ingredientId}}/restore
+Content-Type: application/json
+Cookie: rs_admin_session={{adminSessionCookie}}
+
+{
+  "reason": "Cette référence redevient pertinente pour le catalogue éditorial."
+}
+
+### Merge into an active canonical ingredient
+# Recipe ingredient references and aliases move to the target; author DisplayText values stay unchanged.
+POST {{baseUrl}}/admin/ingredients/{{ingredientId}}/merge
+Content-Type: application/json
+Cookie: rs_admin_session={{adminSessionCookie}}
+
+{
+  "targetIngredientId": {{targetIngredientId}},
+  "reason": "Cette référence est un doublon de l'ingrédient canonique sélectionné."
+}
+
+### Paginated aliases
+GET {{baseUrl}}/admin/ingredients/{{ingredientId}}/aliases?page=1&limit=25&languageCode=fr&q=tomate
+Cookie: rs_admin_session={{adminSessionCookie}}
+
+### Create an alias on an active canonical ingredient
+POST {{baseUrl}}/admin/ingredients/{{ingredientId}}/aliases
+Content-Type: application/json
+Cookie: rs_admin_session={{adminSessionCookie}}
+
+{
+  "name": "Tomate commune",
+  "languageCode": "fr"
+}
+
+### Update an alias
+PATCH {{baseUrl}}/admin/ingredients/{{ingredientId}}/aliases/{{aliasId}}
+Content-Type: application/json
+Cookie: rs_admin_session={{adminSessionCookie}}
+
+{
+  "name": "Tomate de table",
+  "languageCode": "fr"
+}
+
+### Delete an alias
+DELETE {{baseUrl}}/admin/ingredients/{{ingredientId}}/aliases/{{aliasId}}
+Cookie: rs_admin_session={{adminSessionCookie}}

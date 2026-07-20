@@ -4,6 +4,7 @@ import { after, before, describe, it } from 'node:test';
 
 import mysql from 'mysql2/promise';
 
+import { AdminIngredientRepositoryMysql } from '../../../src/repositories/admin/admin.ingredients.repository.mysql.js';
 import { IngredientRepositoryMysql } from '../../../src/repositories/ingredients/ingredient.repository.mysql.js';
 import { RecipeRepositoryMysql } from '../../../src/repositories/recipes/recipe.repository.mysql.js';
 import { env } from '../../../src/utils/env.js';
@@ -414,6 +415,82 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
             ),
             /An ingredient must have no recipe associations before being merged/
         );
+    });
+
+    it('merges canonical ingredients transactionally while preserving author display text and moving aliases', async () => {
+        await connection.query(
+            `INSERT INTO Users (Id, Mail, Username, Password, AccountType, Status, EmailValidatedAt)
+             VALUES (980, 'ingredient-merge-author@example.test', 'ingredient-merge-author', 'test-password-hash', 'community', 'active', CURRENT_TIMESTAMP);
+             INSERT INTO Recipes (Id, UserId, CategoryId, Title, Slug, Description, PrepTimeMinutes, Servings, Status, PublishedAt)
+             VALUES (980, 980, 1, 'Ingredient merge recipe', 'ingredient-merge-recipe', 'Fixture', 5, 2, 'published', CURRENT_TIMESTAMP);
+             INSERT INTO Ingredients (Id, Name, NormalizedName, Slug) VALUES
+               (980, 'Ingredient merge source', 'ingredient merge source', 'ingredient-merge-source'),
+               (981, 'Ingredient merge target', 'ingredient merge target', 'ingredient-merge-target');
+             INSERT INTO Ingredients (Id, Name, NormalizedName, Slug, Status, MergedIntoIngredientId)
+             VALUES (982, 'Ingredient historical redirect', 'ingredient historical redirect', 'ingredient-historical-redirect', 'merged', 980);
+             INSERT INTO IngredientAliases (Id, IngredientId, Name, NormalizedName, LanguageCode)
+             VALUES (980, 980, 'Alias de fusion', 'alias de fusion', 'fr');
+             INSERT INTO RecipeIngredients (Id, RecipeId, IngredientId, DisplayText, Quantity, Unit, Note, SortOrder)
+             VALUES (980, 980, 980, 'deux belles poignées selon l’auteur', 2, 'poignées', 'texte conservé', 1)`
+        );
+
+        const db = await pool.getConnection();
+        const repository = new AdminIngredientRepositoryMysql(pool);
+        try {
+            await db.beginTransaction();
+            await repository.findByIdsForUpdate([980, 981], db);
+            const result = await repository.merge(980, 981, db);
+            await db.commit();
+
+            assert.deepEqual(result, {
+                merged: true,
+                sourceRecipeAssociationCountBefore: 1,
+                targetRecipeAssociationCountBefore: 0,
+                targetRecipeAssociationCountAfter: 1,
+                transferredRecipeAssociationCount: 1,
+                sourceAliasCountBefore: 1,
+                targetAliasCountBefore: 0,
+                targetAliasCountAfter: 1,
+                transferredAliasCount: 1,
+                redirectedMergedIngredientCount: 1
+            });
+        } catch (error) {
+            await db.rollback();
+            throw error;
+        } finally {
+            db.release();
+        }
+
+        const [recipeIngredients] = await connection.query(
+            `SELECT IngredientId, DisplayText, Quantity, Unit, Note
+             FROM RecipeIngredients
+             WHERE Id = 980`
+        );
+        assert.deepEqual(recipeIngredients, [{
+            IngredientId: 981,
+            DisplayText: 'deux belles poignées selon l’auteur',
+            Quantity: '2.000',
+            Unit: 'poignées',
+            Note: 'texte conservé'
+        }]);
+
+        const [aliases] = await connection.query(
+            `SELECT IngredientId, Name, LanguageCode
+             FROM IngredientAliases
+             WHERE Id = 980`
+        );
+        assert.deepEqual(aliases, [{ IngredientId: 981, Name: 'Alias de fusion', LanguageCode: 'fr' }]);
+
+        const [ingredients] = await connection.query(
+            `SELECT Id, Status, MergedIntoIngredientId
+             FROM Ingredients
+             WHERE Id IN (980, 982)
+             ORDER BY Id`
+        );
+        assert.deepEqual(ingredients, [
+            { Id: 980, Status: 'merged', MergedIntoIngredientId: 981 },
+            { Id: 982, Status: 'merged', MergedIntoIngredientId: 981 }
+        ]);
     });
 
     it('rejects equivalent active names while preserving deprecated and merged variants', async () => {

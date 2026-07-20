@@ -7,6 +7,8 @@ import { createAdminAuditLogsRouter } from './api/admin/admin-audit-logs.routes.
 import { adminAuthorizationPolicies } from './api/admin/admin.authorization.js';
 import { createAdminCommentsController } from './api/admin/admin.comments.controller.js';
 import { createAdminCommentsRouter } from './api/admin/admin.comments.routes.js';
+import { createAdminIngredientsController } from './api/admin/admin.ingredients.controller.js';
+import { createAdminIngredientsRouter } from './api/admin/admin.ingredients.routes.js';
 import { createAdminRecipesController } from './api/admin/admin.recipes.controller.js';
 import { createAdminRecipesRouter } from './api/admin/admin.recipes.routes.js';
 import { createAdminStaffController } from './api/admin/admin.staff.controller.js';
@@ -49,6 +51,7 @@ import { configureAuthRbacRepository, configureAuthSessionRepository, configureA
 import { AdminAuditQueryRepositoryMysql } from './repositories/admin/admin-audit-query.repository.mysql.js';
 import { AdminAuditRepositoryMysql } from './repositories/admin/admin-audit.repository.mysql.js';
 import { AdminCommentRepositoryMysql } from './repositories/admin/admin.comments.repository.mysql.js';
+import { AdminIngredientRepositoryMysql } from './repositories/admin/admin.ingredients.repository.mysql.js';
 import { AdminRecipeRepositoryMysql } from './repositories/admin/admin.recipe.repository.mysql.js';
 import { AdminStaffRepositoryMysql } from './repositories/admin/admin.staff.repository.mysql.js';
 import { AdminTagRepositoryMysql } from './repositories/admin/admin.tags.repository.mysql.js';
@@ -72,6 +75,7 @@ import { AdminAuditActionRunnerMysql } from './services/admin/admin-audit-action
 import { AdminAuditQueryService } from './services/admin/admin-audit-query.service.js';
 import { AdminAuditService } from './services/admin/admin-audit.service.js';
 import { AdminCommentService } from './services/admin/admin.comments.services.js';
+import { AdminIngredientService } from './services/admin/admin.ingredients.service.js';
 import { AdminRecipeService } from './services/admin/admin.recipes.services.js';
 import { AdminStaffService } from './services/admin/admin.staff.service.js';
 import { AdminTagService } from './services/admin/admin.tags.service.js';
@@ -107,6 +111,7 @@ import type { ImageStorage } from './storage/image-storage.interface.js';
 export type AppDependencies = {
   adminAuditQueryService: AdminAuditQueryService;
   adminCommentService: AdminCommentService;
+  adminIngredientService: AdminIngredientService;
   adminRecipeService: AdminRecipeService;
   adminStaffService: AdminStaffService;
   adminTagService: AdminTagService;
@@ -139,6 +144,7 @@ function createDefaultDependencies(): AppDependencies {
 
   const adminAuditQueryRepository = new AdminAuditQueryRepositoryMysql(pool);
   const adminCommentRepository = new AdminCommentRepositoryMysql(pool);
+  const adminIngredientRepository = new AdminIngredientRepositoryMysql(pool);
   const adminRecipeRepository = new AdminRecipeRepositoryMysql(pool, getPublicImageUrl);
   const adminStaffRepository = new AdminStaffRepositoryMysql(pool);
   const adminTagRepository = new AdminTagRepositoryMysql(pool);
@@ -168,6 +174,7 @@ function createDefaultDependencies(): AppDependencies {
   return {
     adminAuditQueryService: new AdminAuditQueryService(adminAuditQueryRepository),
     adminCommentService: new AdminCommentService(adminCommentRepository, adminAuditActions),
+    adminIngredientService: new AdminIngredientService(adminIngredientRepository, adminAuditActions),
     adminRecipeService: new AdminRecipeService(adminRecipeRepository, adminAuditActions, recipeImageService),
     adminStaffService: new AdminStaffService(adminStaffRepository, adminAuditActions),
     adminTagService: new AdminTagService(adminTagRepository, adminAuditActions),
@@ -226,6 +233,7 @@ export function createApp(overrides: Partial<AppDependencies> = {}) {
 
   const adminAuditLogsController = createAdminAuditLogsController(dependencies.adminAuditQueryService);
   const adminCommentsController = createAdminCommentsController(dependencies.adminCommentService);
+  const adminIngredientsController = createAdminIngredientsController(dependencies.adminIngredientService);
   const adminRecipesController = createAdminRecipesController(dependencies.adminRecipeService);
   const adminStaffController = createAdminStaffController(dependencies.adminStaffService);
   const adminTagsController = createAdminTagsController(dependencies.adminTagService);
@@ -248,6 +256,7 @@ export function createApp(overrides: Partial<AppDependencies> = {}) {
   adminRouter.use(requireStaffAuth, EnforceAuthorizationPolicies(adminAuthorizationPolicies));
   adminRouter.use('/audit-logs', createAdminAuditLogsRouter(adminAuditLogsController));
   adminRouter.use('/comments', createAdminCommentsRouter(adminCommentsController));
+  adminRouter.use('/ingredients', createAdminIngredientsRouter(adminIngredientsController));
   adminRouter.use('/recipes', createAdminRecipesRouter(adminRecipesController));
   adminRouter.use('/staff/invitations', createStaffInvitationsRouter(staffInvitationsController));
   adminRouter.use('/staff', createAdminStaffRouter(adminStaffController));

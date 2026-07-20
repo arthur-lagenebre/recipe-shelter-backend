@@ -23,3 +23,23 @@ export type IngredientRow = RowDataPacket & {
     CreatedAt: Date;
     UpdatedAt: Date;
 };
+
+export type IngredientAlias = {
+    id: number;
+    ingredientId: number;
+    name: string;
+    normalizedName: string;
+    languageCode: string;
+    createdAt: Date;
+    updatedAt: Date;
+};
+
+export type IngredientAliasRow = RowDataPacket & {
+    Id: number;
+    IngredientId: number;
+    Name: string;
+    NormalizedName: string;
+    LanguageCode: string;
+    CreatedAt: Date;
+    UpdatedAt: Date;
+};
