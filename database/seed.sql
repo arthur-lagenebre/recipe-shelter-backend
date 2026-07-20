@@ -221,7 +221,6 @@ INSERT INTO Ingredients (Name, NormalizedName, Slug) VALUES
 ('Canard', 'canard', 'canard'),
 ('Cannelle', 'cannelle', 'cannelle'),
 ('Cantal', 'cantal', 'cantal'),
-('Capre', 'capre', 'capre'),
 ('Caramel', 'caramel', 'caramel'),
 ('Cardamome', 'cardamome', 'cardamome'),
 ('Carotte', 'carotte', 'carotte'),

@@ -785,6 +785,8 @@ npm run test:mysql
 
 Exécute les intégrations avec une vraie base MySQL isolée : schéma final puis seed central, dépôts critiques, matrice d'accès HTTP issue des rôles seedés et cycle de vie staff complet. Définissez auparavant `TEST_DB_NAME` avec un nom différent de `DB_NAME` et contenant `test`. Chaque base dédiée est créée au début de sa suite puis supprimée à la fin.
 
+Le contrôle d'initialisation dédié vérifie d'abord, sur une base vide, l'inventaire complet des tables, contraintes, index et triggers créé par `database/migrations/1_create_schema.sql`, sans donnée initiale. Il applique ensuite `database/seed.sql`, contrôle les catalogues et permissions via les repositories du backend, puis rejoue le seed pour confirmer son idempotence.
+
 ```bash
 npm run lint
 ```
