@@ -50,11 +50,11 @@ const ADMIN_POLICIES: AdminPolicy[] = [
     { method: 'POST', path: '/api/v1/admin/recipes/1/reject', permission: PERMISSIONS.recipeReject },
     { method: 'POST', path: '/api/v1/admin/recipes/1/archive', permission: PERMISSIONS.recipeArchive },
     { method: 'DELETE', path: '/api/v1/admin/recipes/1', permission: PERMISSIONS.recipesDelete },
-    { method: 'GET', path: '/api/v1/admin/users/banned', permission: PERMISSIONS.usersRead },
-    { method: 'GET', path: '/api/v1/admin/users/banned/count', permission: PERMISSIONS.usersRead },
-    { method: 'GET', path: '/api/v1/admin/users/2', permission: PERMISSIONS.usersRead },
-    { method: 'POST', path: '/api/v1/admin/users/2/ban', permission: PERMISSIONS.usersModerate },
-    { method: 'POST', path: '/api/v1/admin/users/2/unban', permission: PERMISSIONS.usersModerate },
+    { method: 'GET', path: '/api/v1/admin/users/banned', permission: PERMISSIONS.userRead },
+    { method: 'GET', path: '/api/v1/admin/users/banned/count', permission: PERMISSIONS.userRead },
+    { method: 'GET', path: '/api/v1/admin/users/2', permission: PERMISSIONS.userRead },
+    { method: 'POST', path: '/api/v1/admin/users/2/ban', permission: PERMISSIONS.userBan },
+    { method: 'POST', path: '/api/v1/admin/users/2/unban', permission: PERMISSIONS.userUnban },
     { method: 'POST', path: '/api/v1/admin/staff/invitations', permission: PERMISSIONS.staffCreate },
     { method: 'GET', path: '/api/v1/admin/staff', permission: PERMISSIONS.staffRead },
     { method: 'GET', path: '/api/v1/admin/staff/2', permission: PERMISSIONS.staffRead },
@@ -115,7 +115,7 @@ describe('administrative endpoint authorization policies', () => {
 
         adminRouter.use(requireStaffAuth, EnforceAuthorizationPolicies([
             ...adminAuthorizationPolicies,
-            { method: 'get', path: '/default-deny/declared', permission: PERMISSIONS.usersRead },
+            { method: 'get', path: '/default-deny/declared', permission: PERMISSIONS.userRead },
             {
                 method: 'get',
                 path: '/default-deny/unknown-permission',
@@ -273,6 +273,31 @@ describe('administrative endpoint authorization policies', () => {
             });
 
             assert.equal(response.status, 403, `${policy.method} ${policy.path} must reject other comment permissions`);
+            assert.equal(
+                (await response.json() as { error: { code: string } }).error.code,
+                'AUTH_PERMISSION_REQUIRED'
+            );
+            assert.equal(controllerCalls, controllerCallsBeforeRequest);
+        }
+    });
+
+    it('keeps user management permissions isolated by action', async () => {
+        const userManagementPolicies = [
+            { method: 'GET', path: '/api/v1/admin/users/banned', permission: PERMISSIONS.userRead },
+            { method: 'POST', path: '/api/v1/admin/users/2/ban', permission: PERMISSIONS.userBan },
+            { method: 'POST', path: '/api/v1/admin/users/2/unban', permission: PERMISSIONS.userUnban }
+        ] as const;
+        const userManagementPermissions = userManagementPolicies.map(({ permission }) => permission);
+
+        for (const policy of userManagementPolicies) {
+            grantedPermissions = userManagementPermissions.filter((permission) => permission !== policy.permission);
+            const controllerCallsBeforeRequest = controllerCalls;
+            const response = await fetch(`${server.baseUrl}${policy.path}`, {
+                method: policy.method,
+                headers: { cookie }
+            });
+
+            assert.equal(response.status, 403, `${policy.method} ${policy.path} must reject other user permissions`);
             assert.equal(
                 (await response.json() as { error: { code: string } }).error.code,
                 'AUTH_PERMISSION_REQUIRED'

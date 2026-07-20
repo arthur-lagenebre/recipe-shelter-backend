@@ -26,8 +26,9 @@ const EXPECTED_ROLE_PERMISSIONS: Record<string, string[]> = {
     ],
     SuperAdmin: [...Object.values(PERMISSIONS)].sort(),
     UserAdmin: [
-        PERMISSIONS.usersModerate,
-        PERMISSIONS.usersRead
+        PERMISSIONS.userBan,
+        PERMISSIONS.userRead,
+        PERMISSIONS.userUnban
     ]
 };
 
@@ -48,7 +49,7 @@ describe('RBAC seed catalog', () => {
         assert.ok(applicationCodes.every((code) => /^[a-z]+(?:\.[a-z]+)+$/.test(code)));
         assert.deepEqual(
             [...new Set(applicationCodes.map((code) => code.split('.')[0]))].sort(),
-            ['audit', 'catalog', 'comment', 'comments', 'recipe', 'recipes', 'staff', 'system', 'users']
+            ['audit', 'catalog', 'comment', 'comments', 'recipe', 'recipes', 'staff', 'system', 'user']
         );
         assert.ok(applicationCodes.every((code) => isPermissionCode(code)));
         assert.equal(isPermissionCode('unknown.permission'), false);

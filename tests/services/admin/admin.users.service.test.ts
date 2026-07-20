@@ -324,7 +324,7 @@ describe('AdminUserService', () => {
         assert.equal(adminUsers.unbanInput, null);
     });
 
-    it('unbans an existing user through the admin repository', async () => {
+    it('unbans and audits an existing user through the admin repository', async () => {
         users.user = {
             ...baseUser,
             status: 'banned',
@@ -341,7 +341,21 @@ describe('AdminUserService', () => {
             reason: 'Appeal accepted after review.'
         });
         assert.equal(audit.inputs.length, 1);
-        assert.equal(audit.inputs[0]?.eventType, 'users.unban');
+        assert.deepEqual(audit.inputs[0], {
+            actorUserId: 1,
+            eventType: 'users.unban',
+            targetType: 'community_user',
+            targetId: 2,
+            reason: 'Appeal accepted after review.',
+            beforeValues: {
+                ...snapshotBaseUser(),
+                status: 'banned',
+                bannedByUserId: 1,
+                bannedReason: 'Repeated abuse of the platform rules.'
+            },
+            afterValues: snapshotBaseUser(),
+            ...testAdminAuditContext
+        });
     });
 
     it('rejects unban when the reason is missing', async () => {

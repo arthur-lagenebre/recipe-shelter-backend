@@ -90,7 +90,7 @@ describe('admin user access HTTP integration', () => {
         configureAuthUserRepository(userRepository);
         configureAuthRbacRepository({
             async findPermissionCodesByStaffUserId(staffUserId) {
-                return staffUserId === 1 ? [PERMISSIONS.usersModerate] : [];
+                return staffUserId === 1 ? [PERMISSIONS.userBan, PERMISSIONS.userUnban] : [];
             }
         });
         const sessions = new TestSessionRepository();

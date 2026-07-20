@@ -22,7 +22,7 @@ const staffAuth: AuthContext = {
     username: 'staff-user',
     accountType: 'staff',
     status: 'active',
-    permissions: [PERMISSIONS.usersRead, PERMISSIONS.usersModerate]
+    permissions: [PERMISSIONS.userRead, PERMISSIONS.userBan, PERMISSIONS.userUnban]
 };
 
 type AccessMatrixCase = Readonly<{
@@ -60,8 +60,9 @@ const ROLE_PERMISSIONS = {
         PERMISSIONS.commentsUpdate
     ],
     UserAdmin: [
-        PERMISSIONS.usersRead,
-        PERMISSIONS.usersModerate
+        PERMISSIONS.userRead,
+        PERMISSIONS.userBan,
+        PERMISSIONS.userUnban
     ],
     CatalogManager: [
         PERMISSIONS.catalogRead,
@@ -155,7 +156,7 @@ describe('authorization service', () => {
         });
 
         it('denies absent and unknown authorization inputs by default', () => {
-            assert.equal(hasPermission(undefined, PERMISSIONS.usersModerate), false);
+            assert.equal(hasPermission(undefined, PERMISSIONS.userBan), false);
             assert.equal(hasPermission(staffAuth, 'unknown.permission' as never), false);
         });
     });

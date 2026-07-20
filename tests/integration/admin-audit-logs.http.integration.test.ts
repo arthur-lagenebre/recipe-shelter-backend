@@ -137,7 +137,7 @@ describe('admin audit logs HTTP integration', () => {
   });
 
   it('requires authentication and the exact audit.read permission', async () => {
-    grantedPermissions = [PERMISSIONS.usersRead];
+    grantedPermissions = [PERMISSIONS.userRead];
     receivedQuery = null;
 
     const forbidden = await fetch(`${server.baseUrl}/api/v1/admin/audit-logs`, {

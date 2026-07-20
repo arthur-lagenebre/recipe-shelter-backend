@@ -16,7 +16,7 @@ type MockRequest = {
     username: string;
     accountType: User['accountType'];
     status: User['status'];
-    permissions: typeof PERMISSIONS.usersRead[];
+    permissions: typeof PERMISSIONS.userRead[];
   };
 };
 
@@ -70,7 +70,7 @@ describe('session authentication boundaries', () => {
     configureAuthUserRepository({ async findById(id) { return users.get(id) ?? null; } });
     configureAuthRbacRepository({
       async findPermissionCodesByStaffUserId() {
-        return [PERMISSIONS.usersRead];
+        return [PERMISSIONS.userRead];
       }
     });
     configureAuthSessionRepository(sessions);
@@ -124,7 +124,7 @@ describe('session authentication boundaries', () => {
     const req = cookieRequest(await sessions.issueCookie(staffUser, 'admin'));
 
     assert.equal(await getNextError(requireStaffAuth, req), undefined);
-    assert.deepEqual(req.auth?.permissions, [PERMISSIONS.usersRead]);
+    assert.deepEqual(req.auth?.permissions, [PERMISSIONS.userRead]);
   });
 
   it('requires the current MFA-backed staff session to have a recent strong authentication', async () => {

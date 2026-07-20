@@ -16,7 +16,7 @@ describe('RbacRepositoryMysql', () => {
                 executedParams = params;
                 return [[
                     { Code: PERMISSIONS.recipeReview },
-                    { Code: PERMISSIONS.usersModerate },
+                    { Code: PERMISSIONS.userBan },
                     { Code: 'unknown.permission' }
                 ]];
             }
@@ -24,7 +24,7 @@ describe('RbacRepositoryMysql', () => {
 
         const permissions = await repository.findPermissionCodesByStaffUserId(42);
 
-        assert.deepEqual(permissions, [PERMISSIONS.recipeReview, PERMISSIONS.usersModerate]);
+        assert.deepEqual(permissions, [PERMISSIONS.recipeReview, PERMISSIONS.userBan]);
         assert.match(executedSql, /FROM StaffRoles AS sr/);
         assert.match(executedSql, /INNER JOIN RolePermissions AS rp/);
         assert.match(executedSql, /INNER JOIN Permissions AS p/);

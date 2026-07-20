@@ -59,14 +59,16 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
                 (1, 'SuperAdmin', 'administrator', 'Full access'),
                 (2, 'RecipeModerator', 'moderator', 'Moderation access');
             INSERT INTO Permissions (Id, Code, Description) VALUES
-                (1, 'users.moderate', 'Moderate users'),
-                (2, 'recipe.review', 'Review recipes'),
-                (3, 'recipe.publish', 'Publish recipes'),
-                (4, 'recipe.reject', 'Reject recipes'),
-                (5, 'recipe.archive', 'Archive recipes');
+                (1, 'user.read', 'Read users'),
+                (2, 'user.ban', 'Ban users'),
+                (3, 'user.unban', 'Unban users'),
+                (4, 'recipe.review', 'Review recipes'),
+                (5, 'recipe.publish', 'Publish recipes'),
+                (6, 'recipe.reject', 'Reject recipes'),
+                (7, 'recipe.archive', 'Archive recipes');
             INSERT INTO RolePermissions (RoleId, PermissionId) VALUES
-                (1, 1), (1, 2), (1, 3), (1, 4), (1, 5),
-                (2, 2), (2, 3), (2, 4), (2, 5);
+                (1, 1), (1, 2), (1, 3), (1, 4), (1, 5), (1, 6), (1, 7),
+                (2, 4), (2, 5), (2, 6), (2, 7);
             INSERT INTO Users (Id, Mail, Username, Password, AccountType, Status, EmailValidatedAt, BannedByUserId, BannedReason, BannedAt) VALUES
                 (1, 'admin@test.local', 'admin', 'hash', 'staff', 'inactive', CURRENT_TIMESTAMP, NULL, NULL, NULL),
                 (2, 'reader@test.local', 'reader', 'hash', 'community', 'active', CURRENT_TIMESTAMP, NULL, NULL, NULL),
@@ -224,7 +226,9 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
             'recipe.publish',
             'recipe.reject',
             'recipe.review',
-            'users.moderate'
+            'user.ban',
+            'user.read',
+            'user.unban'
         ]);
         await assert.rejects(() => pool.query(`INSERT INTO StaffRoles (StaffUserId, RoleId) VALUES (?, 1)`, [staff.id]));
         await assert.rejects(() => pool.query(`INSERT INTO StaffRoles (StaffUserId, RoleId) VALUES (2, 1)`));
@@ -234,7 +238,7 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
         await assert.rejects(() => pool.query(
             `INSERT INTO Roles (Code, Name, Description) VALUES ('SUPERADMIN', 'Other administrator', 'Duplicate')`
         ));
-        await assert.rejects(() => pool.query(`INSERT INTO Permissions (Code, Description) VALUES ('RECIPE.REVIEW', 'Duplicate')`));
+        await assert.rejects(() => pool.query(`INSERT INTO Permissions (Code, Description) VALUES ('USER.READ', 'Duplicate')`));
         const author = await users.create({
             mail: 'author@test.local',
             username: 'author',

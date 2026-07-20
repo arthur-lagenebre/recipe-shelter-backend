@@ -170,8 +170,9 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
             ],
             SuperAdmin: [...Object.values(PERMISSIONS)].sort(),
             UserAdmin: [
-                PERMISSIONS.usersModerate,
-                PERMISSIONS.usersRead
+                PERMISSIONS.userBan,
+                PERMISSIONS.userRead,
+                PERMISSIONS.userUnban
             ]
         });
 
@@ -298,7 +299,7 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
             `INSERT INTO Roles (Code, Name, Description)
              VALUES ('OtherRecipeModerator', 'MODÉRATEUR DE RECETTES', 'Duplicate name')`
         ));
-        await assert.rejects(() => connection.query(`INSERT INTO Permissions (Code, Description) VALUES ('USERS.READ', 'Duplicate')`));
+        await assert.rejects(() => connection.query(`INSERT INTO Permissions (Code, Description) VALUES ('USER.READ', 'Duplicate')`));
     });
 
     it('creates strictly separate session stores and requires WebAuthn before staff activation', async () => {

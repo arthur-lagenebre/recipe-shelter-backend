@@ -24,28 +24,29 @@ ON DUPLICATE KEY UPDATE
 -- =====================================================
 INSERT INTO Permissions (Id, Code, Description) VALUES
 (1,  'system.health.read', "Consulter l'état de santé du service"),
-(2,  'users.read', "Consulter les comptes community et leur historique de modération"),
-(3,  'users.moderate', "Bannir et réactiver des comptes community"),
-(4,  'recipe.review', "Consulter les recettes à modérer"),
-(5,  'recipe.publish', "Publier les recettes en attente"),
-(6,  'recipe.reject', "Rejeter les recettes en attente"),
-(7,  'recipe.archive', "Archiver les recettes publiées ou rejetées"),
-(8,  'recipes.delete', "Supprimer définitivement des recettes"),
-(9,  'comment.review', "Consulter les commentaires à modérer"),
-(10, 'comment.hide', "Masquer les commentaires visibles"),
-(11, 'comment.restore', "Restaurer les commentaires masqués ou supprimés par leur auteur"),
-(12, 'comments.update', "Modifier des commentaires dans l'administration"),
-(13, 'comments.delete', "Supprimer définitivement des commentaires"),
-(14, 'catalog.read', "Consulter le catalogue dans l'administration"),
-(15, 'catalog.manage', "Créer, modifier et supprimer des catégories, ingrédients, tags et ustensiles"),
-(16, 'staff.read', "Consulter les comptes staff et leurs rôles"),
-(17, 'staff.create', "Inviter un compte staff avec ses rôles initiaux"),
-(18, 'staff.disable', "Désactiver un compte staff et révoquer ses accès"),
-(19, 'staff.enable', "Réactiver un compte staff désactivé"),
-(20, 'staff.role.grant', "Attribuer un rôle à un compte staff"),
-(21, 'staff.role.revoke', "Retirer un rôle à un compte staff"),
-(22, 'staff.session.revoke', "Révoquer les sessions actives des comptes staff"),
-(23, 'audit.read', "Consulter le journal d'audit administratif")
+(2,  'user.read', "Consulter les comptes community et leur historique de modération"),
+(3,  'user.ban', "Bannir des comptes community"),
+(4,  'user.unban', "Réactiver des comptes community bannis"),
+(5,  'recipe.review', "Consulter les recettes à modérer"),
+(6,  'recipe.publish', "Publier les recettes en attente"),
+(7,  'recipe.reject', "Rejeter les recettes en attente"),
+(8,  'recipe.archive', "Archiver les recettes publiées ou rejetées"),
+(9,  'recipes.delete', "Supprimer définitivement des recettes"),
+(10, 'comment.review', "Consulter les commentaires à modérer"),
+(11, 'comment.hide', "Masquer les commentaires visibles"),
+(12, 'comment.restore', "Restaurer les commentaires masqués ou supprimés par leur auteur"),
+(13, 'comments.update', "Modifier des commentaires dans l'administration"),
+(14, 'comments.delete', "Supprimer définitivement des commentaires"),
+(15, 'catalog.read', "Consulter le catalogue dans l'administration"),
+(16, 'catalog.manage', "Créer, modifier et supprimer des catégories, ingrédients, tags et ustensiles"),
+(17, 'staff.read', "Consulter les comptes staff et leurs rôles"),
+(18, 'staff.create', "Inviter un compte staff avec ses rôles initiaux"),
+(19, 'staff.disable', "Désactiver un compte staff et révoquer ses accès"),
+(20, 'staff.enable', "Réactiver un compte staff désactivé"),
+(21, 'staff.role.grant', "Attribuer un rôle à un compte staff"),
+(22, 'staff.role.revoke', "Retirer un rôle à un compte staff"),
+(23, 'staff.session.revoke', "Révoquer les sessions actives des comptes staff"),
+(24, 'audit.read', "Consulter le journal d'audit administratif")
 AS new_permissions
 ON DUPLICATE KEY UPDATE
   Code = new_permissions.Code,
@@ -68,15 +69,17 @@ FROM (
   UNION ALL SELECT 'CommentModerator', 'comment.restore'
   UNION ALL SELECT 'CommentModerator', 'comments.update'
   -- UserAdmin: consultation et modération des seuls comptes community.
-  UNION ALL SELECT 'UserAdmin', 'users.read'
-  UNION ALL SELECT 'UserAdmin', 'users.moderate'
+  UNION ALL SELECT 'UserAdmin', 'user.read'
+  UNION ALL SELECT 'UserAdmin', 'user.ban'
+  UNION ALL SELECT 'UserAdmin', 'user.unban'
   -- CatalogManager: gestion complète des données du catalogue.
   UNION ALL SELECT 'CatalogManager', 'catalog.read'
   UNION ALL SELECT 'CatalogManager', 'catalog.manage'
   -- SuperAdmin: catalogue explicite complet, sans wildcard ni héritage de rôle.
   UNION ALL SELECT 'SuperAdmin', 'system.health.read'
-  UNION ALL SELECT 'SuperAdmin', 'users.read'
-  UNION ALL SELECT 'SuperAdmin', 'users.moderate'
+  UNION ALL SELECT 'SuperAdmin', 'user.read'
+  UNION ALL SELECT 'SuperAdmin', 'user.ban'
+  UNION ALL SELECT 'SuperAdmin', 'user.unban'
   UNION ALL SELECT 'SuperAdmin', 'recipe.review'
   UNION ALL SELECT 'SuperAdmin', 'recipe.publish'
   UNION ALL SELECT 'SuperAdmin', 'recipe.reject'

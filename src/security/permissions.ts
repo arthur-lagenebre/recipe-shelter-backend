@@ -1,7 +1,8 @@
 export const PERMISSIONS = {
   systemHealthRead: 'system.health.read',
-  usersRead: 'users.read',
-  usersModerate: 'users.moderate',
+  userRead: 'user.read',
+  userBan: 'user.ban',
+  userUnban: 'user.unban',
   recipeReview: 'recipe.review',
   recipePublish: 'recipe.publish',
   recipeReject: 'recipe.reject',

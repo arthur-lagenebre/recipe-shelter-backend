@@ -21,7 +21,7 @@ const staffAuth: AuthContext = {
     username: 'staff-user',
     accountType: 'staff',
     status: 'active',
-    permissions: [PERMISSIONS.usersRead, PERMISSIONS.usersModerate]
+    permissions: [PERMISSIONS.userRead, PERMISSIONS.userBan]
 };
 
 function runGuard(middleware: RequestHandler, auth?: AuthContext): { error: unknown; nextCalls: number } {
@@ -75,7 +75,7 @@ describe('authorization middlewares', () => {
     });
 
     describe('RequirePermission', () => {
-        const middleware = RequirePermission(PERMISSIONS.usersModerate);
+        const middleware = RequirePermission(PERMISSIONS.userBan);
 
         it('allows active staff with the exact effective permission', () => {
             assert.deepEqual(runGuard(middleware, staffAuth), { error: undefined, nextCalls: 1 });
@@ -88,11 +88,11 @@ describe('authorization middlewares', () => {
                 'AUTH_PERMISSION_REQUIRED'
             );
             assertForbidden(
-                runGuard(middleware, { ...communityAuth, permissions: [PERMISSIONS.usersModerate] }),
+                runGuard(middleware, { ...communityAuth, permissions: [PERMISSIONS.userBan] }),
                 'AUTH_PERMISSION_REQUIRED'
             );
             assertForbidden(
-                runGuard(middleware, { ...staffAuth, permissions: [PERMISSIONS.usersRead] }),
+                runGuard(middleware, { ...staffAuth, permissions: [PERMISSIONS.userRead] }),
                 'AUTH_PERMISSION_REQUIRED'
             );
         });
