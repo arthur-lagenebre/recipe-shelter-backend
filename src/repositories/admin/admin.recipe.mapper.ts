@@ -14,7 +14,7 @@ export function mapRecipePending(row: RecipePendingRow): RecipePending {
 
 export function mapRecipeIngredient(row: RecipeIngredientRow): AdminRecipeIngredient {
     return {
-        id: row.Id,
+        id: row.IngredientId === null ? null : Number(row.IngredientId),
         name: row.Name,
         displayText: row.DisplayText,
         quantity: row.Quantity === null ? null : Number(row.Quantity),

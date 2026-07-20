@@ -122,6 +122,43 @@ describe('recipe.mapper', () => {
         assert.equal(mapRecipeDetailIngredient({ IngredientId: 7, Name: 'Eau', Slug: 'eau', DisplayText: 'eau filtrée', Quantity: null, Unit: null, Note: null, SortOrder: 1 } as RecipeDetailIngredientRow).quantity, null);
     });
 
+    it('keeps unknown ingredients visible without canonical fields', () => {
+        assert.deepEqual(mapRecipeIngredient({
+            IngredientId: null,
+            DisplayText: 'Poudre de lune',
+            Quantity: 1,
+            Unit: 'pincée',
+            Note: null,
+            SortOrder: 2
+        } as RecipeIngredientRow), {
+            ingredientId: null,
+            displayText: 'Poudre de lune',
+            quantity: 1,
+            unit: 'pincée',
+            note: null,
+            sortOrder: 2
+        });
+        assert.deepEqual(mapRecipeDetailIngredient({
+            IngredientId: null,
+            Name: null,
+            Slug: null,
+            DisplayText: 'Poudre de lune',
+            Quantity: null,
+            Unit: null,
+            Note: null,
+            SortOrder: 2
+        } as RecipeDetailIngredientRow), {
+            id: null,
+            name: null,
+            slug: null,
+            displayText: 'Poudre de lune',
+            quantity: null,
+            unit: null,
+            note: null,
+            sortOrder: 2
+        });
+    });
+
     it('keeps recipe list items unchanged', () => {
         const result = mapRecipeListItem(listRow);
 

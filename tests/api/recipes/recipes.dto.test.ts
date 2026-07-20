@@ -128,6 +128,34 @@ describe('recipes.dto', () => {
         }
     });
 
+    it('accepts an omitted or null canonical id for a free-text ingredient', () => {
+        assert.deepEqual(
+            parseCreateRecipeBody({
+                title: 'Soupe lunaire',
+                ingredients: [
+                    { displayText: 'Poudre de lune' },
+                    { ingredientId: null, displayText: 'Eau filtree' }
+                ]
+            }).ingredients,
+            [
+                { ingredientId: undefined, displayText: 'Poudre de lune', quantity: undefined, unit: undefined, note: undefined, sortOrder: undefined },
+                { ingredientId: null, displayText: 'Eau filtree', quantity: undefined, unit: undefined, note: undefined, sortOrder: undefined }
+            ]
+        );
+    });
+
+    it('rejects invalid explicit canonical ingredient ids', () => {
+        for (const ingredientId of [-1, 1.5, Number.MAX_SAFE_INTEGER + 1, '7']) {
+            assert.throws(
+                () => parseCreateRecipeBody({ title: 'Soupe lunaire', ingredients: [{ ingredientId, displayText: 'Poudre de lune' }] }),
+                (error) => {
+                    assertHttpError(error, 'RECIPES_CREATE_BAD_INGREDIENT_ID', 400);
+                    return true;
+                }
+            );
+        }
+    });
+
     it('parses and validates recipe id and slug params', () => {
         assert.equal(parseRecipeIdParam('42'), 42);
         assert.equal(parseRecipeSlugParam('  tarte-aux-pommes  '), 'tarte-aux-pommes');

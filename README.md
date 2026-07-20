@@ -487,12 +487,19 @@ BCP 47 en minuscules. Un même nom normalisé ne peut apparaître qu'une fois pa
 langue. Chaque alias référence obligatoirement un ingrédient actif ; le schéma
 empêche aussi de déprécier ou fusionner cette cible tant que ses alias n'ont pas
 été réaffectés. Les libellés propres aux recettes restent distincts de ce
-catalogue afin de pouvoir conserver la rédaction de leur auteur. Chaque ligne
-de `RecipeIngredients` associe ainsi un `IngredientId` canonique actif, utilisé
-par les filtres de recherche, à un `DisplayText` libre et obligatoire, utilisé
-pour le rendu. La quantité, l'unité, la note et l'ordre restent portés par cette
-ligne ; les lectures propriétaire, publique et administrative exposent le
-`displayText` sans le remplacer par le nom du catalogue.
+catalogue afin de conserver la rédaction de leur auteur. Chaque ligne de
+`RecipeIngredients` porte donc un `DisplayText` libre et obligatoire, utilisé
+pour le rendu, et un `IngredientId` canonique actif nullable, utilisé par les
+filtres de recherche lorsqu'une correspondance existe. À la création ou au
+remplacement des ingrédients d'un brouillon, un `ingredientId` omis ou `null`
+déclenche une recherche exacte sur le nom normalisé des ingrédients actifs puis
+de leurs alias actifs. Une correspondance renseigne l'identifiant canonique sans
+modifier `DisplayText`; en l'absence de correspondance, la ligne reste sans
+identifiant et une proposition d'ingrédient `pending` est créée dans la même
+transaction. Une proposition équivalente déjà en attente pour la recette est
+réutilisée. La quantité, l'unité, la note et l'ordre restent portés par la ligne ;
+les lectures propriétaire, publique et administrative conservent l'ingrédient
+et son `displayText`, avec des champs canoniques `null` tant qu'il reste inconnu.
 
 Le catalogue administratif des ingrédients est paginé et protégé par les
 permissions `ingredient.*`. `POST /api/v1/admin/ingredients/:id/merge` exige
@@ -593,9 +600,11 @@ même type reçoit `409 CATALOG_PROPOSALS_ALREADY_PENDING`. Une recette absente 
 n'appartenant pas au compte reçoit `404 CATALOG_PROPOSALS_RECIPE_NOT_FOUND`.
 Chaque route est limitée à 10 tentatives par heure et par adresse IP.
 
-Insérer une proposition ne crée pas automatiquement d'entité canonique, ne
-l'associe pas à la recette et ne conditionne aucun changement de statut de cette
-recette.
+Insérer une proposition ne crée pas automatiquement d'entité canonique et ne
+conditionne aucun changement de statut de la recette. Dans le flux de recette,
+la proposition automatique reste distincte de la ligne `RecipeIngredients` :
+le libellé est soumis et publiable avec un `IngredientId` nul, sans attendre la
+revue catalogue.
 
 La file staff est exposée par `GET /api/v1/admin/catalog-proposals`. Elle exige
 `catalog.manage`, est paginée et cible les propositions `pending` par défaut ;

@@ -1008,9 +1008,9 @@ type UpdateRecipeBody = RecipeBody;</code></pre>
 
         <article class="schema">
           <h3>Recipe nested inputs</h3>
-          <p>Sous-objets acceptés dans <code>RecipeBody</code>.</p>
+          <p>Sous-objets acceptés dans <code>RecipeBody</code>. Si <code>ingredientId</code> est omis ou nul, le backend recherche exactement le <code>displayText</code> normalisé parmi les noms et alias actifs. Sans correspondance, il conserve le texte, crée une proposition catalogue et poursuit l’écriture de la recette.</p>
           <pre><code>type RecipeIngredientInput = {
-  ingredientId: number;
+  ingredientId?: number | null;
   displayText: string; // rédaction de l'auteur, 1..255 caractères après trim
   quantity?: number | null;
   unit?: string | null;
@@ -1081,7 +1081,7 @@ type RecipeFeedQuery = {
           <h3>Recipe nested outputs</h3>
           <p>Sous-objets présents dans <code>Recipe</code>.</p>
           <pre><code>type RecipeIngredient = {
-  ingredientId: number;
+  ingredientId: number | null;
   displayText: string;
   quantity: number | null;
   unit: string | null;
@@ -1161,9 +1161,9 @@ type RecentRecipesResponse = RecipeListItem[];</code></pre>
           <h3>RecipeDetail children</h3>
           <p>Sous-objets du détail public d’une recette.</p>
           <pre><code>type RecipeDetailIngredient = {
-  id: number;
-  name: string;
-  slug: string;
+  id: number | null;
+  name: string | null;
+  slug: string | null;
   displayText: string; // libellé à utiliser pour le rendu
   quantity: number | null;
   unit: string | null;
@@ -1839,8 +1839,8 @@ type PendingRecipesCountResponse = {
           <h3>Admin recipe children</h3>
           <p>Sous-objets du détail admin d’une recette.</p>
           <pre><code>type AdminRecipeIngredient = {
-  id: number;
-  name: string;
+  id: number | null;
+  name: string | null;
   displayText: string;
   quantity: number | null;
   unit: string | null;

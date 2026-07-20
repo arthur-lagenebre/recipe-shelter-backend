@@ -155,12 +155,37 @@ describe('RecipeService', () => {
             servings: 1,
             tagIds: [1, 2],
             ingredients: [
-                { ingredientId: 7, displayText: 'pommes Golden en quartiers', quantity: 2, unit: null, note: 'note', sortOrder: 1 },
-                { ingredientId: 8, displayText: 'farine T55', quantity: null, unit: null, note: null, sortOrder: 2 }
+                { ingredientId: 7, displayText: 'pommes Golden en quartiers', normalizedName: 'pommes golden en quartiers', quantity: 2, unit: null, note: 'note', sortOrder: 1 },
+                { ingredientId: 8, displayText: 'farine T55', normalizedName: 'farine t55', quantity: null, unit: null, note: null, sortOrder: 2 }
             ],
             steps: [{ stepNumber: 1, description: 'Bake' }],
             equipments: [{ equipmentId: 4 }]
         });
+    });
+
+    it('normalizes a free-text ingredient without requiring a canonical id', async () => {
+        await service.create(2, {
+            title: 'Soupe lunaire',
+            ingredients: [{ displayText: '  Poudre-de-Lune  ' }]
+        });
+
+        assert.deepEqual(repository.createdInput?.ingredients, [{
+            ingredientId: null,
+            displayText: 'Poudre-de-Lune',
+            normalizedName: 'poudre de lune',
+            quantity: null,
+            unit: null,
+            note: null,
+            sortOrder: 1
+        }]);
+    });
+
+    it('rejects a free-text ingredient that cannot produce a catalogue name', async () => {
+        await assert.rejects(
+            () => service.create(2, { title: 'Soupe lunaire', ingredients: [{ displayText: '---' }] }),
+            (error) => assertHttpError(error, 'RECIPES_BAD_INGREDIENT_NAME', 400)
+        );
+        assert.equal(repository.createdInput, null);
     });
 
     it('allows owners to update drafts with normalized partial collections', async () => {
@@ -182,7 +207,7 @@ describe('RecipeService', () => {
             cookTimeMinutes: undefined,
             servings: undefined,
             tagIds: [3],
-            ingredients: [{ ingredientId: 8, displayText: 'farine complète', quantity: 1, unit: 'g', note: 'fine', sortOrder: 4 }],
+            ingredients: [{ ingredientId: 8, displayText: 'farine complète', normalizedName: 'farine complete', quantity: 1, unit: 'g', note: 'fine', sortOrder: 4 }],
             steps: undefined,
             equipments: undefined
         });

@@ -3,10 +3,10 @@ import { firstOrNull } from '../../utils/array.js';
 import { createPaginatedResult, formatLimitOffsetClause } from '../../utils/pagination.js';
 
 import type { RecipeRepository } from "./recipe.repository.interface.js";
-import type { Recipe, RecipeDetail, RecipeDetailCommentRow, RecipeDetailCommentStatsRow, RecipeDetailIngredientRow, RecipeDetailRow, RecipeDetailStepRow, RecipeDetailTagRow, RecipeDetailEquipmentRow, RecipeIngredientRow, RecipeInput, RecipeListItem, RecipeListItemRow, RecipeRow, RecipeStepRow, RecipeSummary, RecipeTagRow, RecipeEquipmentRow, RecipeSearchFilters, UpdateRecipeInput } from "./recipe.types.js";
+import type { Recipe, RecipeDetail, RecipeDetailCommentRow, RecipeDetailCommentStatsRow, RecipeDetailIngredientRow, RecipeDetailRow, RecipeDetailStepRow, RecipeDetailTagRow, RecipeDetailEquipmentRow, RecipeIngredientRow, RecipeIngredientWriteInput, RecipeInput, RecipeListItem, RecipeListItemRow, RecipeRow, RecipeStepRow, RecipeSummary, RecipeTagRow, RecipeEquipmentRow, RecipeSearchFilters, UpdateRecipeInput } from "./recipe.types.js";
 import type { PaginatedResult, PaginationOptions } from '../../utils/pagination.js';
 import type { PublicImageUrlBuilder } from '../recipe-images/recipe-image.types.js';
-import type { ResultSetHeader } from 'mysql2';
+import type { ResultSetHeader, RowDataPacket } from 'mysql2';
 import type { Pool, PoolConnection } from 'mysql2/promise';
 
 type CountRow = {
@@ -16,6 +16,11 @@ type CountRow = {
 type PublishedWhere = {
     clause: string;
     params: Array<string | number>;
+};
+
+type IngredientMatchRow = RowDataPacket & {
+    IngredientId: number | string;
+    NormalizedName: string;
 };
 
 const COVER_IMAGE_SELECT = `ri.Id AS CoverImageId,
@@ -435,11 +440,15 @@ export class RecipeRepositoryMysql implements RecipeRepository {
         if (!input.ingredients?.length)
             return;
 
+        const ingredients = await this.resolveIngredientIds(connection, input.ingredients);
+
         await connection.query(
             `INSERT INTO RecipeIngredients (RecipeId, IngredientId, DisplayText, Quantity, Unit, Note, SortOrder)
              VALUES ?`,
-            [input.ingredients.map((ingredient) => [recipeId, ingredient.ingredientId, ingredient.displayText, ingredient.quantity ?? null, ingredient.unit, ingredient.note ?? null, ingredient.sortOrder ?? 1])]
+            [ingredients.map((ingredient) => [recipeId, ingredient.ingredientId, ingredient.displayText, ingredient.quantity ?? null, ingredient.unit, ingredient.note ?? null, ingredient.sortOrder ?? 1])]
         );
+
+        await this.insertUnknownIngredientProposals(connection, recipeId, input.userId, ingredients);
     }
 
     private async insertSteps(connection: PoolConnection, recipeId: number, input: RecipeInput): Promise<void> {
@@ -485,10 +494,87 @@ export class RecipeRepositoryMysql implements RecipeRepository {
         if (!input.ingredients?.length)
             return;
 
+        const ingredients = await this.resolveIngredientIds(connection, input.ingredients);
+
         await connection.query(
             `INSERT INTO RecipeIngredients (RecipeId, IngredientId, DisplayText, Quantity, Unit, Note, SortOrder)
              VALUES ?`,
-            [input.ingredients.map((ingredient) => [recipeId, ingredient.ingredientId, ingredient.displayText, ingredient.quantity ?? null, ingredient.unit, ingredient.note ?? null, ingredient.sortOrder ?? 1])]
+            [ingredients.map((ingredient) => [recipeId, ingredient.ingredientId, ingredient.displayText, ingredient.quantity ?? null, ingredient.unit, ingredient.note ?? null, ingredient.sortOrder ?? 1])]
+        );
+
+        await this.insertUnknownIngredientProposals(connection, recipeId, input.userId, ingredients);
+    }
+
+    private async resolveIngredientIds(connection: PoolConnection, ingredients: RecipeIngredientWriteInput[]): Promise<RecipeIngredientWriteInput[]> {
+        const normalizedNames = [...new Set(
+            ingredients
+                .filter(({ ingredientId }) => ingredientId === null)
+                .map(({ normalizedName }) => normalizedName)
+                .filter((normalizedName): normalizedName is string => Boolean(normalizedName))
+        )];
+        if (ingredients.some(({ ingredientId, normalizedName }) => ingredientId === null && !normalizedName))
+            throw new Error('Unknown recipe ingredients require a normalized name');
+        if (!normalizedNames.length)
+            return ingredients;
+
+        const placeholders = normalizedNames.map(() => '?').join(', ');
+        const [rows] = await connection.execute<IngredientMatchRow[]>(
+            `SELECT matches.IngredientId, matches.NormalizedName
+             FROM (
+               SELECT ingredient.Id AS IngredientId, ingredient.NormalizedName, 0 AS MatchPriority
+               FROM Ingredients AS ingredient
+               WHERE ingredient.Status = 'active'
+                 AND ingredient.NormalizedName IN (${placeholders})
+               UNION ALL
+               SELECT alias.IngredientId, alias.NormalizedName, 1 AS MatchPriority
+               FROM IngredientAliases AS alias
+               INNER JOIN Ingredients AS ingredient
+                 ON ingredient.Id = alias.IngredientId AND ingredient.Status = 'active'
+               WHERE alias.NormalizedName IN (${placeholders})
+             ) AS matches
+             ORDER BY matches.NormalizedName, matches.MatchPriority, matches.IngredientId`,
+            [...normalizedNames, ...normalizedNames]
+        );
+        const ingredientIdsByName = new Map<string, number>();
+
+        for (const row of rows) {
+            if (!ingredientIdsByName.has(row.NormalizedName))
+                ingredientIdsByName.set(row.NormalizedName, Number(row.IngredientId));
+        }
+
+        return ingredients.map((ingredient) => ingredient.ingredientId !== null
+            ? ingredient
+            : { ...ingredient, ingredientId: ingredientIdsByName.get(ingredient.normalizedName!) ?? null });
+    }
+
+    private async insertUnknownIngredientProposals(
+        connection: PoolConnection,
+        recipeId: number,
+        authorUserId: number,
+        ingredients: RecipeIngredientWriteInput[]
+    ): Promise<void> {
+        const proposalsByNormalizedName = new Map<string, RecipeIngredientWriteInput>();
+
+        for (const ingredient of ingredients) {
+            if (ingredient.ingredientId === null && !proposalsByNormalizedName.has(ingredient.normalizedName!))
+                proposalsByNormalizedName.set(ingredient.normalizedName!, ingredient);
+        }
+
+        if (!proposalsByNormalizedName.size)
+            return;
+
+        await connection.query(
+            `INSERT INTO CatalogProposals
+               (AuthorUserId, RecipeId, ProposalType, ProposedName, NormalizedName)
+             VALUES ?
+             ON DUPLICATE KEY UPDATE Id = CatalogProposals.Id`,
+            [[...proposalsByNormalizedName.values()].map((ingredient) => [
+                authorUserId,
+                recipeId,
+                'ingredient',
+                ingredient.displayText,
+                ingredient.normalizedName!
+            ])]
         );
     }
 
@@ -590,9 +676,9 @@ export class RecipeRepositoryMysql implements RecipeRepository {
 
     private async findDetailIngredientsByRecipeId(recipeId: number): Promise<RecipeDetailIngredientRow[]> {
         const [rows] = await this.db.execute(
-            `SELECT i.Id AS IngredientId, i.Name, i.Slug, ri.DisplayText, ri.Quantity, ri.Unit, ri.Note, ri.SortOrder
+            `SELECT ri.IngredientId, i.Name, i.Slug, ri.DisplayText, ri.Quantity, ri.Unit, ri.Note, ri.SortOrder
              FROM RecipeIngredients AS ri
-             INNER JOIN Ingredients AS i ON i.Id = ri.IngredientId
+             LEFT JOIN Ingredients AS i ON i.Id = ri.IngredientId
              WHERE ri.RecipeId = ?
              ORDER BY ri.SortOrder, ri.Id`,
             [recipeId]

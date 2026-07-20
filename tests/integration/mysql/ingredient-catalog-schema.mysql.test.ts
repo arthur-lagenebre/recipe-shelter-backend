@@ -6,6 +6,7 @@ import mysql from 'mysql2/promise';
 
 import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin-audit.repository.mysql.js';
 import { AdminIngredientRepositoryMysql } from '../../../src/repositories/admin/admin.ingredients.repository.mysql.js';
+import { AdminRecipeRepositoryMysql } from '../../../src/repositories/admin/admin.recipe.repository.mysql.js';
 import { IngredientRepositoryMysql } from '../../../src/repositories/ingredients/ingredient.repository.mysql.js';
 import { RecipeRepositoryMysql } from '../../../src/repositories/recipes/recipe.repository.mysql.js';
 import { AdminAuditActionRunnerMysql } from '../../../src/services/admin/admin-audit-action.runner.js';
@@ -309,7 +310,7 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
         }]);
     });
 
-    it('stores the author display text while recipe search uses the canonical ingredient id', async () => {
+    it('stores free-text ingredients while recipe search uses canonical ingredient ids when available', async () => {
         const databaseName = requireIngredientCatalogTestDatabaseName();
         const [columns] = await connection.query(
             `SELECT COLUMN_NAME AS ColumnName, COLUMN_TYPE AS ColumnType, IS_NULLABLE AS IsNullable,
@@ -322,7 +323,7 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
         assert.deepEqual(columns, [
             { ColumnName: 'Id', ColumnType: 'bigint unsigned', IsNullable: 'NO', ColumnDefault: null },
             { ColumnName: 'RecipeId', ColumnType: 'bigint unsigned', IsNullable: 'NO', ColumnDefault: null },
-            { ColumnName: 'IngredientId', ColumnType: 'bigint unsigned', IsNullable: 'NO', ColumnDefault: null },
+            { ColumnName: 'IngredientId', ColumnType: 'bigint unsigned', IsNullable: 'YES', ColumnDefault: null },
             { ColumnName: 'DisplayText', ColumnType: 'varchar(255)', IsNullable: 'NO', ColumnDefault: null },
             { ColumnName: 'Quantity', ColumnType: 'decimal(10,3)', IsNullable: 'YES', ColumnDefault: null },
             { ColumnName: 'Unit', ColumnType: 'varchar(64)', IsNullable: 'YES', ColumnDefault: null },
@@ -378,7 +379,8 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
              VALUES (973, 'Merged recipe fixture', 'merged recipe fixture', 'merged-recipe-fixture', 'merged', 972);
              INSERT INTO RecipeIngredients (Id, RecipeId, IngredientId, DisplayText, Quantity, Unit, Note, SortOrder) VALUES
                (970, 970, 970, '2 grosses tomates bien mûres', 2, 'pièces', 'mondées', 2),
-               (971, 970, 974, 'une pincée de fleur de sel', NULL, NULL, 'à ajuster', 1)`
+               (971, 970, 974, 'une pincée de fleur de sel', NULL, NULL, 'à ajuster', 1),
+               (972, 970, NULL, 'Poudre de lune brute', 1, 'pincée', NULL, 3)`
         );
 
         const recipes = new RecipeRepositoryMysql(pool);
@@ -406,6 +408,14 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
                 unit: 'pièces',
                 note: 'mondées',
                 sortOrder: 2
+            },
+            {
+                ingredientId: null,
+                displayText: 'Poudre de lune brute',
+                quantity: 1,
+                unit: 'pincée',
+                note: null,
+                sortOrder: 3
             }
         ]);
 
@@ -414,6 +424,25 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
         const publicRecipe = await recipes.findPublishedBySlug(null, 'recipe-ingredient-fixture');
         assert.equal(publicRecipe?.ingredients[1]?.name, 'Canonical tomato fixture');
         assert.equal(publicRecipe?.ingredients[1]?.displayText, '2 grosses tomates bien mûres');
+        assert.deepEqual(publicRecipe?.ingredients[2], {
+            id: null,
+            name: null,
+            slug: null,
+            displayText: 'Poudre de lune brute',
+            quantity: 1,
+            unit: 'pincée',
+            note: null,
+            sortOrder: 3
+        });
+        assert.deepEqual((await new AdminRecipeRepositoryMysql(pool).findByIdForAdmin(970))?.ingredients[2], {
+            id: null,
+            name: null,
+            displayText: 'Poudre de lune brute',
+            quantity: 1,
+            unit: 'pincée',
+            note: null,
+            sortOrder: 3
+        });
 
         await assert.rejects(
             () => connection.query(
@@ -451,6 +480,83 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
             ),
             /An ingredient must have no recipe associations before being merged/
         );
+    });
+
+    it('resolves free text against the active catalogue or creates one proposal without blocking submission', async () => {
+        await connection.query(
+            `INSERT INTO Users (Id, Mail, Username, Password, AccountType, Status, EmailValidatedAt)
+             VALUES (975, 'free-ingredient-author@example.test', 'free-ingredient-author', 'test-password-hash', 'community', 'active', CURRENT_TIMESTAMP);
+             INSERT INTO Ingredients (Id, Name, NormalizedName, Slug, Status) VALUES
+               (975, 'Moon water fixture', 'moon water fixture', 'moon-water-fixture', 'active'),
+               (976, 'Celestial powder fixture', 'celestial powder fixture', 'celestial-powder-fixture', 'active');
+             INSERT INTO IngredientAliases (Id, IngredientId, Name, NormalizedName, LanguageCode)
+             VALUES (975, 976, 'Star dust fixture', 'star dust fixture', 'en')`
+        );
+
+        const recipes = new RecipeRepositoryMysql(pool);
+        const recipe = await recipes.create({
+            userId: 975,
+            title: 'Free ingredient recipe',
+            slug: 'draft-free-ingredient-recipe',
+            ingredients: [
+                { ingredientId: null, displayText: 'Moon water fixture', normalizedName: 'moon water fixture', sortOrder: 1 },
+                { ingredientId: null, displayText: 'Star dust fixture', normalizedName: 'star dust fixture', sortOrder: 2 },
+                { ingredientId: null, displayText: 'Nebula flakes fixture', normalizedName: 'nebula flakes fixture', sortOrder: 3 }
+            ]
+        });
+
+        assert.deepEqual(recipe.ingredients.map(({ ingredientId, displayText }) => ({ ingredientId, displayText })), [
+            { ingredientId: 975, displayText: 'Moon water fixture' },
+            { ingredientId: 976, displayText: 'Star dust fixture' },
+            { ingredientId: null, displayText: 'Nebula flakes fixture' }
+        ]);
+
+        const [initialProposals] = await connection.query(
+            `SELECT ProposalType, ProposedName, NormalizedName, Status
+             FROM CatalogProposals
+             WHERE RecipeId = ?`,
+            [recipe.id]
+        );
+        assert.deepEqual(initialProposals, [{
+            ProposalType: 'ingredient',
+            ProposedName: 'Nebula flakes fixture',
+            NormalizedName: 'nebula flakes fixture',
+            Status: 'pending'
+        }]);
+        assert.equal((await new IngredientRepositoryMysql(pool).findAll()).some(({ normalizedName }) => normalizedName === 'nebula flakes fixture'), false);
+
+        const updated = await recipes.updateDraft({
+            id: recipe.id,
+            userId: 975,
+            title: recipe.title,
+            slug: recipe.slug,
+            ingredients: [{
+                ingredientId: null,
+                displayText: 'NEBULA---FLAKES FIXTURE',
+                normalizedName: 'nebula flakes fixture'
+            }]
+        });
+        assert.equal(updated.ingredients[0]?.ingredientId, null);
+        assert.equal(updated.ingredients[0]?.displayText, 'NEBULA---FLAKES FIXTURE');
+
+        const [proposalCounts] = await connection.query(
+            `SELECT COUNT(*) AS ProposalCount
+             FROM CatalogProposals
+             WHERE RecipeId = ? AND ProposalType = 'ingredient' AND NormalizedName = ?`,
+            [recipe.id, 'nebula flakes fixture']
+        );
+        assert.equal(Number((proposalCounts as Array<{ ProposalCount: number | string }>)[0]?.ProposalCount), 1);
+
+        const submitted = await recipes.submit(recipe.id, 'free-ingredient-recipe');
+        assert.equal(submitted.status, 'pending');
+        assert.deepEqual(submitted.ingredients[0], {
+            ingredientId: null,
+            displayText: 'NEBULA---FLAKES FIXTURE',
+            quantity: null,
+            unit: null,
+            note: null,
+            sortOrder: 1
+        });
     });
 
     it('merges canonical ingredients transactionally while preserving author display text and moving aliases', async () => {

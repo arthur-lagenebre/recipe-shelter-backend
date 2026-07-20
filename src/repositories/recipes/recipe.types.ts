@@ -3,12 +3,17 @@ import type { RecipeCoverImageDto, RecipeImageJoinedRow } from '../recipe-images
 import type { RowDataPacket } from 'mysql2';
 
 export type RecipeIngredientInput = {
-    ingredientId: number;
+    ingredientId?: number | null;
     displayText: string;
     quantity?: number | null;
     unit?: string | null;
     note?: string | null;
     sortOrder?: number;
+};
+
+export type RecipeIngredientWriteInput = Omit<RecipeIngredientInput, 'ingredientId'> & {
+    ingredientId: number | null;
+    normalizedName?: string;
 };
 
 export type RecipeStepInput = {
@@ -31,7 +36,7 @@ export type RecipeInput = {
     cookTimeMinutes?: number | null;
     servings?: number;
     tagIds?: number[];
-    ingredients?: RecipeIngredientInput[];
+    ingredients?: RecipeIngredientWriteInput[];
     steps?: RecipeStepInput[];
     equipments?: RecipeEquipmentInput[];
 };
@@ -51,7 +56,7 @@ export type UpdateRecipeInput = RecipeInput & {
 };
 
 export type RecipeIngredient = {
-    ingredientId: number;
+    ingredientId: number | null;
     displayText: string;
     quantity: number | null;
     unit: string | null;
@@ -138,9 +143,9 @@ export interface RecipeDetail extends Omit<RecipeListItem, 'authorUsername'> {
 }
 
 export type RecipeDetailIngredient = {
-    id: number;
-    name: string;
-    slug: string;
+    id: number | null;
+    name: string | null;
+    slug: string | null;
     displayText: string;
     quantity: number | null;
     unit: string | null;
@@ -208,7 +213,7 @@ export type RecipeDetailCommentStatsRow = RowDataPacket & {
 };
 
 export type RecipeIngredientRow = RowDataPacket & {
-    IngredientId: number;
+    IngredientId: number | null;
     DisplayText: string;
     Quantity: number | string | null;
     Unit: string | null;
@@ -249,9 +254,9 @@ export type RecipeDetailRow = RecipeListItemRow & {
 };
 
 export type RecipeDetailIngredientRow = RowDataPacket & {
-    IngredientId: number;
-    Name: string;
-    Slug: string;
+    IngredientId: number | null;
+    Name: string | null;
+    Slug: string | null;
     DisplayText: string;
     Quantity: number | string | null;
     Unit: string | null;

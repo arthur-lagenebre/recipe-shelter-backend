@@ -1,5 +1,6 @@
 import { canArchiveRecipe, canEditRecipe, canViewRecipe, isRecipeOwner } from './recipe-permissions.js';
-import { forbidden, notFound } from '../../utils/errors.js';
+import { badRequest, forbidden, notFound } from '../../utils/errors.js';
+import { normalizeIngredientName } from '../ingredients/ingredients.service.js';
 
 import type { RecipeSlugService } from "./recipe-slug.service.js";
 import type { AuthContext } from "../../api/auth/auth.types.js";
@@ -20,6 +21,8 @@ type RecipeContentInput = {
     steps?: RecipeStepInput[];
     equipments?: RecipeEquipmentInput[];
 };
+
+const INGREDIENT_NAME_MAX_LENGTH = 255;
 
 export class RecipeService {
     constructor(private readonly recipeRepository: RecipeRepository, private readonly recipeSlugService: RecipeSlugService) { }
@@ -137,8 +140,9 @@ async function normalizeCreateRecipeInput(userId: number, input: RecipeContentIn
         servings: input.servings ?? 1,
         tagIds: normalizeTagIds(input.tagIds),
         ingredients: input.ingredients?.map((ingredient, index) => ({
-            ingredientId: ingredient.ingredientId,
+            ingredientId: ingredient.ingredientId ?? null,
             displayText: ingredient.displayText.trim(),
+            normalizedName: normalizeRecipeIngredientName(ingredient),
             quantity: ingredient.quantity ?? null,
             unit: normalizeNullableUnit(ingredient.unit),
             note: ingredient.note?.trim() ?? null,
@@ -168,8 +172,9 @@ function normalizeUpdateRecipeInput(recipe: Recipe, input: RecipeContentInput): 
         servings: input.servings,
         tagIds: input.tagIds === undefined ? undefined : normalizeTagIds(input.tagIds),
         ingredients: input.ingredients?.map((ingredient, index) => ({
-            ingredientId: ingredient.ingredientId,
+            ingredientId: ingredient.ingredientId ?? null,
             displayText: ingredient.displayText.trim(),
+            normalizedName: normalizeRecipeIngredientName(ingredient),
             quantity: ingredient.quantity ?? null,
             unit: normalizeNullableUnit(ingredient.unit),
             note: ingredient.note?.trim() ?? null,
@@ -183,4 +188,17 @@ function normalizeUpdateRecipeInput(recipe: Recipe, input: RecipeContentInput): 
             equipmentId: equipment.equipmentId
         }))
     };
+}
+
+function normalizeRecipeIngredientName(ingredient: RecipeIngredientInput): string {
+    const normalizedName = normalizeIngredientName(ingredient.displayText);
+
+    if (ingredient.ingredientId === undefined || ingredient.ingredientId === null) {
+        if (!normalizedName)
+            throw badRequest('Unknown ingredient displayText must contain letters or numbers', 'RECIPES_BAD_INGREDIENT_NAME');
+        if (normalizedName.length > INGREDIENT_NAME_MAX_LENGTH)
+            throw badRequest(`Normalized ingredient name must be at most ${INGREDIENT_NAME_MAX_LENGTH} characters`, 'RECIPES_BAD_INGREDIENT_NAME');
+    }
+
+    return normalizedName;
 }

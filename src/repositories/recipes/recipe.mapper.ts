@@ -54,7 +54,7 @@ export function mapRecipeSummary(row: RecipeRow, getPublicUrl: PublicImageUrlBui
 
 export function mapRecipeIngredient(row: RecipeIngredientRow): RecipeIngredient {
     return {
-        ingredientId: row.IngredientId,
+        ingredientId: row.IngredientId === null ? null : Number(row.IngredientId),
         displayText: row.DisplayText,
         quantity: row.Quantity === null ? null : Number(row.Quantity),
         unit: row.Unit,
@@ -125,7 +125,7 @@ export function mapRecipeDetail(row: RecipeDetailRow, getPublicUrl: PublicImageU
 
 export function mapRecipeDetailIngredient(row: RecipeDetailIngredientRow): RecipeDetailIngredient {
     return {
-        id: row.IngredientId,
+        id: row.IngredientId === null ? null : Number(row.IngredientId),
         name: row.Name,
         slug: row.Slug,
         displayText: row.DisplayText,

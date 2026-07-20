@@ -1433,7 +1433,7 @@ CREATE TABLE RecipeSteps (
 CREATE TABLE RecipeIngredients (
   Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   RecipeId BIGINT UNSIGNED NOT NULL,
-  IngredientId BIGINT UNSIGNED NOT NULL,
+  IngredientId BIGINT UNSIGNED NULL,
   DisplayText VARCHAR(255) NOT NULL,
   Quantity DECIMAL(10,3) NULL,
   Unit VARCHAR(64) NULL,
@@ -1463,16 +1463,18 @@ FOR EACH ROW
 BEGIN
   DECLARE referenced_ingredient_status VARCHAR(16) DEFAULT NULL;
 
-  SELECT Status
-  INTO referenced_ingredient_status
-  FROM Ingredients
-  WHERE Id = NEW.IngredientId
-  FOR SHARE;
+  IF NEW.IngredientId IS NOT NULL THEN
+    SELECT Status
+    INTO referenced_ingredient_status
+    FROM Ingredients
+    WHERE Id = NEW.IngredientId
+    FOR SHARE;
 
-  IF referenced_ingredient_status IS NULL OR referenced_ingredient_status <> 'active' THEN
-    SIGNAL SQLSTATE '45000'
-      SET MYSQL_ERRNO = 1644,
-          MESSAGE_TEXT = 'Recipes can only reference active canonical ingredients';
+    IF referenced_ingredient_status IS NULL OR referenced_ingredient_status <> 'active' THEN
+      SIGNAL SQLSTATE '45000'
+        SET MYSQL_ERRNO = 1644,
+            MESSAGE_TEXT = 'Recipes can only reference active canonical ingredients';
+    END IF;
   END IF;
 END;
 
@@ -1482,16 +1484,18 @@ FOR EACH ROW
 BEGIN
   DECLARE referenced_ingredient_status VARCHAR(16) DEFAULT NULL;
 
-  SELECT Status
-  INTO referenced_ingredient_status
-  FROM Ingredients
-  WHERE Id = NEW.IngredientId
-  FOR SHARE;
+  IF NEW.IngredientId IS NOT NULL THEN
+    SELECT Status
+    INTO referenced_ingredient_status
+    FROM Ingredients
+    WHERE Id = NEW.IngredientId
+    FOR SHARE;
 
-  IF referenced_ingredient_status IS NULL OR referenced_ingredient_status <> 'active' THEN
-    SIGNAL SQLSTATE '45000'
-      SET MYSQL_ERRNO = 1644,
-          MESSAGE_TEXT = 'Recipes can only reference active canonical ingredients';
+    IF referenced_ingredient_status IS NULL OR referenced_ingredient_status <> 'active' THEN
+      SIGNAL SQLSTATE '45000'
+        SET MYSQL_ERRNO = 1644,
+            MESSAGE_TEXT = 'Recipes can only reference active canonical ingredients';
+    END IF;
   END IF;
 END;
 

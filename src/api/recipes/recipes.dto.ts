@@ -39,8 +39,12 @@ function parseIngredient(item: unknown, index: number): RecipeIngredientInput {
     if (Array.from(displayText).length > MAX_RECIPE_INGREDIENT_DISPLAY_TEXT_LENGTH)
         throw badRequest('Ingredient displayText must not exceed 255 characters', 'RECIPES_CREATE_BAD_INGREDIENT_DISPLAY_TEXT');
 
+    const ingredientId = getOptionalNullableNumber(item.ingredientId, 'IngredientId must be a number or null', 'RECIPES_CREATE_BAD_INGREDIENT_ID');
+    if (ingredientId !== undefined && ingredientId !== null && (!Number.isSafeInteger(ingredientId) || ingredientId <= 0))
+        throw badRequest('IngredientId must be a positive integer or null', 'RECIPES_CREATE_BAD_INGREDIENT_ID');
+
     return {
-        ingredientId: getRequiredNumber(item.ingredientId, 'IngredientId must be a number', 'RECIPES_CREATE_BAD_INGREDIENT_ID'),
+        ingredientId,
         displayText,
         quantity: getOptionalNullableNumber(item.quantity, 'Ingredient quantity must be a number or null', 'RECIPES_CREATE_BAD_INGREDIENT_QUANTITY'),
         unit,
