@@ -175,6 +175,17 @@ describe('AdminTagService', () => {
     }]);
   });
 
+  it('audits an unfiltered list with explicit null filter snapshots', async () => {
+    const result = await service.list({}, pagination, actorUserId, testAdminAuditContext);
+
+    assert.equal(result.pagination.totalItems, 4);
+    assert.deepEqual(audit.inputs[0]?.afterValues?.filters, {
+      status: null,
+      groupId: null,
+      q: null
+    });
+  });
+
   it('creates a normalized canonical tag with a generated slug and audit snapshot', async () => {
     const tag = await service.create({
       groupId: 2,
@@ -219,6 +230,54 @@ describe('AdminTagService', () => {
     assert.equal(audit.inputs.length, 0);
   });
 
+  it('rejects malformed direct create and update commands before mutation or audit', async () => {
+    const invalidCreateCommands: Array<{ input: unknown; code: string }> = [
+      { input: null, code: 'ADMIN_TAGS_CREATE_BAD_BODY' },
+      { input: 42, code: 'ADMIN_TAGS_CREATE_BAD_BODY' },
+      { input: { groupId: 0, name: 'Valid' }, code: 'ADMIN_TAGS_BAD_GROUP_ID' },
+      { input: { groupId: 1, name: 42 }, code: 'ADMIN_TAGS_NAME_REQUIRED' },
+      { input: { groupId: 1, name: 'x'.repeat(256) }, code: 'ADMIN_TAGS_NAME_TOO_LONG' },
+      { input: { groupId: 1, name: '***' }, code: 'ADMIN_TAGS_NAME_INVALID' },
+      { input: { groupId: 1, name: '\u00df'.repeat(128) }, code: 'ADMIN_TAGS_NAME_TOO_LONG' },
+      { input: { groupId: 1, name: 'Valid', slug: 42 }, code: 'ADMIN_TAGS_SLUG_INVALID' },
+      { input: { groupId: 1, name: 'Valid', slug: '' }, code: 'ADMIN_TAGS_SLUG_INVALID' },
+      { input: { groupId: 1, name: 'Valid', slug: 'x'.repeat(256) }, code: 'ADMIN_TAGS_SLUG_INVALID' },
+      { input: { groupId: 1, name: 'Valid', slug: 'not valid' }, code: 'ADMIN_TAGS_SLUG_INVALID' },
+      { input: { groupId: 1, name: 'Valid', description: 42 }, code: 'ADMIN_TAGS_DESCRIPTION_INVALID' },
+      { input: { groupId: 1, name: 'Valid', description: ' ' }, code: 'ADMIN_TAGS_DESCRIPTION_INVALID' },
+      { input: { groupId: 1, name: 'Valid', description: 'x'.repeat(1001) }, code: 'ADMIN_TAGS_DESCRIPTION_TOO_LONG' }
+    ];
+
+    for (const { input, code } of invalidCreateCommands) {
+      await assert.rejects(
+        () => service.create(input as never, actorUserId, testAdminAuditContext),
+        (error) => assertHttpError(error, 400, code)
+      );
+    }
+
+    const invalidUpdateCommands: Array<{ input: unknown; code: string }> = [
+      { input: null, code: 'ADMIN_TAGS_UPDATE_BAD_BODY' },
+      { input: 42, code: 'ADMIN_TAGS_UPDATE_BAD_BODY' },
+      { input: {}, code: 'ADMIN_TAGS_UPDATE_EMPTY' },
+      { input: { groupId: 0 }, code: 'ADMIN_TAGS_BAD_GROUP_ID' },
+      { input: { name: 42 }, code: 'ADMIN_TAGS_NAME_REQUIRED' },
+      { input: { name: 'x'.repeat(256) }, code: 'ADMIN_TAGS_NAME_TOO_LONG' },
+      { input: { slug: 42 }, code: 'ADMIN_TAGS_SLUG_INVALID' },
+      { input: { description: 42 }, code: 'ADMIN_TAGS_DESCRIPTION_INVALID' },
+      { input: { description: ' ' }, code: 'ADMIN_TAGS_DESCRIPTION_INVALID' }
+    ];
+
+    for (const { input, code } of invalidUpdateCommands) {
+      await assert.rejects(
+        () => service.update(2, input as never, actorUserId, testAdminAuditContext),
+        (error) => assertHttpError(error, 400, code)
+      );
+    }
+
+    assert.equal(repository.tags.size, 4);
+    assert.equal(audit.inputs.length, 0);
+  });
+
   it('updates only active tags, recomputes their normalized name and audits before/after state', async () => {
     const tag = await service.update(2, {
       groupId: 2,
@@ -251,6 +310,37 @@ describe('AdminTagService', () => {
     assert.equal(audit.inputs.length, 0);
   });
 
+  it('keeps omitted update fields and rejects missing tags or groups', async () => {
+    const tag = await service.update(2, {
+      slug: 'express-updated'
+    }, actorUserId, testAdminAuditContext);
+
+    assert.deepEqual({
+      groupId: tag.group.id,
+      name: tag.name,
+      normalizedName: tag.normalizedName,
+      slug: tag.slug,
+      description: tag.description
+    }, {
+      groupId: 1,
+      name: 'Express',
+      normalizedName: 'express',
+      slug: 'express-updated',
+      description: null
+    });
+
+    audit.inputs.length = 0;
+    await assert.rejects(
+      () => service.update(999, { name: 'Missing' }, actorUserId, testAdminAuditContext),
+      (error) => assertHttpError(error, 404, 'ADMIN_TAGS_NOT_FOUND')
+    );
+    await assert.rejects(
+      () => service.update(2, { groupId: 999 }, actorUserId, testAdminAuditContext),
+      (error) => assertHttpError(error, 404, 'ADMIN_TAGS_GROUP_NOT_FOUND')
+    );
+    assert.equal(audit.inputs.length, 0);
+  });
+
   it('deprecates and restores a tag with distinct audited lifecycle events', async () => {
     const deprecated = await service.deprecate(2, 'Tag devenu obsolète.', actorUserId, testAdminAuditContext);
     assert.equal(deprecated.status, 'deprecated');
@@ -277,6 +367,45 @@ describe('AdminTagService', () => {
     await assert.rejects(
       () => service.restore(5, 'Collision canonique active.', actorUserId, testAdminAuditContext),
       (error) => assertHttpError(error, 409, 'ADMIN_TAGS_NORMALIZED_NAME_TAKEN')
+    );
+    assert.equal(audit.inputs.length, 0);
+  });
+
+  it('rejects malformed lifecycle commands and concurrent status changes without audit', async () => {
+    await assert.rejects(
+      () => service.deprecate(3, 'Tag deja obsolete.', actorUserId, testAdminAuditContext),
+      (error) => assertHttpError(error, 409, 'ADMIN_TAGS_DEPRECATE_INVALID_STATUS')
+    );
+    await assert.rejects(
+      () => service.update(1.5, { name: 'Invalid id' }, actorUserId, testAdminAuditContext),
+      (error) => assertHttpError(error, 400, 'ADMIN_TAGS_BAD_ID')
+    );
+    await assert.rejects(
+      () => service.restore(3, null as never, actorUserId, testAdminAuditContext),
+      (error) => assertHttpError(error, 400, 'ADMIN_TAGS_RESTORE_REASON_REQUIRED')
+    );
+    await assert.rejects(
+      () => service.restore(3, 'court', actorUserId, testAdminAuditContext),
+      (error) => assertHttpError(error, 400, 'ADMIN_TAGS_RESTORE_REASON_TOO_SHORT')
+    );
+    await assert.rejects(
+      () => service.merge(3, {
+        targetTagId: 2,
+        reason: 'x'.repeat(1001)
+      }, actorUserId, testAdminAuditContext),
+      (error) => assertHttpError(error, 400, 'ADMIN_TAGS_MERGE_REASON_TOO_LONG')
+    );
+
+    repository.deprecate = async () => false;
+    await assert.rejects(
+      () => service.deprecate(2, 'Conflit de statut concurrent.', actorUserId, testAdminAuditContext),
+      (error) => assertHttpError(error, 409, 'ADMIN_TAGS_STATUS_CONFLICT')
+    );
+
+    repository.restore = async () => 'not_updated';
+    await assert.rejects(
+      () => service.restore(3, 'Conflit de statut concurrent.', actorUserId, testAdminAuditContext),
+      (error) => assertHttpError(error, 409, 'ADMIN_TAGS_STATUS_CONFLICT')
     );
     assert.equal(audit.inputs.length, 0);
   });

@@ -51,6 +51,24 @@ function assertTagDeletionRejected(error: unknown): boolean {
     return true;
 }
 
+function assertReferencedTagDeletionRejected(error: unknown): boolean {
+    assert.ok(error instanceof Error);
+
+    const mysqlError = error as Error & {
+        errno?: number;
+        sqlMessage?: string;
+        sqlState?: string;
+    };
+
+    assert.equal(mysqlError.errno, 1644);
+    assert.equal(mysqlError.sqlState, '45000');
+    assert.equal(
+        mysqlError.sqlMessage,
+        'Referenced tags cannot be physically deleted; deprecate or merge them instead'
+    );
+    return true;
+}
+
 function assertActiveNormalizedDuplicateRejected(error: unknown): boolean {
     assert.ok(error instanceof Error);
 
@@ -154,16 +172,20 @@ describe('tag catalog schema integration', { skip: !mysqlEnabled && 'Set TEST_DB
             ]
         );
 
-        const [mergeIntegrityTriggers] = await connection.query(
+        const [tagIntegrityTriggers] = await connection.query(
             `SELECT TRIGGER_NAME AS TriggerName, LOWER(EVENT_OBJECT_TABLE) AS TableName,
                     ACTION_TIMING AS ActionTiming, EVENT_MANIPULATION AS EventManipulation
              FROM information_schema.TRIGGERS
              WHERE TRIGGER_SCHEMA = ?
-               AND TRIGGER_NAME IN ('recipe_tags_active_tag_BI', 'tags_merged_recipe_associations_BU')
+               AND TRIGGER_NAME IN (
+                 'recipe_tags_active_tag_BI',
+                 'tags_merged_recipe_associations_BU',
+                 'tags_no_delete_BD'
+               )
              ORDER BY TRIGGER_NAME`,
             [databaseName]
         );
-        assert.deepEqual(mergeIntegrityTriggers, [
+        assert.deepEqual(tagIntegrityTriggers, [
             {
                 TriggerName: 'recipe_tags_active_tag_BI',
                 TableName: 'recipetags',
@@ -175,6 +197,12 @@ describe('tag catalog schema integration', { skip: !mysqlEnabled && 'Set TEST_DB
                 TableName: 'tags',
                 ActionTiming: 'BEFORE',
                 EventManipulation: 'UPDATE'
+            },
+            {
+                TriggerName: 'tags_no_delete_BD',
+                TableName: 'tags',
+                ActionTiming: 'BEFORE',
+                EventManipulation: 'DELETE'
             }
         ]);
 
@@ -467,6 +495,38 @@ describe('tag catalog schema integration', { skip: !mysqlEnabled && 'Set TEST_DB
                 `INSERT INTO RecipeTags (RecipeId, TagId)
                  VALUES (930, 933)`
             );
+            await assert.rejects(
+                () => db.execute(`DELETE FROM Tags WHERE Id = 933`),
+                assertReferencedTagDeletionRejected
+            );
+
+            const [retainedActiveTag] = await db.query(
+                `SELECT tags.Id, tags.Status, COUNT(recipe_tags.RecipeId) AS RecipeCount
+                 FROM Tags AS tags
+                 LEFT JOIN RecipeTags AS recipe_tags ON recipe_tags.TagId = tags.Id
+                 WHERE tags.Id = 933
+                 GROUP BY tags.Id, tags.Status`
+            );
+            assert.deepEqual(retainedActiveTag, [{
+                Id: 933,
+                Status: 'active',
+                RecipeCount: 1
+            }]);
+
+            assert.equal(await repository.deprecate(933, db), true);
+            const [retainedDeprecatedTag] = await db.query(
+                `SELECT tags.Id, tags.Status, COUNT(recipe_tags.RecipeId) AS RecipeCount
+                 FROM Tags AS tags
+                 LEFT JOIN RecipeTags AS recipe_tags ON recipe_tags.TagId = tags.Id
+                 WHERE tags.Id = 933
+                 GROUP BY tags.Id, tags.Status`
+            );
+            assert.deepEqual(retainedDeprecatedTag, [{
+                Id: 933,
+                Status: 'deprecated',
+                RecipeCount: 1
+            }]);
+
             await assert.rejects(
                 () => db.execute(
                     `UPDATE Tags

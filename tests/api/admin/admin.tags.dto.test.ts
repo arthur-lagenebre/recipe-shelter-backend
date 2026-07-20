@@ -26,8 +26,12 @@ describe('admin tags DTO validation', () => {
     assert.throws(() => parseAdminTagIdParam('9007199254740992'), (error) => assertHttpError(error, 'ADMIN_TAGS_BAD_ID'));
     assert.throws(() => parseAdminTagListFilters([]), (error) => assertHttpError(error, 'ADMIN_TAGS_BAD_QUERY'));
     assert.throws(() => parseAdminTagListFilters({ status: 'deleted' }), (error) => assertHttpError(error, 'ADMIN_TAGS_BAD_STATUS'));
+    assert.throws(() => parseAdminTagListFilters({ status: 42 }), (error) => assertHttpError(error, 'ADMIN_TAGS_BAD_STATUS'));
     assert.throws(() => parseAdminTagListFilters({ groupId: '0' }), (error) => assertHttpError(error, 'ADMIN_TAGS_BAD_GROUP_ID'));
+    assert.throws(() => parseAdminTagListFilters({ groupId: '9007199254740992' }), (error) => assertHttpError(error, 'ADMIN_TAGS_BAD_GROUP_ID'));
+    assert.throws(() => parseAdminTagListFilters({ q: 42 }), (error) => assertHttpError(error, 'ADMIN_TAGS_BAD_SEARCH'));
     assert.throws(() => parseAdminTagListFilters({ q: '   ' }), (error) => assertHttpError(error, 'ADMIN_TAGS_BAD_SEARCH'));
+    assert.throws(() => parseAdminTagListFilters({ q: 'x'.repeat(256) }), (error) => assertHttpError(error, 'ADMIN_TAGS_BAD_SEARCH'));
   });
 
   it('parses create and partial update payloads', () => {
@@ -57,8 +61,13 @@ describe('admin tags DTO validation', () => {
     assert.throws(() => parseCreateAdminTagBody([]), (error) => assertHttpError(error, 'ADMIN_TAGS_CREATE_BAD_BODY'));
     assert.throws(() => parseCreateAdminTagBody({ groupId: 0, name: 'Valid' }), (error) => assertHttpError(error, 'ADMIN_TAGS_BAD_GROUP_ID'));
     assert.throws(() => parseCreateAdminTagBody({ groupId: 1, name: ' ' }), (error) => assertHttpError(error, 'ADMIN_TAGS_NAME_REQUIRED'));
+    assert.throws(() => parseCreateAdminTagBody({ groupId: 1, name: 'x'.repeat(256) }), (error) => assertHttpError(error, 'ADMIN_TAGS_NAME_TOO_LONG'));
+    assert.throws(() => parseCreateAdminTagBody({ groupId: 1, name: 'Valid', slug: 42 }), (error) => assertHttpError(error, 'ADMIN_TAGS_SLUG_INVALID'));
+    assert.throws(() => parseCreateAdminTagBody({ groupId: 1, name: 'Valid', slug: 'x'.repeat(256) }), (error) => assertHttpError(error, 'ADMIN_TAGS_SLUG_INVALID'));
     assert.throws(() => parseCreateAdminTagBody({ groupId: 1, name: 'Valid', slug: 'Not Valid' }), (error) => assertHttpError(error, 'ADMIN_TAGS_SLUG_INVALID'));
+    assert.throws(() => parseCreateAdminTagBody({ groupId: 1, name: 'Valid', description: 42 }), (error) => assertHttpError(error, 'ADMIN_TAGS_DESCRIPTION_INVALID'));
     assert.throws(() => parseCreateAdminTagBody({ groupId: 1, name: 'Valid', description: ' ' }), (error) => assertHttpError(error, 'ADMIN_TAGS_DESCRIPTION_INVALID'));
+    assert.throws(() => parseUpdateAdminTagBody([]), (error) => assertHttpError(error, 'ADMIN_TAGS_UPDATE_BAD_BODY'));
     assert.throws(() => parseUpdateAdminTagBody({}), (error) => assertHttpError(error, 'ADMIN_TAGS_UPDATE_EMPTY'));
     assert.throws(() => parseUpdateAdminTagBody({ description: 'x'.repeat(1001) }), (error) => assertHttpError(error, 'ADMIN_TAGS_DESCRIPTION_TOO_LONG'));
   });
@@ -79,6 +88,14 @@ describe('admin tags DTO validation', () => {
     assert.throws(
       () => parseAdminTagActionReasonBody({ reason: 'court' }, 'restore'),
       (error) => assertHttpError(error, 'ADMIN_TAGS_RESTORE_REASON_TOO_SHORT')
+    );
+    assert.throws(
+      () => parseAdminTagActionReasonBody([], 'deprecate'),
+      (error) => assertHttpError(error, 'ADMIN_TAGS_DEPRECATE_BAD_BODY')
+    );
+    assert.throws(
+      () => parseAdminTagActionReasonBody({ reason: 'x'.repeat(1001) }, 'deprecate'),
+      (error) => assertHttpError(error, 'ADMIN_TAGS_DEPRECATE_REASON_TOO_LONG')
     );
     assert.throws(
       () => parseMergeAdminTagBody({ targetTagId: 0, reason: 'Motif suffisamment long.' }),

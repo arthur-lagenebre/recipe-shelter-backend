@@ -489,6 +489,11 @@ vers un tag non actif. L'audit conserve les états source/cible avant et après,
 les volumes d'associations et les nombres de transferts, déduplications et alias
 redirigés. La liste, la création, la modification et chaque transition de cycle
 de vie produisent un événement via l'audit administratif centralisé.
+La suppression physique n'est exposée par aucune route, y compris pour un staff
+disposant de toutes les permissions. La politique administrative la refuse par
+défaut et le schéma protège également les écritures directes : un tag référencé
+par une recette doit être déprécié ou fusionné. Sa ligne historique est ainsi
+conservée ; la dépréciation maintient aussi ses associations existantes.
 
 `POST /api/v1/auth/login` est réservé aux comptes community et pose le cookie
 HttpOnly `rs_app_session`, avec l’audience JWT `recipe-shelter-app` et une durée

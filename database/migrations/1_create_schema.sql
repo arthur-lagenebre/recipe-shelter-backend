@@ -1013,13 +1013,6 @@ BEGIN
   END IF;
 END;
 
-CREATE TRIGGER tags_no_delete_BD
-BEFORE DELETE ON Tags
-FOR EACH ROW
-SIGNAL SQLSTATE '45000'
-  SET MYSQL_ERRNO = 1644,
-      MESSAGE_TEXT = 'Tags cannot be physically deleted; deprecate or merge them instead';
-
 -- ---------- Recipe content ----------
 CREATE TABLE RecipeSteps (
   RecipeId BIGINT UNSIGNED NOT NULL,
@@ -1102,6 +1095,25 @@ BEGIN
       SET MYSQL_ERRNO = 1644,
           MESSAGE_TEXT = 'A tag must have no recipe associations before being merged';
   END IF;
+END;
+
+CREATE TRIGGER tags_no_delete_BD
+BEFORE DELETE ON Tags
+FOR EACH ROW
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM RecipeTags
+    WHERE TagId = OLD.Id
+  ) THEN
+    SIGNAL SQLSTATE '45000'
+      SET MYSQL_ERRNO = 1644,
+          MESSAGE_TEXT = 'Referenced tags cannot be physically deleted; deprecate or merge them instead';
+  END IF;
+
+  SIGNAL SQLSTATE '45000'
+    SET MYSQL_ERRNO = 1644,
+        MESSAGE_TEXT = 'Tags cannot be physically deleted; deprecate or merge them instead';
 END;
 
 CREATE TABLE RecipeEquipments (
