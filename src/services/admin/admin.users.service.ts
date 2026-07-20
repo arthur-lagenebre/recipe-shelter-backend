@@ -17,6 +17,7 @@ export type AdminUserModerationLogDto = {
     reason: string;
     adminId: number;
     adminUsername?: string;
+    correlationId: string;
     createdAt: Date;
 };
 
@@ -51,6 +52,7 @@ export class AdminUserService {
                     action: log.action,
                     reason: log.reason,
                     adminId: log.adminId,
+                    correlationId: log.correlationId,
                     createdAt: log.createdAt
                 };
 
@@ -79,8 +81,8 @@ export class AdminUserService {
 
             const banned = await this.adminUsers.ban(userId, adminUserId, cleanReason, db);
 
-            if (banned)
-                await audit.record({
+            if (banned) {
+                const auditReceipt = await audit.record({
                     actorUserId: adminUserId,
                     eventType: ADMIN_AUDIT_EVENT_TYPES.usersBan,
                     targetType: ADMIN_AUDIT_TARGET_TYPES.communityUser,
@@ -95,6 +97,8 @@ export class AdminUserService {
                     },
                     ...context
                 });
+                await this.adminUsers.createModerationLog(auditReceipt.id, userId, db);
+            }
 
             return banned;
         });
@@ -114,8 +118,8 @@ export class AdminUserService {
 
             const unbanned = await this.adminUsers.unban(userId, adminUserId, cleanReason, db);
 
-            if (unbanned)
-                await audit.record({
+            if (unbanned) {
+                const auditReceipt = await audit.record({
                     actorUserId: adminUserId,
                     eventType: ADMIN_AUDIT_EVENT_TYPES.usersUnban,
                     targetType: ADMIN_AUDIT_TARGET_TYPES.communityUser,
@@ -130,6 +134,8 @@ export class AdminUserService {
                     },
                     ...context
                 });
+                await this.adminUsers.createModerationLog(auditReceipt.id, userId, db);
+            }
 
             return unbanned;
         });

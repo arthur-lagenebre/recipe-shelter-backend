@@ -22,6 +22,7 @@ class TestAdminStaffRepository implements AdminStaffRepository {
   enableConflict = false;
   grantConflict = false;
   revokeConflict = false;
+  moderationLogInputs: Array<{ auditLogId: number; staffUserId: number }> = [];
 
   constructor() {
     this.accounts.set(actor.id, cloneStaff(actor));
@@ -63,6 +64,10 @@ class TestAdminStaffRepository implements AdminStaffRepository {
     account.disabledAt = new Date('2026-07-17T12:00:00.000Z');
     account.activeSessionCount = 0;
     return revokedSessionCount;
+  }
+
+  async createModerationLog(auditLogId: number, staffUserId: number): Promise<void> {
+    this.moderationLogInputs.push({ auditLogId, staffUserId });
   }
 
   async enable(staffUserId: number): Promise<boolean> {
@@ -141,6 +146,7 @@ describe('AdminStaffService', () => {
     );
     assert.equal(disabled.status, 'disabled');
     assert.equal(disabled.activeSessionCount, 0);
+    assert.deepEqual(repository.moderationLogInputs, [{ auditLogId: 1, staffUserId: target.id }]);
     assert.equal(disabled.disabledByStaffUserId, actor.id);
 
     const enabled = await service.enable(

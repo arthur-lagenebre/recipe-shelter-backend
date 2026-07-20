@@ -5,6 +5,7 @@ import { after, before, describe, it } from 'node:test';
 import mysql from 'mysql2/promise';
 
 import { AdminCommentRepositoryMysql } from '../../../src/repositories/admin/admin.comments.repository.mysql.js';
+import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin-audit.repository.mysql.js';
 import { AdminRecipeRepositoryMysql } from '../../../src/repositories/admin/admin.recipe.repository.mysql.js';
 import { AdminUserRepositoryMysql } from '../../../src/repositories/admin/admin.users.repository.mysql.js';
 import { CommentRepositoryMysql } from '../../../src/repositories/comments/comments.repository.mysql.js';
@@ -12,6 +13,11 @@ import { FavoriteRepositoryMysql } from '../../../src/repositories/favorites/fav
 import { RecipeRepositoryMysql } from '../../../src/repositories/recipes/recipe.repository.mysql.js';
 import { RbacRepositoryMysql } from '../../../src/repositories/rbac/rbac.repository.mysql.js';
 import { UserRepositoryMysql } from '../../../src/repositories/users/user.repository.mysql.js';
+import { AdminAuditActionRunnerMysql } from '../../../src/services/admin/admin-audit-action.runner.js';
+import { AdminAuditService } from '../../../src/services/admin/admin-audit.service.js';
+import { AdminCommentService } from '../../../src/services/admin/admin.comments.services.js';
+import { AdminRecipeService } from '../../../src/services/admin/admin.recipes.services.js';
+import { AdminUserService } from '../../../src/services/admin/admin.users.service.js';
 import { env } from '../../../src/utils/env.js';
 
 import type { Pool } from 'mysql2/promise';
@@ -162,6 +168,13 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
         const adminUsers = new AdminUserRepositoryMysql(pool);
         const adminRecipes = new AdminRecipeRepositoryMysql(pool);
         const adminComments = new AdminCommentRepositoryMysql(pool);
+        const auditActions = new AdminAuditActionRunnerMysql(
+            pool,
+            (db) => new AdminAuditService(new AdminAuditRepositoryMysql(db))
+        );
+        const adminUserService = new AdminUserService(users, adminUsers, auditActions);
+        const adminRecipeService = new AdminRecipeService(adminRecipes, auditActions);
+        const adminCommentService = new AdminCommentService(adminComments, auditActions);
 
         const [accountTypeColumns] = await pool.query(`SHOW COLUMNS FROM Users WHERE Field = 'AccountType'`);
         const accountTypeColumn = (accountTypeColumns as Array<{ Type: string; Null: string; Default: string }>)[0];
@@ -249,9 +262,9 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
         assert.equal(author.accountType, 'community');
         assert.equal(await users.isEmailTaken('author@test.local'), true);
         assert.equal((await users.findAuthByEmail('author@test.local'))?.passwordHash, 'password-hash');
-        assert.equal(await adminUsers.ban(author.id, 1, 'Repository integration ban.'), true);
+        assert.equal(await adminUserService.ban(author.id, 1, 'Repository integration ban.', {}), true);
         assert.equal((await users.findById(author.id))?.status, 'banned');
-        assert.equal(await adminUsers.unban(author.id, 1, 'Repository integration unban.'), true);
+        assert.equal(await adminUserService.unban(author.id, 1, 'Repository integration unban.', {}), true);
         assert.equal((await users.findById(author.id))?.status, 'active');
         assert.equal((await adminUsers.findModerationLogsByUserId(author.id)).length, 2);
 
@@ -279,7 +292,7 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
 
         const submitted = await recipes.submit(recipe.id, 'quick-pasta');
         assert.equal(submitted.status, 'pending');
-        assert.equal(await adminRecipes.reject(recipe.id, 1, 'Missing editorial details.'), true);
+        assert.equal(await adminRecipeService.reject(recipe.id, 1, 'Missing editorial details.', {}), true);
         const rejectedRecipe = await adminRecipes.findByIdForAdmin(recipe.id);
         assert.equal(rejectedRecipe?.status, 'rejected');
         assert.equal(rejectedRecipe?.rejectionReason, 'Missing editorial details.');
@@ -314,17 +327,18 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
         assert.equal(commentTree[0]?.children?.[0]?.id, reply.id);
 
         await assert.rejects(() => adminComments.hide(rootComment.id, 1, 'short'));
-        assert.equal(await adminComments.hide(rootComment.id, 1, 'Repeated personal attacks.'), true);
+        assert.equal(await adminCommentService.hide(rootComment.id, 1, 'Repeated personal attacks.', {}), true);
         const moderatedComments = await adminComments.findModeratedForAdmin();
         assert.equal(moderatedComments.length, 1);
         assert.equal(moderatedComments[0]?.moderationReason, 'Repeated personal attacks.');
         const [commentModerationLogs] = await pool.query(
-            `SELECT Action, Reason
-             FROM CommentModerationLogs
-             WHERE CommentId = ?`,
+            `SELECT audit.Action, audit.Reason
+             FROM CommentModerationLogs AS log
+             INNER JOIN AdminAuditLogs AS audit ON audit.Id = log.AdminAuditLogId
+             WHERE log.CommentId = ?`,
             [rootComment.id]
         );
-        assert.deepEqual(commentModerationLogs, [{ Action: 'hide', Reason: 'Repeated personal attacks.' }]);
+        assert.deepEqual(commentModerationLogs, [{ Action: 'comments.hide', Reason: 'Repeated personal attacks.' }]);
         assert.equal(await adminComments.unmoderate(rootComment.id), true);
         assert.equal((await adminComments.findByIdForAdmin(rootComment.id))?.moderationReason, null);
 
@@ -333,19 +347,21 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
         assert.equal(await favorites.delete(2, recipe.id), true);
 
         await assert.rejects(() => adminRecipes.archive(recipe.id, 1, 'short'));
-        assert.equal(await adminRecipes.archive(recipe.id, 1, 'Editorial policy violation.'), true);
+        assert.equal(await adminRecipeService.archive(recipe.id, 1, 'Editorial policy violation.', {}), true);
         const archivedRecipe = await adminRecipes.findByIdForAdmin(recipe.id);
         assert.equal(archivedRecipe?.status, 'archived');
         assert.equal(archivedRecipe?.archiveReason, 'Editorial policy violation.');
         const [recipeModerationLogs] = await pool.query(
-            `SELECT Action, Reason
-             FROM RecipeModerationLogs
-             WHERE RecipeId = ?`,
+            `SELECT audit.Action, audit.Reason
+             FROM RecipeModerationLogs AS log
+             INNER JOIN AdminAuditLogs AS audit ON audit.Id = log.AdminAuditLogId
+             WHERE log.RecipeId = ?
+             ORDER BY audit.Id`,
             [recipe.id]
         );
         assert.deepEqual(recipeModerationLogs, [
-            { Action: 'reject', Reason: 'Missing editorial details.' },
-            { Action: 'archive', Reason: 'Editorial policy violation.' }
+            { Action: 'recipes.reject', Reason: 'Missing editorial details.' },
+            { Action: 'recipes.archive', Reason: 'Editorial policy violation.' }
         ]);
 
         await assert.rejects(() => recipes.create({

@@ -228,16 +228,21 @@ describe('staff management MySQL integration', { skip: !mysqlEnabled && 'Set TES
     ]);
 
     const [moderationRows] = await pool.query(
-      `SELECT StaffUserId, AdminId, Action, Reason
-       FROM StaffModerationLogs
-       WHERE StaffUserId = ?`,
+      `SELECT log.StaffUserId, audit.Id AS AdminAuditLogId,
+              audit.ActorUserId AS AdminId, audit.Action, audit.Reason,
+              audit.CorrelationId
+       FROM StaffModerationLogs AS log
+       INNER JOIN AdminAuditLogs AS audit ON audit.Id = log.AdminAuditLogId
+       WHERE log.StaffUserId = ?`,
       [targetUserId]
     );
     assert.deepEqual(moderationRows, [{
       StaffUserId: targetUserId,
+      AdminAuditLogId: 3,
       AdminId: actorUserId,
-      Action: 'disable',
-      Reason: 'Confirmed departure from the staff team.'
+      Action: 'staff.disable',
+      Reason: 'Confirmed departure from the staff team.',
+      CorrelationId: testAdminAuditContext.correlationId
     }]);
   });
 

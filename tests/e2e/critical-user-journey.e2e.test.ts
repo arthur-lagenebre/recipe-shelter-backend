@@ -367,7 +367,8 @@ describe('critical user journey E2E', () => {
                 } : null;
             },
             async publish(id: number, adminUserId: number) { return recipes.publish(id, adminUserId); },
-            async reject(id: number, adminUserId: number, reason: string) { return recipes.reject(id, adminUserId, reason); }
+            async reject(id: number, adminUserId: number, reason: string) { return recipes.reject(id, adminUserId, reason); },
+            async createModerationLog() { }
         } as unknown as AdminRecipeRepository;
         const sessions = new TestSessionRepository();
         const authService = new AuthService(

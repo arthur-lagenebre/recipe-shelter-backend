@@ -53,6 +53,7 @@ const baseModerationLog: UserModerationLog = {
     action: 'ban',
     reason: 'Repeated abuse of the platform rules.',
     adminUsername: 'admin',
+    correlationId: testAdminAuditContext.correlationId!,
     createdAt: new Date('2026-05-10T10:00:00.000Z')
 };
 
@@ -149,6 +150,7 @@ class FakeAdminUserRepository implements AdminUserRepository {
     findModerationLogsByUserIdInput: number | null = null;
     banInput: { userId: number; adminUserId: number; reason: string } | null = null;
     unbanInput: { userId: number; adminUserId: number; reason: string } | null = null;
+    moderationLogInput: { auditLogId: number; userId: number } | null = null;
 
     async findBannedForAdmin(): Promise<BannedUser[]> {
         return this.bannedUsers;
@@ -180,6 +182,10 @@ class FakeAdminUserRepository implements AdminUserRepository {
         this.unbanInput = { userId, adminUserId, reason };
 
         return this.unbanResult;
+    }
+
+    async createModerationLog(auditLogId: number, userId: number): Promise<void> {
+        this.moderationLogInput = { auditLogId, userId };
     }
 }
 
@@ -227,6 +233,7 @@ describe('AdminUserService', () => {
                 reason: 'Repeated abuse of the platform rules.',
                 adminId: 1,
                 adminUsername: 'admin',
+                correlationId: testAdminAuditContext.correlationId,
                 createdAt: new Date('2026-05-10T10:00:00.000Z')
             }]
         });
@@ -259,6 +266,7 @@ describe('AdminUserService', () => {
             reason: 'Repeated abuse of the platform rules.'
         });
         assert.equal(audit.inputs.length, 1);
+        assert.deepEqual(adminUsers.moderationLogInput, { auditLogId: 1, userId: 2 });
         assert.deepEqual(audit.inputs[0], {
             actorUserId: 1,
             eventType: 'users.ban',
@@ -341,6 +349,7 @@ describe('AdminUserService', () => {
             reason: 'Appeal accepted after review.'
         });
         assert.equal(audit.inputs.length, 1);
+        assert.deepEqual(adminUsers.moderationLogInput, { auditLogId: 1, userId: 2 });
         assert.deepEqual(audit.inputs[0], {
             actorUserId: 1,
             eventType: 'users.unban',
@@ -393,6 +402,7 @@ describe('AdminUserService', () => {
             false
         );
         assert.equal(audit.inputs.length, 0);
+        assert.equal(adminUsers.moderationLogInput, null);
     });
 });
 

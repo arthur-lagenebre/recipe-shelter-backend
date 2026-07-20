@@ -643,51 +643,66 @@ SIGNAL SQLSTATE '45000'
   SET MYSQL_ERRNO = 1644,
       MESSAGE_TEXT = 'Admin audit logs are append-only: DELETE is forbidden';
 
+-- Specialized moderation histories are typed, append-only extensions of the
+-- global audit. Their primary key is the audit entry they enrich; actor,
+-- action, reason, correlation id and timestamp stay in one source of truth.
 CREATE TABLE StaffModerationLogs (
-  Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  AdminAuditLogId BIGINT UNSIGNED NOT NULL,
   StaffUserId BIGINT UNSIGNED NOT NULL,
-  AdminId BIGINT UNSIGNED NOT NULL,
-  Action ENUM('disable') NOT NULL,
-  Reason TEXT NOT NULL,
-  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (Id),
-  KEY idx_staff_moderation_logs_staff_user_id (StaffUserId),
-  KEY idx_staff_moderation_logs_admin_id (AdminId),
-  KEY idx_staff_moderation_logs_created_at (CreatedAt),
-  CONSTRAINT staff_moderation_logs_reason_CK
-    CHECK (CHAR_LENGTH(TRIM(Reason)) >= 10 AND CHAR_LENGTH(Reason) <= 1000),
-  CONSTRAINT staff_moderation_logs_staff_profile_FK
-    FOREIGN KEY (StaffUserId) REFERENCES StaffProfiles(UserId)
+  PRIMARY KEY (AdminAuditLogId),
+  KEY idx_staff_moderation_logs_staff_user_id (StaffUserId, AdminAuditLogId),
+  CONSTRAINT staff_moderation_logs_audit_log_FK
+    FOREIGN KEY (AdminAuditLogId) REFERENCES AdminAuditLogs(Id)
     ON UPDATE RESTRICT
     ON DELETE RESTRICT,
-  CONSTRAINT staff_moderation_logs_admin_profile_FK
-    FOREIGN KEY (AdminId) REFERENCES StaffProfiles(UserId)
+  CONSTRAINT staff_moderation_logs_staff_profile_FK
+    FOREIGN KEY (StaffUserId) REFERENCES StaffProfiles(UserId)
     ON UPDATE RESTRICT
     ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TRIGGER staff_moderation_logs_immutable_BU
+BEFORE UPDATE ON StaffModerationLogs
+FOR EACH ROW
+SIGNAL SQLSTATE '45000'
+  SET MYSQL_ERRNO = 1644,
+      MESSAGE_TEXT = 'Staff moderation logs are append-only: UPDATE is forbidden';
+
+CREATE TRIGGER staff_moderation_logs_immutable_BD
+BEFORE DELETE ON StaffModerationLogs
+FOR EACH ROW
+SIGNAL SQLSTATE '45000'
+  SET MYSQL_ERRNO = 1644,
+      MESSAGE_TEXT = 'Staff moderation logs are append-only: DELETE is forbidden';
+
 CREATE TABLE UserModerationLogs (
-  Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  AdminAuditLogId BIGINT UNSIGNED NOT NULL,
   UserId BIGINT UNSIGNED NOT NULL,
-  AdminId BIGINT UNSIGNED NOT NULL,
-  Action ENUM('ban', 'unban') NOT NULL,
-  Reason TEXT NOT NULL,
-  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (Id),
-  KEY idx_user_moderation_logs_user_id (UserId),
-  KEY idx_user_moderation_logs_admin_id (AdminId),
-  KEY idx_user_moderation_logs_created_at (CreatedAt),
-  CONSTRAINT user_moderation_logs_reason_CK
-    CHECK (CHAR_LENGTH(TRIM(Reason)) >= 10 AND CHAR_LENGTH(Reason) <= 1000),
+  PRIMARY KEY (AdminAuditLogId),
+  KEY idx_user_moderation_logs_user_id (UserId, AdminAuditLogId),
+  CONSTRAINT user_moderation_logs_audit_log_FK
+    FOREIGN KEY (AdminAuditLogId) REFERENCES AdminAuditLogs(Id)
+    ON UPDATE RESTRICT
+    ON DELETE RESTRICT,
   CONSTRAINT user_moderation_logs_user_FK
     FOREIGN KEY (UserId) REFERENCES CommunityProfiles(UserId)
     ON UPDATE RESTRICT
-    ON DELETE RESTRICT,
-  CONSTRAINT user_moderation_logs_admin_FK
-    FOREIGN KEY (AdminId) REFERENCES StaffProfiles(UserId)
-    ON UPDATE RESTRICT
     ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TRIGGER user_moderation_logs_immutable_BU
+BEFORE UPDATE ON UserModerationLogs
+FOR EACH ROW
+SIGNAL SQLSTATE '45000'
+  SET MYSQL_ERRNO = 1644,
+      MESSAGE_TEXT = 'User moderation logs are append-only: UPDATE is forbidden';
+
+CREATE TRIGGER user_moderation_logs_immutable_BD
+BEFORE DELETE ON UserModerationLogs
+FOR EACH ROW
+SIGNAL SQLSTATE '45000'
+  SET MYSQL_ERRNO = 1644,
+      MESSAGE_TEXT = 'User moderation logs are append-only: DELETE is forbidden';
 
 CREATE TABLE EmailValidations (
   Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -795,23 +810,29 @@ CREATE TABLE Recipes (
 -- RecipeId remains as the stable business target after an authorized hard
 -- deletion, so the moderation journal deliberately has no target foreign key.
 CREATE TABLE RecipeModerationLogs (
-  Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  AdminAuditLogId BIGINT UNSIGNED NOT NULL,
   RecipeId BIGINT UNSIGNED NOT NULL,
-  AdminId BIGINT UNSIGNED NOT NULL,
-  Action ENUM('reject', 'archive') NOT NULL,
-  Reason TEXT NOT NULL,
-  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (Id),
-  KEY idx_recipe_moderation_logs_recipe_id (RecipeId),
-  KEY idx_recipe_moderation_logs_admin_id (AdminId),
-  KEY idx_recipe_moderation_logs_created_at (CreatedAt),
-  CONSTRAINT recipe_moderation_logs_reason_CK
-    CHECK (CHAR_LENGTH(TRIM(Reason)) >= 10 AND CHAR_LENGTH(Reason) <= 1000),
-  CONSTRAINT recipe_moderation_logs_admin_profile_FK
-    FOREIGN KEY (AdminId) REFERENCES StaffProfiles(UserId)
+  PRIMARY KEY (AdminAuditLogId),
+  KEY idx_recipe_moderation_logs_recipe_id (RecipeId, AdminAuditLogId),
+  CONSTRAINT recipe_moderation_logs_audit_log_FK
+    FOREIGN KEY (AdminAuditLogId) REFERENCES AdminAuditLogs(Id)
     ON UPDATE RESTRICT
     ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TRIGGER recipe_moderation_logs_immutable_BU
+BEFORE UPDATE ON RecipeModerationLogs
+FOR EACH ROW
+SIGNAL SQLSTATE '45000'
+  SET MYSQL_ERRNO = 1644,
+      MESSAGE_TEXT = 'Recipe moderation logs are append-only: UPDATE is forbidden';
+
+CREATE TRIGGER recipe_moderation_logs_immutable_BD
+BEFORE DELETE ON RecipeModerationLogs
+FOR EACH ROW
+SIGNAL SQLSTATE '45000'
+  SET MYSQL_ERRNO = 1644,
+      MESSAGE_TEXT = 'Recipe moderation logs are append-only: DELETE is forbidden';
 
 -- ---------- Recipe images ----------
 CREATE TABLE RecipeImages (
@@ -1024,20 +1045,26 @@ CREATE TABLE Comments (
 -- CommentId remains as the stable business target after an authorized hard
 -- deletion, so the moderation journal deliberately has no target foreign key.
 CREATE TABLE CommentModerationLogs (
-  Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  AdminAuditLogId BIGINT UNSIGNED NOT NULL,
   CommentId BIGINT UNSIGNED NOT NULL,
-  AdminId BIGINT UNSIGNED NOT NULL,
-  Action ENUM('hide') NOT NULL,
-  Reason TEXT NOT NULL,
-  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (Id),
-  KEY idx_comment_moderation_logs_comment_id (CommentId),
-  KEY idx_comment_moderation_logs_admin_id (AdminId),
-  KEY idx_comment_moderation_logs_created_at (CreatedAt),
-  CONSTRAINT comment_moderation_logs_reason_CK
-    CHECK (CHAR_LENGTH(TRIM(Reason)) >= 10 AND CHAR_LENGTH(Reason) <= 1000),
-  CONSTRAINT comment_moderation_logs_admin_profile_FK
-    FOREIGN KEY (AdminId) REFERENCES StaffProfiles(UserId)
+  PRIMARY KEY (AdminAuditLogId),
+  KEY idx_comment_moderation_logs_comment_id (CommentId, AdminAuditLogId),
+  CONSTRAINT comment_moderation_logs_audit_log_FK
+    FOREIGN KEY (AdminAuditLogId) REFERENCES AdminAuditLogs(Id)
     ON UPDATE RESTRICT
     ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TRIGGER comment_moderation_logs_immutable_BU
+BEFORE UPDATE ON CommentModerationLogs
+FOR EACH ROW
+SIGNAL SQLSTATE '45000'
+  SET MYSQL_ERRNO = 1644,
+      MESSAGE_TEXT = 'Comment moderation logs are append-only: UPDATE is forbidden';
+
+CREATE TRIGGER comment_moderation_logs_immutable_BD
+BEFORE DELETE ON CommentModerationLogs
+FOR EACH ROW
+SIGNAL SQLSTATE '45000'
+  SET MYSQL_ERRNO = 1644,
+      MESSAGE_TEXT = 'Comment moderation logs are append-only: DELETE is forbidden';

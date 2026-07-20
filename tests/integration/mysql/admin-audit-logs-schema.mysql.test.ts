@@ -55,6 +55,12 @@ function assertImmutableAuditError(error: unknown, operation: 'DELETE' | 'UPDATE
     return true;
 }
 
+class FailingModerationLogAdminUserRepository extends AdminUserRepositoryMysql {
+    override async createModerationLog(): Promise<void> {
+        throw new Error('forced specialized moderation log failure');
+    }
+}
+
 describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TEST_DB_NAME to run isolated MySQL tests' }, () => {
     let connection: mysql.Connection;
     let pool: mysql.Pool;
@@ -192,6 +198,59 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
 
         const [seededLogs] = await connection.query('SELECT COUNT(*) AS LogCount FROM AdminAuditLogs');
         assert.deepEqual(seededLogs, [{ LogCount: 0 }]);
+
+        const [moderationColumns] = await connection.query(
+            `SELECT LOWER(TABLE_NAME) AS TableName,
+                    GROUP_CONCAT(COLUMN_NAME ORDER BY ORDINAL_POSITION SEPARATOR ',') AS ColumnNames
+             FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = ?
+               AND TABLE_NAME IN ('CommentModerationLogs', 'RecipeModerationLogs', 'StaffModerationLogs', 'UserModerationLogs')
+             GROUP BY TABLE_NAME
+             ORDER BY TABLE_NAME`,
+            [databaseName]
+        );
+        assert.deepEqual(moderationColumns, [
+            { TableName: 'commentmoderationlogs', ColumnNames: 'AdminAuditLogId,CommentId' },
+            { TableName: 'recipemoderationlogs', ColumnNames: 'AdminAuditLogId,RecipeId' },
+            { TableName: 'staffmoderationlogs', ColumnNames: 'AdminAuditLogId,StaffUserId' },
+            { TableName: 'usermoderationlogs', ColumnNames: 'AdminAuditLogId,UserId' }
+        ]);
+
+        const [moderationAuditForeignKeys] = await connection.query(
+            `SELECT LOWER(TABLE_NAME) AS TableName, COLUMN_NAME AS ColumnName,
+                    LOWER(REFERENCED_TABLE_NAME) AS ReferencedTableName,
+                    REFERENCED_COLUMN_NAME AS ReferencedColumnName
+             FROM information_schema.KEY_COLUMN_USAGE
+             WHERE CONSTRAINT_SCHEMA = ?
+               AND CONSTRAINT_NAME LIKE '%moderation_logs_audit_log_FK'
+             ORDER BY TABLE_NAME`,
+            [databaseName]
+        );
+        assert.deepEqual(moderationAuditForeignKeys, [
+            { TableName: 'commentmoderationlogs', ColumnName: 'AdminAuditLogId', ReferencedTableName: 'adminauditlogs', ReferencedColumnName: 'Id' },
+            { TableName: 'recipemoderationlogs', ColumnName: 'AdminAuditLogId', ReferencedTableName: 'adminauditlogs', ReferencedColumnName: 'Id' },
+            { TableName: 'staffmoderationlogs', ColumnName: 'AdminAuditLogId', ReferencedTableName: 'adminauditlogs', ReferencedColumnName: 'Id' },
+            { TableName: 'usermoderationlogs', ColumnName: 'AdminAuditLogId', ReferencedTableName: 'adminauditlogs', ReferencedColumnName: 'Id' }
+        ]);
+
+        const [moderationTriggers] = await connection.query(
+            `SELECT LOWER(EVENT_OBJECT_TABLE) AS TableName, EVENT_MANIPULATION AS EventManipulation
+             FROM information_schema.TRIGGERS
+             WHERE TRIGGER_SCHEMA = ?
+               AND EVENT_OBJECT_TABLE IN ('CommentModerationLogs', 'RecipeModerationLogs', 'StaffModerationLogs', 'UserModerationLogs')
+             ORDER BY LOWER(EVENT_OBJECT_TABLE), FIELD(EVENT_MANIPULATION, 'DELETE', 'UPDATE')`,
+            [databaseName]
+        );
+        assert.deepEqual(moderationTriggers, [
+            { TableName: 'commentmoderationlogs', EventManipulation: 'DELETE' },
+            { TableName: 'commentmoderationlogs', EventManipulation: 'UPDATE' },
+            { TableName: 'recipemoderationlogs', EventManipulation: 'DELETE' },
+            { TableName: 'recipemoderationlogs', EventManipulation: 'UPDATE' },
+            { TableName: 'staffmoderationlogs', EventManipulation: 'DELETE' },
+            { TableName: 'staffmoderationlogs', EventManipulation: 'UPDATE' },
+            { TableName: 'usermoderationlogs', EventManipulation: 'DELETE' },
+            { TableName: 'usermoderationlogs', EventManipulation: 'UPDATE' }
+        ]);
     });
 
     it('stores a redacted audit event with all investigation fields', async () => {
@@ -349,15 +408,28 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
             }
         );
         const [businessLogs] = await connection.query(
-            `SELECT Action, Reason
-             FROM UserModerationLogs
-             WHERE UserId = 901
-             ORDER BY Id`
+            `SELECT audit.Id AS AdminAuditLogId, audit.Action, audit.Reason, audit.CorrelationId
+             FROM UserModerationLogs AS log
+             INNER JOIN AdminAuditLogs AS audit ON audit.Id = log.AdminAuditLogId
+             WHERE log.UserId = 901
+             ORDER BY audit.Id`
         );
-        assert.deepEqual(businessLogs, [
-            { Action: 'ban', Reason: 'Repeated violation confirmed by integration test.' },
-            { Action: 'unban', Reason: 'Integration test restores the account after review.' }
-        ]);
+        assert.deepEqual(
+            (businessLogs as Array<Record<string, unknown>>).map(({ Action, Reason, CorrelationId }) => ({ Action, Reason, CorrelationId })),
+            [
+                {
+                    Action: 'users.ban',
+                    Reason: 'Repeated violation confirmed by integration test.',
+                    CorrelationId: '00000000-0000-4000-8000-000000000905'
+                },
+                {
+                    Action: 'users.unban',
+                    Reason: 'Integration test restores the account after review.',
+                    CorrelationId: '00000000-0000-4000-8000-000000000906'
+                }
+            ]
+        );
+        assert.ok((businessLogs as Array<{ AdminAuditLogId: number }>).every(({ AdminAuditLogId }) => AdminAuditLogId > 0));
 
         const failingService = new AdminUserService(
             new UserRepositoryMysql(pool),
@@ -390,6 +462,34 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
         );
         assert.deepEqual(rolledBack, [{
             Status: 'active',
+            ModerationLogCount: (moderationLogsBefore as Array<{ LogCount: number }>)[0]?.LogCount
+        }]);
+
+        const failingModerationLogService = new AdminUserService(
+            new UserRepositoryMysql(pool),
+            new FailingModerationLogAdminUserRepository(pool),
+            auditActions
+        );
+        await assert.rejects(
+            () => failingModerationLogService.ban(
+                901,
+                900,
+                'This moderation must be rolled back with its specialized log.',
+                { correlationId: '00000000-0000-4000-8000-000000000907' }
+            ),
+            /forced specialized moderation log failure/
+        );
+        const [specializedLogRollback] = await connection.query(
+            `SELECT cp.Status,
+                    (SELECT COUNT(*) FROM AdminAuditLogs WHERE CorrelationId = ?) AS AuditCount,
+                    (SELECT COUNT(*) FROM UserModerationLogs WHERE UserId = 901) AS ModerationLogCount
+             FROM CommunityProfiles AS cp
+             WHERE cp.UserId = 901`,
+            ['00000000-0000-4000-8000-000000000907']
+        );
+        assert.deepEqual(specializedLogRollback, [{
+            Status: 'active',
+            AuditCount: 0,
             ModerationLogCount: (moderationLogsBefore as Array<{ LogCount: number }>)[0]?.LogCount
         }]);
     });
@@ -450,5 +550,42 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
              WHERE CorrelationId = '00000000-0000-4000-8000-000000000900'`
         );
         assert.deepEqual(remainingLogs, [{ Reason: 'Repeated violation of the test policy.' }]);
+    });
+
+    it('keeps specialized moderation histories immutable and rejects orphan links', async () => {
+        const [auditRows] = await connection.query(
+            `SELECT Id
+             FROM AdminAuditLogs
+             WHERE CorrelationId = '00000000-0000-4000-8000-000000000900'`
+        );
+        const auditLogId = (auditRows as Array<{ Id: number }>)[0]?.Id;
+        assert.ok(auditLogId);
+        await assert.rejects(
+            () => new AdminUserRepositoryMysql(pool).createModerationLog(
+                auditLogId,
+                999,
+                connection as unknown as Parameters<AdminUserRepositoryMysql['createModerationLog']>[2]
+            ),
+            /does not match its administrative audit entry/
+        );
+        await assert.rejects(() => connection.query(
+            `INSERT INTO UserModerationLogs (AdminAuditLogId, UserId)
+             VALUES (999999, 901)`
+        ));
+        await assert.rejects(() => connection.query(
+            `UPDATE UserModerationLogs
+             SET UserId = 901
+             WHERE AdminAuditLogId = (
+               SELECT Id FROM AdminAuditLogs
+               WHERE CorrelationId = '00000000-0000-4000-8000-000000000905'
+             )`
+        ), /User moderation logs are append-only: UPDATE is forbidden/);
+        await assert.rejects(() => connection.query(
+            `DELETE FROM UserModerationLogs
+             WHERE AdminAuditLogId = (
+               SELECT Id FROM AdminAuditLogs
+               WHERE CorrelationId = '00000000-0000-4000-8000-000000000905'
+             )`
+        ), /User moderation logs are append-only: DELETE is forbidden/);
     });
 });

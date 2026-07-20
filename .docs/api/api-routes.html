@@ -1957,11 +1957,12 @@ type BannedUsersCountResponse = {
 };
 
 type AdminUserModerationLog = {
-  id: number;
+  id: number; // identifiant de l’entrée AdminAuditLogs associée
   action: UserModerationAction;
   reason: string;
   adminId: number;
   adminUsername?: string;
+  correlationId: string;
   createdAt: ISODateString;
 };
 

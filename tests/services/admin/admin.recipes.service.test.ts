@@ -80,6 +80,7 @@ class FakeAdminRecipeRepository implements AdminRecipeRepository {
     publishedInput: { id: number; adminUserId: number } | null = null;
     rejectedInput: { id: number; adminUserId: number; reason: string } | null = null;
     archivedInput: { id: number; adminUserId: number; reason: string } | null = null;
+    moderationLogInputs: Array<{ auditLogId: number; recipeId: number }> = [];
     deletedId: number | null = null;
     recipeAdmin: RecipeAdmin | null = adminRecipe;
 
@@ -128,6 +129,10 @@ class FakeAdminRecipeRepository implements AdminRecipeRepository {
         return true;
     }
 
+    async createModerationLog(auditLogId: number, recipeId: number): Promise<void> {
+        this.moderationLogInputs.push({ auditLogId, recipeId });
+    }
+
     async delete(id: number): Promise<boolean> {
         this.deletedId = id;
         return true;
@@ -172,6 +177,7 @@ describe('AdminRecipeService', () => {
 
         assert.equal(await service.reject(10, 1, 'Missing details', testAdminAuditContext), true);
         assert.deepEqual(adminRecipes.rejectedInput, { id: 10, adminUserId: 1, reason: 'Missing details' });
+        assert.deepEqual(adminRecipes.moderationLogInputs, [{ auditLogId: 2, recipeId: 10 }]);
         assert.equal(audit.inputs.length, 2);
         assert.deepEqual(audit.inputs[1], {
             actorUserId: 1,
@@ -222,6 +228,7 @@ describe('AdminRecipeService', () => {
         recipes.recipe = { ...baseRecipe, status: 'published' };
         assert.equal(await service.archive(10, 1, 'Repeated policy violations.', testAdminAuditContext), true);
         assert.deepEqual(adminRecipes.archivedInput, { id: 10, adminUserId: 1, reason: 'Repeated policy violations.' });
+        assert.deepEqual(adminRecipes.moderationLogInputs, [{ auditLogId: 1, recipeId: 10 }]);
         assert.equal(audit.inputs.length, 1);
         assert.deepEqual(audit.inputs[0], {
             actorUserId: 1,

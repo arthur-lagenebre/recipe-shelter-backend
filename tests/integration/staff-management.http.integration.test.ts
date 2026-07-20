@@ -75,6 +75,8 @@ class HttpAdminStaffRepository implements AdminStaffRepository {
     return revokedSessionCount;
   }
 
+  async createModerationLog(): Promise<void> { }
+
   async enable(staffUserId: number): Promise<boolean> {
     const account = this.accounts.get(staffUserId);
     if (!account || account.status !== 'disabled')

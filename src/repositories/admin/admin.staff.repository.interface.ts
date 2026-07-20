@@ -7,6 +7,7 @@ export interface AdminStaffRepository {
   findRoleByCode(roleCode: string, db?: PoolConnection): Promise<AdminStaffRole | null>;
   lockAndCheckLastActiveSuperAdmin(staffUserId: number, db: PoolConnection): Promise<boolean>;
   disable(staffUserId: number, actorStaffUserId: number, reason: string, db: PoolConnection): Promise<number | null>;
+  createModerationLog(auditLogId: number, staffUserId: number, db: PoolConnection): Promise<void>;
   enable(staffUserId: number, db: PoolConnection): Promise<boolean>;
   grantRole(staffUserId: number, roleId: number, db: PoolConnection): Promise<boolean>;
   revokeRole(staffUserId: number, roleId: number, db: PoolConnection): Promise<boolean>;

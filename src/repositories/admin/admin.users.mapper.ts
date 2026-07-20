@@ -33,6 +33,7 @@ export function mapUserModerationLog(row: UserModerationLogRow): UserModerationL
         adminId: row.AdminId,
         action: row.Action,
         reason: row.Reason,
+        correlationId: row.CorrelationId,
         createdAt: row.CreatedAt
     };
 

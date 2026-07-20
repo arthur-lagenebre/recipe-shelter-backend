@@ -36,6 +36,7 @@ class FakeAdminCommentRepository implements AdminCommentRepository {
     restoreResult = true;
     hardDeleteResult = true;
     hideInput: { moderatedByUserId: number; reason: string } | null = null;
+    moderationLogInput: { auditLogId: number; commentId: number } | null = null;
     unmoderatedId: number | null = null;
     restoredId: number | null = null;
     updatedInput: AdminUpdateCommentInput | null = null;
@@ -66,6 +67,10 @@ class FakeAdminCommentRepository implements AdminCommentRepository {
         this.hideInput = { moderatedByUserId, reason };
 
         return this.hideResult;
+    }
+
+    async createModerationLog(auditLogId: number, commentId: number): Promise<void> {
+        this.moderationLogInput = { auditLogId, commentId };
     }
 
     async unmoderate(id: number): Promise<boolean> {
@@ -144,6 +149,7 @@ describe('AdminCommentService', () => {
 
         assert.equal(result, true);
         assert.deepEqual(repository.hideInput, { moderatedByUserId: 99, reason: 'Repeated personal attacks.' });
+        assert.deepEqual(repository.moderationLogInput, { auditLogId: 1, commentId: 1 });
         assert.equal(audit.inputs.length, 1);
         assert.deepEqual(audit.inputs[0], {
             actorUserId: 99,
@@ -189,6 +195,7 @@ describe('AdminCommentService', () => {
             }
         );
         assert.deepEqual(repository.hideInput, { moderatedByUserId: 99, reason: 'Repeated personal attacks.' });
+        assert.equal(repository.moderationLogInput, null);
         assert.equal(audit.inputs.length, 0);
     });
 
@@ -371,6 +378,7 @@ describe('AdminCommentService', () => {
 
         await assert.rejects(() => service.hide(1, 99, 'Repeated personal attacks.', testAdminAuditContext), /audit unavailable/);
         assert.deepEqual(repository.hideInput, { moderatedByUserId: 99, reason: 'Repeated personal attacks.' });
+        assert.equal(repository.moderationLogInput, null);
         assert.equal(audit.inputs.length, 0);
     });
 });

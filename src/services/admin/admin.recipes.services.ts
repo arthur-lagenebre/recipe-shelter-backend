@@ -69,8 +69,8 @@ export class AdminRecipeService {
             const recipe = await this.requireModeratableRecipe(recipeId, db);
             const rejected = await this.adminRecipeRepository.reject(recipeId, adminUserId, cleanReason, db);
 
-            if (rejected)
-                await audit.record({
+            if (rejected) {
+                const auditReceipt = await audit.record({
                     actorUserId: adminUserId,
                     eventType: ADMIN_AUDIT_EVENT_TYPES.recipesReject,
                     targetType: ADMIN_AUDIT_TARGET_TYPES.recipe,
@@ -85,6 +85,8 @@ export class AdminRecipeService {
                     },
                     ...context
                 });
+                await this.adminRecipeRepository.createModerationLog(auditReceipt.id, recipeId, db);
+            }
 
             return rejected;
         });
@@ -101,8 +103,8 @@ export class AdminRecipeService {
 
             const archived = await this.adminRecipeRepository.archive(recipeId, adminUserId, cleanReason, db);
 
-            if (archived)
-                await audit.record({
+            if (archived) {
+                const auditReceipt = await audit.record({
                     actorUserId: adminUserId,
                     eventType: ADMIN_AUDIT_EVENT_TYPES.recipesArchive,
                     targetType: ADMIN_AUDIT_TARGET_TYPES.recipe,
@@ -116,6 +118,8 @@ export class AdminRecipeService {
                     },
                     ...context
                 });
+                await this.adminRecipeRepository.createModerationLog(auditReceipt.id, recipeId, db);
+            }
 
             return archived;
         });

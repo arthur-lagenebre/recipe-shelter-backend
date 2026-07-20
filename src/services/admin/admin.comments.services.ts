@@ -43,7 +43,7 @@ export class AdminCommentService {
             if (!hidden)
                 throw notFound('Comment not found', 'COMMENTS_NOT_FOUND');
 
-            await audit.record({
+            const auditReceipt = await audit.record({
                 actorUserId: adminUserId,
                 eventType: ADMIN_AUDIT_EVENT_TYPES.commentsHide,
                 targetType: ADMIN_AUDIT_TARGET_TYPES.comment,
@@ -58,6 +58,7 @@ export class AdminCommentService {
                 },
                 ...context
             });
+            await this.adminCommentRepository.createModerationLog(auditReceipt.id, commentId, db);
 
             return hidden;
         });

@@ -7,8 +7,6 @@ import type {
     AdminUserDetailsRow,
     BannedUser,
     BannedUserRow,
-    CreateUserModerationLogInput,
-    UserModerationAction,
     UserModerationLog,
     UserModerationLogRow
 } from './admin.users.types.js';
@@ -60,11 +58,18 @@ export class AdminUserRepositoryMysql implements AdminUserRepository {
 
     async findModerationLogsByUserId(userId: number): Promise<UserModerationLog[]> {
         const [rows] = await this.db.execute(
-            `SELECT l.Id, l.UserId, l.AdminId, l.Action, l.Reason, admin.Username AS AdminUsername, l.CreatedAt
+            `SELECT audit.Id, l.UserId, audit.ActorUserId AS AdminId,
+                    CASE audit.Action
+                      WHEN 'users.ban' THEN 'ban'
+                      WHEN 'users.unban' THEN 'unban'
+                    END AS Action,
+                    audit.Reason, admin.Username AS AdminUsername,
+                    audit.CorrelationId, audit.CreatedAt
              FROM UserModerationLogs AS l
-             LEFT JOIN Users AS admin ON l.AdminId = admin.Id
+             INNER JOIN AdminAuditLogs AS audit ON audit.Id = l.AdminAuditLogId
+             INNER JOIN Users AS admin ON admin.Id = audit.ActorUserId
              WHERE l.UserId = ?
-             ORDER BY l.CreatedAt DESC, l.Id DESC
+             ORDER BY audit.CreatedAt DESC, audit.Id DESC
              LIMIT ${USER_MODERATION_LOGS_LIMIT}`,
             [userId]
         );
@@ -73,7 +78,7 @@ export class AdminUserRepositoryMysql implements AdminUserRepository {
     }
 
     async ban(userId: number, adminUserId: number, reason: string, db?: PoolConnection): Promise<boolean> {
-        return this.updateUserWithModerationLog('ban', userId, adminUserId, reason, async (conn) => {
+        return this.updateUserTransaction(async (conn) => {
             const [result] = await conn.execute<ResultSetHeader>(
                 `UPDATE CommunityProfiles
                  SET Status = 'banned',
@@ -98,7 +103,7 @@ export class AdminUserRepositoryMysql implements AdminUserRepository {
     }
 
     async unban(userId: number, adminUserId: number, reason: string, db?: PoolConnection): Promise<boolean> {
-        return this.updateUserWithModerationLog('unban', userId, adminUserId, reason, async (conn) => {
+        return this.updateUserTransaction(async (conn) => {
             const [result] = await conn.execute<ResultSetHeader>(
                 `UPDATE CommunityProfiles
                  SET Status = 'active',
@@ -122,15 +127,26 @@ export class AdminUserRepositoryMysql implements AdminUserRepository {
         }, db);
     }
 
-    private async updateUserWithModerationLog(action: UserModerationAction, userId: number, adminUserId: number, reason: string, updateUser: (conn: PoolConnection) => Promise<boolean>, db?: PoolConnection): Promise<boolean> {
-        if (db) {
-            const updated = await updateUser(db);
+    async createModerationLog(auditLogId: number, userId: number, db: PoolConnection): Promise<void> {
+        const [result] = await db.execute<ResultSetHeader>(
+            `INSERT INTO UserModerationLogs (AdminAuditLogId, UserId)
+             SELECT audit.Id, ?
+             FROM AdminAuditLogs AS audit
+             WHERE audit.Id = ?
+               AND audit.Action IN ('users.ban', 'users.unban')
+               AND audit.TargetType = 'community_user'
+               AND audit.Reason IS NOT NULL
+               AND BINARY audit.TargetId = BINARY CAST(? AS CHAR)`,
+            [userId, auditLogId, userId]
+        );
 
-            if (updated)
-                await this.createModerationLog(db, { userId, adminId: adminUserId, action, reason });
+        if (result.affectedRows !== 1)
+            throw new Error('User moderation log does not match its administrative audit entry');
+    }
 
-            return updated;
-        }
+    private async updateUserTransaction(updateUser: (conn: PoolConnection) => Promise<boolean>, db?: PoolConnection): Promise<boolean> {
+        if (db)
+            return updateUser(db);
 
         const conn = await this.db.getConnection();
 
@@ -138,9 +154,6 @@ export class AdminUserRepositoryMysql implements AdminUserRepository {
             await conn.beginTransaction();
 
             const updated = await updateUser(conn);
-
-            if (updated)
-                await this.createModerationLog(conn, { userId, adminId: adminUserId, action, reason });
 
             await conn.commit();
 
@@ -153,11 +166,4 @@ export class AdminUserRepositoryMysql implements AdminUserRepository {
         }
     }
 
-    private async createModerationLog(conn: PoolConnection, input: CreateUserModerationLogInput): Promise<void> {
-        await conn.execute(
-            `INSERT INTO UserModerationLogs (UserId, AdminId, Action, Reason)
-             VALUES (?, ?, ?, ?)`,
-            [input.userId, input.adminId, input.action, input.reason]
-        );
-    }
 }

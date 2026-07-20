@@ -79,40 +79,31 @@ export class AdminCommentRepositoryMysql implements AdminCommentRepository {
     }
 
     async hide(id: number, moderatedByUserId: number, moderationReason: string, db?: PoolConnection): Promise<boolean> {
-        if (db)
-            return this.hideAndLog(id, moderatedByUserId, moderationReason, db);
-
-        const connection = await this.db.getConnection();
-
-        try {
-            await connection.beginTransaction();
-            const hidden = await this.hideAndLog(id, moderatedByUserId, moderationReason, connection);
-            await connection.commit();
-            return hidden;
-        } catch (error) {
-            await connection.rollback();
-            throw error;
-        } finally {
-            connection.release();
-        }
-    }
-
-    private async hideAndLog(id: number, moderatedByUserId: number, moderationReason: string, db: PoolConnection): Promise<boolean> {
-        const [result] = await db.execute<ResultSetHeader>(
+        const [result] = await (db ?? this.db).execute<ResultSetHeader>(
             `UPDATE Comments
              SET ModeratedAt = CURRENT_TIMESTAMP, ModeratedByUserId = ?, ModerationReason = ?
              WHERE Id = ?`,
             [moderatedByUserId, moderationReason, id]
         );
 
-        if (result.affectedRows > 0)
-            await db.execute(
-                `INSERT INTO CommentModerationLogs (CommentId, AdminId, Action, Reason)
-                 VALUES (?, ?, 'hide', ?)`,
-                [id, moderatedByUserId, moderationReason]
-            );
-
         return result.affectedRows > 0;
+    }
+
+    async createModerationLog(auditLogId: number, commentId: number, db: PoolConnection): Promise<void> {
+        const [result] = await db.execute<ResultSetHeader>(
+            `INSERT INTO CommentModerationLogs (AdminAuditLogId, CommentId)
+             SELECT audit.Id, ?
+             FROM AdminAuditLogs AS audit
+             WHERE audit.Id = ?
+               AND audit.Action = 'comments.hide'
+               AND audit.TargetType = 'comment'
+               AND audit.Reason IS NOT NULL
+               AND BINARY audit.TargetId = BINARY CAST(? AS CHAR)`,
+            [commentId, auditLogId, commentId]
+        );
+
+        if (result.affectedRows !== 1)
+            throw new Error('Comment moderation log does not match its administrative audit entry');
     }
 
     async unmoderate(id: number, db?: PoolConnection): Promise<boolean> {

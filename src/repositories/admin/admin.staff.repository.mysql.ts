@@ -127,13 +127,24 @@ export class AdminStaffRepositoryMysql implements AdminStaffRepository {
     if (profileResult.affectedRows === 0)
       return null;
 
-    await db.execute(
-      `INSERT INTO StaffModerationLogs (StaffUserId, AdminId, Action, Reason)
-       VALUES (?, ?, 'disable', ?)`,
-      [staffUserId, actorStaffUserId, reason]
+    return activeSessionCount;
+  }
+
+  async createModerationLog(auditLogId: number, staffUserId: number, db: PoolConnection): Promise<void> {
+    const [result] = await db.execute<ResultSetHeader>(
+      `INSERT INTO StaffModerationLogs (AdminAuditLogId, StaffUserId)
+       SELECT audit.Id, ?
+       FROM AdminAuditLogs AS audit
+       WHERE audit.Id = ?
+         AND audit.Action = 'staff.disable'
+         AND audit.TargetType = 'staff_user'
+         AND audit.Reason IS NOT NULL
+         AND BINARY audit.TargetId = BINARY CAST(? AS CHAR)`,
+      [staffUserId, auditLogId, staffUserId]
     );
 
-    return activeSessionCount;
+    if (result.affectedRows !== 1)
+      throw new Error('Staff moderation log does not match its administrative audit entry');
   }
 
   async enable(staffUserId: number, db: PoolConnection): Promise<boolean> {

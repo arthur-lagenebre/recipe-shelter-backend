@@ -172,7 +172,11 @@ côté service. Chaque décision ajoute une entrée au journal métier du domain
 (`RecipeModerationLogs`, `CommentModerationLogs`, `UserModerationLogs` ou
 `StaffModerationLogs`) et, lorsque le domaine expose un état courant, y reporte
 aussi le motif. Cette écriture est réalisée dans la même transaction que
-l’entrée d’audit administrative. Chaque route
+l’entrée d’audit administrative. Chaque journal métier est une extension
+append-only de cette entrée : `AdminAuditLogId` est à la fois sa clé primaire et
+une clé étrangère vers `AdminAuditLogs.Id`. Le journal spécialisé ne recopie que
+la cible métier typée ; l’acteur, l’action, le motif, la date et le
+`correlationId` sont lus depuis l’unique entrée d’audit associée. Chaque route
 utilise sa permission métier (`recipe.reject`, `recipe.archive`, `user.ban`,
 `user.unban`, `comment.hide` ou `staff.disable`) ; le simple fait d’être staff
 ne suffit pas.

@@ -8,4 +8,5 @@ export interface AdminUserRepository {
     findModerationLogsByUserId(userId: number): Promise<UserModerationLog[]>;
     ban(userId: number, adminUserId: number, reason: string, db?: PoolConnection): Promise<boolean>;
     unban(userId: number, adminUserId: number, reason: string, db?: PoolConnection): Promise<boolean>;
+    createModerationLog(auditLogId: number, userId: number, db: PoolConnection): Promise<void>;
 }

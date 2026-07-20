@@ -2,7 +2,7 @@ import { ADMIN_AUDIT_EVENT_TYPES, ADMIN_AUDIT_TARGET_TYPES } from './admin-audit
 import { badRequest, conflict, forbidden, notFound } from '../../utils/errors.js';
 
 import type { AdminAuditActionRunner } from './admin-audit-action.runner.js';
-import type { AdminAuditRecorder, AdminAuditRequestContext } from './admin-audit.service.js';
+import type { AdminAuditRecorder, AdminAuditRecordReceipt, AdminAuditRequestContext } from './admin-audit.service.js';
 import type { AdminStaffRepository } from '../../repositories/admin/admin.staff.repository.interface.js';
 import type { AdminStaffAccount, AdminStaffRole } from '../../repositories/admin/admin.staff.types.js';
 
@@ -74,7 +74,7 @@ export class AdminStaffService {
         throw conflict('Staff account status changed concurrently', 'STAFF_STATUS_CONFLICT');
 
       const after = await this.requireStaff(staffUserId, db);
-      await this.recordLifecycleAudit(
+      const auditReceipt = await this.recordLifecycleAudit(
         audit,
         ADMIN_AUDIT_EVENT_TYPES.staffDisable,
         before,
@@ -84,6 +84,7 @@ export class AdminStaffService {
         context,
         revokedSessionCount
       );
+      await this.staff.createModerationLog(auditReceipt.id, staffUserId, db);
 
       return after;
     });
@@ -194,8 +195,8 @@ export class AdminStaffService {
     return role;
   }
 
-  private async recordLifecycleAudit(audit: AdminAuditRecorder, eventType: typeof ADMIN_AUDIT_EVENT_TYPES.staffDisable | typeof ADMIN_AUDIT_EVENT_TYPES.staffEnable, before: AdminStaffAccount, after: AdminStaffAccount, actorStaffUserId: number, reason: string, context: AdminAuditRequestContext, revokedSessionCount?: number): Promise<void> {
-    await audit.record({
+  private async recordLifecycleAudit(audit: AdminAuditRecorder, eventType: typeof ADMIN_AUDIT_EVENT_TYPES.staffDisable | typeof ADMIN_AUDIT_EVENT_TYPES.staffEnable, before: AdminStaffAccount, after: AdminStaffAccount, actorStaffUserId: number, reason: string, context: AdminAuditRequestContext, revokedSessionCount?: number): Promise<AdminAuditRecordReceipt> {
+    return audit.record({
       actorUserId: actorStaffUserId,
       eventType,
       targetType: ADMIN_AUDIT_TARGET_TYPES.staffUser,

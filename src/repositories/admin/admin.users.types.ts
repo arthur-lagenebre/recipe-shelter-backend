@@ -54,6 +54,7 @@ export type UserModerationLog = {
     action: UserModerationAction;
     reason: string;
     adminUsername?: string;
+    correlationId: string;
     createdAt: Date;
 };
 
@@ -64,12 +65,6 @@ export type UserModerationLogRow = RowDataPacket & {
     Action: UserModerationAction;
     Reason: string;
     AdminUsername: string | null;
+    CorrelationId: string;
     CreatedAt: Date;
-};
-
-export type CreateUserModerationLogInput = {
-    userId: number;
-    adminId: number;
-    action: UserModerationAction;
-    reason: string;
 };

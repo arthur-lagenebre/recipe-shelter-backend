@@ -78,7 +78,8 @@ describe('admin user access HTTP integration', () => {
                     bannedAt: null
                 });
                 return true;
-            }
+            },
+            async createModerationLog() { }
         } as unknown as AdminUserRepository;
         const service = new AdminUserService(
             userRepository as unknown as UserRepository,
