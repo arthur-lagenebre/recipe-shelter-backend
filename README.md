@@ -113,10 +113,12 @@ la révocation volontaire, la désactivation ou le verrouillage du compte, le
 changement de mot de passe, le reset MFA, la suspicion de compromission et le
 retrait du dernier rôle.
 
-Toute modification du hash de mot de passe révoque immédiatement les sessions
-du domaine correspondant : `CommunitySessions` pour une identité community et
-`StaffSessions` pour une identité staff. Les deux stockages ne sont jamais
-révoqués transversalement. Côté staff, le passage à `disabled` ou `locked`, la
+Tout changement de mot de passe révoque immédiatement les sessions du domaine
+correspondant. Pour une identité community, le flux authentifié préserve la
+session courante et révoque les autres, tandis que le flux « mot de passe
+oublié » révoque toutes les sessions sans exception. Pour une identité staff,
+la modification du hash révoque toutes les `StaffSessions`. Les deux stockages
+ne sont jamais révoqués transversalement. Côté staff, le passage à `disabled` ou `locked`, la
 remise à zéro de `MfaEnrolledAt` et le retrait du dernier `StaffRoles` révoquent
 également toutes les sessions actives. Chaque requête authentifiée revalide la
 session persistée ; un JWT déjà émis devient donc inutilisable immédiatement.

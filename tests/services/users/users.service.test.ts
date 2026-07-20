@@ -6,6 +6,7 @@ import bcrypt from 'bcrypt';
 import { UserService } from '../../../src/services/users/users.service.js';
 import { HttpError } from '../../../src/utils/errors.js';
 
+import type { SessionRepository } from '../../../src/repositories/auth/session.repository.interface.js';
 import type { RecipeRepository } from '../../../src/repositories/recipes/recipe.repository.interface.js';
 import type { RecipeListItem } from '../../../src/repositories/recipes/recipe.types.js';
 import type { UserRepository } from '../../../src/repositories/users/user.repository.interface.js';
@@ -99,6 +100,20 @@ class FakeRecipeRepository {
     }
 }
 
+class FakeSessionRepository {
+    revocations: Array<{
+        userId: number;
+        revocationType: 'password_changed';
+        exceptSessionId?: string;
+    }> = [];
+
+    async revokeAllCommunitySessions(userId: number, revocationType: 'password_changed', exceptSessionId?: string): Promise<number> {
+        this.revocations.push({ userId, revocationType, exceptSessionId });
+
+        return 1;
+    }
+}
+
 function assertHttpError(error: unknown, code: string, status: number): void {
     assert.ok(error instanceof HttpError);
     assert.equal(error.code, code);
@@ -108,12 +123,18 @@ function assertHttpError(error: unknown, code: string, status: number): void {
 describe('UserService', () => {
     let users: FakeUserRepository;
     let recipes: FakeRecipeRepository;
+    let sessions: FakeSessionRepository;
     let service: UserService;
 
     beforeEach(() => {
         users = new FakeUserRepository();
         recipes = new FakeRecipeRepository();
-        service = new UserService(users as unknown as UserRepository, recipes as unknown as RecipeRepository);
+        sessions = new FakeSessionRepository();
+        service = new UserService(
+            users as unknown as UserRepository,
+            recipes as unknown as RecipeRepository,
+            sessions as unknown as SessionRepository
+        );
     });
 
     it('gets a public user profile with published recipes', async () => {
@@ -232,27 +253,42 @@ describe('UserService', () => {
     it('updates passwords after validating the current password and policy', async () => {
         users.userWithPassword = { ...baseUser, passwordHash: await bcrypt.hash('current-password', 4) };
 
-        await service.updatePassword(2, 'current-password', 'new-password');
+        await service.updatePassword(2, 'current-password', 'new-password', 'current-session-id');
 
         assert.equal(users.updatedPassword?.userId, 2);
         assert.equal(await bcrypt.compare('new-password', users.updatedPassword?.passwordHash ?? ''), true);
+        assert.deepEqual(sessions.revocations, [{
+            userId: 2,
+            revocationType: 'password_changed',
+            exceptSessionId: 'current-session-id'
+        }]);
+    });
+
+    it('updates the password and revokes every active session when no current session id is available', async () => {
+        users.userWithPassword = { ...baseUser, passwordHash: await bcrypt.hash('current-password', 4) };
+
+        await service.updatePassword(2, 'current-password', 'new-password', null);
+
+        assert.equal(await bcrypt.compare('new-password', users.updatedPassword?.passwordHash ?? ''), true);
+        assert.deepEqual(sessions.revocations, [{ userId: 2, revocationType: 'password_changed', exceptSessionId: undefined }]);
     });
 
     it('rejects invalid password updates', async () => {
         users.userWithPassword = { ...baseUser, passwordHash: await bcrypt.hash('current-password', 4) };
 
-        await assert.rejects(() => service.updatePassword(2, 'wrong', 'new-password'), (error) => {
+        await assert.rejects(() => service.updatePassword(2, 'wrong', 'new-password', null), (error) => {
             assertHttpError(error, 'USERS_UPDATE_PASSWORD_BAD_CURRENT', 401);
             return true;
         });
-        await assert.rejects(() => service.updatePassword(2, 'current-password', 'current-password'), (error) => {
+        await assert.rejects(() => service.updatePassword(2, 'current-password', 'current-password', null), (error) => {
             assertHttpError(error, 'USERS_UPDATE_PASSWORD_SAME_PASSWORD', 400);
             return true;
         });
-        await assert.rejects(() => service.updatePassword(2, 'current-password', 'short'), (error) => {
+        await assert.rejects(() => service.updatePassword(2, 'current-password', 'short', null), (error) => {
             assertHttpError(error, 'USERS_UPDATE_PASSWORD_WEAK_PASSWORD', 400);
             return true;
         });
+        assert.deepEqual(sessions.revocations, []);
     });
 
     it('updates usernames after validating password and uniqueness', async () => {

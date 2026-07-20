@@ -39,6 +39,7 @@ export interface SessionRepository {
   isStaffSessionRecentlyAuthenticated(id: string, userId: number, authenticatedAfter: Date): Promise<boolean>;
   findActiveStaffSessionsByUserId(userId: number, db?: PoolConnection): Promise<StaffSession[]>;
   revokeCommunitySession(id: string, userId: number): Promise<void>;
+  revokeAllCommunitySessions(userId: number, revocationType: 'password_changed', exceptSessionId?: string): Promise<number>;
   revokeStaffSession(input: RevokeStaffSessionInput, db?: PoolConnection): Promise<boolean>;
 }
 import type { PoolConnection } from 'mysql2/promise';

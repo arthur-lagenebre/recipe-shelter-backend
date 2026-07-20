@@ -1,4 +1,6 @@
 import { parseUpdateEmailBody, parseUpdatePasswordBody, parseUpdateUsernameBody, parseUsernameParam } from './users.dto.js';
+import { verifySessionToken } from '../../services/auth/session-token.js';
+import { getSessionToken } from '../../utils/session-cookie.js';
 import { asyncHandler } from '../http/async-handler.js';
 
 import type { UserService } from '../../services/users/users.service.js';
@@ -43,8 +45,19 @@ export function createUsersController(userService: UserService) {
             }
 
             const input = parseUpdatePasswordBody(req.body);
+            const token = getSessionToken(req, 'app');
+            let currentSessionId: string | null = null;
 
-            await userService.updatePassword(req.auth.userId, input.currentPassword, input.newPassword);
+            try {
+                const session = token ? verifySessionToken(token, 'app') : null;
+
+                if (session?.userId === req.auth.userId)
+                    currentSessionId = session.sessionId;
+            } catch {
+                currentSessionId = null;
+            }
+
+            await userService.updatePassword(req.auth.userId, input.currentPassword, input.newPassword, currentSessionId);
 
             res.status(200).json({ ok: true, message: 'Password updated successfully.' });
         }),

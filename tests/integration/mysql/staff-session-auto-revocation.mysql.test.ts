@@ -78,8 +78,9 @@ describe('automatic staff session revocation MySQL integration', { skip: !mysqlE
     }
   });
 
-  it('revokes only the matching realm after a password change or reset', async () => {
+  it('lets the application preserve a community session while staff password changes revoke automatically', async () => {
     const community = await createCommunityIdentity('password-community');
+    const otherCommunitySessionId = randomUUID();
     const staff = await createStaffIdentity('password-staff', ['UserAdmin']);
     const staffMfa = new StaffMfaRepositoryMysql(pool);
     const flowId = randomUUID();
@@ -103,10 +104,18 @@ describe('automatic staff session revocation MySQL integration', { skip: !mysqlE
     assert.equal(await sessions.isStaffSessionActive(staff.sessionId, staff.userId), true);
 
     await pool.execute(
+      `INSERT INTO CommunitySessions (Id, CommunityUserId, ExpiresAt)
+       VALUES (?, ?, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 1 HOUR))`,
+      [otherCommunitySessionId, community.userId]
+    );
+
+    await pool.execute(
       `UPDATE Users SET Password = 'new-community-password-hash' WHERE Id = ?`,
       [community.userId]
     );
-    assert.equal(await sessions.isCommunitySessionActive(community.sessionId, community.userId), false);
+    await sessions.revokeAllCommunitySessions(community.userId, 'password_changed', community.sessionId);
+    assert.equal(await sessions.isCommunitySessionActive(community.sessionId, community.userId), true);
+    assert.equal(await sessions.isCommunitySessionActive(otherCommunitySessionId, community.userId), false);
     assert.equal(await sessions.isStaffSessionActive(staff.sessionId, staff.userId), true);
 
     await pool.execute(
@@ -137,7 +146,7 @@ describe('automatic staff session revocation MySQL integration', { skip: !mysqlE
 
     const [communityRevocation] = await pool.query(
       `SELECT RevocationType FROM CommunitySessions WHERE Id = ?`,
-      [community.sessionId]
+      [otherCommunitySessionId]
     );
     const [staffRevocation] = await pool.query(
       `SELECT RevokedByStaffUserId, RevocationType FROM StaffSessions WHERE Id = ?`,

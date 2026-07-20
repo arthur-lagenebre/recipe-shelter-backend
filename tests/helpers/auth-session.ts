@@ -61,6 +61,20 @@ export class TestSessionRepository implements SessionRepository {
       this.communitySessions.delete(id);
   }
 
+  async revokeAllCommunitySessions(userId: number, _revocationType: 'password_changed', exceptSessionId?: string): Promise<number> {
+    let revokedCount = 0;
+
+    for (const [id, session] of this.communitySessions) {
+      if (session.userId !== userId || id === exceptSessionId || session.expiresAt.getTime() <= Date.now())
+        continue;
+
+      this.communitySessions.delete(id);
+      revokedCount += 1;
+    }
+
+    return revokedCount;
+  }
+
   async revokeStaffSession(input: RevokeStaffSessionInput): Promise<boolean> {
     this.staffRevocations.push(input);
     const session = this.staffSessions.get(input.id);

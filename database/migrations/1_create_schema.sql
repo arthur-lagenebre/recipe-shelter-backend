@@ -415,20 +415,9 @@ CREATE TABLE StaffSessions (
     )
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Authentication changes revoke only the matching session realm. The triggers
--- also cover password resets because they persist a new password hash.
-CREATE TRIGGER users_community_password_sessions_AU
-AFTER UPDATE ON Users
-FOR EACH ROW
-UPDATE CommunitySessions
-SET RevokedAt = CURRENT_TIMESTAMP,
-    RevocationType = 'password_changed'
-WHERE CommunityUserId = NEW.Id
-  AND NEW.AccountType = 'community'
-  AND NOT (OLD.Password <=> NEW.Password)
-  AND RevokedAt IS NULL
-  AND ExpiresAt > CURRENT_TIMESTAMP;
-
+-- Staff authentication changes revoke the matching session realm and advance
+-- the session version. Community password changes are handled by the
+-- application so an authenticated user can preserve the current session.
 CREATE TRIGGER users_staff_password_sessions_AU
 AFTER UPDATE ON Users
 FOR EACH ROW

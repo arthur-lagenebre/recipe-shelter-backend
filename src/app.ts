@@ -208,18 +208,13 @@ function createDefaultDependencies(): AppDependencies {
     favoriteService: new FavoriteService(favoriteRepository),
     imageStorage,
     ingredientService: new IngredientService(ingredientRepository),
-    passwordResetService: new PasswordResetService(userRepository, passwordResetRepository, mailer, env.http.frontendBaseUrl),
+    passwordResetService: new PasswordResetService(userRepository, passwordResetRepository, sessionRepository, mailer, env.http.frontendBaseUrl),
     recipeImageService,
     recipeService: new RecipeService(recipeRepository, recipeSlugService),
-    staffInvitationService: new StaffInvitationService(
-      staffInvitationRepository,
-      mailer,
-      adminAuditActions,
-      env.http.frontendBaseUrl
-    ),
+    staffInvitationService: new StaffInvitationService(staffInvitationRepository, mailer, adminAuditActions, env.http.frontendBaseUrl),
     staffSessionService: new StaffSessionService(sessionRepository, userRepository, adminAuditActions),
     tagService: new TagService(tagRepository),
-    usersService: new UserService(userRepository, recipeRepository)
+    usersService: new UserService(userRepository, recipeRepository, sessionRepository)
   };
 }
 

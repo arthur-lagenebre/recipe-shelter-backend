@@ -138,4 +138,24 @@ describe('SessionRepositoryMysql', () => {
     assert.deepEqual(fake.statements[1]?.params, [9, 'suspected_compromise', 'staff-id', 1]);
     assert.equal(revoked, false);
   });
+
+  it('revokes all active community sessions except the selected session', async () => {
+    const fake = createPool();
+    const repository = new SessionRepositoryMysql(fake.pool);
+
+    const revokedCount = await repository.revokeAllCommunitySessions(2, 'password_changed', 'current-session-id');
+
+    assert.equal(revokedCount, 1);
+    assert.match(fake.statements[0]?.sql ?? '', /UPDATE CommunitySessions/);
+    assert.match(fake.statements[0]?.sql ?? '', /RevokedAt = CURRENT_TIMESTAMP/);
+    assert.match(fake.statements[0]?.sql ?? '', /RevocationType = \?/);
+    assert.match(fake.statements[0]?.sql ?? '', /CommunityUserId = \?[\s\S]+RevokedAt IS NULL[\s\S]+ExpiresAt > CURRENT_TIMESTAMP[\s\S]+\(\? IS NULL OR Id <> \?\)/);
+    assert.deepEqual(fake.statements[0]?.params, ['password_changed', 2, 'current-session-id', 'current-session-id']);
+
+    const emptyFake = createPool(false);
+    const emptyRepository = new SessionRepositoryMysql(emptyFake.pool);
+
+    assert.equal(await emptyRepository.revokeAllCommunitySessions(2, 'password_changed'), 0);
+    assert.deepEqual(emptyFake.statements[0]?.params, ['password_changed', 2, null, null]);
+  });
 });

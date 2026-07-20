@@ -258,8 +258,8 @@ describe('account lifecycle E2E', () => {
         const resets = new AccountResetRepository();
         mailer = new AccountMailer();
         const emailValidationService = new EmailValidationService(users, validations, mailer, 'https://front.example');
-        const passwordResetService = new PasswordResetService(users, resets, mailer, 'https://front.example');
         const sessions = new TestSessionRepository();
+        const passwordResetService = new PasswordResetService(users, resets, sessions, mailer, 'https://front.example');
 
         server = await startHttpTestServer(createApp({
             authService: new AuthService(users, emailValidationService, sessions, {} as StaffMfaManager),
@@ -269,7 +269,7 @@ describe('account lifecycle E2E', () => {
             passwordResetService,
             usersService: new UserService(users, {
                 async findPublishedByAuthorId() { return []; }
-            } as unknown as RecipeRepository)
+            } as unknown as RecipeRepository, sessions)
         }));
     });
 
@@ -307,6 +307,8 @@ describe('account lifecycle E2E', () => {
         });
         assert.equal(login.status, 200);
         assert.match(login.headers.get('set-cookie') ?? '', /HttpOnly/i);
+        const preResetSessionCookie = (login.headers.get('set-cookie') ?? '').split(';', 1)[0];
+        assert.ok(preResetSessionCookie);
 
         const forgot = await postJson(server.baseUrl, '/api/v1/auth/forgot-password', {
             mail: 'alice@example.com'
@@ -320,6 +322,10 @@ describe('account lifecycle E2E', () => {
         });
         assert.equal(reset.status, 200);
         assert.deepEqual(mailer.changedMail, { to: 'alice@example.com', username: 'alice' });
+
+        const resetRevokedSession = await fetch(`${server.baseUrl}/api/v1/users/me`, { headers: { cookie: preResetSessionCookie } });
+        assert.equal(resetRevokedSession.status, 401);
+        assert.equal((await resetRevokedSession.json() as { error: { code: string } }).error.code, 'AUTH_BAD_TOKEN');
 
         const oldPassword = await postJson(server.baseUrl, '/api/v1/auth/login', {
             mail: 'alice@example.com',
@@ -335,6 +341,11 @@ describe('account lifecycle E2E', () => {
 
         const sessionCookie = (newPassword.headers.get('set-cookie') ?? '').split(';', 1)[0];
         assert.ok(sessionCookie);
+
+        const otherLogin = await postJson(server.baseUrl, '/api/v1/auth/login', { mail: 'alice@example.com', password: 'UpdatedPass42!' });
+        assert.equal(otherLogin.status, 200);
+        const otherSessionCookie = (otherLogin.headers.get('set-cookie') ?? '').split(';', 1)[0];
+        assert.ok(otherSessionCookie);
 
         const updateUsername = await fetch(`${server.baseUrl}/api/v1/users/me/username`, {
             method: 'PATCH',
@@ -358,6 +369,13 @@ describe('account lifecycle E2E', () => {
             body: JSON.stringify({ currentPassword: 'UpdatedPass42!', newPassword: 'FinalPass42!' })
         });
         assert.equal(updatePassword.status, 200);
+
+        const preservedSession = await fetch(`${server.baseUrl}/api/v1/users/me`, { headers: { cookie: sessionCookie } });
+        assert.equal(preservedSession.status, 200);
+
+        const revokedOtherSession = await fetch(`${server.baseUrl}/api/v1/users/me`, { headers: { cookie: otherSessionCookie } });
+        assert.equal(revokedOtherSession.status, 401);
+        assert.equal((await revokedOtherSession.json() as { error: { code: string } }).error.code, 'AUTH_BAD_TOKEN');
 
         const finalLogin = await postJson(server.baseUrl, '/api/v1/auth/login', {
             mail: 'alice.new@example.com',

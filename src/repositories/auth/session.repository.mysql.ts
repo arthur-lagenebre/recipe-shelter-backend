@@ -174,6 +174,22 @@ export class SessionRepositoryMysql implements SessionRepository {
     );
   }
 
+  async revokeAllCommunitySessions(userId: number, revocationType: 'password_changed', exceptSessionId?: string): Promise<number> {
+    const excludedSessionId = exceptSessionId ?? null;
+    const [result] = await this.db.execute<ResultSetHeader>(
+      `UPDATE CommunitySessions
+       SET RevokedAt = CURRENT_TIMESTAMP,
+           RevocationType = ?
+       WHERE CommunityUserId = ?
+         AND RevokedAt IS NULL
+         AND ExpiresAt > CURRENT_TIMESTAMP
+         AND (? IS NULL OR Id <> ?)`,
+      [revocationType, userId, excludedSessionId, excludedSessionId]
+    );
+
+    return result.affectedRows;
+  }
+
   async revokeStaffSession(input: RevokeStaffSessionInput, db?: PoolConnection): Promise<boolean> {
     const [result] = await (db ?? this.db).execute<ResultSetHeader>(
       `UPDATE StaffSessions

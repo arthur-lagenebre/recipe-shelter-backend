@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import { badRequest, conflict, notFound, unauthorized } from '../../utils/errors.js';
 import { validatePassword } from '../auth/password-policy.js';
 
+import type { SessionRepository } from '../../repositories/auth/session.repository.interface.js';
 import type { RecipeRepository } from '../../repositories/recipes/recipe.repository.interface.js';
 import type { RecipeListItem } from '../../repositories/recipes/recipe.types.js';
 import type { UserRepository } from '../../repositories/users/user.repository.interface.js';
@@ -25,7 +26,7 @@ export type PublicUserWithPublishedRecipes = {
 };
 
 export class UserService {
-    constructor(private readonly userRepository: UserRepository, private readonly recipeRepository: RecipeRepository) { }
+    constructor(private readonly userRepository: UserRepository, private readonly recipeRepository: RecipeRepository, private readonly sessions: SessionRepository) { }
 
     async getMe(userId: number): Promise<PublicUserProfile> {
         const user = await this.userRepository.findById(userId);
@@ -99,7 +100,7 @@ export class UserService {
         return this.getMe(userId);
     }
 
-    async updatePassword(userId: number, currentPassword: string, newPassword: string): Promise<void> {
+    async updatePassword( userId: number, currentPassword: string, newPassword: string, currentSessionId: string | null): Promise<void> {
         const user = await this.userRepository.findWithPasswordById(userId);
 
         if (!user)
@@ -124,6 +125,7 @@ export class UserService {
         const newPasswordHash = await bcrypt.hash(newPassword, 12);
 
         await this.userRepository.updatePassword(userId, newPasswordHash);
+        await this.sessions.revokeAllCommunitySessions(userId, 'password_changed', currentSessionId ?? undefined);
     }
 
     async updateUsername(userId: number, currentPassword: string, newUsername: string): Promise<PublicUserProfile> {

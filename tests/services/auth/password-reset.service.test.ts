@@ -8,6 +8,7 @@ import { env } from '../../../src/utils/env.js';
 import { hashResetToken } from '../../../src/utils/security/password-reset-token.js';
 
 import type { PasswordResetRepository } from '../../../src/repositories/auth/password-reset.repository.interface.js';
+import type { SessionRepository } from '../../../src/repositories/auth/session.repository.interface.js';
 import type { PasswordResetMailInput, Mailer } from '../../../src/services/mail/mail.types.js';
 
 type UserLite = {
@@ -75,9 +76,24 @@ class FakeMailer implements Partial<Mailer> {
     }
 }
 
+class FakeSessions {
+    revocations: Array<{
+        userId: number;
+        revocationType: 'password_changed';
+        exceptSessionId?: string;
+    }> = [];
+
+    async revokeAllCommunitySessions(userId: number, revocationType: 'password_changed', exceptSessionId?: string): Promise<number> {
+        this.revocations.push({ userId, revocationType, exceptSessionId });
+
+        return 2;
+    }
+}
+
 describe('PasswordResetService', () => {
     let users: FakeUsers;
     let resets: FakeResets;
+    let sessions: FakeSessions;
     let mailer: FakeMailer;
     let service: PasswordResetService;
 
@@ -85,8 +101,9 @@ describe('PasswordResetService', () => {
         env.auth.bcryptCost = 4;
         users = new FakeUsers();
         resets = new FakeResets();
+        sessions = new FakeSessions();
         mailer = new FakeMailer();
-        service = new PasswordResetService(users, resets, mailer as unknown as Mailer, 'https://front.example');
+        service = new PasswordResetService(users, resets, sessions as unknown as SessionRepository, mailer as unknown as Mailer, 'https://front.example');
     });
 
     it('ignores blank and unknown reset requests', async () => {
@@ -125,6 +142,7 @@ describe('PasswordResetService', () => {
         assert.equal(resets.tokenHashInput, hashResetToken('token'));
         assert.equal(users.updatedPassword?.userId, 2);
         assert.equal(await bcrypt.compare('NewPass42', users.updatedPassword?.passwordHash ?? ''), true);
+        assert.deepEqual(sessions.revocations, [{ userId: 2, revocationType: 'password_changed', exceptSessionId: undefined }]);
         assert.equal(resets.markedUsedId, 9);
         assert.deepEqual(mailer.changedEmail, { to: 'user@example.com', username: 'testuser' });
     });

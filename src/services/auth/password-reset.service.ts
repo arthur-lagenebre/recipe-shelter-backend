@@ -5,6 +5,7 @@ import { env } from '../../utils/env.js';
 import { generateResetToken, hashResetToken } from '../../utils/security/password-reset-token.js';
 
 import type { PasswordResetRepository } from '../../repositories/auth/password-reset.repository.interface.js';
+import type { SessionRepository } from '../../repositories/auth/session.repository.interface.js';
 import type { Mailer } from '../mail/mail.types.js';
 
 type UserLite = {
@@ -22,7 +23,7 @@ type UserRepository = {
 const PASSWORD_RESET_TTL_MINUTES = 30;
 
 export class PasswordResetService {
-    constructor(private readonly users: UserRepository, private readonly resets: PasswordResetRepository, private readonly mailer: Mailer, private readonly appBaseUrl: string) { }
+    constructor(private readonly users: UserRepository, private readonly resets: PasswordResetRepository, private readonly sessions: SessionRepository, private readonly mailer: Mailer, private readonly appBaseUrl: string) { }
 
     async requestReset(mail: string): Promise<void> {
         const normalizedMail = mail.trim().toLowerCase();
@@ -64,6 +65,7 @@ export class PasswordResetService {
         const passwordHash = await bcrypt.hash(newPassword, env.auth.bcryptCost);
 
         await this.users.updatePassword(reset.UserId, passwordHash);
+        await this.sessions.revokeAllCommunitySessions(reset.UserId, 'password_changed');
         await this.resets.markUsed(reset.Id);
 
         const user = await this.users.findById(reset.UserId);
