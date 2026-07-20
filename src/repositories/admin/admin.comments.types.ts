@@ -11,6 +11,7 @@ export type AdminComment = {
     moderatedAt: Date | null;
     moderatedByUserId: number | null;
     moderatedByUsername: string | null;
+    moderationReason: string | null;
     deletedAt: Date | null;
     deletedByUserId: number | null;
     deletedByUsername: string | null;
@@ -37,6 +38,7 @@ export type AdminCommentRow = RowDataPacket & {
     ModeratedAt: Date | null;
     ModeratedByUserId: number | null;
     ModeratedByUsername: string | null;
+    ModerationReason: string | null;
     DeletedAt: Date | null;
     DeletedByUserId: number | null;
     DeletedByUsername: string | null;

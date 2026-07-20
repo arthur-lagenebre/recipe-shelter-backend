@@ -1,5 +1,5 @@
 import { getAdminAuditRequestContext } from './admin-audit.context.js';
-import { parseRejectRecipeBody } from './admin.recipes.dto.js';
+import { parseArchiveRecipeBody, parseRejectRecipeBody } from './admin.recipes.dto.js';
 import { asyncHandler } from '../http/async-handler.js';
 import { parseRecipeIdParam } from '../recipes/recipes.dto.js';
 
@@ -34,17 +34,18 @@ export function createAdminRecipesController(adminRecipeService: AdminRecipeServ
 
         rejectRecipe: asyncHandler(async (req, res) => {
             const recipeId = parseRecipeIdParam(req.params.id);
-            const rejectionReason = parseRejectRecipeBody(req.body);
+            const reason = parseRejectRecipeBody(req.body);
 
-             const result = await adminRecipeService.reject(recipeId, req.auth!.userId, rejectionReason, getAdminAuditRequestContext(req));
+            const result = await adminRecipeService.reject(recipeId, req.auth!.userId, reason, getAdminAuditRequestContext(req));
 
             res.status(200).json({ ok: result });
         }),
 
         archiveRecipe: asyncHandler(async (req, res) => {
             const recipeId = parseRecipeIdParam(req.params.id);
+            const reason = parseArchiveRecipeBody(req.body);
 
-            const result = await adminRecipeService.archive(recipeId,req.auth!.userId,getAdminAuditRequestContext(req));
+            const result = await adminRecipeService.archive(recipeId, req.auth!.userId, reason, getAdminAuditRequestContext(req));
 
             res.status(200).json({ ok: result });
         }),

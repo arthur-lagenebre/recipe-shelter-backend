@@ -24,7 +24,12 @@ Cookie: rs_admin_session={{adminSessionCookie}}
 
 ### Hide comment as admin
 POST {{baseUrl}}/admin/comments/{{commentId}}/hide
+Content-Type: application/json
 Cookie: rs_admin_session={{adminSessionCookie}}
+
+{
+  "reason": "Ce commentaire contient des attaques personnelles repetees."
+}
 
 ### Remove moderation from comment as admin
 POST {{baseUrl}}/admin/comments/{{commentId}}/unmoderate

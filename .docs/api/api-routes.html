@@ -1614,15 +1614,15 @@ type HealthReadyResponse = {
             <tr>
               <td><span class="method post">POST</span></td>
               <td><code>/api/v1/admin/recipes/:id/reject</code></td>
-              <td><span class="auth admin">Admin</span></td>
-              <td><code>rejectionReason</code> requis.</td>
+              <td><span class="auth admin">Staff + <code>recipe.reject</code></span></td>
+              <td><code>reason</code> requis, 10..1000 caract&egrave;res.</td>
               <td><code>200</code> <code>{ "ok": true }</code>.</td>
             </tr>
             <tr>
               <td><span class="method post">POST</span></td>
               <td><code>/api/v1/admin/recipes/:id/archive</code></td>
-              <td><span class="auth admin">Admin</span></td>
-              <td><code>id</code> entier positif.</td>
+              <td><span class="auth admin">Staff + <code>recipe.archive</code></span></td>
+              <td><code>reason</code> requis, 10..1000 caract&egrave;res.</td>
               <td><code>200</code> <code>{ "ok": true }</code>.</td>
             </tr>
             <tr>
@@ -1678,6 +1678,7 @@ type PendingRecipesCountResponse = {
   publishedAt: ISODateString | null;
   archivedAt: ISODateString | null;
   rejectionReason: string | null;
+  archiveReason: string | null;
   updatedAt: ISODateString;
   tags: AdminRecipeTag[];
   ingredients: AdminRecipeIngredient[];
@@ -1717,8 +1718,8 @@ type AdminRecipeEquipment = {
         <article class="schema">
           <h3>Admin recipe actions</h3>
           <p>Rejet, approbation, archivage et suppression admin.</p>
-          <pre><code>type RejectRecipeRequest = {
-  rejectionReason: string;
+          <pre><code>type RecipeModerationReasonRequest = {
+  reason: string; // 10..1000 caract&egrave;res apr&egrave;s trim
 };
 
 type ApproveRecipeResponse = OkResponse;
@@ -1775,8 +1776,8 @@ type DeleteRecipeAdminResponse = OkResponse;</code></pre>
             <tr>
               <td><span class="method post">POST</span></td>
               <td><code>/api/v1/admin/comments/:id/hide</code></td>
-              <td><span class="auth admin">Admin</span></td>
-              <td><code>id</code> entier positif.</td>
+              <td><span class="auth admin">Staff + <code>comment.hide</code></span></td>
+              <td><code>reason</code> requis, 10..1000 caract&egrave;res.</td>
               <td><code>200</code> <code>{ "ok": true }</code>.</td>
             </tr>
             <tr>
@@ -1826,6 +1827,7 @@ type DeleteRecipeAdminResponse = OkResponse;</code></pre>
   moderatedAt: ISODateString | null;
   moderatedByUserId: number | null;
   moderatedByUsername: string | null;
+  moderationReason: string | null;
   deletedAt: ISODateString | null;
   deletedByUserId: number | null;
   deletedByUsername: string | null;
@@ -1842,6 +1844,10 @@ type DeleteRecipeAdminResponse = OkResponse;</code></pre>
           <pre><code>type AdminUpdateCommentBody = {
   rating?: number | null;
   comment: string;
+};
+
+type HideCommentRequest = {
+  reason: string; // 10..1000 caract&egrave;res apr&egrave;s trim
 };
 
 type ModeratedCommentsResponse = AdminComment[];
@@ -1900,14 +1906,14 @@ type DeleteCommentAdminResponse = OkResponse;</code></pre>
             <tr>
               <td><span class="method post">POST</span></td>
               <td><code>/api/v1/admin/users/:id/ban</code></td>
-              <td><span class="auth admin">Admin</span></td>
+              <td><span class="auth admin">Staff + <code>user.ban</code></span></td>
               <td><code>reason</code> requis, 10..1000 caractères. Un admin ne peut pas se bannir lui-même.</td>
               <td><code>200</code> <code>{ "ok": true }</code>.</td>
             </tr>
             <tr>
               <td><span class="method post">POST</span></td>
               <td><code>/api/v1/admin/users/:id/unban</code></td>
-              <td><span class="auth admin">Admin</span></td>
+              <td><span class="auth admin">Staff + <code>user.unban</code></span></td>
               <td><code>reason</code> requis, 10..1000 caractères.</td>
               <td><code>200</code> <code>{ "ok": true }</code>.</td>
             </tr>
@@ -2065,8 +2071,8 @@ type UnbanUserResponse = OkResponse;</code></pre>
             <tr>
               <td><span class="method post">POST</span></td>
               <td><code>/api/v1/admin/staff/:staffUserId/disable</code></td>
-              <td><span class="auth admin">Admin récent + <code>staff.disable</code></span></td>
-              <td><code>{ "reason": string }</code>. Cible obligatoirement <code>active</code>.</td>
+              <td><span class="auth admin">Staff récent + <code>staff.disable</code></span></td>
+              <td><code>{ "reason": string }</code>, 10..1000 caract&egrave;res. Cible obligatoirement <code>active</code>.</td>
               <td><code>200</code> compte désactivé ; toutes ses sessions actives sont révoquées atomiquement. Refus <code>401 AUTH_RECENT_AUTHENTICATION_REQUIRED</code> sans preuve forte récente, <code>403 STAFF_DISABLE_SELF_FORBIDDEN</code> sur soi-même. Conflit <code>409 LAST_ACTIVE_SUPER_ADMIN</code> si un autre staff cible le dernier <code>SuperAdmin</code> actif.</td>
             </tr>
             <tr>

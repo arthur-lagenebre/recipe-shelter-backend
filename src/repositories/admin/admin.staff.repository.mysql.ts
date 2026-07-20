@@ -127,6 +127,12 @@ export class AdminStaffRepositoryMysql implements AdminStaffRepository {
     if (profileResult.affectedRows === 0)
       return null;
 
+    await db.execute(
+      `INSERT INTO StaffModerationLogs (StaffUserId, AdminId, Action, Reason)
+       VALUES (?, ?, 'disable', ?)`,
+      [staffUserId, actorStaffUserId, reason]
+    );
+
     return activeSessionCount;
   }
 

@@ -1,10 +1,13 @@
 import { ADMIN_AUDIT_EVENT_TYPES, ADMIN_AUDIT_TARGET_TYPES } from './admin-audit.events.js';
-import { notFound } from '../../utils/errors.js';
+import { badRequest, notFound } from '../../utils/errors.js';
 
 import type { AdminAuditActionRunner } from './admin-audit-action.runner.js';
 import type { AdminAuditRequestContext } from './admin-audit.service.js';
 import type { AdminCommentRepository } from '../../repositories/admin/admin.comments.repository.interface.js';
 import type { AdminComment, AdminUpdateCommentInput } from '../../repositories/admin/admin.comments.types.js';
+
+const MODERATION_REASON_MIN_LENGTH = 10;
+const MODERATION_REASON_MAX_LENGTH = 1000;
 
 export class AdminCommentService {
     constructor(private readonly adminCommentRepository: AdminCommentRepository, private readonly auditActions: AdminAuditActionRunner) { }
@@ -25,7 +28,9 @@ export class AdminCommentService {
         return this.adminCommentRepository.countSoftDeletedForAdmin();
     }
 
-    async hide(commentId: number, adminUserId: number, context: AdminAuditRequestContext): Promise<boolean> {
+    async hide(commentId: number, adminUserId: number, reason: string, context: AdminAuditRequestContext): Promise<boolean> {
+        const cleanReason = validateHideReason(reason);
+
         return this.auditActions.run(async ({ db, audit }) => {
             const comment = await this.adminCommentRepository.findByIdForAdmin(commentId, db);
 
@@ -33,7 +38,7 @@ export class AdminCommentService {
                 throw notFound('Comment not found', 'COMMENTS_NOT_FOUND');
 
             const beforeValues = snapshotComment(comment);
-            const hidden = await this.adminCommentRepository.hide(commentId, adminUserId, db);
+            const hidden = await this.adminCommentRepository.hide(commentId, adminUserId, cleanReason, db);
 
             if (!hidden)
                 throw notFound('Comment not found', 'COMMENTS_NOT_FOUND');
@@ -43,11 +48,13 @@ export class AdminCommentService {
                 eventType: ADMIN_AUDIT_EVENT_TYPES.commentsHide,
                 targetType: ADMIN_AUDIT_TARGET_TYPES.comment,
                 targetId: commentId,
+                reason: cleanReason,
                 beforeValues,
                 afterValues: {
                     ...beforeValues,
                     isModerated: true,
-                    moderatedByUserId: adminUserId
+                    moderatedByUserId: adminUserId,
+                    moderationReason: cleanReason
                 },
                 ...context
             });
@@ -78,7 +85,8 @@ export class AdminCommentService {
                 afterValues: {
                     ...beforeValues,
                     isModerated: false,
-                    moderatedByUserId: null
+                    moderatedByUserId: null,
+                    moderationReason: null
                 },
                 ...context
             });
@@ -180,7 +188,21 @@ function snapshotComment(comment: AdminComment) {
         comment: comment.comment,
         isModerated: comment.moderatedAt !== null,
         moderatedByUserId: comment.moderatedByUserId,
+        moderationReason: comment.moderationReason,
         isDeleted: comment.deletedAt !== null,
         deletedByUserId: comment.deletedByUserId
     };
+}
+
+function validateHideReason(reason: string): string {
+    const cleanReason = typeof reason === 'string' ? reason.trim() : '';
+
+    if (!cleanReason)
+        throw badRequest('Hide reason is required', 'ADMIN_COMMENTS_HIDE_MISSING_REASON');
+    if (cleanReason.length < MODERATION_REASON_MIN_LENGTH)
+        throw badRequest(`Hide reason must be at least ${MODERATION_REASON_MIN_LENGTH} characters`, 'ADMIN_COMMENTS_HIDE_REASON_TOO_SHORT');
+    if (cleanReason.length > MODERATION_REASON_MAX_LENGTH)
+        throw badRequest(`Hide reason must be at most ${MODERATION_REASON_MAX_LENGTH} characters`, 'ADMIN_COMMENTS_HIDE_REASON_TOO_LONG');
+
+    return cleanReason;
 }

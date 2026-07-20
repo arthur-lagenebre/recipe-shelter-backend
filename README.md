@@ -164,6 +164,19 @@ le backend. Le catalogue initial est le suivant :
 | Staff | `staff.read`, `staff.create`, `staff.disable`, `staff.enable`, `staff.role.grant`, `staff.role.revoke`, `staff.session.revoke` |
 | Audit | `audit.read` |
 
+Les décisions de rejet ou d’archivage administratif d’une recette, de
+ban/unban d’un compte community, de masquage d’un commentaire et de
+désactivation d’un compte staff exigent un body `{ "reason": string }`. Le
+motif est normalisé puis validé entre 10 et 1000 caractères côté contrôleur et
+côté service. Chaque décision ajoute une entrée au journal métier du domaine
+(`RecipeModerationLogs`, `CommentModerationLogs`, `UserModerationLogs` ou
+`StaffModerationLogs`) et, lorsque le domaine expose un état courant, y reporte
+aussi le motif. Cette écriture est réalisée dans la même transaction que
+l’entrée d’audit administrative. Chaque route
+utilise sa permission métier (`recipe.reject`, `recipe.archive`, `user.ban`,
+`user.unban`, `comment.hide` ou `staff.disable`) ; le simple fait d’être staff
+ne suffit pas.
+
 La matrice initiale est explicite et insérée de manière idempotente par le seed :
 
 | Rôle | Permissions |

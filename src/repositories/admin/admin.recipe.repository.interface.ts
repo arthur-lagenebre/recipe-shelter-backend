@@ -8,5 +8,6 @@ export interface AdminRecipeRepository {
     findAuditStateById(id: number, db: PoolConnection): Promise<AdminRecipeAuditState | null>;
     publish(id: number, moderatedByUserId: number, db?: PoolConnection): Promise<boolean>;
     reject(id: number, moderatedByUserId: number, rejectionReason: string, db?: PoolConnection): Promise<boolean>;
+    archive(id: number, moderatedByUserId: number, archiveReason: string, db?: PoolConnection): Promise<boolean>;
     delete(id: number, db?: PoolConnection): Promise<boolean>;
 }

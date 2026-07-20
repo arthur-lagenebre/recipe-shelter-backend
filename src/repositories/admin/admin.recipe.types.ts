@@ -31,6 +31,7 @@ export type RecipeAdmin = {
     publishedAt: Date | null;
     archivedAt: Date | null;
     rejectionReason: string | null;
+    archiveReason: string | null;
     updatedAt: Date;
     tags: AdminRecipeTag[];
     ingredients: AdminRecipeIngredient[];
@@ -47,6 +48,7 @@ export type AdminRecipeAuditState = {
     status: string;
     moderatedByUserId: number | null;
     rejectionReason: string | null;
+    archiveReason: string | null;
 };
 
 export type AdminRecipeIngredient = {
@@ -126,6 +128,7 @@ export type RecipeAdminRow = RowDataPacket & RecipeImageJoinedRow & {
     PublishedAt: Date | null;
     ArchivedAt: Date | null;
     RejectionReason: string | null;
+    ArchiveReason: string | null;
     UpdatedAt: Date;
     Username: string;
     Category: string | null;
@@ -140,4 +143,5 @@ export type AdminRecipeAuditStateRow = RowDataPacket & {
     Status: string;
     ModeratedByUserId: number | null;
     RejectionReason: string | null;
+    ArchiveReason: string | null;
 };

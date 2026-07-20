@@ -8,7 +8,6 @@ import { TestAdminAuditRecorder, testAdminAuditContext } from '../../helpers/adm
 import type { AdminRecipeRepository } from '../../../src/repositories/admin/admin.recipe.repository.interface.js';
 import type { AdminRecipeAuditState, RecipeAdmin, RecipePending } from '../../../src/repositories/admin/admin.recipe.types.js';
 import type { RecipeImage } from '../../../src/repositories/recipe-images/recipe-image.types.js';
-import type { RecipeRepository } from '../../../src/repositories/recipes/recipe.repository.interface.js';
 import type { Recipe } from '../../../src/repositories/recipes/recipe.types.js';
 
 const baseRecipe: Recipe = {
@@ -62,6 +61,7 @@ const adminRecipe: RecipeAdmin = {
     publishedAt: null,
     archivedAt: null,
     rejectionReason: null,
+    archiveReason: null,
     updatedAt: new Date('2026-05-10T10:00:00.000Z'),
     tags: [],
     ingredients: [],
@@ -69,23 +69,17 @@ const adminRecipe: RecipeAdmin = {
     equipments: []
 };
 
-class FakeRecipeRepository implements Partial<RecipeRepository> {
+class FakeRecipeRepository {
     recipe: Recipe | null = baseRecipe;
-    archivedId: number | null = null;
-
     async findById(): Promise<Recipe | null> {
         return this.recipe;
-    }
-
-    async archive(id: number): Promise<boolean> {
-        this.archivedId = id;
-        return true;
     }
 }
 
 class FakeAdminRecipeRepository implements AdminRecipeRepository {
     publishedInput: { id: number; adminUserId: number } | null = null;
     rejectedInput: { id: number; adminUserId: number; reason: string } | null = null;
+    archivedInput: { id: number; adminUserId: number; reason: string } | null = null;
     deletedId: number | null = null;
     recipeAdmin: RecipeAdmin | null = adminRecipe;
 
@@ -114,7 +108,8 @@ class FakeAdminRecipeRepository implements AdminRecipeRepository {
             slug: recipe.slug,
             status: recipe.status,
             moderatedByUserId: recipe.moderatedByUserId,
-            rejectionReason: recipe.rejectionReason
+            rejectionReason: recipe.rejectionReason,
+            archiveReason: null
         } : null;
     }
 
@@ -125,6 +120,11 @@ class FakeAdminRecipeRepository implements AdminRecipeRepository {
 
     async reject(id: number, adminUserId: number, reason: string): Promise<boolean> {
         this.rejectedInput = { id, adminUserId, reason };
+        return true;
+    }
+
+    async archive(id: number, adminUserId: number, reason: string): Promise<boolean> {
+        this.archivedInput = { id, adminUserId, reason };
         return true;
     }
 
@@ -152,7 +152,7 @@ describe('AdminRecipeService', () => {
         recipes = new FakeRecipeRepository();
         adminRecipes = new FakeAdminRecipeRepository(recipes);
         audit = new TestAdminAuditRecorder();
-        service = new AdminRecipeService(recipes as unknown as RecipeRepository, adminRecipes, audit);
+        service = new AdminRecipeService(adminRecipes, audit);
     });
 
     it('lists, counts and gets recipes for admin', async () => {
@@ -195,19 +195,51 @@ describe('AdminRecipeService', () => {
         await assert.rejects(() => service.approve(10, 1, testAdminAuditContext), (error) => assertHttpError(error, 'RECIPES_NOT_FOUND', 404));
 
         recipes.recipe = { ...baseRecipe, status: 'draft' };
-        await assert.rejects(() => service.reject(10, 1, 'Reason', testAdminAuditContext), (error) => assertHttpError(error, 'RECIPES_MODERATE_FORBIDDEN', 403));
+        await assert.rejects(() => service.reject(10, 1, 'Valid reason', testAdminAuditContext), (error) => assertHttpError(error, 'RECIPES_MODERATE_FORBIDDEN', 403));
+        assert.equal(audit.inputs.length, 0);
+    });
+
+    it('rejects missing, short and oversized moderation reasons before persistence', async () => {
+        for (const [action, reason, code] of [
+            ['reject', '   ', 'ADMIN_RECIPES_REJECT_MISSING_REASON'],
+            ['reject', 'short', 'ADMIN_RECIPES_REJECT_REASON_TOO_SHORT'],
+            ['archive', 'x'.repeat(1001), 'ADMIN_RECIPES_ARCHIVE_REASON_TOO_LONG']
+        ] as const) {
+            await assert.rejects(
+                () => action === 'reject'
+                    ? service.reject(10, 1, reason, testAdminAuditContext)
+                    : service.archive(10, 1, reason, testAdminAuditContext),
+                (error) => assertHttpError(error, code, 400)
+            );
+        }
+
+        assert.equal(adminRecipes.rejectedInput, null);
+        assert.equal(adminRecipes.archivedInput, null);
         assert.equal(audit.inputs.length, 0);
     });
 
     it('archives only published or rejected recipes and deletes existing recipes', async () => {
         recipes.recipe = { ...baseRecipe, status: 'published' };
-        assert.equal(await service.archive(10, 1, testAdminAuditContext), true);
-        assert.equal(recipes.archivedId, 10);
+        assert.equal(await service.archive(10, 1, 'Repeated policy violations.', testAdminAuditContext), true);
+        assert.deepEqual(adminRecipes.archivedInput, { id: 10, adminUserId: 1, reason: 'Repeated policy violations.' });
         assert.equal(audit.inputs.length, 1);
-        assert.equal(audit.inputs[0]?.eventType, 'recipes.archive');
+        assert.deepEqual(audit.inputs[0], {
+            actorUserId: 1,
+            eventType: 'recipes.archive',
+            targetType: 'recipe',
+            targetId: 10,
+            reason: 'Repeated policy violations.',
+            beforeValues: { ...snapshotBaseRecipe(), status: 'published' },
+            afterValues: {
+                ...snapshotBaseRecipe(),
+                status: 'archived',
+                archiveReason: 'Repeated policy violations.'
+            },
+            ...testAdminAuditContext
+        });
 
         recipes.recipe = { ...baseRecipe, status: 'draft' };
-        await assert.rejects(() => service.archive(10, 1, testAdminAuditContext), (error) => assertHttpError(error, 'RECIPES_ARCHIVE_FORBIDDEN', 403));
+        await assert.rejects(() => service.archive(10, 1, 'Repeated policy violations.', testAdminAuditContext), (error) => assertHttpError(error, 'RECIPES_ARCHIVE_FORBIDDEN', 403));
 
         recipes.recipe = baseRecipe;
         assert.equal(await service.delete(10, 1, testAdminAuditContext), true);
@@ -255,7 +287,7 @@ describe('AdminRecipeService', () => {
             events.push('audit:record');
             return recordAudit(input);
         };
-        service = new AdminRecipeService(recipes as unknown as RecipeRepository, adminRecipes, audit, cleanup);
+        service = new AdminRecipeService(adminRecipes, audit, cleanup);
 
         assert.equal(await service.delete(10, 1, testAdminAuditContext), true);
         assert.deepEqual(events, ['image:read', 'db:delete', 'audit:record', 'storage:delete']);
@@ -271,7 +303,7 @@ describe('AdminRecipeService', () => {
                 assert.fail('cleanup must not run');
             }
         };
-        service = new AdminRecipeService(recipes as unknown as RecipeRepository, adminRecipes, audit, cleanup);
+        service = new AdminRecipeService(adminRecipes, audit, cleanup);
 
         await assert.rejects(
             () => service.delete(10, 1, testAdminAuditContext),
@@ -289,6 +321,7 @@ function snapshotBaseRecipe() {
         slug: baseRecipe.slug,
         status: baseRecipe.status,
         moderatedByUserId: baseRecipe.moderatedByUserId,
-        rejectionReason: baseRecipe.rejectionReason
+        rejectionReason: baseRecipe.rejectionReason,
+        archiveReason: null
     };
 }

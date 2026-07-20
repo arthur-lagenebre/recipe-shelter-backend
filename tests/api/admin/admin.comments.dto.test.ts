@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { parseAdminCommentIdParam, parseAdminUpdateCommentBody } from '../../../src/api/admin/admin.comments.dto.js';
+import { parseAdminCommentIdParam, parseAdminUpdateCommentBody, parseHideCommentBody } from '../../../src/api/admin/admin.comments.dto.js';
 import { HttpError } from '../../../src/utils/errors.js';
 
 function assertHttpError(error: unknown, code: string, status: number): void {
@@ -63,5 +63,23 @@ describe('admin.comments.dto', () => {
                 return true;
             }
         );
+    });
+
+    it('requires a bounded reason to hide a comment', () => {
+        assert.equal(parseHideCommentBody({ reason: '  Repeated personal attacks.  ' }), 'Repeated personal attacks.');
+
+        for (const [body, code] of [
+            [{}, 'ADMIN_COMMENTS_HIDE_MISSING_REASON'],
+            [{ reason: 'short' }, 'ADMIN_COMMENTS_HIDE_REASON_TOO_SHORT'],
+            [{ reason: 'x'.repeat(1001) }, 'ADMIN_COMMENTS_HIDE_REASON_TOO_LONG']
+        ] as const) {
+            assert.throws(
+                () => parseHideCommentBody(body),
+                (error) => {
+                    assertHttpError(error, code, 400);
+                    return true;
+                }
+            );
+        }
     });
 });

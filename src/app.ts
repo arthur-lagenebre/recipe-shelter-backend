@@ -138,10 +138,7 @@ function createDefaultDependencies(): AppDependencies {
   const adminStaffRepository = new AdminStaffRepositoryMysql(pool);
   const adminUserRepository = new AdminUserRepositoryMysql(pool);
   const staffInvitationRepository = new StaffInvitationRepositoryMysql(pool);
-  const adminAuditActions = new AdminAuditActionRunnerMysql(
-    pool,
-    (db) => new AdminAuditService(new AdminAuditRepositoryMysql(db))
-  );
+  const adminAuditActions = new AdminAuditActionRunnerMysql(pool, (db) => new AdminAuditService(new AdminAuditRepositoryMysql(db)));
   const categoryRepository = new CategoryRepositoryMysql(pool);
   const commentRepository = new CommentRepositoryMysql(pool);
   const equipmentRepository = new EquipmentRepositoryMysql(pool);
@@ -165,7 +162,7 @@ function createDefaultDependencies(): AppDependencies {
   return {
     adminAuditQueryService: new AdminAuditQueryService(adminAuditQueryRepository),
     adminCommentService: new AdminCommentService(adminCommentRepository, adminAuditActions),
-    adminRecipeService: new AdminRecipeService(recipeRepository, adminRecipeRepository, adminAuditActions, recipeImageService),
+    adminRecipeService: new AdminRecipeService(adminRecipeRepository, adminAuditActions, recipeImageService),
     adminStaffService: new AdminStaffService(adminStaffRepository, adminAuditActions),
     adminUserService: new AdminUserService(userRepository, adminUserRepository, adminAuditActions),
     authService: new AuthService(userRepository, emailValidationService, sessionRepository, staffMfaService),

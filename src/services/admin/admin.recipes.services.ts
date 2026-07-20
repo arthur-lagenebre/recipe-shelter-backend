@@ -1,5 +1,5 @@
 import { ADMIN_AUDIT_EVENT_TYPES, ADMIN_AUDIT_TARGET_TYPES } from './admin-audit.events.js';
-import { forbidden, notFound } from '../../utils/errors.js';
+import { badRequest, forbidden, notFound } from '../../utils/errors.js';
 import { canArchiveRecipe } from '../recipes/recipe-permissions.js';
 
 import type { AdminAuditActionRunner } from './admin-audit-action.runner.js';
@@ -7,8 +7,10 @@ import type { AdminAuditRequestContext } from './admin-audit.service.js';
 import type { AdminRecipeRepository } from "../../repositories/admin/admin.recipe.repository.interface.js";
 import type { AdminRecipeAuditState, RecipeAdmin, RecipePending } from "../../repositories/admin/admin.recipe.types.js";
 import type { RecipeImage } from '../../repositories/recipe-images/recipe-image.types.js';
-import type { RecipeRepository } from '../../repositories/recipes/recipe.repository.interface.js';
 import type { PoolConnection } from 'mysql2/promise';
+
+const MODERATION_REASON_MIN_LENGTH = 10;
+const MODERATION_REASON_MAX_LENGTH = 1000;
 
 type RecipeImageCleanup = {
     findForCleanup(recipeId: number): Promise<RecipeImage | null>;
@@ -16,7 +18,7 @@ type RecipeImageCleanup = {
 };
 
 export class AdminRecipeService {
-    constructor(private readonly recipeRepository: RecipeRepository, private readonly adminRecipeRepository: AdminRecipeRepository, private readonly auditActions: AdminAuditActionRunner, private readonly recipeImageCleanup?: RecipeImageCleanup) { }
+    constructor(private readonly adminRecipeRepository: AdminRecipeRepository, private readonly auditActions: AdminAuditActionRunner, private readonly recipeImageCleanup?: RecipeImageCleanup) { }
 
     async getPendingRecipesForAdmin(): Promise<RecipePending[]> {
         return this.adminRecipeRepository.findPendingForAdmin();
@@ -60,10 +62,12 @@ export class AdminRecipeService {
         });
     }
 
-    async reject(recipeId: number, adminUserId: number, rejectionReason: string, context: AdminAuditRequestContext): Promise<boolean> {
+    async reject(recipeId: number, adminUserId: number, reason: string, context: AdminAuditRequestContext): Promise<boolean> {
+        const cleanReason = validateModerationReason(reason, 'reject');
+
         return this.auditActions.run(async ({ db, audit }) => {
             const recipe = await this.requireModeratableRecipe(recipeId, db);
-            const rejected = await this.adminRecipeRepository.reject(recipeId, adminUserId, rejectionReason, db);
+            const rejected = await this.adminRecipeRepository.reject(recipeId, adminUserId, cleanReason, db);
 
             if (rejected)
                 await audit.record({
@@ -71,13 +75,13 @@ export class AdminRecipeService {
                     eventType: ADMIN_AUDIT_EVENT_TYPES.recipesReject,
                     targetType: ADMIN_AUDIT_TARGET_TYPES.recipe,
                     targetId: recipeId,
-                    reason: rejectionReason,
+                    reason: cleanReason,
                     beforeValues: snapshotRecipe(recipe),
                     afterValues: {
                         ...snapshotRecipe(recipe),
                         status: 'rejected',
                         moderatedByUserId: adminUserId,
-                        rejectionReason
+                        rejectionReason: cleanReason
                     },
                     ...context
                 });
@@ -86,14 +90,16 @@ export class AdminRecipeService {
         });
     }
 
-    async archive(recipeId: number, adminUserId: number, context: AdminAuditRequestContext): Promise<boolean> {
+    async archive(recipeId: number, adminUserId: number, reason: string, context: AdminAuditRequestContext): Promise<boolean> {
+        const cleanReason = validateModerationReason(reason, 'archive');
+
         return this.auditActions.run(async ({ db, audit }) => {
             const recipe = await this.requireRecipeAuditState(recipeId, db);
 
             if (!canArchiveRecipe(recipe))
                 throw forbidden('Recipe cannot be archived', 'RECIPES_ARCHIVE_FORBIDDEN');
 
-            const archived = await this.recipeRepository.archive(recipeId, db);
+            const archived = await this.adminRecipeRepository.archive(recipeId, adminUserId, cleanReason, db);
 
             if (archived)
                 await audit.record({
@@ -101,10 +107,12 @@ export class AdminRecipeService {
                     eventType: ADMIN_AUDIT_EVENT_TYPES.recipesArchive,
                     targetType: ADMIN_AUDIT_TARGET_TYPES.recipe,
                     targetId: recipeId,
+                    reason: cleanReason,
                     beforeValues: snapshotRecipe(recipe),
                     afterValues: {
                         ...snapshotRecipe(recipe),
-                        status: 'archived'
+                        status: 'archived',
+                        archiveReason: cleanReason
                     },
                     ...context
                 });
@@ -170,6 +178,22 @@ function snapshotRecipe(recipe: AdminRecipeAuditState) {
         slug: recipe.slug,
         status: recipe.status,
         moderatedByUserId: recipe.moderatedByUserId,
-        rejectionReason: recipe.rejectionReason
+        rejectionReason: recipe.rejectionReason,
+        archiveReason: recipe.archiveReason
     };
+}
+
+function validateModerationReason(reason: string, action: 'archive' | 'reject'): string {
+    const cleanReason = typeof reason === 'string' ? reason.trim() : '';
+    const label = action === 'reject' ? 'Rejection' : 'Archive';
+    const codePrefix = `ADMIN_RECIPES_${action.toUpperCase()}`;
+
+    if (!cleanReason)
+        throw badRequest(`${label} reason is required`, `${codePrefix}_MISSING_REASON`);
+    if (cleanReason.length < MODERATION_REASON_MIN_LENGTH)
+        throw badRequest(`${label} reason must be at least ${MODERATION_REASON_MIN_LENGTH} characters`, `${codePrefix}_REASON_TOO_SHORT`);
+    if (cleanReason.length > MODERATION_REASON_MAX_LENGTH)
+        throw badRequest(`${label} reason must be at most ${MODERATION_REASON_MAX_LENGTH} characters`, `${codePrefix}_REASON_TOO_LONG`);
+
+    return cleanReason;
 }

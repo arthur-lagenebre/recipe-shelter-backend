@@ -61,6 +61,11 @@ CREATE TABLE Users (
     CHECK (AccountType <> 'community' OR Password IS NOT NULL),
   CONSTRAINT users_active_staff_password_CK
     CHECK (AccountType <> 'staff' OR Status <> 'active' OR Password IS NOT NULL),
+  CONSTRAINT users_banned_reason_length_CK
+    CHECK (
+      BannedReason IS NULL
+      OR (CHAR_LENGTH(TRIM(BannedReason)) >= 10 AND CHAR_LENGTH(BannedReason) <= 1000)
+    ),
   CONSTRAINT users_banned_by_user_FK
     FOREIGN KEY (BannedByUserId) REFERENCES Users(Id)
     ON UPDATE CASCADE
@@ -90,7 +95,7 @@ CREATE TABLE StaffProfiles (
       (Status = 'disabled'
         AND DisabledByStaffUserId IS NOT NULL
         AND DisabledReason IS NOT NULL
-        AND CHAR_LENGTH(TRIM(DisabledReason)) > 0
+        AND CHAR_LENGTH(TRIM(DisabledReason)) >= 10
         AND CHAR_LENGTH(DisabledReason) <= 1000
         AND DisabledAt IS NOT NULL
         AND DisabledAt >= CreatedAt)
@@ -310,14 +315,27 @@ CREATE TABLE CommunityProfiles (
   KEY idx_community_profiles_status (Status),
   KEY idx_community_profiles_banned_by_user_id (BannedByUserId),
   CONSTRAINT community_profiles_account_type_CK CHECK (AccountType = 'community'),
+  CONSTRAINT community_profiles_ban_CK
+    CHECK (
+      (Status = 'banned'
+        AND BannedByUserId IS NOT NULL
+        AND BannedReason IS NOT NULL
+        AND CHAR_LENGTH(TRIM(BannedReason)) >= 10
+        AND CHAR_LENGTH(BannedReason) <= 1000
+        AND BannedAt IS NOT NULL)
+      OR (Status <> 'banned'
+        AND BannedByUserId IS NULL
+        AND BannedReason IS NULL
+        AND BannedAt IS NULL)
+    ),
   CONSTRAINT community_profiles_user_account_type_FK
     FOREIGN KEY (UserId, AccountType) REFERENCES Users(Id, AccountType)
     ON UPDATE RESTRICT
     ON DELETE CASCADE,
   CONSTRAINT community_profiles_banned_by_user_FK
-    FOREIGN KEY (BannedByUserId) REFERENCES Users(Id)
-    ON UPDATE CASCADE
-    ON DELETE SET NULL
+    FOREIGN KEY (BannedByUserId) REFERENCES StaffProfiles(UserId)
+    ON UPDATE RESTRICT
+    ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE CommunitySessions (
@@ -625,6 +643,29 @@ SIGNAL SQLSTATE '45000'
   SET MYSQL_ERRNO = 1644,
       MESSAGE_TEXT = 'Admin audit logs are append-only: DELETE is forbidden';
 
+CREATE TABLE StaffModerationLogs (
+  Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  StaffUserId BIGINT UNSIGNED NOT NULL,
+  AdminId BIGINT UNSIGNED NOT NULL,
+  Action ENUM('disable') NOT NULL,
+  Reason TEXT NOT NULL,
+  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (Id),
+  KEY idx_staff_moderation_logs_staff_user_id (StaffUserId),
+  KEY idx_staff_moderation_logs_admin_id (AdminId),
+  KEY idx_staff_moderation_logs_created_at (CreatedAt),
+  CONSTRAINT staff_moderation_logs_reason_CK
+    CHECK (CHAR_LENGTH(TRIM(Reason)) >= 10 AND CHAR_LENGTH(Reason) <= 1000),
+  CONSTRAINT staff_moderation_logs_staff_profile_FK
+    FOREIGN KEY (StaffUserId) REFERENCES StaffProfiles(UserId)
+    ON UPDATE RESTRICT
+    ON DELETE RESTRICT,
+  CONSTRAINT staff_moderation_logs_admin_profile_FK
+    FOREIGN KEY (AdminId) REFERENCES StaffProfiles(UserId)
+    ON UPDATE RESTRICT
+    ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE UserModerationLogs (
   Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   UserId BIGINT UNSIGNED NOT NULL,
@@ -636,13 +677,15 @@ CREATE TABLE UserModerationLogs (
   KEY idx_user_moderation_logs_user_id (UserId),
   KEY idx_user_moderation_logs_admin_id (AdminId),
   KEY idx_user_moderation_logs_created_at (CreatedAt),
+  CONSTRAINT user_moderation_logs_reason_CK
+    CHECK (CHAR_LENGTH(TRIM(Reason)) >= 10 AND CHAR_LENGTH(Reason) <= 1000),
   CONSTRAINT user_moderation_logs_user_FK
-    FOREIGN KEY (UserId) REFERENCES Users(Id)
-    ON UPDATE CASCADE
+    FOREIGN KEY (UserId) REFERENCES CommunityProfiles(UserId)
+    ON UPDATE RESTRICT
     ON DELETE RESTRICT,
   CONSTRAINT user_moderation_logs_admin_FK
-    FOREIGN KEY (AdminId) REFERENCES Users(Id)
-    ON UPDATE CASCADE
+    FOREIGN KEY (AdminId) REFERENCES StaffProfiles(UserId)
+    ON UPDATE RESTRICT
     ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -711,6 +754,7 @@ CREATE TABLE Recipes (
   PublishedAt DATETIME NULL,
   ArchivedAt DATETIME NULL,
   RejectionReason TEXT NULL,
+  ArchiveReason TEXT NULL,
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (Id),
   UNIQUE KEY recipes_slug_UK (Slug),
@@ -719,6 +763,21 @@ CREATE TABLE Recipes (
   KEY idx_recipes_status (Status),
   KEY idx_recipes_moderated_by_user_id (ModeratedByUserId),
   FULLTEXT INDEX ft_recipes_title (Title),
+  CONSTRAINT recipes_rejection_reason_CK
+    CHECK (
+      (Status = 'rejected'
+        AND RejectionReason IS NOT NULL
+        AND CHAR_LENGTH(TRIM(RejectionReason)) >= 10
+        AND CHAR_LENGTH(RejectionReason) <= 1000)
+      OR (Status <> 'rejected'
+        AND (RejectionReason IS NULL
+          OR (CHAR_LENGTH(TRIM(RejectionReason)) >= 10 AND CHAR_LENGTH(RejectionReason) <= 1000)))
+    ),
+  CONSTRAINT recipes_archive_reason_CK
+    CHECK (
+      ArchiveReason IS NULL
+      OR (CHAR_LENGTH(TRIM(ArchiveReason)) >= 10 AND CHAR_LENGTH(ArchiveReason) <= 1000)
+    ),
   CONSTRAINT recipes_user_FK
     FOREIGN KEY (UserId) REFERENCES CommunityProfiles(UserId)
     ON UPDATE CASCADE
@@ -728,9 +787,30 @@ CREATE TABLE Recipes (
     ON UPDATE CASCADE
     ON DELETE RESTRICT,
   CONSTRAINT recipes_moderated_by_user_FK
-    FOREIGN KEY (ModeratedByUserId) REFERENCES Users(Id)
-    ON UPDATE CASCADE
-    ON DELETE SET NULL
+    FOREIGN KEY (ModeratedByUserId) REFERENCES StaffProfiles(UserId)
+    ON UPDATE RESTRICT
+    ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- RecipeId remains as the stable business target after an authorized hard
+-- deletion, so the moderation journal deliberately has no target foreign key.
+CREATE TABLE RecipeModerationLogs (
+  Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  RecipeId BIGINT UNSIGNED NOT NULL,
+  AdminId BIGINT UNSIGNED NOT NULL,
+  Action ENUM('reject', 'archive') NOT NULL,
+  Reason TEXT NOT NULL,
+  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (Id),
+  KEY idx_recipe_moderation_logs_recipe_id (RecipeId),
+  KEY idx_recipe_moderation_logs_admin_id (AdminId),
+  KEY idx_recipe_moderation_logs_created_at (CreatedAt),
+  CONSTRAINT recipe_moderation_logs_reason_CK
+    CHECK (CHAR_LENGTH(TRIM(Reason)) >= 10 AND CHAR_LENGTH(Reason) <= 1000),
+  CONSTRAINT recipe_moderation_logs_admin_profile_FK
+    FOREIGN KEY (AdminId) REFERENCES StaffProfiles(UserId)
+    ON UPDATE RESTRICT
+    ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------- Recipe images ----------
@@ -892,6 +972,7 @@ CREATE TABLE Comments (
   ParentCommentId BIGINT UNSIGNED NULL,
   ModeratedAt DATETIME NULL,
   ModeratedByUserId BIGINT UNSIGNED NULL,
+  ModerationReason TEXT NULL,
   DeletedAt DATETIME NULL,
   DeletedByUserId BIGINT UNSIGNED NULL,
   Rating TINYINT UNSIGNED NULL,
@@ -904,6 +985,17 @@ CREATE TABLE Comments (
   KEY idx_comments_parent_comment_id (ParentCommentId),
   KEY idx_comments_deleted_at (DeletedAt),
   KEY idx_comments_moderated_at (ModeratedAt),
+  CONSTRAINT comments_moderation_CK
+    CHECK (
+      (ModeratedAt IS NOT NULL
+        AND ModeratedByUserId IS NOT NULL
+        AND ModerationReason IS NOT NULL
+        AND CHAR_LENGTH(TRIM(ModerationReason)) >= 10
+        AND CHAR_LENGTH(ModerationReason) <= 1000)
+      OR (ModeratedAt IS NULL
+        AND ModeratedByUserId IS NULL
+        AND ModerationReason IS NULL)
+    ),
   CONSTRAINT comments_recipe_FK
     FOREIGN KEY (RecipeId) REFERENCES Recipes(Id)
     ON UPDATE CASCADE
@@ -917,9 +1009,9 @@ CREATE TABLE Comments (
     ON UPDATE CASCADE
     ON DELETE SET NULL,
   CONSTRAINT comments_moderated_by_FK
-    FOREIGN KEY (ModeratedByUserId) REFERENCES Users(Id)
-    ON UPDATE CASCADE
-    ON DELETE SET NULL,
+    FOREIGN KEY (ModeratedByUserId) REFERENCES StaffProfiles(UserId)
+    ON UPDATE RESTRICT
+    ON DELETE RESTRICT,
   CONSTRAINT comments_deleted_by_FK
     FOREIGN KEY (DeletedByUserId) REFERENCES Users(Id)
     ON UPDATE CASCADE
@@ -927,4 +1019,25 @@ CREATE TABLE Comments (
 
   CONSTRAINT comments_rating_chk
     CHECK (Rating IS NULL OR (Rating BETWEEN 1 AND 5))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- CommentId remains as the stable business target after an authorized hard
+-- deletion, so the moderation journal deliberately has no target foreign key.
+CREATE TABLE CommentModerationLogs (
+  Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  CommentId BIGINT UNSIGNED NOT NULL,
+  AdminId BIGINT UNSIGNED NOT NULL,
+  Action ENUM('hide') NOT NULL,
+  Reason TEXT NOT NULL,
+  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (Id),
+  KEY idx_comment_moderation_logs_comment_id (CommentId),
+  KEY idx_comment_moderation_logs_admin_id (AdminId),
+  KEY idx_comment_moderation_logs_created_at (CreatedAt),
+  CONSTRAINT comment_moderation_logs_reason_CK
+    CHECK (CHAR_LENGTH(TRIM(Reason)) >= 10 AND CHAR_LENGTH(Reason) <= 1000),
+  CONSTRAINT comment_moderation_logs_admin_profile_FK
+    FOREIGN KEY (AdminId) REFERENCES StaffProfiles(UserId)
+    ON UPDATE RESTRICT
+    ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

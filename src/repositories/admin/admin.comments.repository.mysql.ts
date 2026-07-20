@@ -3,16 +3,15 @@ import { firstOrNull } from '../../utils/array.js';
 
 import type { AdminCommentRepository } from './admin.comments.repository.interface.js';
 import type { AdminComment, AdminCommentRow, AdminUpdateCommentInput } from './admin.comments.types.js';
-import type { Queryable } from '../../db/query.js';
 import type { ResultSetHeader } from 'mysql2';
-import type { PoolConnection } from 'mysql2/promise';
+import type { Pool, PoolConnection } from 'mysql2/promise';
 
 export class AdminCommentRepositoryMysql implements AdminCommentRepository {
-    constructor(private readonly db: Queryable) { }
+    constructor(private readonly db: Pool) { }
 
     async findModeratedForAdmin(): Promise<AdminComment[]> {
         const [rows] = await this.db.execute(
-            `SELECT c.Id, c.RecipeId, r.Title AS RecipeTitle, r.Slug AS RecipeSlug, c.UserId, u.Username, c.ParentCommentId, c.ModeratedAt, c.ModeratedByUserId, moderator.Username AS ModeratedByUsername, c.DeletedAt, c.DeletedByUserId, deletedBy.Username AS DeletedByUsername, c.Rating, c.Comment, c.CreatedAt, c.UpdatedAt
+            `SELECT c.Id, c.RecipeId, r.Title AS RecipeTitle, r.Slug AS RecipeSlug, c.UserId, u.Username, c.ParentCommentId, c.ModeratedAt, c.ModeratedByUserId, moderator.Username AS ModeratedByUsername, c.ModerationReason, c.DeletedAt, c.DeletedByUserId, deletedBy.Username AS DeletedByUsername, c.Rating, c.Comment, c.CreatedAt, c.UpdatedAt
              FROM Comments AS c
              INNER JOIN Recipes AS r ON c.RecipeId = r.Id
              INNER JOIN Users AS u ON c.UserId = u.Id
@@ -38,7 +37,7 @@ export class AdminCommentRepositoryMysql implements AdminCommentRepository {
 
     async findSoftDeletedForAdmin(): Promise<AdminComment[]> {
         const [rows] = await this.db.execute(
-            `SELECT c.Id, c.RecipeId, r.Title AS RecipeTitle, r.Slug AS RecipeSlug, c.UserId, u.Username, c.ParentCommentId, c.ModeratedAt, c.ModeratedByUserId, moderator.Username AS ModeratedByUsername, c.DeletedAt, c.DeletedByUserId, deletedBy.Username AS DeletedByUsername, c.Rating, c.Comment, c.CreatedAt, c.UpdatedAt
+            `SELECT c.Id, c.RecipeId, r.Title AS RecipeTitle, r.Slug AS RecipeSlug, c.UserId, u.Username, c.ParentCommentId, c.ModeratedAt, c.ModeratedByUserId, moderator.Username AS ModeratedByUsername, c.ModerationReason, c.DeletedAt, c.DeletedByUserId, deletedBy.Username AS DeletedByUsername, c.Rating, c.Comment, c.CreatedAt, c.UpdatedAt
              FROM Comments AS c
              INNER JOIN Recipes AS r ON c.RecipeId = r.Id
              INNER JOIN Users AS u ON c.UserId = u.Id
@@ -64,7 +63,7 @@ export class AdminCommentRepositoryMysql implements AdminCommentRepository {
 
     async findByIdForAdmin(id: number, db?: PoolConnection): Promise<AdminComment | null> {
         const [rows] = await (db ?? this.db).execute(
-            `SELECT c.Id, c.RecipeId, r.Title AS RecipeTitle, r.Slug AS RecipeSlug, c.UserId, u.Username, c.ParentCommentId, c.ModeratedAt, c.ModeratedByUserId, moderator.Username AS ModeratedByUsername, c.DeletedAt, c.DeletedByUserId, deletedBy.Username AS DeletedByUsername, c.Rating, c.Comment, c.CreatedAt, c.UpdatedAt
+            `SELECT c.Id, c.RecipeId, r.Title AS RecipeTitle, r.Slug AS RecipeSlug, c.UserId, u.Username, c.ParentCommentId, c.ModeratedAt, c.ModeratedByUserId, moderator.Username AS ModeratedByUsername, c.ModerationReason, c.DeletedAt, c.DeletedByUserId, deletedBy.Username AS DeletedByUsername, c.Rating, c.Comment, c.CreatedAt, c.UpdatedAt
              FROM Comments AS c
              INNER JOIN Recipes AS r ON c.RecipeId = r.Id
              INNER JOIN Users AS u ON c.UserId = u.Id
@@ -79,13 +78,39 @@ export class AdminCommentRepositoryMysql implements AdminCommentRepository {
         return row ? mapAdminComment(row) : null;
     }
 
-    async hide(id: number, moderatedByUserId: number, db?: PoolConnection): Promise<boolean> {
-        const [result] = await (db ?? this.db).execute<ResultSetHeader>(
+    async hide(id: number, moderatedByUserId: number, moderationReason: string, db?: PoolConnection): Promise<boolean> {
+        if (db)
+            return this.hideAndLog(id, moderatedByUserId, moderationReason, db);
+
+        const connection = await this.db.getConnection();
+
+        try {
+            await connection.beginTransaction();
+            const hidden = await this.hideAndLog(id, moderatedByUserId, moderationReason, connection);
+            await connection.commit();
+            return hidden;
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            connection.release();
+        }
+    }
+
+    private async hideAndLog(id: number, moderatedByUserId: number, moderationReason: string, db: PoolConnection): Promise<boolean> {
+        const [result] = await db.execute<ResultSetHeader>(
             `UPDATE Comments
-             SET ModeratedAt = CURRENT_TIMESTAMP, ModeratedByUserId = ?
+             SET ModeratedAt = CURRENT_TIMESTAMP, ModeratedByUserId = ?, ModerationReason = ?
              WHERE Id = ?`,
-            [moderatedByUserId, id]
+            [moderatedByUserId, moderationReason, id]
         );
+
+        if (result.affectedRows > 0)
+            await db.execute(
+                `INSERT INTO CommentModerationLogs (CommentId, AdminId, Action, Reason)
+                 VALUES (?, ?, 'hide', ?)`,
+                [id, moderatedByUserId, moderationReason]
+            );
 
         return result.affectedRows > 0;
     }
@@ -93,7 +118,7 @@ export class AdminCommentRepositoryMysql implements AdminCommentRepository {
     async unmoderate(id: number, db?: PoolConnection): Promise<boolean> {
         const [result] = await (db ?? this.db).execute<ResultSetHeader>(
             `UPDATE Comments
-             SET ModeratedAt = NULL, ModeratedByUserId = NULL
+             SET ModeratedAt = NULL, ModeratedByUserId = NULL, ModerationReason = NULL
              WHERE Id = ? AND ModeratedAt IS NOT NULL`,
             [id]
         );

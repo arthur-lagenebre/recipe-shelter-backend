@@ -7,7 +7,7 @@ export interface AdminCommentRepository {
     findSoftDeletedForAdmin(): Promise<AdminComment[]>;
     countSoftDeletedForAdmin(): Promise<number>;
     findByIdForAdmin(id: number, db?: PoolConnection): Promise<AdminComment | null>;
-    hide(id: number, moderatedByUserId: number, db?: PoolConnection): Promise<boolean>;
+    hide(id: number, moderatedByUserId: number, moderationReason: string, db?: PoolConnection): Promise<boolean>;
     unmoderate(id: number, db?: PoolConnection): Promise<boolean>;
     restore(id: number, db?: PoolConnection): Promise<boolean>;
     update(input: AdminUpdateCommentInput, db?: PoolConnection): Promise<AdminComment | null>;

@@ -127,10 +127,18 @@
         "method": "POST",
         "header": [
           {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
             "key": "Cookie",
             "value": "rs_admin_session={{adminSessionCookie}}"
           }
         ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"reason\": \"Ce commentaire contient des attaques personnelles repetees.\"\n}"
+        },
         "url": {
           "raw": "{{baseUrl}}/api/v1/admin/comments/{{commentId}}/hide",
           "host": [

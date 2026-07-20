@@ -362,7 +362,8 @@ describe('critical user journey E2E', () => {
                     slug: recipe.slug,
                     status: recipe.status,
                     moderatedByUserId: recipe.moderatedByUserId,
-                    rejectionReason: recipe.rejectionReason
+                    rejectionReason: recipe.rejectionReason,
+                    archiveReason: null
                 } : null;
             },
             async publish(id: number, adminUserId: number) { return recipes.publish(id, adminUserId); },
@@ -394,7 +395,6 @@ describe('critical user journey E2E', () => {
             authUserRepository: users as Pick<UserRepository, 'findById'>,
             recipeService: new RecipeService(recipeRepository, new RecipeSlugService(recipeRepository)),
             adminRecipeService: new AdminRecipeService(
-                recipeRepository,
                 adminRecipeRepository,
                 new TestAdminAuditRecorder()
             ),
@@ -619,7 +619,7 @@ describe('critical user journey E2E', () => {
         const reject = await fetch(`${server.baseUrl}/api/v1/admin/recipes/${recipe.id}/reject`, {
             method: 'POST',
             headers: { cookie: adminCookie, 'content-type': 'application/json' },
-            body: JSON.stringify({ rejectionReason: 'Preparation details are incomplete.' })
+            body: JSON.stringify({ reason: 'Preparation details are incomplete.' })
         });
         assert.equal(reject.status, 200);
 

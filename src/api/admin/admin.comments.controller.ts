@@ -1,5 +1,5 @@
 import { getAdminAuditRequestContext } from './admin-audit.context.js';
-import { parseAdminCommentIdParam, parseAdminUpdateCommentBody } from './admin.comments.dto.js';
+import { parseAdminCommentIdParam, parseAdminUpdateCommentBody, parseHideCommentBody } from './admin.comments.dto.js';
 import { asyncHandler } from '../http/async-handler.js';
 
 import type { AdminCommentService } from '../../services/admin/admin.comments.services.js';
@@ -32,7 +32,8 @@ export function createAdminCommentsController(adminCommentService: AdminCommentS
 
         hideComment: asyncHandler(async (req, res) => {
             const commentId = parseAdminCommentIdParam(req.params.id);
-            const result = await adminCommentService.hide(commentId, req.auth!.userId, getAdminAuditRequestContext(req));
+            const reason = parseHideCommentBody(req.body);
+            const result = await adminCommentService.hide(commentId, req.auth!.userId, reason, getAdminAuditRequestContext(req));
 
             res.status(200).json({ ok: result });
         }),

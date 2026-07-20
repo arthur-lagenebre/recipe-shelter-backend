@@ -4,13 +4,14 @@ import { mapRecipe } from '../recipes/recipe.mapper.js';
 
 import type { AdminRecipeRepository } from "./admin.recipe.repository.interface.js";
 import type { AdminRecipeAuditState, AdminRecipeAuditStateRow, RecipeAdmin, RecipeAdminRow, RecipeIngredientRow, RecipePending, RecipePendingRow, RecipeStepRow, RecipeTagRow, RecipeEquipmentRow } from './admin.recipe.types.js';
-import type { Queryable } from '../../db/query.js';
 import type { PublicImageUrlBuilder } from '../recipe-images/recipe-image.types.js';
 import type { ResultSetHeader } from 'mysql2';
-import type { PoolConnection } from 'mysql2/promise';
+import type { Pool, PoolConnection } from 'mysql2/promise';
+
+type RecipeModerationAction = 'archive' | 'reject';
 
 export class AdminRecipeRepositoryMysql implements AdminRecipeRepository {
-    constructor(private readonly db: Queryable, private readonly getPublicImageUrl: PublicImageUrlBuilder = missingPublicImageUrlBuilder) { }
+    constructor(private readonly db: Pool, private readonly getPublicImageUrl: PublicImageUrlBuilder = missingPublicImageUrlBuilder) { }
 
     async findPendingForAdmin(): Promise<RecipePending[]> {
         const [rows] = await this.db.execute(
@@ -37,7 +38,7 @@ export class AdminRecipeRepositoryMysql implements AdminRecipeRepository {
 
     async findByIdForAdmin(id: number): Promise<RecipeAdmin | null> {
         const [rows] = await this.db.execute(
-            `SELECT r.Id, r.UserId, u.Username, r.CategoryId, rc.Name AS Category, r.Title, r.Slug, r.Description, r.PrepTimeMinutes, r.RestTimeMinutes, r.CookTimeMinutes, r.Servings, r.Status, r.CreatedAt, r.SubmittedAt, r.ModeratedAt, r.ModeratedByUserId, r.PublishedAt, r.ArchivedAt, r.RejectionReason, r.UpdatedAt,
+            `SELECT r.Id, r.UserId, u.Username, r.CategoryId, rc.Name AS Category, r.Title, r.Slug, r.Description, r.PrepTimeMinutes, r.RestTimeMinutes, r.CookTimeMinutes, r.Servings, r.Status, r.CreatedAt, r.SubmittedAt, r.ModeratedAt, r.ModeratedByUserId, r.PublishedAt, r.ArchivedAt, r.RejectionReason, r.ArchiveReason, r.UpdatedAt,
                     ri.Id AS CoverImageId,
                     ri.LargeStorageKey AS CoverImageLargeStorageKey,
                     ri.MediumStorageKey AS CoverImageMediumStorageKey,
@@ -69,6 +70,7 @@ export class AdminRecipeRepositoryMysql implements AdminRecipeRepository {
 
         return {
             ...recipeWithoutTagIds,
+            archiveReason: row.ArchiveReason,
             user: row.Username,
             category: row.Category,
             tags: tagRows.map(mapRecipeTag),
@@ -80,7 +82,7 @@ export class AdminRecipeRepositoryMysql implements AdminRecipeRepository {
 
     async findAuditStateById(id: number, db: PoolConnection): Promise<AdminRecipeAuditState | null> {
         const [rows] = await db.execute(
-            `SELECT Id, UserId, CategoryId, Title, Slug, Status, ModeratedByUserId, RejectionReason
+            `SELECT Id, UserId, CategoryId, Title, Slug, Status, ModeratedByUserId, RejectionReason, ArchiveReason
              FROM Recipes
              WHERE Id = ?
              FOR UPDATE`,
@@ -96,7 +98,8 @@ export class AdminRecipeRepositoryMysql implements AdminRecipeRepository {
             slug: row.Slug,
             status: row.Status,
             moderatedByUserId: row.ModeratedByUserId,
-            rejectionReason: row.RejectionReason
+            rejectionReason: row.RejectionReason,
+            archiveReason: row.ArchiveReason
         } : null;
     }
 
@@ -112,14 +115,43 @@ export class AdminRecipeRepositoryMysql implements AdminRecipeRepository {
     }
 
     async reject(id: number, moderatedByUserId: number, rejectionReason: string, db?: PoolConnection): Promise<boolean> {
-        const [result] = await (db ?? this.db).execute<ResultSetHeader>(
-            `UPDATE Recipes
-                 SET Status = ?, ModeratedAt = CURRENT_TIMESTAMP, ModeratedByUserId = ?, RejectionReason = ?
-                 WHERE Id = ?`,
-            ['rejected', moderatedByUserId, rejectionReason, id]
-        );
+        return this.runWithModerationLog(
+            'reject',
+            id,
+            moderatedByUserId,
+            rejectionReason,
+            async (executor) => {
+                const [result] = await executor.execute<ResultSetHeader>(
+                    `UPDATE Recipes
+                     SET Status = ?, ModeratedAt = CURRENT_TIMESTAMP, ModeratedByUserId = ?, RejectionReason = ?
+                     WHERE Id = ?`,
+                    ['rejected', moderatedByUserId, rejectionReason, id]
+                );
 
-        return result.affectedRows > 0;
+                return result.affectedRows > 0;
+            },
+            db
+        );
+    }
+
+    async archive(id: number, moderatedByUserId: number, archiveReason: string, db?: PoolConnection): Promise<boolean> {
+        return this.runWithModerationLog(
+            'archive',
+            id,
+            moderatedByUserId,
+            archiveReason,
+            async (executor) => {
+                const [result] = await executor.execute<ResultSetHeader>(
+                    `UPDATE Recipes
+                     SET Status = 'archived', ArchivedAt = CURRENT_TIMESTAMP, ArchiveReason = ?
+                     WHERE Id = ?`,
+                    [archiveReason, id]
+                );
+
+                return result.affectedRows > 0;
+            },
+            db
+        );
     }
 
     async delete(id: number, db?: PoolConnection): Promise<boolean> {
@@ -130,6 +162,52 @@ export class AdminRecipeRepositoryMysql implements AdminRecipeRepository {
         );
 
         return result.affectedRows > 0;
+    }
+
+    private async runWithModerationLog(
+        action: RecipeModerationAction,
+        recipeId: number,
+        adminUserId: number,
+        reason: string,
+        mutation: (db: PoolConnection) => Promise<boolean>,
+        db?: PoolConnection
+    ): Promise<boolean> {
+        if (db)
+            return this.executeModerationMutation(db, action, recipeId, adminUserId, reason, mutation);
+
+        const connection = await this.db.getConnection();
+
+        try {
+            await connection.beginTransaction();
+            const changed = await this.executeModerationMutation(connection, action, recipeId, adminUserId, reason, mutation);
+            await connection.commit();
+            return changed;
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            connection.release();
+        }
+    }
+
+    private async executeModerationMutation(
+        db: PoolConnection,
+        action: RecipeModerationAction,
+        recipeId: number,
+        adminUserId: number,
+        reason: string,
+        mutation: (db: PoolConnection) => Promise<boolean>
+    ): Promise<boolean> {
+        const changed = await mutation(db);
+
+        if (changed)
+            await db.execute(
+                `INSERT INTO RecipeModerationLogs (RecipeId, AdminId, Action, Reason)
+                 VALUES (?, ?, ?, ?)`,
+                [recipeId, adminUserId, action, reason]
+            );
+
+        return changed;
     }
 
     private async findIngredientsByRecipeId(recipeId: number): Promise<RecipeIngredientRow[]> {

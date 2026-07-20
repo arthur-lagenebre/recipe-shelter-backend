@@ -348,6 +348,16 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
                 correlationId: '00000000-0000-4000-8000-000000000906'
             }
         );
+        const [businessLogs] = await connection.query(
+            `SELECT Action, Reason
+             FROM UserModerationLogs
+             WHERE UserId = 901
+             ORDER BY Id`
+        );
+        assert.deepEqual(businessLogs, [
+            { Action: 'ban', Reason: 'Repeated violation confirmed by integration test.' },
+            { Action: 'unban', Reason: 'Integration test restores the account after review.' }
+        ]);
 
         const failingService = new AdminUserService(
             new UserRepositoryMysql(pool),

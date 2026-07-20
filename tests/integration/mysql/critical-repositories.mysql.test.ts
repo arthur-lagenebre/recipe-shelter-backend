@@ -279,6 +279,11 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
 
         const submitted = await recipes.submit(recipe.id, 'quick-pasta');
         assert.equal(submitted.status, 'pending');
+        assert.equal(await adminRecipes.reject(recipe.id, 1, 'Missing editorial details.'), true);
+        const rejectedRecipe = await adminRecipes.findByIdForAdmin(recipe.id);
+        assert.equal(rejectedRecipe?.status, 'rejected');
+        assert.equal(rejectedRecipe?.rejectionReason, 'Missing editorial details.');
+        assert.equal((await recipes.submit(recipe.id, 'quick-pasta')).status, 'pending');
         assert.equal(await adminRecipes.publish(recipe.id, 1), true);
 
         const published = await recipes.searchPublished(author.id, { q: 'pasta' }, { page: 1, limit: 12, offset: 0 });
@@ -308,13 +313,40 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
         assert.equal(commentTree.length, 1);
         assert.equal(commentTree[0]?.children?.[0]?.id, reply.id);
 
-        assert.equal(await adminComments.hide(rootComment.id, 1), true);
-        assert.equal((await adminComments.findModeratedForAdmin()).length, 1);
+        await assert.rejects(() => adminComments.hide(rootComment.id, 1, 'short'));
+        assert.equal(await adminComments.hide(rootComment.id, 1, 'Repeated personal attacks.'), true);
+        const moderatedComments = await adminComments.findModeratedForAdmin();
+        assert.equal(moderatedComments.length, 1);
+        assert.equal(moderatedComments[0]?.moderationReason, 'Repeated personal attacks.');
+        const [commentModerationLogs] = await pool.query(
+            `SELECT Action, Reason
+             FROM CommentModerationLogs
+             WHERE CommentId = ?`,
+            [rootComment.id]
+        );
+        assert.deepEqual(commentModerationLogs, [{ Action: 'hide', Reason: 'Repeated personal attacks.' }]);
         assert.equal(await adminComments.unmoderate(rootComment.id), true);
+        assert.equal((await adminComments.findByIdForAdmin(rootComment.id))?.moderationReason, null);
 
         assert.equal(await comments.softDelete(reply.id, author.id), true);
         assert.equal(await adminComments.restore(reply.id), true);
         assert.equal(await favorites.delete(2, recipe.id), true);
+
+        await assert.rejects(() => adminRecipes.archive(recipe.id, 1, 'short'));
+        assert.equal(await adminRecipes.archive(recipe.id, 1, 'Editorial policy violation.'), true);
+        const archivedRecipe = await adminRecipes.findByIdForAdmin(recipe.id);
+        assert.equal(archivedRecipe?.status, 'archived');
+        assert.equal(archivedRecipe?.archiveReason, 'Editorial policy violation.');
+        const [recipeModerationLogs] = await pool.query(
+            `SELECT Action, Reason
+             FROM RecipeModerationLogs
+             WHERE RecipeId = ?`,
+            [recipe.id]
+        );
+        assert.deepEqual(recipeModerationLogs, [
+            { Action: 'reject', Reason: 'Missing editorial details.' },
+            { Action: 'archive', Reason: 'Editorial policy violation.' }
+        ]);
 
         await assert.rejects(() => recipes.create({
             userId: author.id,

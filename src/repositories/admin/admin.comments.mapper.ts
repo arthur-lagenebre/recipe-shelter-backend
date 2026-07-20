@@ -12,6 +12,7 @@ export function mapAdminComment(row: AdminCommentRow): AdminComment {
         moderatedAt: row.ModeratedAt,
         moderatedByUserId: row.ModeratedByUserId,
         moderatedByUsername: row.ModeratedByUsername,
+        moderationReason: row.ModerationReason,
         deletedAt: row.DeletedAt,
         deletedByUserId: row.DeletedByUserId,
         deletedByUsername: row.DeletedByUsername,

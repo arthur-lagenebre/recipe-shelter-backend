@@ -226,6 +226,19 @@ describe('staff management MySQL integration', { skip: !mysqlEnabled && 'Set TES
       { Action: 'staff.roles.grant', TargetType: 'staff_user', Reason: 'Temporary recipe moderation coverage.' },
       { Action: 'staff.roles.revoke', TargetType: 'staff_user', Reason: 'Temporary moderation coverage ended.' }
     ]);
+
+    const [moderationRows] = await pool.query(
+      `SELECT StaffUserId, AdminId, Action, Reason
+       FROM StaffModerationLogs
+       WHERE StaffUserId = ?`,
+      [targetUserId]
+    );
+    assert.deepEqual(moderationRows, [{
+      StaffUserId: targetUserId,
+      AdminId: actorUserId,
+      Action: 'disable',
+      Reason: 'Confirmed departure from the staff team.'
+    }]);
   });
 
   it('rejects both ways of removing the last active SuperAdmin without mutation or audit', async () => {

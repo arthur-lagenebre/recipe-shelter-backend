@@ -28,12 +28,17 @@ Content-Type: application/json
 Cookie: rs_admin_session={{adminSessionCookie}}
 
 {
-  "rejectionReason": "La recette doit etre completee avant publication."
+  "reason": "La recette doit etre completee avant publication."
 }
 
 ### Archive recipe as admin
 POST {{baseUrl}}/admin/recipes/{{recipeId}}/archive
+Content-Type: application/json
 Cookie: rs_admin_session={{adminSessionCookie}}
+
+{
+  "reason": "Cette recette publiee contrevient aux regles editoriales."
+}
 
 ### Delete recipe as admin
 DELETE {{baseUrl}}/admin/recipes/{{recipeId}}

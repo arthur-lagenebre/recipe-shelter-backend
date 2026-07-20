@@ -19,6 +19,7 @@ const baseComment: AdminComment = {
     moderatedAt: null,
     moderatedByUserId: null,
     moderatedByUsername: null,
+    moderationReason: null,
     deletedAt: null,
     deletedByUserId: null,
     deletedByUsername: null,
@@ -34,7 +35,7 @@ class FakeAdminCommentRepository implements AdminCommentRepository {
     unmoderateResult = true;
     restoreResult = true;
     hardDeleteResult = true;
-    moderatedByUserId: number | null = null;
+    hideInput: { moderatedByUserId: number; reason: string } | null = null;
     unmoderatedId: number | null = null;
     restoredId: number | null = null;
     updatedInput: AdminUpdateCommentInput | null = null;
@@ -60,9 +61,9 @@ class FakeAdminCommentRepository implements AdminCommentRepository {
         return this.comment;
     }
 
-    async hide(id: number, moderatedByUserId: number): Promise<boolean> {
+    async hide(id: number, moderatedByUserId: number, reason: string): Promise<boolean> {
         void id;
-        this.moderatedByUserId = moderatedByUserId;
+        this.hideInput = { moderatedByUserId, reason };
 
         return this.hideResult;
     }
@@ -139,21 +140,23 @@ describe('AdminCommentService', () => {
     });
 
     it('hides an existing comment', async () => {
-        const result = await service.hide(1, 99, testAdminAuditContext);
+        const result = await service.hide(1, 99, 'Repeated personal attacks.', testAdminAuditContext);
 
         assert.equal(result, true);
-        assert.equal(repository.moderatedByUserId, 99);
+        assert.deepEqual(repository.hideInput, { moderatedByUserId: 99, reason: 'Repeated personal attacks.' });
         assert.equal(audit.inputs.length, 1);
         assert.deepEqual(audit.inputs[0], {
             actorUserId: 99,
             eventType: 'comments.hide',
             targetType: 'comment',
             targetId: 1,
+            reason: 'Repeated personal attacks.',
             beforeValues: snapshotBaseComment(),
             afterValues: {
                 ...snapshotBaseComment(),
                 isModerated: true,
-                moderatedByUserId: 99
+                moderatedByUserId: 99,
+                moderationReason: 'Repeated personal attacks.'
             },
             ...testAdminAuditContext
         });
@@ -163,14 +166,14 @@ describe('AdminCommentService', () => {
         repository.comment = null;
 
         await assert.rejects(
-            () => service.hide(1, 99, testAdminAuditContext),
+            () => service.hide(1, 99, 'Repeated personal attacks.', testAdminAuditContext),
             (error) => {
                 assertHttpError(error, 'COMMENTS_NOT_FOUND', 404);
 
                 return true;
             }
         );
-        assert.equal(repository.moderatedByUserId, null);
+        assert.equal(repository.hideInput, null);
         assert.equal(audit.inputs.length, 0);
     });
 
@@ -178,19 +181,43 @@ describe('AdminCommentService', () => {
         repository.hideResult = false;
 
         await assert.rejects(
-            () => service.hide(1, 99, testAdminAuditContext),
+            () => service.hide(1, 99, 'Repeated personal attacks.', testAdminAuditContext),
             (error) => {
                 assertHttpError(error, 'COMMENTS_NOT_FOUND', 404);
 
                 return true;
             }
         );
-        assert.equal(repository.moderatedByUserId, 99);
+        assert.deepEqual(repository.hideInput, { moderatedByUserId: 99, reason: 'Repeated personal attacks.' });
+        assert.equal(audit.inputs.length, 0);
+    });
+
+    it('rejects missing, short and oversized hide reasons before persistence', async () => {
+        for (const [reason, code] of [
+            ['   ', 'ADMIN_COMMENTS_HIDE_MISSING_REASON'],
+            ['short', 'ADMIN_COMMENTS_HIDE_REASON_TOO_SHORT'],
+            ['x'.repeat(1001), 'ADMIN_COMMENTS_HIDE_REASON_TOO_LONG']
+        ]) {
+            await assert.rejects(
+                () => service.hide(1, 99, reason, testAdminAuditContext),
+                (error) => {
+                    assertHttpError(error, code, 400);
+                    return true;
+                }
+            );
+        }
+
+        assert.equal(repository.hideInput, null);
         assert.equal(audit.inputs.length, 0);
     });
 
     it('removes moderation from an existing comment', async () => {
-        repository.comment = { ...baseComment, moderatedAt: new Date('2026-05-09T11:00:00.000Z'), moderatedByUserId: 99 };
+        repository.comment = {
+            ...baseComment,
+            moderatedAt: new Date('2026-05-09T11:00:00.000Z'),
+            moderatedByUserId: 99,
+            moderationReason: 'Repeated personal attacks.'
+        };
         const result = await service.unmoderate(1, 99, testAdminAuditContext);
 
         assert.equal(result, true);
@@ -342,8 +369,8 @@ describe('AdminCommentService', () => {
     it('propagates audit failures after the sensitive mutation', async () => {
         audit.error = new Error('audit unavailable');
 
-        await assert.rejects(() => service.hide(1, 99, testAdminAuditContext), /audit unavailable/);
-        assert.equal(repository.moderatedByUserId, 99);
+        await assert.rejects(() => service.hide(1, 99, 'Repeated personal attacks.', testAdminAuditContext), /audit unavailable/);
+        assert.deepEqual(repository.hideInput, { moderatedByUserId: 99, reason: 'Repeated personal attacks.' });
         assert.equal(audit.inputs.length, 0);
     });
 });
@@ -357,6 +384,7 @@ function snapshotBaseComment() {
         comment: baseComment.comment,
         isModerated: false,
         moderatedByUserId: null,
+        moderationReason: null,
         isDeleted: false,
         deletedByUserId: null
     };

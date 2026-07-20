@@ -137,7 +137,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"rejectionReason\": \"La recette doit etre completee avant publication.\"\n}"
+          "raw": "{\n  \"reason\": \"La recette doit etre completee avant publication.\"\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/api/v1/admin/recipes/{{recipeId}}/reject",
@@ -161,10 +161,18 @@
         "method": "POST",
         "header": [
           {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
             "key": "Cookie",
             "value": "rs_admin_session={{adminSessionCookie}}"
           }
         ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"reason\": \"Cette recette publiee contrevient aux regles editoriales.\"\n}"
+        },
         "url": {
           "raw": "{{baseUrl}}/api/v1/admin/recipes/{{recipeId}}/archive",
           "host": [
