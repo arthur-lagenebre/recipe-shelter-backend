@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import { beforeEach, describe, it } from 'node:test';
 
-import { StaffInvitationService } from '../../../src/services/admin/staff-invitation.service.js';
+import { StaffInvitationService } from '../../../src/services/admin/admin.staff-invitation.service.js';
 import { HttpError } from '../../../src/utils/errors.js';
 import { TestAdminAuditRecorder, testAdminAuditContext } from '../../helpers/admin-audit.js';
 
-import type { CreateStaffInvitationInput, CreateStaffInvitationResult, StaffInvitationRepository } from '../../../src/repositories/admin/staff-invitation.repository.interface.js';
+import type { CreateStaffInvitationInput, CreateStaffInvitationResult, StaffInvitationRepository } from '../../../src/repositories/admin/admin.staff-invitation.repository.interface.js';
 import type { StaffInvitationMailInput, StaffInvitationMailer } from '../../../src/services/mail/mail.types.js';
 import type { PoolConnection } from 'mysql2/promise';
 

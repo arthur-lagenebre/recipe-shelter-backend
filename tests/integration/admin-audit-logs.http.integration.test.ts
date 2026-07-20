@@ -4,8 +4,8 @@ import { after, before, describe, it } from 'node:test';
 import cookieParser from 'cookie-parser';
 import express from 'express';
 
-import { createAdminAuditLogsController } from '../../src/api/admin/admin-audit-logs.controller.js';
-import { createAdminAuditLogsRouter } from '../../src/api/admin/admin-audit-logs.routes.js';
+import { createAdminAuditLogsController } from '../../src/api/admin/admin.audit-logs.controller.js';
+import { createAdminAuditLogsRouter } from '../../src/api/admin/admin.audit-logs.routes.js';
 import { adminAuthorizationPolicies } from '../../src/api/admin/admin.authorization.js';
 import { EnforceAuthorizationPolicies } from '../../src/middlewares/authorization.js';
 import { errorHandler } from '../../src/middlewares/error-handler.js';
@@ -15,7 +15,7 @@ import { createPaginatedResult } from '../../src/utils/pagination.js';
 import { TestSessionRepository } from '../helpers/auth-session.js';
 import { startHttpTestServer } from '../helpers/http-test-server.js';
 
-import type { AdminAuditLogFilters } from '../../src/repositories/admin/admin-audit-query.types.js';
+import type { AdminAuditLogFilters } from '../../src/repositories/admin/admin.audit-query.types.js';
 import type { User } from '../../src/repositories/users/user.types.js';
 import type { PermissionCode } from '../../src/security/permissions.js';
 import type { PaginationOptions } from '../../src/utils/pagination.js';

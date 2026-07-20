@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { parseManagedStaffSessionRevocationBody, parseStaffSessionIdParam, parseStaffUserIdParam } from '../../../src/api/admin/staff-sessions.dto.js';
+import { parseManagedStaffSessionRevocationBody, parseStaffSessionIdParam, parseStaffUserIdParam } from '../../../src/api/admin/admin.staff-sessions.dto.js';
 import { HttpError } from '../../../src/utils/errors.js';
 
 describe('staff sessions DTO', () => {

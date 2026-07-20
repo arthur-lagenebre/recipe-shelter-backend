@@ -4,11 +4,11 @@ import { after, before, describe, it } from 'node:test';
 
 import mysql from 'mysql2/promise';
 
-import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin-audit.repository.mysql.js';
-import { StaffInvitationRepositoryMysql } from '../../../src/repositories/admin/staff-invitation.repository.mysql.js';
-import { AdminAuditActionRunnerMysql } from '../../../src/services/admin/admin-audit-action.runner.js';
-import { AdminAuditService } from '../../../src/services/admin/admin-audit.service.js';
-import { StaffInvitationService } from '../../../src/services/admin/staff-invitation.service.js';
+import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin.audit.repository.mysql.js';
+import { StaffInvitationRepositoryMysql } from '../../../src/repositories/admin/admin.staff-invitation.repository.mysql.js';
+import { AdminAuditActionRunnerMysql } from '../../../src/services/admin/admin.audit-action.runner.js';
+import { AdminAuditService } from '../../../src/services/admin/admin.audit.service.js';
+import { StaffInvitationService } from '../../../src/services/admin/admin.staff-invitation.service.js';
 import { env } from '../../../src/utils/env.js';
 import { HttpError } from '../../../src/utils/errors.js';
 import { hashStaffInvitationToken } from '../../../src/utils/security/staff-invitation-token.js';

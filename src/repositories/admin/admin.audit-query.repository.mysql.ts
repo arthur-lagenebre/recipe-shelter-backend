@@ -1,9 +1,9 @@
-import { mapAdminAuditLog } from './admin-audit-query.mapper.js';
+import { mapAdminAuditLog } from './admin.audit-query.mapper.js';
 import { firstOrNull } from '../../utils/array.js';
 import { createPaginatedResult, formatLimitOffsetClause } from '../../utils/pagination.js';
 
-import type { AdminAuditQueryRepository } from './admin-audit-query.repository.interface.js';
-import type { AdminAuditLog, AdminAuditLogFilters, AdminAuditLogRow } from './admin-audit-query.types.js';
+import type { AdminAuditQueryRepository } from './admin.audit-query.repository.interface.js';
+import type { AdminAuditLog, AdminAuditLogFilters, AdminAuditLogRow } from './admin.audit-query.types.js';
 import type { Queryable } from '../../db/query.js';
 import type { PaginatedResult, PaginationOptions } from '../../utils/pagination.js';
 

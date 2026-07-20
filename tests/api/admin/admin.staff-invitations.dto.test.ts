@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { parseCreateStaffInvitationBody } from '../../../src/api/admin/staff-invitations.dto.js';
+import { parseCreateStaffInvitationBody } from '../../../src/api/admin/admin.staff-invitations.dto.js';
 import { HttpError } from '../../../src/utils/errors.js';
 
 describe('staff invitation DTO', () => {

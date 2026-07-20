@@ -1,5 +1,5 @@
-import type { AdminAuditSnapshot } from './admin-audit.repository.interface.js';
-import type { AdminAuditEventType, AdminAuditTargetType } from '../../services/admin/admin-audit.events.js';
+import type { AdminAuditSnapshot } from './admin.audit.repository.interface.js';
+import type { AdminAuditEventType, AdminAuditTargetType } from '../../services/admin/admin.audit.events.js';
 import type { RowDataPacket } from 'mysql2';
 
 export type AdminAuditLogFilters = {

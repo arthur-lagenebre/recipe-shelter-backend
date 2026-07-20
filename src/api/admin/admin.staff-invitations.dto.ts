@@ -2,7 +2,7 @@ import { badRequest } from '../../utils/errors.js';
 import { normalizeEmail } from '../../utils/string.js';
 import { isRecord } from '../http/dto.helpers.js';
 
-import type { CreateStaffInvitationCommand } from '../../services/admin/staff-invitation.service.js';
+import type { CreateStaffInvitationCommand } from '../../services/admin/admin.staff-invitation.service.js';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_EMAIL_LENGTH = 255;

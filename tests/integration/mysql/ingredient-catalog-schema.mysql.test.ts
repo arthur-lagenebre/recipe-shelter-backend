@@ -4,13 +4,13 @@ import { after, before, describe, it } from 'node:test';
 
 import mysql from 'mysql2/promise';
 
-import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin-audit.repository.mysql.js';
+import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin.audit.repository.mysql.js';
 import { AdminIngredientRepositoryMysql } from '../../../src/repositories/admin/admin.ingredients.repository.mysql.js';
 import { AdminRecipeRepositoryMysql } from '../../../src/repositories/admin/admin.recipe.repository.mysql.js';
 import { IngredientRepositoryMysql } from '../../../src/repositories/ingredients/ingredient.repository.mysql.js';
 import { RecipeRepositoryMysql } from '../../../src/repositories/recipes/recipe.repository.mysql.js';
-import { AdminAuditActionRunnerMysql } from '../../../src/services/admin/admin-audit-action.runner.js';
-import { AdminAuditService } from '../../../src/services/admin/admin-audit.service.js';
+import { AdminAuditActionRunnerMysql } from '../../../src/services/admin/admin.audit-action.runner.js';
+import { AdminAuditService } from '../../../src/services/admin/admin.audit.service.js';
 import { AdminIngredientService } from '../../../src/services/admin/admin.ingredients.service.js';
 import { env } from '../../../src/utils/env.js';
 

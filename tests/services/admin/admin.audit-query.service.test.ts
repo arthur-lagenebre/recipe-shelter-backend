@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { AdminAuditQueryService } from '../../../src/services/admin/admin-audit-query.service.js';
+import { AdminAuditQueryService } from '../../../src/services/admin/admin.audit-query.service.js';
 import { createPaginatedResult } from '../../../src/utils/pagination.js';
 
-import type { AdminAuditQueryRepository } from '../../../src/repositories/admin/admin-audit-query.repository.interface.js';
-import type { AdminAuditLogFilters } from '../../../src/repositories/admin/admin-audit-query.types.js';
+import type { AdminAuditQueryRepository } from '../../../src/repositories/admin/admin.audit-query.repository.interface.js';
+import type { AdminAuditLogFilters } from '../../../src/repositories/admin/admin.audit-query.types.js';
 import type { PaginationOptions } from '../../../src/utils/pagination.js';
 
 describe('AdminAuditQueryService', () => {

@@ -1,8 +1,8 @@
-import { parseAdminAuditLogFilters } from './admin-audit-logs.dto.js';
+import { parseAdminAuditLogFilters } from './admin.audit-logs.dto.js';
 import { parsePaginationQuery } from '../../utils/pagination.js';
 import { asyncHandler } from '../http/async-handler.js';
 
-import type { AdminAuditQueryService } from '../../services/admin/admin-audit-query.service.js';
+import type { AdminAuditQueryService } from '../../services/admin/admin.audit-query.service.js';
 
 const DEFAULT_AUDIT_LOG_LIMIT = 25;
 

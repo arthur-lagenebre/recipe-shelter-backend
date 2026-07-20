@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { getAdminAuditRequestContext } from '../../../src/api/admin/admin-audit.context.js';
+import { getAdminAuditRequestContext } from '../../../src/api/admin/admin.audit.context.js';
 
 import type { Request } from 'express';
 

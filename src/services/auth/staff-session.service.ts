@@ -1,10 +1,10 @@
 import { badRequest, notFound } from '../../utils/errors.js';
-import { ADMIN_AUDIT_EVENT_TYPES, ADMIN_AUDIT_TARGET_TYPES } from '../admin/admin-audit.events.js';
+import { ADMIN_AUDIT_EVENT_TYPES, ADMIN_AUDIT_TARGET_TYPES } from '../admin/admin.audit.events.js';
 
 import type { SessionRepository, StaffSession } from '../../repositories/auth/session.repository.interface.js';
 import type { UserRepository } from '../../repositories/users/user.repository.interface.js';
-import type { AdminAuditActionRunner } from '../admin/admin-audit-action.runner.js';
-import type { AdminAuditRecorder, AdminAuditRequestContext } from '../admin/admin-audit.service.js';
+import type { AdminAuditActionRunner } from '../admin/admin.audit-action.runner.js';
+import type { AdminAuditRecorder, AdminAuditRequestContext } from '../admin/admin.audit.service.js';
 import type { PoolConnection } from 'mysql2/promise';
 
 const MANAGED_REVOCATION_REASON_MIN_LENGTH = 10;

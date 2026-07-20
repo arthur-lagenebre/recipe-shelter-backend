@@ -5,8 +5,8 @@ import cookieParser from 'cookie-parser';
 import express from 'express';
 
 import { adminAuthorizationPolicies } from '../../src/api/admin/admin.authorization.js';
-import { createStaffSessionsController } from '../../src/api/admin/staff-sessions.controller.js';
-import { createAdminStaffSessionsRouter } from '../../src/api/admin/staff-sessions.routes.js';
+import { createStaffSessionsController } from '../../src/api/admin/admin.staff-sessions.controller.js';
+import { createAdminStaffSessionsRouter } from '../../src/api/admin/admin.staff-sessions.routes.js';
 import { createStaffAuthRouter } from '../../src/api/auth/auth.routes.js';
 import { EnforceAuthorizationPolicies } from '../../src/middlewares/authorization.js';
 import { errorHandler } from '../../src/middlewares/error-handler.js';

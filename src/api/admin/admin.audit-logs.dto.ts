@@ -1,9 +1,9 @@
-import { ADMIN_AUDIT_EVENT_TYPES, ADMIN_AUDIT_TARGET_TYPES } from '../../services/admin/admin-audit.events.js';
+import { ADMIN_AUDIT_EVENT_TYPES, ADMIN_AUDIT_TARGET_TYPES } from '../../services/admin/admin.audit.events.js';
 import { badRequest } from '../../utils/errors.js';
 import { isRecord } from '../http/dto.helpers.js';
 
-import type { AdminAuditLogFilters } from '../../repositories/admin/admin-audit-query.types.js';
-import type { AdminAuditEventType, AdminAuditTargetType } from '../../services/admin/admin-audit.events.js';
+import type { AdminAuditLogFilters } from '../../repositories/admin/admin.audit-query.types.js';
+import type { AdminAuditEventType, AdminAuditTargetType } from '../../services/admin/admin.audit.events.js';
 
 const ACTIONS = new Set<string>(Object.values(ADMIN_AUDIT_EVENT_TYPES));
 const TARGET_TYPES = new Set<string>(Object.values(ADMIN_AUDIT_TARGET_TYPES));

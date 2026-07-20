@@ -5,12 +5,12 @@ import { after, before, describe, it } from 'node:test';
 import mysql from 'mysql2/promise';
 
 import { AdminUserRepositoryMysql } from '../../../src/repositories/admin/admin.users.repository.mysql.js';
-import { AdminAuditQueryRepositoryMysql } from '../../../src/repositories/admin/admin-audit-query.repository.mysql.js';
-import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin-audit.repository.mysql.js';
+import { AdminAuditQueryRepositoryMysql } from '../../../src/repositories/admin/admin.audit-query.repository.mysql.js';
+import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin.audit.repository.mysql.js';
 import { UserRepositoryMysql } from '../../../src/repositories/users/user.repository.mysql.js';
-import { AdminAuditActionRunnerMysql } from '../../../src/services/admin/admin-audit-action.runner.js';
-import { ADMIN_AUDIT_EVENT_TYPES, ADMIN_AUDIT_TARGET_TYPES } from '../../../src/services/admin/admin-audit.events.js';
-import { AdminAuditService } from '../../../src/services/admin/admin-audit.service.js';
+import { AdminAuditActionRunnerMysql } from '../../../src/services/admin/admin.audit-action.runner.js';
+import { ADMIN_AUDIT_EVENT_TYPES, ADMIN_AUDIT_TARGET_TYPES } from '../../../src/services/admin/admin.audit.events.js';
+import { AdminAuditService } from '../../../src/services/admin/admin.audit.service.js';
 import { AdminUserService } from '../../../src/services/admin/admin.users.service.js';
 import { env } from '../../../src/utils/env.js';
 

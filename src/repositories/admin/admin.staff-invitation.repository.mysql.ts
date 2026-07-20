@@ -1,4 +1,4 @@
-import type { CreateStaffInvitationInput, CreateStaffInvitationResult, StaffInvitationRepository, StaffInvitationRole } from './staff-invitation.repository.interface.js';
+import type { CreateStaffInvitationInput, CreateStaffInvitationResult, StaffInvitationRepository, StaffInvitationRole } from './admin.staff-invitation.repository.interface.js';
 import type { Pool, PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 
 type RoleRow = RowDataPacket & {

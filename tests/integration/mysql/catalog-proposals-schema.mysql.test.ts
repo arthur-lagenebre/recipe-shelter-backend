@@ -4,12 +4,12 @@ import { after, before, describe, it } from 'node:test';
 
 import mysql from 'mysql2/promise';
 
-import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin-audit.repository.mysql.js';
+import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin.audit.repository.mysql.js';
 import { AdminIngredientRepositoryMysql } from '../../../src/repositories/admin/admin.ingredients.repository.mysql.js';
 import { AdminTagRepositoryMysql } from '../../../src/repositories/admin/admin.tags.repository.mysql.js';
 import { CatalogProposalRepositoryMysql } from '../../../src/repositories/catalog/catalog-proposals.repository.mysql.js';
-import { AdminAuditActionRunnerMysql } from '../../../src/services/admin/admin-audit-action.runner.js';
-import { AdminAuditService } from '../../../src/services/admin/admin-audit.service.js';
+import { AdminAuditActionRunnerMysql } from '../../../src/services/admin/admin.audit-action.runner.js';
+import { AdminAuditService } from '../../../src/services/admin/admin.audit.service.js';
 import { AdminCatalogProposalService } from '../../../src/services/admin/admin.catalog-proposals.service.js';
 import { CatalogProposalService } from '../../../src/services/catalog/catalog-proposals.service.js';
 import { env } from '../../../src/utils/env.js';

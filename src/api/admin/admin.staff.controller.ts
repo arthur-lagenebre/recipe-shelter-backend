@@ -1,4 +1,4 @@
-import { getAdminAuditRequestContext } from './admin-audit.context.js';
+import { getAdminAuditRequestContext } from './admin.audit.context.js';
 import { parseAdminStaffRoleCodeParam, parseAdminStaffUserIdParam, parseStaffActionReasonBody } from './admin.staff.dto.js';
 import { asyncHandler } from '../http/async-handler.js';
 

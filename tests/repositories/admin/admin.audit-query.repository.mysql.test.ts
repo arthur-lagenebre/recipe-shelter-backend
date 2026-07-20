@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { AdminAuditQueryRepositoryMysql } from '../../../src/repositories/admin/admin-audit-query.repository.mysql.js';
+import { AdminAuditQueryRepositoryMysql } from '../../../src/repositories/admin/admin.audit-query.repository.mysql.js';
 
 import type { Queryable } from '../../../src/db/query.js';
 

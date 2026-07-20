@@ -1,4 +1,4 @@
-import { getAdminAuditRequestContext } from './admin-audit.context.js';
+import { getAdminAuditRequestContext } from './admin.audit.context.js';
 import { parseArchiveRecipeBody, parseRejectRecipeBody } from './admin.recipes.dto.js';
 import { asyncHandler } from '../http/async-handler.js';
 import { parseRecipeIdParam } from '../recipes/recipes.dto.js';

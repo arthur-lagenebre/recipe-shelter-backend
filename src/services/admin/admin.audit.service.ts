@@ -1,10 +1,10 @@
 import { randomUUID } from 'node:crypto';
 
-import { ADMIN_AUDIT_EVENT_TARGET_TYPES, ADMIN_AUDIT_EVENT_TYPES, ADMIN_AUDIT_TARGET_TYPES, type AdminAuditEventType, type AdminAuditTargetType } from './admin-audit.events.js';
+import { ADMIN_AUDIT_EVENT_TARGET_TYPES, ADMIN_AUDIT_EVENT_TYPES, ADMIN_AUDIT_TARGET_TYPES, type AdminAuditEventType, type AdminAuditTargetType } from './admin.audit.events.js';
 import { internalError } from '../../utils/errors.js';
 import { logger } from '../../utils/logger.js';
 
-import type { AdminAuditJsonValue, AdminAuditRepository, AdminAuditSnapshot, CreateAdminAuditLogInput } from '../../repositories/admin/admin-audit.repository.interface.js';
+import type { AdminAuditJsonValue, AdminAuditRepository, AdminAuditSnapshot, CreateAdminAuditLogInput } from '../../repositories/admin/admin.audit.repository.interface.js';
 
 const TARGET_ID_MAX_LENGTH = 255;
 const REASON_MAX_LENGTH = 65_535;

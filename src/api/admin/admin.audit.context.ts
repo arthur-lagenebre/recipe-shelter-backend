@@ -1,4 +1,4 @@
-import type { AdminAuditRequestContext } from '../../services/admin/admin-audit.service.js';
+import type { AdminAuditRequestContext } from '../../services/admin/admin.audit.service.js';
 import type { Handler } from '../http/http.types.js';
 
 export function getAdminAuditRequestContext(req: Parameters<Handler>[0]): AdminAuditRequestContext {

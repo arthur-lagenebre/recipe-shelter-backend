@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { StaffInvitationRepositoryMysql } from '../../../src/repositories/admin/staff-invitation.repository.mysql.js';
+import { StaffInvitationRepositoryMysql } from '../../../src/repositories/admin/admin.staff-invitation.repository.mysql.js';
 
-import type { CreateStaffInvitationInput } from '../../../src/repositories/admin/staff-invitation.repository.interface.js';
+import type { CreateStaffInvitationInput } from '../../../src/repositories/admin/admin.staff-invitation.repository.interface.js';
 import type { Pool } from 'mysql2/promise';
 
 type FakeOptions = {

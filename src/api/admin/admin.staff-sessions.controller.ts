@@ -1,5 +1,5 @@
-import { getAdminAuditRequestContext } from './admin-audit.context.js';
-import { parseManagedStaffSessionRevocationBody, parseStaffSessionIdParam, parseStaffUserIdParam } from './staff-sessions.dto.js';
+import { getAdminAuditRequestContext } from './admin.audit.context.js';
+import { parseManagedStaffSessionRevocationBody, parseStaffSessionIdParam, parseStaffUserIdParam } from './admin.staff-sessions.dto.js';
 import { verifySessionToken } from '../../services/auth/session-token.js';
 import { unauthorized } from '../../utils/errors.js';
 import { clearSessionCookie, getSessionToken } from '../../utils/session-cookie.js';

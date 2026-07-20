@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import { beforeEach, describe, it } from 'node:test';
 
-import { ADMIN_AUDIT_EVENT_TYPES, ADMIN_AUDIT_TARGET_TYPES } from '../../../src/services/admin/admin-audit.events.js';
-import { ADMIN_AUDIT_FAILURE_POLICY, AdminAuditService } from '../../../src/services/admin/admin-audit.service.js';
+import { ADMIN_AUDIT_EVENT_TYPES, ADMIN_AUDIT_TARGET_TYPES } from '../../../src/services/admin/admin.audit.events.js';
+import { ADMIN_AUDIT_FAILURE_POLICY, AdminAuditService } from '../../../src/services/admin/admin.audit.service.js';
 import { HttpError } from '../../../src/utils/errors.js';
 import { logger } from '../../../src/utils/logger.js';
 
-import type { AdminAuditRepository, AdminAuditSnapshot, CreateAdminAuditLogInput } from '../../../src/repositories/admin/admin-audit.repository.interface.js';
-import type { AdminAuditEventType } from '../../../src/services/admin/admin-audit.events.js';
+import type { AdminAuditRepository, AdminAuditSnapshot, CreateAdminAuditLogInput } from '../../../src/repositories/admin/admin.audit.repository.interface.js';
+import type { AdminAuditEventType } from '../../../src/services/admin/admin.audit.events.js';
 
 const correlationId = '00000000-0000-4000-8000-000000000802';
 

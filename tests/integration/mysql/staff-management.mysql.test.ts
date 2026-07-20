@@ -4,11 +4,11 @@ import { after, before, describe, it } from 'node:test';
 
 import mysql from 'mysql2/promise';
 
-import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin-audit.repository.mysql.js';
+import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin.audit.repository.mysql.js';
 import { AdminStaffRepositoryMysql } from '../../../src/repositories/admin/admin.staff.repository.mysql.js';
 import { SessionRepositoryMysql } from '../../../src/repositories/auth/session.repository.mysql.js';
-import { AdminAuditActionRunnerMysql } from '../../../src/services/admin/admin-audit-action.runner.js';
-import { AdminAuditService } from '../../../src/services/admin/admin-audit.service.js';
+import { AdminAuditActionRunnerMysql } from '../../../src/services/admin/admin.audit-action.runner.js';
+import { AdminAuditService } from '../../../src/services/admin/admin.audit.service.js';
 import { AdminStaffService } from '../../../src/services/admin/admin.staff.service.js';
 import { env } from '../../../src/utils/env.js';
 import { HttpError } from '../../../src/utils/errors.js';

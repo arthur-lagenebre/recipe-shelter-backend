@@ -1,4 +1,4 @@
-import { getAdminAuditRequestContext } from './admin-audit.context.js';
+import { getAdminAuditRequestContext } from './admin.audit.context.js';
 import { parseAcceptIngredientCatalogProposalBody, parseAcceptTagCatalogProposalBody, parseAdminCatalogProposalIdParam, parseAdminCatalogProposalListFilters, parseAssociateIngredientCatalogProposalBody, parseAssociateTagCatalogProposalBody, parseConvertCatalogProposalToAliasBody, parseRejectCatalogProposalBody } from './admin.catalog-proposals.dto.js';
 import { parsePaginationQuery } from '../../utils/pagination.js';
 import { asyncHandler } from '../http/async-handler.js';

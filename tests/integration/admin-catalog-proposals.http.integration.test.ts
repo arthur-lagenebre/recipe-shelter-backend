@@ -18,7 +18,7 @@ import { startHttpTestServer } from '../helpers/http-test-server.js';
 
 import type { CatalogProposal, CatalogProposalListFilters } from '../../src/repositories/catalog/catalog-proposals.types.js';
 import type { PermissionCode } from '../../src/security/permissions.js';
-import type { AdminAuditRequestContext } from '../../src/services/admin/admin-audit.service.js';
+import type { AdminAuditRequestContext } from '../../src/services/admin/admin.audit.service.js';
 import type { User } from '../../src/repositories/users/user.types.js';
 import type { PaginationOptions } from '../../src/utils/pagination.js';
 import type { HttpTestServer } from '../helpers/http-test-server.js';

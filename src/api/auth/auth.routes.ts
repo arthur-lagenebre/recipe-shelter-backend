@@ -4,7 +4,7 @@ import { rateLimiter } from '../../middlewares/rate-limiter.js';
 import { requireCommunityAuth, requireStaffAuth } from '../../middlewares/require-auth.js';
 import { env } from '../../utils/env.js';
 
-import type { StaffSessionsController } from '../admin/staff-sessions.routes.js';
+import type { StaffSessionsController } from '../admin/admin.staff-sessions.routes.js';
 import type { RequestHandler } from 'express';
 
 type AuthController = {

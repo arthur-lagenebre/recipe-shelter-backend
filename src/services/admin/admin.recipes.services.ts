@@ -1,9 +1,9 @@
-import { ADMIN_AUDIT_EVENT_TYPES, ADMIN_AUDIT_TARGET_TYPES } from './admin-audit.events.js';
+import { ADMIN_AUDIT_EVENT_TYPES, ADMIN_AUDIT_TARGET_TYPES } from './admin.audit.events.js';
 import { badRequest, forbidden, notFound } from '../../utils/errors.js';
 import { canArchiveRecipe } from '../recipes/recipe-permissions.js';
 
-import type { AdminAuditActionRunner } from './admin-audit-action.runner.js';
-import type { AdminAuditRequestContext } from './admin-audit.service.js';
+import type { AdminAuditActionRunner } from './admin.audit-action.runner.js';
+import type { AdminAuditRequestContext } from './admin.audit.service.js';
 import type { AdminRecipeRepository } from "../../repositories/admin/admin.recipe.repository.interface.js";
 import type { AdminRecipeAuditState, RecipeAdmin, RecipePending } from "../../repositories/admin/admin.recipe.types.js";
 import type { RecipeImage } from '../../repositories/recipe-images/recipe-image.types.js';

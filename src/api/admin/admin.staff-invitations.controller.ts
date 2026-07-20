@@ -1,8 +1,8 @@
-import { getAdminAuditRequestContext } from './admin-audit.context.js';
-import { parseCreateStaffInvitationBody } from './staff-invitations.dto.js';
+import { getAdminAuditRequestContext } from './admin.audit.context.js';
+import { parseCreateStaffInvitationBody } from './admin.staff-invitations.dto.js';
 import { asyncHandler } from '../http/async-handler.js';
 
-import type { StaffInvitationService } from '../../services/admin/staff-invitation.service.js';
+import type { StaffInvitationService } from '../../services/admin/admin.staff-invitation.service.js';
 
 export function createStaffInvitationsController(staffInvitations: StaffInvitationService) {
   return {

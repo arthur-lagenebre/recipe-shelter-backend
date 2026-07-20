@@ -1,4 +1,4 @@
-import type { AdminAuditLog, AdminAuditLogFilters } from './admin-audit-query.types.js';
+import type { AdminAuditLog, AdminAuditLogFilters } from './admin.audit-query.types.js';
 import type { PaginatedResult, PaginationOptions } from '../../utils/pagination.js';
 
 /** Read-only investigation boundary, deliberately separate from append-only audit writes. */

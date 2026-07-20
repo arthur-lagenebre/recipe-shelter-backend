@@ -1,8 +1,8 @@
-import { ADMIN_AUDIT_EVENT_TYPES, ADMIN_AUDIT_TARGET_TYPES } from './admin-audit.events.js';
+import { ADMIN_AUDIT_EVENT_TYPES, ADMIN_AUDIT_TARGET_TYPES } from './admin.audit.events.js';
 import { badRequest, conflict, forbidden, notFound } from '../../utils/errors.js';
 
-import type { AdminAuditActionRunner } from './admin-audit-action.runner.js';
-import type { AdminAuditRecorder, AdminAuditRecordReceipt, AdminAuditRequestContext } from './admin-audit.service.js';
+import type { AdminAuditActionRunner } from './admin.audit-action.runner.js';
+import type { AdminAuditRecorder, AdminAuditRecordReceipt, AdminAuditRequestContext } from './admin.audit.service.js';
 import type { AdminStaffRepository } from '../../repositories/admin/admin.staff.repository.interface.js';
 import type { AdminStaffAccount, AdminStaffRole } from '../../repositories/admin/admin.staff.types.js';
 

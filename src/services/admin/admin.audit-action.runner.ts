@@ -1,6 +1,6 @@
 import { internalError } from '../../utils/errors.js';
 
-import type { AdminAuditRecorder } from './admin-audit.service.js';
+import type { AdminAuditRecorder } from './admin.audit.service.js';
 import type { Pool, PoolConnection } from 'mysql2/promise';
 
 export type AdminAuditActionScope = {

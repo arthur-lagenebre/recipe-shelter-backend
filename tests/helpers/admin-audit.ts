@@ -1,5 +1,5 @@
-import type { AdminAuditRecordInput, AdminAuditRecordReceipt, AdminAuditRecorder, AdminAuditRequestContext } from '../../src/services/admin/admin-audit.service.js';
-import type { AdminAuditActionRunner, AdminAuditActionScope } from '../../src/services/admin/admin-audit-action.runner.js';
+import type { AdminAuditRecordInput, AdminAuditRecordReceipt, AdminAuditRecorder, AdminAuditRequestContext } from '../../src/services/admin/admin.audit.service.js';
+import type { AdminAuditActionRunner, AdminAuditActionScope } from '../../src/services/admin/admin.audit-action.runner.js';
 import type { PoolConnection } from 'mysql2/promise';
 
 export const testAdminAuditContext: AdminAuditRequestContext = {

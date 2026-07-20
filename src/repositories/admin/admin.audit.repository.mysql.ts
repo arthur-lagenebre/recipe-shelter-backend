@@ -1,4 +1,4 @@
-import type { AdminAuditRepository, CreateAdminAuditLogInput } from './admin-audit.repository.interface.js';
+import type { AdminAuditRepository, CreateAdminAuditLogInput } from './admin.audit.repository.interface.js';
 import type { Queryable } from '../../db/query.js';
 import type { ResultSetHeader } from 'mysql2/promise';
 

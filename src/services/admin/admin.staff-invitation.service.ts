@@ -1,12 +1,12 @@
-import { ADMIN_AUDIT_EVENT_TYPES, ADMIN_AUDIT_TARGET_TYPES } from './admin-audit.events.js';
+import { ADMIN_AUDIT_EVENT_TYPES, ADMIN_AUDIT_TARGET_TYPES } from './admin.audit.events.js';
 import { env } from '../../utils/env.js';
 import { badRequest, conflict } from '../../utils/errors.js';
 import { generateStaffInvitationToken, hashStaffInvitationToken } from '../../utils/security/staff-invitation-token.js';
 import { normalizeEmail } from '../../utils/string.js';
 
-import type { AdminAuditActionRunner } from './admin-audit-action.runner.js';
-import type { AdminAuditRequestContext } from './admin-audit.service.js';
-import type { StaffInvitation, StaffInvitationRepository } from '../../repositories/admin/staff-invitation.repository.interface.js';
+import type { AdminAuditActionRunner } from './admin.audit-action.runner.js';
+import type { AdminAuditRequestContext } from './admin.audit.service.js';
+import type { StaffInvitation, StaffInvitationRepository } from '../../repositories/admin/admin.staff-invitation.repository.interface.js';
 import type { StaffInvitationMailer } from '../mail/mail.types.js';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

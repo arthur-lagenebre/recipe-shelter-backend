@@ -1,4 +1,4 @@
-import type { AdminAuditLog, AdminAuditLogRow } from './admin-audit-query.types.js';
+import type { AdminAuditLog, AdminAuditLogRow } from './admin.audit-query.types.js';
 
 export function mapAdminAuditLog(row: AdminAuditLogRow): AdminAuditLog {
   return {

@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { AdminAuditActionRunnerMysql } from '../../../src/services/admin/admin-audit-action.runner.js';
+import { AdminAuditActionRunnerMysql } from '../../../src/services/admin/admin.audit-action.runner.js';
 
-import type { AdminAuditRecorder } from '../../../src/services/admin/admin-audit.service.js';
+import type { AdminAuditRecorder } from '../../../src/services/admin/admin.audit.service.js';
 import type { PoolConnection } from 'mysql2/promise';
 
 describe('AdminAuditActionRunnerMysql', () => {

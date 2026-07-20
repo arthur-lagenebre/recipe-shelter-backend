@@ -5,7 +5,7 @@ import { after, before, describe, it } from 'node:test';
 import mysql from 'mysql2/promise';
 
 import { AdminCommentRepositoryMysql } from '../../../src/repositories/admin/admin.comments.repository.mysql.js';
-import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin-audit.repository.mysql.js';
+import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin.audit.repository.mysql.js';
 import { AdminRecipeRepositoryMysql } from '../../../src/repositories/admin/admin.recipe.repository.mysql.js';
 import { AdminUserRepositoryMysql } from '../../../src/repositories/admin/admin.users.repository.mysql.js';
 import { CommentRepositoryMysql } from '../../../src/repositories/comments/comments.repository.mysql.js';
@@ -13,8 +13,8 @@ import { FavoriteRepositoryMysql } from '../../../src/repositories/favorites/fav
 import { RecipeRepositoryMysql } from '../../../src/repositories/recipes/recipe.repository.mysql.js';
 import { RbacRepositoryMysql } from '../../../src/repositories/rbac/rbac.repository.mysql.js';
 import { UserRepositoryMysql } from '../../../src/repositories/users/user.repository.mysql.js';
-import { AdminAuditActionRunnerMysql } from '../../../src/services/admin/admin-audit-action.runner.js';
-import { AdminAuditService } from '../../../src/services/admin/admin-audit.service.js';
+import { AdminAuditActionRunnerMysql } from '../../../src/services/admin/admin.audit-action.runner.js';
+import { AdminAuditService } from '../../../src/services/admin/admin.audit.service.js';
 import { AdminCommentService } from '../../../src/services/admin/admin.comments.services.js';
 import { AdminRecipeService } from '../../../src/services/admin/admin.recipes.services.js';
 import { AdminUserService } from '../../../src/services/admin/admin.users.service.js';

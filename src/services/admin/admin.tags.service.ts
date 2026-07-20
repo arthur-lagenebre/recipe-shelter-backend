@@ -1,9 +1,9 @@
-import { ADMIN_AUDIT_EVENT_TYPES, ADMIN_AUDIT_TARGET_TYPES } from './admin-audit.events.js';
+import { ADMIN_AUDIT_EVENT_TYPES, ADMIN_AUDIT_TARGET_TYPES } from './admin.audit.events.js';
 import { badRequest, conflict, notFound } from '../../utils/errors.js';
 import { normalizeTagName } from '../tag/tags.service.js';
 
-import type { AdminAuditActionRunner } from './admin-audit-action.runner.js';
-import type { AdminAuditRequestContext } from './admin-audit.service.js';
+import type { AdminAuditActionRunner } from './admin.audit-action.runner.js';
+import type { AdminAuditRequestContext } from './admin.audit.service.js';
 import type { AdminTagRepository } from '../../repositories/admin/admin.tags.repository.interface.js';
 import type { AdminTagListFilters, AdminTagWriteResult } from '../../repositories/admin/admin.tags.types.js';
 import type { Tag } from '../../repositories/tag/tag.types.js';

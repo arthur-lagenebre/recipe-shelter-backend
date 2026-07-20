@@ -4,7 +4,7 @@ import { after, before, describe, it } from 'node:test';
 import cookieParser from 'cookie-parser';
 import express from 'express';
 
-import { createAdminAuditLogsRouter } from '../../src/api/admin/admin-audit-logs.routes.js';
+import { createAdminAuditLogsRouter } from '../../src/api/admin/admin.audit-logs.routes.js';
 import { createAdminCommentsRouter } from '../../src/api/admin/admin.comments.routes.js';
 import { createAdminIngredientsRouter } from '../../src/api/admin/admin.ingredients.routes.js';
 import { adminAuthorizationPolicies } from '../../src/api/admin/admin.authorization.js';
@@ -13,8 +13,8 @@ import { createAdminRecipesRouter } from '../../src/api/admin/admin.recipes.rout
 import { createAdminStaffRouter } from '../../src/api/admin/admin.staff.routes.js';
 import { createAdminTagsRouter } from '../../src/api/admin/admin.tags.routes.js';
 import { createAdminUsersRouter } from '../../src/api/admin/admin.users.routes.js';
-import { createStaffInvitationsRouter } from '../../src/api/admin/staff-invitations.routes.js';
-import { createAdminStaffSessionsRouter } from '../../src/api/admin/staff-sessions.routes.js';
+import { createStaffInvitationsRouter } from '../../src/api/admin/admin.staff-invitations.routes.js';
+import { createAdminStaffSessionsRouter } from '../../src/api/admin/admin.staff-sessions.routes.js';
 import { createHealthRouter } from '../../src/api/health/health.routes.js';
 import { EnforceAuthorizationPolicies } from '../../src/middlewares/authorization.js';
 import { errorHandler } from '../../src/middlewares/error-handler.js';

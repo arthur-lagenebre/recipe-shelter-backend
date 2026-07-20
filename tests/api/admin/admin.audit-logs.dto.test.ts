@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { parseAdminAuditLogFilters } from '../../../src/api/admin/admin-audit-logs.dto.js';
+import { parseAdminAuditLogFilters } from '../../../src/api/admin/admin.audit-logs.dto.js';
 import { HttpError } from '../../../src/utils/errors.js';
 
 describe('admin audit logs DTO', () => {

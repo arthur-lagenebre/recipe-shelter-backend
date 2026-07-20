@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin-audit.repository.mysql.js';
+import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin.audit.repository.mysql.js';
 
-import type { AdminAuditRepository } from '../../../src/repositories/admin/admin-audit.repository.interface.js';
+import type { AdminAuditRepository } from '../../../src/repositories/admin/admin.audit.repository.interface.js';
 import type { Queryable } from '../../../src/db/query.js';
 
 type HasExactKeys<T, Expected extends PropertyKey> =
