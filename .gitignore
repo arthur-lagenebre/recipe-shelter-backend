@@ -28,3 +28,4 @@ var/uploads/
 Thumbs.db
 .vscode/
 .idea/
+.claude/settings.json

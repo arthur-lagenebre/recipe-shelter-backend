@@ -257,6 +257,138 @@ describe('recipes.dto', () => {
         );
     });
 
+    it('rejects an out-of-bounds ingredient quantity', () => {
+        for (const quantity of [-10, 10001]) {
+            assert.throws(
+                () => parseCreateRecipeBody({ title: 'Thé maison', ingredients: [{ ingredientId: 7, displayText: 'thé vert', quantity }] }),
+                (error) => {
+                    assertHttpError(error, 'RECIPES_CREATE_BAD_INGREDIENT_QUANTITY', 400);
+                    return true;
+                }
+            );
+        }
+    });
+
+    it('rejects an out-of-bounds title length', () => {
+        assert.throws(
+            () => parseCreateRecipeBody({ title: 'a'.repeat(201) }),
+            (error) => {
+                assertHttpError(error, 'RECIPES_CREATE_WEAK_TITLE', 400);
+                return true;
+            }
+        );
+    });
+
+    it('accepts a title at the maximum length', () => {
+        assert.equal(parseCreateRecipeBody({ title: 'a'.repeat(200) }).title.length, 200);
+    });
+
+    it('rejects a description longer than 5000 characters', () => {
+        assert.throws(
+            () => parseCreateRecipeBody({ title: 'Valid title', description: 'a'.repeat(5001) }),
+            (error) => {
+                assertHttpError(error, 'RECIPES_CREATE_BAD_DESCRIPTION', 400);
+                return true;
+            }
+        );
+    });
+
+    it('rejects servings outside of 1 to 100', () => {
+        for (const servings of [-3, 0, 101]) {
+            assert.throws(
+                () => parseCreateRecipeBody({ title: 'Valid title', servings }),
+                (error) => {
+                    assertHttpError(error, 'RECIPES_CREATE_BAD_SERVINGS', 400);
+                    return true;
+                }
+            );
+        }
+    });
+
+    it('rejects a non-integer servings value', () => {
+        assert.throws(
+            () => parseCreateRecipeBody({ title: 'Valid title', servings: 6.5 }),
+            (error) => {
+                assertHttpError(error, 'RECIPES_CREATE_BAD_SERVINGS', 400);
+                return true;
+            }
+        );
+    });
+
+    it('rejects a negative or non-integer prep time', () => {
+        for (const prepTimeMinutes of [-1, 0.5, 1441]) {
+            assert.throws(
+                () => parseCreateRecipeBody({ title: 'Valid title', prepTimeMinutes }),
+                (error) => {
+                    assertHttpError(error, 'RECIPES_CREATE_BAD_PREP_TIME', 400);
+                    return true;
+                }
+            );
+        }
+    });
+
+    it('rejects an out-of-bounds cook or rest time', () => {
+        assert.throws(
+            () => parseCreateRecipeBody({ title: 'Valid title', cookTimeMinutes: 4321 }),
+            (error) => {
+                assertHttpError(error, 'RECIPES_CREATE_BAD_COOK_TIME', 400);
+                return true;
+            }
+        );
+
+        assert.throws(
+            () => parseCreateRecipeBody({ title: 'Valid title', restTimeMinutes: -1 }),
+            (error) => {
+                assertHttpError(error, 'RECIPES_CREATE_BAD_REST_TIME', 400);
+                return true;
+            }
+        );
+    });
+
+    it('rejects an ingredients array larger than 100 items', () => {
+        const ingredients = new Array(101).fill({ displayText: 'eau' });
+        assert.throws(
+            () => parseCreateRecipeBody({ title: 'Valid title', ingredients }),
+            (error) => {
+                assertHttpError(error, 'RECIPES_CREATE_BAD_INGREDIENTS', 400);
+                return true;
+            }
+        );
+    });
+
+    it('rejects a steps array larger than 100 items', () => {
+        const steps = new Array(101).fill({ description: 'Mélanger.' });
+        assert.throws(
+            () => parseCreateRecipeBody({ title: 'Valid title', steps }),
+            (error) => {
+                assertHttpError(error, 'RECIPES_CREATE_BAD_STEPS', 400);
+                return true;
+            }
+        );
+    });
+
+    it('rejects an equipments array larger than 50 items', () => {
+        const equipments = new Array(51).fill({ equipmentId: 1 });
+        assert.throws(
+            () => parseCreateRecipeBody({ title: 'Valid title', equipments }),
+            (error) => {
+                assertHttpError(error, 'RECIPES_CREATE_BAD_EQUIPMENTS', 400);
+                return true;
+            }
+        );
+    });
+
+    it('rejects a tagIds array larger than 20 items', () => {
+        const tagIds = new Array(21).fill(1);
+        assert.throws(
+            () => parseCreateRecipeBody({ title: 'Valid title', tagIds }),
+            (error) => {
+                assertHttpError(error, 'RECIPES_CREATE_BAD_TAGS', 400);
+                return true;
+            }
+        );
+    });
+
     it('parses a max total time filter', () => {
         assert.deepEqual(parseRecipeSearchQuery({ maxTotalTimeMinutes: '45' }), { maxTotalTimeMinutes: 45 });
     });

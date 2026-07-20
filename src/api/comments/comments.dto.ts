@@ -1,5 +1,8 @@
 import { badRequest } from '../../utils/errors.js';
-import { getOptionalNullableNumber, getRequiredString, isRecord } from '../http/dto.helpers.js';
+import { getOptionalNullableNumber, getRequiredBoundedString, isRecord } from '../http/dto.helpers.js';
+
+const MIN_COMMENT_LENGTH = 1;
+const MAX_COMMENT_LENGTH = 2000;
 
 export type CreateCommentBody = {
     parentCommentId?: number | null;
@@ -43,7 +46,7 @@ export function parseCreateCommentBody(body: unknown): CreateCommentBody {
     if (!isRecord(body))
         throw badRequest('Invalid body', 'COMMENTS_CREATE_BAD_BODY');
 
-    const comment = getRequiredString(body.comment, 'Comment is required', 'COMMENTS_CREATE_MISSING_COMMENT');
+    const comment = getRequiredBoundedString(body.comment, MIN_COMMENT_LENGTH, MAX_COMMENT_LENGTH, 'Comment is required', 'COMMENTS_CREATE_MISSING_COMMENT');
     const parentCommentId = parseParentCommentId(body.parentCommentId);
     const rating = parseRating(body.rating, 'COMMENTS_CREATE');
 
@@ -57,7 +60,7 @@ export function parseUpdateCommentBody(body: unknown): UpdateCommentBody {
     if (!isRecord(body))
         throw badRequest('Invalid body', 'COMMENTS_UPDATE_BAD_BODY');
 
-    const comment = getRequiredString(body.comment, 'Comment is required', 'COMMENTS_UPDATE_MISSING_COMMENT');
+    const comment = getRequiredBoundedString(body.comment, MIN_COMMENT_LENGTH, MAX_COMMENT_LENGTH, 'Comment is required', 'COMMENTS_UPDATE_MISSING_COMMENT');
 
     return { rating: parseRating(body.rating, 'COMMENTS_UPDATE'), comment };
 }

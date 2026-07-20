@@ -1,5 +1,5 @@
 import { badRequest } from '../../utils/errors.js';
-import { getOptionalArray, getOptionalNullableNumber, getOptionalNullableString, getOptionalNumber, getOptionalString, getRequiredNumber, getRequiredPositiveInteger, getRequiredString, isRecord } from '../http/dto.helpers.js';
+import { getBoundedArray, getBoundedInteger, getBoundedNullableInteger, getBoundedNullableNumber, getBoundedString, getOptionalNullableNumber, getOptionalNullableString, getOptionalNumber, getOptionalString, getRequiredNumber, getRequiredPositiveInteger, getRequiredString, isRecord } from '../http/dto.helpers.js';
 
 import type { RecipeIngredientInput, RecipeStepInput, RecipeEquipmentInput } from '../../repositories/recipes/recipe.types.js';
 import type { RecipeSearchFilters } from '../../repositories/recipes/recipe.types.js';
@@ -26,6 +26,23 @@ export type RecipeSearchQuery = RecipeSearchFilters;
 const DEFAULT_RECIPE_FEED_LIMIT = 12;
 const MAX_RECIPE_FEED_LIMIT = 20;
 const MAX_RECIPE_INGREDIENT_DISPLAY_TEXT_LENGTH = 255;
+const MIN_RECIPE_TITLE_LENGTH = 5;
+const MAX_RECIPE_TITLE_LENGTH = 200;
+const MAX_RECIPE_DESCRIPTION_LENGTH = 5000;
+const MIN_RECIPE_SERVINGS = 1;
+const MAX_RECIPE_SERVINGS = 100;
+const MIN_RECIPE_PREP_TIME_MINUTES = 0;
+const MAX_RECIPE_PREP_TIME_MINUTES = 1440;
+const MIN_RECIPE_COOK_TIME_MINUTES = 0;
+const MAX_RECIPE_COOK_TIME_MINUTES = 4320;
+const MIN_RECIPE_REST_TIME_MINUTES = 0;
+const MAX_RECIPE_REST_TIME_MINUTES = 43200;
+const MIN_RECIPE_INGREDIENT_QUANTITY = 0;
+const MAX_RECIPE_INGREDIENT_QUANTITY = 10000;
+const MAX_RECIPE_TAGS = 20;
+const MAX_RECIPE_INGREDIENTS = 100;
+const MAX_RECIPE_STEPS = 100;
+const MAX_RECIPE_EQUIPMENTS = 50;
 
 function parseIngredient(item: unknown, index: number): RecipeIngredientInput {
     if (!isRecord(item))
@@ -46,7 +63,7 @@ function parseIngredient(item: unknown, index: number): RecipeIngredientInput {
     return {
         ingredientId,
         displayText,
-        quantity: getOptionalNullableNumber(item.quantity, 'Ingredient quantity must be a number or null', 'RECIPES_CREATE_BAD_INGREDIENT_QUANTITY'),
+        quantity: getBoundedNullableNumber(item.quantity, MIN_RECIPE_INGREDIENT_QUANTITY, MAX_RECIPE_INGREDIENT_QUANTITY, 'Ingredient quantity must be a number between 0 and 10000', 'RECIPES_CREATE_BAD_INGREDIENT_QUANTITY'),
         unit,
         note,
         sortOrder
@@ -82,19 +99,19 @@ function parseRecipeContentBody(body: unknown, codePrefix: 'RECIPES_CREATE' | 'R
 
     const title = getRequiredString(body.title, 'Title is required', `${codePrefix}_MISSING_TITLE`);
 
-    if (title.length < 5)
-        throw badRequest('Title must be at least 5 characters', `${codePrefix}_WEAK_TITLE`);
+    if (Array.from(title).length < MIN_RECIPE_TITLE_LENGTH || Array.from(title).length > MAX_RECIPE_TITLE_LENGTH)
+        throw badRequest('Title must be between 5 and 200 characters', `${codePrefix}_WEAK_TITLE`);
 
     const categoryId = getOptionalNullableNumber(body.categoryId, 'Category must be a number', `${codePrefix}_BAD_CATEGORY`);
-    const description = getOptionalString(body.description, 'Description must be a string', `${codePrefix}_BAD_DESCRIPTION`);
-    const prepTimeMinutes = getOptionalNumber(body.prepTimeMinutes, 'Prep time must be a number', `${codePrefix}_BAD_PREP_TIME`);
-    const restTimeMinutes = getOptionalNullableNumber(body.restTimeMinutes, 'Rest time must be a number', `${codePrefix}_BAD_REST_TIME`);
-    const cookTimeMinutes = getOptionalNullableNumber(body.cookTimeMinutes, 'Cook time must be a number', `${codePrefix}_BAD_COOK_TIME`);
-    const servings = getOptionalNumber(body.servings, 'Servings must be a number', `${codePrefix}_BAD_SERVINGS`);
-    const tagIds = getOptionalArray(body.tagIds, parseTagId, 'Tags must be an array', `${codePrefix}_BAD_TAGS`);
-    const ingredients = getOptionalArray(body.ingredients, parseIngredient, 'Ingredients must be an array', `${codePrefix}_BAD_INGREDIENTS`);
-    const steps = getOptionalArray(body.steps, parseStep, 'Steps must be an array', `${codePrefix}_BAD_STEPS`);
-    const equipments = getOptionalArray(body.equipments, parseEquipment, 'Equipments must be an array', `${codePrefix}_BAD_EQUIPMENTS`);
+    const description = getBoundedString(body.description, 0, MAX_RECIPE_DESCRIPTION_LENGTH, 'Description must not exceed 5000 characters', `${codePrefix}_BAD_DESCRIPTION`);
+    const prepTimeMinutes = getBoundedInteger(body.prepTimeMinutes, MIN_RECIPE_PREP_TIME_MINUTES, MAX_RECIPE_PREP_TIME_MINUTES, 'Prep time must be an integer between 0 and 1440', `${codePrefix}_BAD_PREP_TIME`);
+    const restTimeMinutes = getBoundedNullableInteger(body.restTimeMinutes, MIN_RECIPE_REST_TIME_MINUTES, MAX_RECIPE_REST_TIME_MINUTES, 'Rest time must be an integer between 0 and 43200', `${codePrefix}_BAD_REST_TIME`);
+    const cookTimeMinutes = getBoundedNullableInteger(body.cookTimeMinutes, MIN_RECIPE_COOK_TIME_MINUTES, MAX_RECIPE_COOK_TIME_MINUTES, 'Cook time must be an integer between 0 and 4320', `${codePrefix}_BAD_COOK_TIME`);
+    const servings = getBoundedInteger(body.servings, MIN_RECIPE_SERVINGS, MAX_RECIPE_SERVINGS, 'Servings must be an integer between 1 and 100', `${codePrefix}_BAD_SERVINGS`);
+    const tagIds = getBoundedArray(body.tagIds, MAX_RECIPE_TAGS, parseTagId, 'Tags must be an array of at most 20 items', `${codePrefix}_BAD_TAGS`);
+    const ingredients = getBoundedArray(body.ingredients, MAX_RECIPE_INGREDIENTS, parseIngredient, 'Ingredients must be an array of at most 100 items', `${codePrefix}_BAD_INGREDIENTS`);
+    const steps = getBoundedArray(body.steps, MAX_RECIPE_STEPS, parseStep, 'Steps must be an array of at most 100 items', `${codePrefix}_BAD_STEPS`);
+    const equipments = getBoundedArray(body.equipments, MAX_RECIPE_EQUIPMENTS, parseEquipment, 'Equipments must be an array of at most 50 items', `${codePrefix}_BAD_EQUIPMENTS`);
 
     return { categoryId, title, description, prepTimeMinutes, restTimeMinutes, cookTimeMinutes, servings, tagIds, ingredients, steps, equipments };
 }
