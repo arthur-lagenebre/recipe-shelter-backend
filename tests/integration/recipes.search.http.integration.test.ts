@@ -12,7 +12,7 @@ import { createPaginatedResult } from '../../src/utils/pagination.js';
 import { startHttpTestServer } from '../helpers/http-test-server.js';
 
 import type { RecipeSearchFilters } from '../../src/repositories/recipes/recipe.types.js';
-import type { RecipeService } from '../../src/services/recipes/recipes.services.js';
+import type { RecipeService } from '../../src/services/recipes/recipes.service.js';
 import type { PaginationOptions } from '../../src/utils/pagination.js';
 import type { HttpTestServer } from '../helpers/http-test-server.js';
 
@@ -25,27 +25,40 @@ describe('recipes search HTTP integration', () => {
             async searchPublished(_userId: number | null, filters: RecipeSearchFilters, pagination: PaginationOptions) {
                 receivedSearch = { filters, pagination };
 
-                return createPaginatedResult([{
-                    id: 42,
-                    title: 'Filter fixture',
-                    slug: 'filter-fixture',
-                    description: 'Fixture',
-                    category: 'Main',
-                    coverImage: null,
-                    prepTimeMinutes: 10,
-                    restTimeMinutes: null,
-                    cookTimeMinutes: 20,
-                    servings: 4,
-                    authorUsername: 'author',
-                    publishedAt: new Date('2026-07-13T10:00:00.000Z'),
-                    isFavorite: false
-                }], 13, pagination);
+                return createPaginatedResult(
+                    [
+                        {
+                            id: 42,
+                            title: 'Filter fixture',
+                            slug: 'filter-fixture',
+                            description: 'Fixture',
+                            category: 'Main',
+                            coverImage: null,
+                            prepTimeMinutes: 10,
+                            restTimeMinutes: null,
+                            cookTimeMinutes: 20,
+                            servings: 4,
+                            authorUsername: 'author',
+                            publishedAt: new Date('2026-07-13T10:00:00.000Z'),
+                            isFavorite: false
+                        }
+                    ],
+                    13,
+                    pagination
+                );
             }
         } as unknown as RecipeService;
         const app = express();
 
         app.use(cookieParser());
-        const recipeImageService = { replace: async () => { throw new Error('Not used'); }, delete: async () => { throw new Error('Not used'); } };
+        const recipeImageService = {
+            replace: async () => {
+                throw new Error('Not used');
+            },
+            delete: async () => {
+                throw new Error('Not used');
+            }
+        };
         app.use('/api/v1/recipes', createRecipesRouter(createRecipesController(recipeService, recipeImageService as never)));
         app.use(notFound);
         app.use(errorHandler);
@@ -56,8 +69,10 @@ describe('recipes search HTTP integration', () => {
     after(async () => server.close());
 
     it('deduplicates all id lists and preserves the paginated response contract', async () => {
-        const response = await fetch(`${server.baseUrl}/api/v1/recipes/search?q=fixture&categoryId=3&tagIds=1,1,2&excludedTagIds=8,8&ingredientIds=4,5,4&excludedIngredientIds=10,11,10&maxTotalTimeMinutes=60&page=2&limit=12`);
-        const body = await response.json() as { items: Array<{ id: number }>; pagination: { totalItems: number } };
+        const response = await fetch(
+            `${server.baseUrl}/api/v1/recipes/search?q=fixture&categoryId=3&tagIds=1,1,2&excludedTagIds=8,8&ingredientIds=4,5,4&excludedIngredientIds=10,11,10&maxTotalTimeMinutes=60&page=2&limit=12`
+        );
+        const body = (await response.json()) as { items: Array<{ id: number }>; pagination: { totalItems: number } };
 
         assert.equal(response.status, 200);
         assert.deepEqual(receivedSearch, {

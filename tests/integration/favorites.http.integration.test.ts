@@ -14,8 +14,8 @@ import { createPaginatedResult } from '../../src/utils/pagination.js';
 import { TestSessionRepository } from '../helpers/auth-session.js';
 import { startHttpTestServer } from '../helpers/http-test-server.js';
 
-import type { FavoriteRepository } from '../../src/repositories/favorites/favorites.repository.interface.js';
-import type { Favorite } from '../../src/repositories/favorites/favorites.types.js';
+import type { FavoriteRepository } from '../../src/repositories/favorite/favorite.repository.interface.js';
+import type { Favorite } from '../../src/repositories/favorite/favorite.types.js';
 import type { RecipeRepository } from '../../src/repositories/recipes/recipe.repository.interface.js';
 import type { Recipe, RecipeListItem } from '../../src/repositories/recipes/recipe.types.js';
 import type { User } from '../../src/repositories/users/user.types.js';
@@ -128,7 +128,9 @@ describe('favorites HTTP integration', () => {
         const app = express();
 
         configureAuthUserRepository({
-            async findById(id) { return id === activeUser.id ? activeUser : null; }
+            async findById(id) {
+                return id === activeUser.id ? activeUser : null;
+            }
         });
         const sessions = new TestSessionRepository();
         configureAuthSessionRepository(sessions);
@@ -181,7 +183,7 @@ describe('favorites HTTP integration', () => {
         const listResponse = await fetch(`${server.baseUrl}/api/v1/favorites/me?page=1&limit=5`, {
             headers: { cookie: sessionCookie }
         });
-        const listBody = await listResponse.json() as { items: RecipeListItem[]; pagination: { limit: number; totalItems: number } };
+        const listBody = (await listResponse.json()) as { items: RecipeListItem[]; pagination: { limit: number; totalItems: number } };
 
         assert.equal(listResponse.status, 200);
         assert.equal(listBody.items[0]?.id, 12);

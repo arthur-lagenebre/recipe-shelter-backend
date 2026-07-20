@@ -28,9 +28,6 @@ describe('createImageStorage', () => {
     });
 
     it('rejects an unsupported storage backend at the factory boundary', () => {
-        assert.throws(
-            () => createImageStorage({ ...config, driver: 'unsupported' as never }),
-            /Unknown image storage driver: unsupported/
-        );
+        assert.throws(() => createImageStorage({ ...config, driver: 'unsupported' as never }), /Unknown image storage driver: unsupported/);
     });
 });

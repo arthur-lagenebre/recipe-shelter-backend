@@ -17,13 +17,10 @@ type CommandDependencies = {
     writeOutput(message: string): void;
 };
 
-type CommandOptions =
-    | { help: true }
-    | { help: false; mail: string; username: string };
+type CommandOptions = { help: true } | { help: false; mail: string; username: string };
 
 export function parseBootstrapSuperAdminArgs(args: string[]): CommandOptions {
-    if (args.length === 1 && (args[0] === '--help' || args[0] === '-h'))
-        return { help: true };
+    if (args.length === 1 && (args[0] === '--help' || args[0] === '-h')) return { help: true };
 
     let mail: string | undefined;
     let username: string | undefined;
@@ -32,31 +29,27 @@ export function parseBootstrapSuperAdminArgs(args: string[]): CommandOptions {
         const argument = args[index];
 
         if (argument === '--email') {
-            if (mail !== undefined)
-                throw invalidArguments();
+            if (mail !== undefined) throw invalidArguments();
             mail = readOptionValue(args, index);
             index += 1;
             continue;
         }
 
         if (argument?.startsWith('--email=')) {
-            if (mail !== undefined)
-                throw invalidArguments();
+            if (mail !== undefined) throw invalidArguments();
             mail = argument.slice('--email='.length);
             continue;
         }
 
         if (argument === '--username') {
-            if (username !== undefined)
-                throw invalidArguments();
+            if (username !== undefined) throw invalidArguments();
             username = readOptionValue(args, index);
             index += 1;
             continue;
         }
 
         if (argument?.startsWith('--username=')) {
-            if (username !== undefined)
-                throw invalidArguments();
+            if (username !== undefined) throw invalidArguments();
             username = argument.slice('--username='.length);
             continue;
         }
@@ -64,8 +57,7 @@ export function parseBootstrapSuperAdminArgs(args: string[]): CommandOptions {
         throw invalidArguments();
     }
 
-    if (!mail || !username)
-        throw invalidArguments();
+    if (!mail || !username) throw invalidArguments();
 
     return { help: false, mail, username };
 }
@@ -89,14 +81,11 @@ export async function runBootstrapSuperAdminCommand(args: string[], dependencies
 function readOptionValue(args: string[], optionIndex: number): string {
     const value = args[optionIndex + 1];
 
-    if (!value || value.startsWith('-'))
-        throw invalidArguments();
+    if (!value || value.startsWith('-')) throw invalidArguments();
 
     return value;
 }
 
 function invalidArguments(): CommandUsageError {
-    return new CommandUsageError(
-        'Invalid arguments. Only --email and --username are accepted.'
-    );
+    return new CommandUsageError('Invalid arguments. Only --email and --username are accepted.');
 }

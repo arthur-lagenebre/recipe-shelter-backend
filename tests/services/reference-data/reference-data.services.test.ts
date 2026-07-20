@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { CategoryService } from '../../../src/services/category/category.service.js';
+import { CategoryService } from '../../../src/services/categories/categories.service.js';
 import { EquipmentService } from '../../../src/services/equipments/equipments.service.js';
 import { IngredientService } from '../../../src/services/ingredients/ingredients.service.js';
-import { TagService } from '../../../src/services/tag/tags.service.js';
+import { TagService } from '../../../src/services/tags/tags.service.js';
 import { HttpError } from '../../../src/utils/errors.js';
 
 import type { CategoryRepository } from '../../../src/repositories/category/category.repository.interface.js';
@@ -60,8 +60,13 @@ describe('reference data services', () => {
     it('returns categories and looks up a category by id', async () => {
         const requestedIds: number[] = [];
         const repository: CategoryRepository = {
-            async findAll() { return [category]; },
-            async findById(id) { requestedIds.push(id); return category; }
+            async findAll() {
+                return [category];
+            },
+            async findById(id) {
+                requestedIds.push(id);
+                return category;
+            }
         };
         const service = new CategoryService(repository);
 
@@ -72,55 +77,90 @@ describe('reference data services', () => {
 
     it('reports missing category data', async () => {
         const repository = {
-            async findAll() { return null; },
-            async findById() { return null; }
+            async findAll() {
+                return null;
+            },
+            async findById() {
+                return null;
+            }
         } as unknown as CategoryRepository;
         const service = new CategoryService(repository);
 
-        await assert.rejects(() => service.getCategories(), (error) => assertNotFound(error, 'CATEGORIES_NOT_FOUND'));
-        await assert.rejects(() => service.getCategory(99), (error) => assertNotFound(error, 'CATEGORY_NOT_FOUND'));
+        await assert.rejects(
+            () => service.getCategories(),
+            (error) => assertNotFound(error, 'CATEGORIES_NOT_FOUND')
+        );
+        await assert.rejects(
+            () => service.getCategory(99),
+            (error) => assertNotFound(error, 'CATEGORY_NOT_FOUND')
+        );
     });
 
     it('returns equipments and reports missing equipment data', async () => {
         const repository: EquipmentRepository = {
-            async findAll() { return [equipment]; },
-            async findById(id) { return id === equipment.id ? equipment : null; }
+            async findAll() {
+                return [equipment];
+            },
+            async findById(id) {
+                return id === equipment.id ? equipment : null;
+            }
         };
         const service = new EquipmentService(repository);
 
         assert.deepEqual(await service.getEquipments(), [equipment]);
         assert.deepEqual(await service.getEquipment(2), equipment);
-        await assert.rejects(() => service.getEquipment(99), (error) => assertNotFound(error, 'EQUIPMENT_NOT_FOUND'));
+        await assert.rejects(
+            () => service.getEquipment(99),
+            (error) => assertNotFound(error, 'EQUIPMENT_NOT_FOUND')
+        );
     });
 
     it('returns ingredients and reports missing ingredient data', async () => {
         const repository: IngredientRepository = {
-            async findAll() { return [ingredient]; },
-            async findById(id) { return id === ingredient.id ? ingredient : null; }
+            async findAll() {
+                return [ingredient];
+            },
+            async findById(id) {
+                return id === ingredient.id ? ingredient : null;
+            }
         };
         const service = new IngredientService(repository);
 
         assert.deepEqual(await service.getIngredients(), [ingredient]);
         assert.deepEqual(await service.getIngredient(3), ingredient);
-        await assert.rejects(() => service.getIngredient(99), (error) => assertNotFound(error, 'INGREDIENT_NOT_FOUND'));
+        await assert.rejects(
+            () => service.getIngredient(99),
+            (error) => assertNotFound(error, 'INGREDIENT_NOT_FOUND')
+        );
     });
 
     it('returns tags and reports missing tag data', async () => {
         const repository: TagRepository = {
-            async findAll() { return [tag]; },
-            async findById(id) { return id === tag.id ? tag : null; }
+            async findAll() {
+                return [tag];
+            },
+            async findById(id) {
+                return id === tag.id ? tag : null;
+            }
         };
         const service = new TagService(repository);
 
         assert.deepEqual(await service.getTags(), [tag]);
         assert.deepEqual(await service.getTag(4), tag);
-        await assert.rejects(() => service.getTag(99), (error) => assertNotFound(error, 'TAG_NOT_FOUND'));
+        await assert.rejects(
+            () => service.getTag(99),
+            (error) => assertNotFound(error, 'TAG_NOT_FOUND')
+        );
     });
 
     it('accepts empty reference lists as valid results', async () => {
         const categories = new CategoryService({
-            async findAll() { return []; },
-            async findById() { return null; }
+            async findAll() {
+                return [];
+            },
+            async findById() {
+                return null;
+            }
         });
 
         assert.deepEqual(await categories.getCategories(), []);

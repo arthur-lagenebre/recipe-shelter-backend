@@ -1,4 +1,4 @@
-import type { Category } from "./category.types.js";
+import type { Category } from './category.types.js';
 
 export interface CategoryRepository {
     findAll(): Promise<Category[]>;

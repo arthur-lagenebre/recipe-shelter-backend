@@ -1,4 +1,4 @@
-import type { Category, CategoryRow } from "./category.types.js";
+import type { Category, CategoryRow } from './category.types.js';
 
 export function mapCategory(row: CategoryRow): Category {
     return {

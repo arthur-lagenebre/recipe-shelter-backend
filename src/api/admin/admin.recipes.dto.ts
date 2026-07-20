@@ -20,8 +20,7 @@ function parseRecipeModerationReasonBody(body: unknown, action: 'archive' | 'rej
     const codePrefix = `ADMIN_RECIPES_${action.toUpperCase()}`;
     const label = action === 'reject' ? 'Rejection' : 'Archive';
 
-    if (!isRecord(body))
-        throw badRequest('Invalid body', `${codePrefix}_BAD_BODY`);
+    if (!isRecord(body)) throw badRequest('Invalid body', `${codePrefix}_BAD_BODY`);
 
     const reason = getRequiredString(body.reason, `${label} reason is required`, `${codePrefix}_MISSING_REASON`);
 

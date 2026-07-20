@@ -7,7 +7,7 @@ import type { ResultSetHeader } from 'mysql2';
 import type { Pool, PoolConnection } from 'mysql2/promise';
 
 export class AdminCommentRepositoryMysql implements AdminCommentRepository {
-    constructor(private readonly db: Pool) { }
+    constructor(private readonly db: Pool) {}
 
     async findModeratedForAdmin(): Promise<AdminComment[]> {
         const [rows] = await this.db.execute(
@@ -102,8 +102,7 @@ export class AdminCommentRepositoryMysql implements AdminCommentRepository {
             [commentId, auditLogId, commentId]
         );
 
-        if (result.affectedRows !== 1)
-            throw new Error('Comment moderation log does not match its administrative audit entry');
+        if (result.affectedRows !== 1) throw new Error('Comment moderation log does not match its administrative audit entry');
     }
 
     async unmoderate(id: number, db?: PoolConnection): Promise<boolean> {
@@ -136,8 +135,7 @@ export class AdminCommentRepositoryMysql implements AdminCommentRepository {
             [input.comment, input.rating ?? null, input.id]
         );
 
-        if (result.affectedRows === 0)
-            return null;
+        if (result.affectedRows === 0) return null;
 
         return this.findByIdForAdmin(input.id, db);
     }

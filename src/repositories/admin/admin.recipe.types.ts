@@ -9,7 +9,7 @@ export type RecipePending = {
     slug: string;
     description: string;
     submittedAt: Date;
-}
+};
 
 export type RecipeAdmin = {
     id: number;
@@ -37,7 +37,7 @@ export type RecipeAdmin = {
     ingredients: AdminRecipeIngredient[];
     steps: AdminRecipeStep[];
     equipments: AdminRecipeEquipment[];
-}
+};
 
 export type AdminRecipeAuditState = {
     id: number;
@@ -111,30 +111,31 @@ export type RecipePendingRow = RowDataPacket & {
     SubmittedAt: Date;
 };
 
-export type RecipeAdminRow = RowDataPacket & RecipeImageJoinedRow & {
-    Id: number;
-    UserId: number;
-    CategoryId: number | null;
-    Title: string;
-    Slug: string;
-    Description: string;
-    PrepTimeMinutes: number;
-    RestTimeMinutes: number | null;
-    CookTimeMinutes: number | null;
-    Servings: number;
-    Status: string;
-    CreatedAt: Date;
-    SubmittedAt: Date | null;
-    ModeratedAt: Date | null;
-    ModeratedByUserId: number | null;
-    PublishedAt: Date | null;
-    ArchivedAt: Date | null;
-    RejectionReason: string | null;
-    ArchiveReason: string | null;
-    UpdatedAt: Date;
-    Username: string;
-    Category: string | null;
-};
+export type RecipeAdminRow = RowDataPacket &
+    RecipeImageJoinedRow & {
+        Id: number;
+        UserId: number;
+        CategoryId: number | null;
+        Title: string;
+        Slug: string;
+        Description: string;
+        PrepTimeMinutes: number;
+        RestTimeMinutes: number | null;
+        CookTimeMinutes: number | null;
+        Servings: number;
+        Status: string;
+        CreatedAt: Date;
+        SubmittedAt: Date | null;
+        ModeratedAt: Date | null;
+        ModeratedByUserId: number | null;
+        PublishedAt: Date | null;
+        ArchivedAt: Date | null;
+        RejectionReason: string | null;
+        ArchiveReason: string | null;
+        UpdatedAt: Date;
+        Username: string;
+        Category: string | null;
+    };
 
 export type AdminRecipeAuditStateRow = RowDataPacket & {
     Id: number;

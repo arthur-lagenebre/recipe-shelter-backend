@@ -7,7 +7,7 @@ export type Category = {
     iconName: string;
     createdAt: Date;
     updatedAt: Date;
-}
+};
 
 export type CategoryRow = RowDataPacket & {
     Id: number;

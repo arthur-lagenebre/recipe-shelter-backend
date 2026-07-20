@@ -1,18 +1,22 @@
-import { parseCreateRecipeBody, parseRecipeFeedLimitQuery, parseRecipeSlugParam, parseRecipeIdParam, parseRecipeSearchQuery, parseUpdateRecipeBody } from './recipes.dto.js';
+import {
+    parseCreateRecipeBody,
+    parseRecipeFeedLimitQuery,
+    parseRecipeSlugParam,
+    parseRecipeIdParam,
+    parseRecipeSearchQuery,
+    parseUpdateRecipeBody
+} from './recipes.dto.js';
+import { unauthorized } from '../../utils/errors.js';
 import { parsePaginationQuery } from '../../utils/pagination.js';
 import { asyncHandler } from '../http/async-handler.js';
 
 import type { RecipeImageService } from '../../services/recipes/recipe-image.service.js';
-import type { RecipeService } from '../../services/recipes/recipes.services.js';
+import type { RecipeService } from '../../services/recipes/recipes.service.js';
 
 export function createRecipesController(recipeService: RecipeService, recipeImageService: RecipeImageService) {
     return {
         getMyRecipes: asyncHandler(async (req, res) => {
-            if (!req.auth) {
-                res.status(401).json({ error: { message: 'Unauthorized', code: 'AUTH_UNAUTHORIZED' } });
-
-                return;
-            }
+            if (!req.auth) throw unauthorized('Unauthorized', 'AUTH_UNAUTHORIZED');
 
             const pagination = parsePaginationQuery(req.query, 10, 'RECIPES_PAGINATION');
             const result = await recipeService.getMine(req.auth.userId, pagination);
@@ -21,11 +25,7 @@ export function createRecipesController(recipeService: RecipeService, recipeImag
         }),
 
         createRecipe: asyncHandler(async (req, res) => {
-            if (!req.auth) {
-                res.status(401).json({ error: { message: 'Unauthorized', code: 'AUTH_UNAUTHORIZED' } });
-
-                return;
-            }
+            if (!req.auth) throw unauthorized('Unauthorized', 'AUTH_UNAUTHORIZED');
 
             const body = parseCreateRecipeBody(req.body);
             const result = await recipeService.create(req.auth.userId, body);
@@ -69,13 +69,8 @@ export function createRecipesController(recipeService: RecipeService, recipeImag
             res.status(200).json(result);
         }),
 
-
         getRecipe: asyncHandler(async (req, res) => {
-            if (!req.auth) {
-                res.status(401).json({ error: { message: 'Unauthorized', code: 'AUTH_UNAUTHORIZED' } });
-
-                return;
-            }
+            if (!req.auth) throw unauthorized('Unauthorized', 'AUTH_UNAUTHORIZED');
 
             const recipeId = parseRecipeIdParam(req.params.id);
             const result = await recipeService.get(recipeId, req.auth);
@@ -84,11 +79,7 @@ export function createRecipesController(recipeService: RecipeService, recipeImag
         }),
 
         updateRecipe: asyncHandler(async (req, res) => {
-            if (!req.auth) {
-                res.status(401).json({ error: { message: 'Unauthorized', code: 'AUTH_UNAUTHORIZED' } });
-
-                return;
-            }
+            if (!req.auth) throw unauthorized('Unauthorized', 'AUTH_UNAUTHORIZED');
 
             const recipeId = parseRecipeIdParam(req.params.id);
             const body = parseUpdateRecipeBody(req.body);
@@ -98,11 +89,7 @@ export function createRecipesController(recipeService: RecipeService, recipeImag
         }),
 
         submitRecipe: asyncHandler(async (req, res) => {
-            if (!req.auth) {
-                res.status(401).json({ error: { message: 'Unauthorized', code: 'AUTH_UNAUTHORIZED' } });
-
-                return;
-            }
+            if (!req.auth) throw unauthorized('Unauthorized', 'AUTH_UNAUTHORIZED');
 
             const recipeId = parseRecipeIdParam(req.params.id);
             const result = await recipeService.submit(recipeId, req.auth);
@@ -111,23 +98,16 @@ export function createRecipesController(recipeService: RecipeService, recipeImag
         }),
 
         archiveRecipe: asyncHandler(async (req, res) => {
-            if (!req.auth) {
-                res.status(401).json({ error: { message: 'Unauthorized', code: 'AUTH_UNAUTHORIZED' } });
-
-                return;
-            }
+            if (!req.auth) throw unauthorized('Unauthorized', 'AUTH_UNAUTHORIZED');
 
             const recipeId = parseRecipeIdParam(req.params.id);
             const result = await recipeService.archive(recipeId, req.auth);
 
-            res.status(200).json({ "ok": result });
+            res.status(200).json({ ok: result });
         }),
 
         replaceCoverImage: asyncHandler(async (req, res) => {
-            if (!req.auth) {
-                res.status(401).json({ error: { message: 'Unauthorized', code: 'AUTH_UNAUTHORIZED' } });
-                return;
-            }
+            if (!req.auth) throw unauthorized('Unauthorized', 'AUTH_UNAUTHORIZED');
 
             const recipeId = parseRecipeIdParam(req.params.recipeId);
             const result = await recipeImageService.replace(
@@ -141,16 +121,12 @@ export function createRecipesController(recipeService: RecipeService, recipeImag
         }),
 
         deleteCoverImage: asyncHandler(async (req, res) => {
-            if (!req.auth) {
-                res.status(401).json({ error: { message: 'Unauthorized', code: 'AUTH_UNAUTHORIZED' } });
-                return;
-            }
+            if (!req.auth) throw unauthorized('Unauthorized', 'AUTH_UNAUTHORIZED');
 
             const recipeId = parseRecipeIdParam(req.params.recipeId);
             await recipeImageService.delete(recipeId, req.auth);
 
             res.status(204).send();
-        }),
-
+        })
     };
 }

@@ -34,10 +34,7 @@ describe('admin.recipes.dto', () => {
     });
 
     it('requires bounded reasons for rejection and administrative archive', () => {
-        assert.equal(
-            parseArchiveRecipeBody({ reason: '  Repeated policy violations.  ' }),
-            'Repeated policy violations.'
-        );
+        assert.equal(parseArchiveRecipeBody({ reason: '  Repeated policy violations.  ' }), 'Repeated policy violations.');
 
         for (const [parser, codePrefix] of [
             [parseRejectRecipeBody, 'ADMIN_RECIPES_REJECT'],

@@ -23,8 +23,7 @@ class FakeTransporter {
     deliveryError: Error | null = null;
 
     async sendMail(message: SendMailOptions): Promise<SentMessageInfo> {
-        if (this.deliveryError)
-            throw this.deliveryError;
+        if (this.deliveryError) throw this.deliveryError;
 
         this.messages.push(message);
         return { messageId: 'test-message' } as SentMessageInfo;
@@ -33,10 +32,7 @@ class FakeTransporter {
 
 function createService(overrides: Partial<SmtpConfig> = {}) {
     const transporter = new FakeTransporter();
-    const service = new SmtpMailService(
-        { ...config, ...overrides },
-        transporter as unknown as Pick<Transporter, 'sendMail'>
-    );
+    const service = new SmtpMailService({ ...config, ...overrides }, transporter as unknown as Pick<Transporter, 'sendMail'>);
 
     return { service, transporter };
 }
@@ -127,13 +123,14 @@ describe('SmtpMailService', () => {
 
         const contact = createService({ contactRecipientEmail: '' });
         await assert.rejects(
-            () => contact.service.sendContactEmail({
-                name: 'Alice',
-                email: 'alice@example.com',
-                subject: 'Question',
-                message: 'Hello',
-                sentAt: new Date()
-            }),
+            () =>
+                contact.service.sendContactEmail({
+                    name: 'Alice',
+                    email: 'alice@example.com',
+                    subject: 'Question',
+                    message: 'Hello',
+                    sentAt: new Date()
+                }),
             (error) => assertMailError(error, 'CONTACT_SEND_FAILED')
         );
         assert.equal(contact.transporter.messages.length, 0);
@@ -143,24 +140,26 @@ describe('SmtpMailService', () => {
         const application = createService();
         application.transporter.deliveryError = new Error('SMTP unavailable');
         await assert.rejects(
-            () => application.service.sendEmailValidationEmail({
-                to: 'alice@example.com',
-                username: 'alice',
-                validationUrl: 'https://front.example/validate'
-            }),
+            () =>
+                application.service.sendEmailValidationEmail({
+                    to: 'alice@example.com',
+                    username: 'alice',
+                    validationUrl: 'https://front.example/validate'
+                }),
             (error) => assertMailError(error, 'MAIL_SEND_FAILED')
         );
 
         const contact = createService();
         contact.transporter.deliveryError = new Error('SMTP unavailable');
         await assert.rejects(
-            () => contact.service.sendContactEmail({
-                name: 'Alice',
-                email: 'alice@example.com',
-                subject: 'Question',
-                message: 'Hello',
-                sentAt: new Date()
-            }),
+            () =>
+                contact.service.sendContactEmail({
+                    name: 'Alice',
+                    email: 'alice@example.com',
+                    subject: 'Question',
+                    message: 'Hello',
+                    sentAt: new Date()
+                }),
             (error) => assertMailError(error, 'CONTACT_SEND_FAILED')
         );
     });

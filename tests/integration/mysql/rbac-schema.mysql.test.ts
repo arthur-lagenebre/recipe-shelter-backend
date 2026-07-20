@@ -15,16 +15,12 @@ const baseTestDatabaseName = process.env.TEST_DB_NAME?.trim() ?? '';
 const mysqlEnabled = Boolean(baseTestDatabaseName);
 
 function requireRbacTestDatabaseName(): string {
-    if (!/^[a-zA-Z0-9_]+$/.test(baseTestDatabaseName))
-        throw new Error('TEST_DB_NAME must contain only letters, numbers and underscores');
-    if (!baseTestDatabaseName.toLowerCase().includes('test'))
-        throw new Error('TEST_DB_NAME must contain "test"');
-    if (baseTestDatabaseName === env.db.name)
-        throw new Error('TEST_DB_NAME must be different from DB_NAME');
+    if (!/^[a-zA-Z0-9_]+$/.test(baseTestDatabaseName)) throw new Error('TEST_DB_NAME must contain only letters, numbers and underscores');
+    if (!baseTestDatabaseName.toLowerCase().includes('test')) throw new Error('TEST_DB_NAME must contain "test"');
+    if (baseTestDatabaseName === env.db.name) throw new Error('TEST_DB_NAME must be different from DB_NAME');
 
     const databaseName = `${baseTestDatabaseName}_rbac`;
-    if (databaseName.length > 64)
-        throw new Error('TEST_DB_NAME is too long for the RBAC integration database suffix');
+    if (databaseName.length > 64) throw new Error('TEST_DB_NAME is too long for the RBAC integration database suffix');
     return databaseName;
 }
 
@@ -70,8 +66,7 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
 
     after(async () => {
         if (connection) {
-            if (pool)
-                await pool.end();
+            if (pool) await pool.end();
             await connection.query(`DROP DATABASE IF EXISTS \`${requireRbacTestDatabaseName()}\``);
             await connection.end();
         }
@@ -137,9 +132,7 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
             (permissions as Array<{ Code: string }>).map(({ Code }) => Code),
             [...Object.values(PERMISSIONS)].sort()
         );
-        assert.ok(
-            (permissions as Array<{ Description: string }>).every(({ Description }) => Description.trim().length > 0)
-        );
+        assert.ok((permissions as Array<{ Description: string }>).every(({ Description }) => Description.trim().length > 0));
 
         const [rolePermissions] = await connection.query(
             `SELECT r.Code AS RoleCode, p.Code AS PermissionCode
@@ -167,32 +160,16 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
                 PERMISSIONS.tagRead,
                 PERMISSIONS.tagUpdate
             ],
-            CommentModerator: [
-                PERMISSIONS.commentHide,
-                PERMISSIONS.commentRestore,
-                PERMISSIONS.commentReview,
-                PERMISSIONS.commentsUpdate
-            ],
-            RecipeModerator: [
-                PERMISSIONS.recipeArchive,
-                PERMISSIONS.recipePublish,
-                PERMISSIONS.recipeReject,
-                PERMISSIONS.recipeReview
-            ],
+            CommentModerator: [PERMISSIONS.commentHide, PERMISSIONS.commentRestore, PERMISSIONS.commentReview, PERMISSIONS.commentsUpdate],
+            RecipeModerator: [PERMISSIONS.recipeArchive, PERMISSIONS.recipePublish, PERMISSIONS.recipeReject, PERMISSIONS.recipeReview],
             SuperAdmin: [...Object.values(PERMISSIONS)].sort(),
-            UserAdmin: [
-                PERMISSIONS.userBan,
-                PERMISSIONS.userRead,
-                PERMISSIONS.userUnban
-            ]
+            UserAdmin: [PERMISSIONS.userBan, PERMISSIONS.userRead, PERMISSIONS.userUnban]
         });
 
         const [seededAccounts] = await connection.query(`SELECT COUNT(*) AS AccountCount FROM Users`);
         assert.deepEqual(seededAccounts, [{ AccountCount: 0 }]);
 
-        const [seededRoleAssignments] = await connection.query(
-            `SELECT COUNT(*) AS AssignmentCount FROM StaffRoles`
-        );
+        const [seededRoleAssignments] = await connection.query(`SELECT COUNT(*) AS AssignmentCount FROM StaffRoles`);
         assert.deepEqual(seededRoleAssignments, [{ AssignmentCount: 0 }]);
     });
 
@@ -273,14 +250,16 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
              INSERT INTO Comments (RecipeId, UserId, Comment) VALUES (200, 110, 'Allowed author')`
         );
 
-        await assert.rejects(() => connection.query(
-            `INSERT INTO Recipes (Id, UserId, CategoryId, Title, Slug, Description, PrepTimeMinutes, Servings)
+        await assert.rejects(() =>
+            connection.query(
+                `INSERT INTO Recipes (Id, UserId, CategoryId, Title, Slug, Description, PrepTimeMinutes, Servings)
              VALUES (201, 111, 100, 'Staff recipe', 'staff-recipe', 'Forbidden owner', 5, 2)`
-        ));
+            )
+        );
         await assert.rejects(() => connection.query(`INSERT INTO Favorites (UserId, RecipeId) VALUES (111, 200)`));
-        await assert.rejects(() => connection.query(
-            `INSERT INTO Comments (RecipeId, UserId, Comment) VALUES (200, 111, 'Forbidden author')`
-        ));
+        await assert.rejects(() =>
+            connection.query(`INSERT INTO Comments (RecipeId, UserId, Comment) VALUES (200, 111, 'Forbidden author')`)
+        );
     });
 
     it('enforces unique assignments, foreign keys and default deny', async () => {
@@ -302,14 +281,18 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
         await assert.rejects(() => connection.query(`INSERT INTO StaffRoles (StaffUserId, RoleId) VALUES (101, 999999)`));
         await assert.rejects(() => connection.query(`INSERT INTO RolePermissions (RoleId, PermissionId) VALUES (5, 1)`));
         await assert.rejects(() => connection.query(`INSERT INTO RolePermissions (RoleId, PermissionId) VALUES (1, 999999)`));
-        await assert.rejects(() => connection.query(
-            `INSERT INTO Roles (Code, Name, Description)
+        await assert.rejects(() =>
+            connection.query(
+                `INSERT INTO Roles (Code, Name, Description)
              VALUES ('RECIPEMODERATOR', 'Autre rôle recettes', 'Duplicate code')`
-        ));
-        await assert.rejects(() => connection.query(
-            `INSERT INTO Roles (Code, Name, Description)
+            )
+        );
+        await assert.rejects(() =>
+            connection.query(
+                `INSERT INTO Roles (Code, Name, Description)
              VALUES ('OtherRecipeModerator', 'MODÉRATEUR DE RECETTES', 'Duplicate name')`
-        ));
+            )
+        );
         await assert.rejects(() => connection.query(`INSERT INTO Permissions (Code, Description) VALUES ('USER.READ', 'Duplicate')`));
     });
 
@@ -334,9 +317,9 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
         );
 
         await assert.rejects(() => connection.query(`UPDATE Users SET Status = 'active' WHERE Id = 121`));
-        await assert.rejects(() => connection.query(
-            `UPDATE StaffProfiles SET MfaEnrolledAt = CURRENT_TIMESTAMP, Status = 'active' WHERE UserId = 121`
-        ));
+        await assert.rejects(() =>
+            connection.query(`UPDATE StaffProfiles SET MfaEnrolledAt = CURRENT_TIMESTAMP, Status = 'active' WHERE UserId = 121`)
+        );
         await connection.query(
             `INSERT INTO StaffWebAuthnCredentials
                (CredentialId, StaffUserId, PublicKey, SignatureCounter, Transports, DeviceType, BackedUp, Aaguid)
@@ -360,52 +343,68 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
                      DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 8 HOUR))`
         );
 
-        await assert.rejects(() => connection.query(
-            `INSERT INTO CommunitySessions (Id, CommunityUserId, ExpiresAt)
+        await assert.rejects(() =>
+            connection.query(
+                `INSERT INTO CommunitySessions (Id, CommunityUserId, ExpiresAt)
              VALUES ('00000000-0000-4000-8000-000000000122', 121, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 1 DAY))`
-        ));
-        await assert.rejects(() => connection.query(
-            `INSERT INTO StaffSessions (Id, StaffUserId, WebAuthnCredentialId, MfaVerifiedAt, ExpiresAt)
+            )
+        );
+        await assert.rejects(() =>
+            connection.query(
+                `INSERT INTO StaffSessions (Id, StaffUserId, WebAuthnCredentialId, MfaVerifiedAt, ExpiresAt)
              VALUES ('00000000-0000-4000-8000-000000000123', 120, 'credential-121', CURRENT_TIMESTAMP,
                      DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 8 HOUR))`
-        ));
-        await assert.rejects(() => connection.query(
-            `INSERT INTO StaffSessions (Id, StaffUserId, WebAuthnCredentialId, MfaVerifiedAt, ExpiresAt)
+            )
+        );
+        await assert.rejects(() =>
+            connection.query(
+                `INSERT INTO StaffSessions (Id, StaffUserId, WebAuthnCredentialId, MfaVerifiedAt, ExpiresAt)
              VALUES ('00000000-0000-4000-8000-000000000124', 121, 'unknown-credential', CURRENT_TIMESTAMP,
                      DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 8 HOUR))`
-        ));
-        await assert.rejects(() => connection.query(
-            `INSERT INTO StaffSessions (Id, StaffUserId, WebAuthnCredentialId, MfaVerifiedAt, ExpiresAt)
+            )
+        );
+        await assert.rejects(() =>
+            connection.query(
+                `INSERT INTO StaffSessions (Id, StaffUserId, WebAuthnCredentialId, MfaVerifiedAt, ExpiresAt)
              VALUES ('00000000-0000-4000-8000-000000000125', 121, 'credential-121', NULL,
                      DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 8 HOUR))`
-        ));
-        await assert.rejects(() => connection.query(
-            `UPDATE StaffSessions
+            )
+        );
+        await assert.rejects(() =>
+            connection.query(
+                `UPDATE StaffSessions
              SET RevokedByStaffUserId = 121, RevocationType = 'self'
              WHERE Id = '00000000-0000-4000-8000-000000000121'`
-        ));
+            )
+        );
 
         const sessions = new SessionRepositoryMysql(pool);
         const activeSessions = await sessions.findActiveStaffSessionsByUserId(121);
         assert.equal(activeSessions.length, 1);
-        assert.deepEqual({
-            id: activeSessions[0]?.id,
-            mfaMethod: activeSessions[0]?.mfaMethod,
-            ipAddress: activeSessions[0]?.ipAddress,
-            userAgent: activeSessions[0]?.userAgent
-        }, {
-            id: '00000000-0000-4000-8000-000000000121',
-            mfaMethod: 'webauthn',
-            ipAddress: '192.0.2.121',
-            userAgent: 'Recipe Shelter schema test'
-        });
+        assert.deepEqual(
+            {
+                id: activeSessions[0]?.id,
+                mfaMethod: activeSessions[0]?.mfaMethod,
+                ipAddress: activeSessions[0]?.ipAddress,
+                userAgent: activeSessions[0]?.userAgent
+            },
+            {
+                id: '00000000-0000-4000-8000-000000000121',
+                mfaMethod: 'webauthn',
+                ipAddress: '192.0.2.121',
+                userAgent: 'Recipe Shelter schema test'
+            }
+        );
         assert.equal('webAuthnCredentialId' in (activeSessions[0] as unknown as Record<string, unknown>), false);
-        assert.equal(await sessions.revokeStaffSession({
-            id: '00000000-0000-4000-8000-000000000121',
-            staffUserId: 121,
-            revokedByStaffUserId: 121,
-            revocationType: 'self'
-        }), true);
+        assert.equal(
+            await sessions.revokeStaffSession({
+                id: '00000000-0000-4000-8000-000000000121',
+                staffUserId: 121,
+                revokedByStaffUserId: 121,
+                revocationType: 'self'
+            }),
+            true
+        );
         assert.deepEqual(await sessions.findActiveStaffSessionsByUserId(121), []);
 
         const [revokedSession] = await connection.query(
@@ -413,12 +412,14 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
              FROM StaffSessions
              WHERE Id = '00000000-0000-4000-8000-000000000121'`
         );
-        assert.deepEqual(revokedSession, [{
-            IpAddress: '192.0.2.121',
-            UserAgent: 'Recipe Shelter schema test',
-            RevokedByStaffUserId: 121,
-            RevocationType: 'self'
-        }]);
+        assert.deepEqual(revokedSession, [
+            {
+                IpAddress: '192.0.2.121',
+                UserAgent: 'Recipe Shelter schema test',
+                RevokedByStaffUserId: 121,
+                RevocationType: 'self'
+            }
+        ]);
     });
 
     it('completes enrollment and authentication atomically through the WebAuthn repository', async () => {
@@ -462,10 +463,13 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
             }
         };
 
-        assert.equal(await repository.completeEnrollment({
-            ...enrollmentInput,
-            invitationTokenHash: 'c'.repeat(64)
-        }), false);
+        assert.equal(
+            await repository.completeEnrollment({
+                ...enrollmentInput,
+                invitationTokenHash: 'c'.repeat(64)
+            }),
+            false
+        );
         const [pendingRows] = await connection.query(
             `SELECT u.Password, sp.Status AS StaffStatus, sp.MfaEnrolledAt, si.UsedAt,
                     (SELECT COUNT(*) FROM StaffWebAuthnCredentials WHERE StaffUserId = 130) AS CredentialCount
@@ -474,13 +478,15 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
              INNER JOIN StaffInvitations AS si ON si.StaffUserId = u.Id
              WHERE u.Id = 130`
         );
-        assert.deepEqual(pendingRows, [{
-            Password: null,
-            StaffStatus: 'invited',
-            MfaEnrolledAt: null,
-            UsedAt: null,
-            CredentialCount: 0
-        }]);
+        assert.deepEqual(pendingRows, [
+            {
+                Password: null,
+                StaffStatus: 'invited',
+                MfaEnrolledAt: null,
+                UsedAt: null,
+                CredentialCount: 0
+            }
+        ]);
 
         assert.equal(await repository.completeEnrollment(enrollmentInput), true);
         assert.equal(await repository.completeEnrollment(enrollmentInput), false);
@@ -493,13 +499,15 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
              INNER JOIN StaffInvitations AS si ON si.StaffUserId = u.Id
              WHERE u.Id = 130`
         );
-        const enrolled = (enrolledRows as Array<{
-            Password: string;
-            UserStatus: string;
-            StaffStatus: string;
-            MfaEnrolledAt: Date | null;
-            UsedAt: Date | null;
-        }>)[0];
+        const enrolled = (
+            enrolledRows as Array<{
+                Password: string;
+                UserStatus: string;
+                StaffStatus: string;
+                MfaEnrolledAt: Date | null;
+                UsedAt: Date | null;
+            }>
+        )[0];
         assert.equal(enrolled?.Password, 'password-hash');
         assert.equal(enrolled?.UserStatus, 'active');
         assert.equal(enrolled?.StaffStatus, 'active');
@@ -515,20 +523,26 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
             challenge: 'authentication-challenge-130',
             ttlMs: 300_000
         });
-        assert.equal(await repository.completeAuthentication({
-            challengeId: '00000000-0000-4000-8000-000000000131',
-            staffUserId: 130,
-            credentialId: 'credential-130',
-            expectedCounter: 0,
-            newCounter: 1
-        }), true);
-        assert.equal(await repository.completeAuthentication({
-            challengeId: '00000000-0000-4000-8000-000000000131',
-            staffUserId: 130,
-            credentialId: 'credential-130',
-            expectedCounter: 0,
-            newCounter: 1
-        }), false);
+        assert.equal(
+            await repository.completeAuthentication({
+                challengeId: '00000000-0000-4000-8000-000000000131',
+                staffUserId: 130,
+                credentialId: 'credential-130',
+                expectedCounter: 0,
+                newCounter: 1
+            }),
+            true
+        );
+        assert.equal(
+            await repository.completeAuthentication({
+                challengeId: '00000000-0000-4000-8000-000000000131',
+                staffUserId: 130,
+                credentialId: 'credential-130',
+                expectedCounter: 0,
+                newCounter: 1
+            }),
+            false
+        );
 
         const credential = await repository.findCredential(130, 'credential-130');
         assert.equal(credential?.signatureCounter, 1);

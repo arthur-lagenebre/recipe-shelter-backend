@@ -5,12 +5,12 @@ import { after, before, describe, it } from 'node:test';
 import mysql from 'mysql2/promise';
 
 import { AdminUserRepositoryMysql } from '../../../src/repositories/admin/admin.users.repository.mysql.js';
-import { AdminAuditQueryRepositoryMysql } from '../../../src/repositories/admin/admin-audit-query.repository.mysql.js';
-import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin-audit.repository.mysql.js';
+import { AdminAuditQueryRepositoryMysql } from '../../../src/repositories/admin/admin.audit-query.repository.mysql.js';
+import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin.audit.repository.mysql.js';
 import { UserRepositoryMysql } from '../../../src/repositories/users/user.repository.mysql.js';
-import { AdminAuditActionRunnerMysql } from '../../../src/services/admin/admin-audit-action.runner.js';
-import { ADMIN_AUDIT_EVENT_TYPES, ADMIN_AUDIT_TARGET_TYPES } from '../../../src/services/admin/admin-audit.events.js';
-import { AdminAuditService } from '../../../src/services/admin/admin-audit.service.js';
+import { AdminAuditActionRunnerMysql } from '../../../src/services/admin/admin.audit-action.runner.js';
+import { ADMIN_AUDIT_EVENT_TYPES, ADMIN_AUDIT_TARGET_TYPES } from '../../../src/services/admin/admin.audit.events.js';
+import { AdminAuditService } from '../../../src/services/admin/admin.audit.service.js';
 import { AdminUserService } from '../../../src/services/admin/admin.users.service.js';
 import { env } from '../../../src/utils/env.js';
 
@@ -20,16 +20,12 @@ const baseTestDatabaseName = process.env.TEST_DB_NAME?.trim() ?? '';
 const mysqlEnabled = Boolean(baseTestDatabaseName);
 
 function requireAuditTestDatabaseName(): string {
-    if (!/^[a-zA-Z0-9_]+$/.test(baseTestDatabaseName))
-        throw new Error('TEST_DB_NAME must contain only letters, numbers and underscores');
-    if (!baseTestDatabaseName.toLowerCase().includes('test'))
-        throw new Error('TEST_DB_NAME must contain "test"');
-    if (baseTestDatabaseName === env.db.name)
-        throw new Error('TEST_DB_NAME must be different from DB_NAME');
+    if (!/^[a-zA-Z0-9_]+$/.test(baseTestDatabaseName)) throw new Error('TEST_DB_NAME must contain only letters, numbers and underscores');
+    if (!baseTestDatabaseName.toLowerCase().includes('test')) throw new Error('TEST_DB_NAME must contain "test"');
+    if (baseTestDatabaseName === env.db.name) throw new Error('TEST_DB_NAME must be different from DB_NAME');
 
     const databaseName = `${baseTestDatabaseName}_audit`;
-    if (databaseName.length > 64)
-        throw new Error('TEST_DB_NAME is too long for the audit integration database suffix');
+    if (databaseName.length > 64) throw new Error('TEST_DB_NAME is too long for the audit integration database suffix');
     return databaseName;
 }
 
@@ -48,10 +44,7 @@ function assertImmutableAuditError(error: unknown, operation: 'DELETE' | 'UPDATE
 
     assert.equal(mysqlError.errno, 1644);
     assert.equal(mysqlError.sqlState, '45000');
-    assert.equal(
-        mysqlError.sqlMessage,
-        `Admin audit logs are append-only: ${operation} is forbidden`
-    );
+    assert.equal(mysqlError.sqlMessage, `Admin audit logs are append-only: ${operation} is forbidden`);
     return true;
 }
 
@@ -76,9 +69,7 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
         });
 
         await connection.query(`DROP DATABASE IF EXISTS \`${databaseName}\``);
-        await connection.query(
-            `CREATE DATABASE \`${databaseName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
-        );
+        await connection.query(`CREATE DATABASE \`${databaseName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
 
         const schemaPath = new URL('../../../database/migrations/1_create_schema.sql', import.meta.url);
         const seedPath = new URL('../../../database/seed.sql', import.meta.url);
@@ -104,8 +95,7 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
     });
 
     after(async () => {
-        if (pool)
-            await pool.end();
+        if (pool) await pool.end();
         if (connection) {
             await connection.query(`DROP DATABASE IF EXISTS \`${requireAuditTestDatabaseName()}\``);
             await connection.end();
@@ -227,10 +217,30 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
             [databaseName]
         );
         assert.deepEqual(moderationAuditForeignKeys, [
-            { TableName: 'commentmoderationlogs', ColumnName: 'AdminAuditLogId', ReferencedTableName: 'adminauditlogs', ReferencedColumnName: 'Id' },
-            { TableName: 'recipemoderationlogs', ColumnName: 'AdminAuditLogId', ReferencedTableName: 'adminauditlogs', ReferencedColumnName: 'Id' },
-            { TableName: 'staffmoderationlogs', ColumnName: 'AdminAuditLogId', ReferencedTableName: 'adminauditlogs', ReferencedColumnName: 'Id' },
-            { TableName: 'usermoderationlogs', ColumnName: 'AdminAuditLogId', ReferencedTableName: 'adminauditlogs', ReferencedColumnName: 'Id' }
+            {
+                TableName: 'commentmoderationlogs',
+                ColumnName: 'AdminAuditLogId',
+                ReferencedTableName: 'adminauditlogs',
+                ReferencedColumnName: 'Id'
+            },
+            {
+                TableName: 'recipemoderationlogs',
+                ColumnName: 'AdminAuditLogId',
+                ReferencedTableName: 'adminauditlogs',
+                ReferencedColumnName: 'Id'
+            },
+            {
+                TableName: 'staffmoderationlogs',
+                ColumnName: 'AdminAuditLogId',
+                ReferencedTableName: 'adminauditlogs',
+                ReferencedColumnName: 'Id'
+            },
+            {
+                TableName: 'usermoderationlogs',
+                ColumnName: 'AdminAuditLogId',
+                ReferencedTableName: 'adminauditlogs',
+                ReferencedColumnName: 'Id'
+            }
         ]);
 
         const [moderationTriggers] = await connection.query(
@@ -254,9 +264,7 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
     });
 
     it('stores a redacted audit event with all investigation fields', async () => {
-        const audit = new AdminAuditService(
-            new AdminAuditRepositoryMysql(connection as unknown as Queryable)
-        );
+        const audit = new AdminAuditService(new AdminAuditRepositoryMysql(connection as unknown as Queryable));
         const receipt = await audit.record({
             actorUserId: 900,
             eventType: ADMIN_AUDIT_EVENT_TYPES.usersBan,
@@ -281,31 +289,34 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
         );
         const log = (logs as Array<Record<string, unknown>>)[0];
 
-        assert.deepEqual(log && {
-            actorUserId: log.ActorUserId,
-            action: log.Action,
-            targetType: log.TargetType,
-            targetId: log.TargetId,
-            reason: log.Reason,
-            beforeStatus: log.BeforeStatus,
-            beforePasswordHash: log.BeforePasswordHash,
-            afterStatus: log.AfterStatus,
-            ipAddress: log.IpAddress,
-            userAgent: log.UserAgent,
-            correlationId: log.CorrelationId
-        }, {
-            actorUserId: 900,
-            action: 'users.ban',
-            targetType: 'community_user',
-            targetId: '901',
-            reason: 'Repeated violation of the test policy.',
-            beforeStatus: 'active',
-            beforePasswordHash: '[REDACTED]',
-            afterStatus: 'banned',
-            ipAddress: '2001:db8::900',
-            userAgent: 'Recipe Shelter audit integration test',
-            correlationId: '00000000-0000-4000-8000-000000000900'
-        });
+        assert.deepEqual(
+            log && {
+                actorUserId: log.ActorUserId,
+                action: log.Action,
+                targetType: log.TargetType,
+                targetId: log.TargetId,
+                reason: log.Reason,
+                beforeStatus: log.BeforeStatus,
+                beforePasswordHash: log.BeforePasswordHash,
+                afterStatus: log.AfterStatus,
+                ipAddress: log.IpAddress,
+                userAgent: log.UserAgent,
+                correlationId: log.CorrelationId
+            },
+            {
+                actorUserId: 900,
+                action: 'users.ban',
+                targetType: 'community_user',
+                targetId: '901',
+                reason: 'Repeated violation of the test policy.',
+                beforeStatus: 'active',
+                beforePasswordHash: '[REDACTED]',
+                afterStatus: 'banned',
+                ipAddress: '2001:db8::900',
+                userAgent: 'Recipe Shelter audit integration test',
+                correlationId: '00000000-0000-4000-8000-000000000900'
+            }
+        );
         assert.equal(receipt.id, log?.Id);
         assert.equal(receipt.correlationId, '00000000-0000-4000-8000-000000000900');
         assert.ok(log?.CreatedAt instanceof Date);
@@ -313,9 +324,7 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
 
     it('queries a minimized paginated investigation view with every supported filter', async () => {
         const correlationId = '00000000-0000-4000-8000-000000000915';
-        await new AdminAuditService(
-            new AdminAuditRepositoryMysql(connection as unknown as Queryable)
-        ).record({
+        await new AdminAuditService(new AdminAuditRepositoryMysql(connection as unknown as Queryable)).record({
             actorUserId: 900,
             eventType: ADMIN_AUDIT_EVENT_TYPES.usersBan,
             targetType: ADMIN_AUDIT_TARGET_TYPES.communityUser,
@@ -328,15 +337,18 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
             correlationId
         });
 
-        const result = await new AdminAuditQueryRepositoryMysql(pool).find({
-            actorUserId: 900,
-            action: ADMIN_AUDIT_EVENT_TYPES.usersBan,
-            targetType: ADMIN_AUDIT_TARGET_TYPES.communityUser,
-            targetId: '901',
-            from: new Date('2020-01-01T00:00:00.000Z'),
-            to: new Date('2030-01-01T00:00:00.000Z'),
-            correlationId
-        }, { page: 1, limit: 25, offset: 0 });
+        const result = await new AdminAuditQueryRepositoryMysql(pool).find(
+            {
+                actorUserId: 900,
+                action: ADMIN_AUDIT_EVENT_TYPES.usersBan,
+                targetType: ADMIN_AUDIT_TARGET_TYPES.communityUser,
+                targetId: '901',
+                from: new Date('2020-01-01T00:00:00.000Z'),
+                to: new Date('2030-01-01T00:00:00.000Z'),
+                correlationId
+            },
+            { page: 1, limit: 25, offset: 0 }
+        );
 
         assert.deepEqual(result.pagination, {
             page: 1,
@@ -346,49 +358,40 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
             hasNextPage: false,
             hasPreviousPage: false
         });
-        assert.deepEqual(result.items[0] && {
-            actor: result.items[0].actor,
-            action: result.items[0].action,
-            target: result.items[0].target,
-            reason: result.items[0].reason,
-            beforeValues: result.items[0].beforeValues,
-            afterValues: result.items[0].afterValues,
-            correlationId: result.items[0].correlationId
-        }, {
-            actor: { id: 900, username: 'audit-staff' },
-            action: 'users.ban',
-            target: { type: 'community_user', id: '901' },
-            reason: 'Audit consultation integration fixture.',
-            beforeValues: { status: 'active', accessToken: '[REDACTED]' },
-            afterValues: { status: 'banned' },
-            correlationId
-        });
+        assert.deepEqual(
+            result.items[0] && {
+                actor: result.items[0].actor,
+                action: result.items[0].action,
+                target: result.items[0].target,
+                reason: result.items[0].reason,
+                beforeValues: result.items[0].beforeValues,
+                afterValues: result.items[0].afterValues,
+                correlationId: result.items[0].correlationId
+            },
+            {
+                actor: { id: 900, username: 'audit-staff' },
+                action: 'users.ban',
+                target: { type: 'community_user', id: '901' },
+                reason: 'Audit consultation integration fixture.',
+                beforeValues: { status: 'active', accessToken: '[REDACTED]' },
+                afterValues: { status: 'banned' },
+                correlationId
+            }
+        );
         assert.ok(result.items[0]?.createdAt instanceof Date);
         assert.equal('ipAddress' in (result.items[0] ?? {}), false);
         assert.equal('userAgent' in (result.items[0] ?? {}), false);
     });
 
     it('commits exactly one audit entry with a sensitive action and rolls both back on audit failure', async () => {
-        const auditActions = new AdminAuditActionRunnerMysql(
-            pool,
-            (db) => new AdminAuditService(new AdminAuditRepositoryMysql(db))
-        );
-        const service = new AdminUserService(
-            new UserRepositoryMysql(pool),
-            new AdminUserRepositoryMysql(pool),
-            auditActions
-        );
+        const auditActions = new AdminAuditActionRunnerMysql(pool, (db) => new AdminAuditService(new AdminAuditRepositoryMysql(db)));
+        const service = new AdminUserService(new UserRepositoryMysql(pool), new AdminUserRepositoryMysql(pool), auditActions);
 
-        await service.ban(
-            901,
-            900,
-            'Repeated violation confirmed by integration test.',
-            {
-                ipAddress: '192.0.2.90',
-                userAgent: 'Recipe Shelter audited action integration test',
-                correlationId: '00000000-0000-4000-8000-000000000905'
-            }
-        );
+        await service.ban(901, 900, 'Repeated violation confirmed by integration test.', {
+            ipAddress: '192.0.2.90',
+            userAgent: 'Recipe Shelter audited action integration test',
+            correlationId: '00000000-0000-4000-8000-000000000905'
+        });
 
         const [committed] = await connection.query(
             `SELECT cp.Status,
@@ -399,14 +402,9 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
         );
         assert.deepEqual(committed, [{ Status: 'banned', AuditCount: 1 }]);
 
-        await service.unban(
-            901,
-            900,
-            'Integration test restores the account after review.',
-            {
-                correlationId: '00000000-0000-4000-8000-000000000906'
-            }
-        );
+        await service.unban(901, 900, 'Integration test restores the account after review.', {
+            correlationId: '00000000-0000-4000-8000-000000000906'
+        });
         const [businessLogs] = await connection.query(
             `SELECT audit.Id AS AdminAuditLogId, audit.Action, audit.Reason, audit.CorrelationId
              FROM UserModerationLogs AS log
@@ -415,7 +413,11 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
              ORDER BY audit.Id`
         );
         assert.deepEqual(
-            (businessLogs as Array<Record<string, unknown>>).map(({ Action, Reason, CorrelationId }) => ({ Action, Reason, CorrelationId })),
+            (businessLogs as Array<Record<string, unknown>>).map(({ Action, Reason, CorrelationId }) => ({
+                Action,
+                Reason,
+                CorrelationId
+            })),
             [
                 {
                     Action: 'users.ban',
@@ -440,17 +442,10 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
                 }
             }))
         );
-        const [moderationLogsBefore] = await connection.query(
-            'SELECT COUNT(*) AS LogCount FROM UserModerationLogs WHERE UserId = 901'
-        );
+        const [moderationLogsBefore] = await connection.query('SELECT COUNT(*) AS LogCount FROM UserModerationLogs WHERE UserId = 901');
 
         await assert.rejects(
-            () => failingService.ban(
-                901,
-                900,
-                'This moderation must be rolled back with its failed audit.',
-                {}
-            ),
+            () => failingService.ban(901, 900, 'This moderation must be rolled back with its failed audit.', {}),
             /forced audit failure/
         );
 
@@ -460,10 +455,12 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
              FROM CommunityProfiles AS cp
              WHERE cp.UserId = 901`
         );
-        assert.deepEqual(rolledBack, [{
-            Status: 'active',
-            ModerationLogCount: (moderationLogsBefore as Array<{ LogCount: number }>)[0]?.LogCount
-        }]);
+        assert.deepEqual(rolledBack, [
+            {
+                Status: 'active',
+                ModerationLogCount: (moderationLogsBefore as Array<{ LogCount: number }>)[0]?.LogCount
+            }
+        ]);
 
         const failingModerationLogService = new AdminUserService(
             new UserRepositoryMysql(pool),
@@ -471,12 +468,10 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
             auditActions
         );
         await assert.rejects(
-            () => failingModerationLogService.ban(
-                901,
-                900,
-                'This moderation must be rolled back with its specialized log.',
-                { correlationId: '00000000-0000-4000-8000-000000000907' }
-            ),
+            () =>
+                failingModerationLogService.ban(901, 900, 'This moderation must be rolled back with its specialized log.', {
+                    correlationId: '00000000-0000-4000-8000-000000000907'
+                }),
             /forced specialized moderation log failure/
         );
         const [specializedLogRollback] = await connection.query(
@@ -487,11 +482,13 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
              WHERE cp.UserId = 901`,
             ['00000000-0000-4000-8000-000000000907']
         );
-        assert.deepEqual(specializedLogRollback, [{
-            Status: 'active',
-            AuditCount: 0,
-            ModerationLogCount: (moderationLogsBefore as Array<{ LogCount: number }>)[0]?.LogCount
-        }]);
+        assert.deepEqual(specializedLogRollback, [
+            {
+                Status: 'active',
+                AuditCount: 0,
+                ModerationLogCount: (moderationLogsBefore as Array<{ LogCount: number }>)[0]?.LogCount
+            }
+        ]);
     });
 
     it('rejects invalid actors and malformed investigation values', async () => {
@@ -500,48 +497,66 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
             JSON_OBJECT('status', 'active'), JSON_OBJECT('status', 'banned'),
             '00000000-0000-4000-8000-000000000901'`;
 
-        await assert.rejects(() => connection.query(
-            `INSERT INTO AdminAuditLogs
+        await assert.rejects(() =>
+            connection.query(
+                `INSERT INTO AdminAuditLogs
                (ActorUserId, Action, TargetType, TargetId, BeforeValues, AfterValues, CorrelationId)
              VALUES (901, ${validValues})`
-        ));
-        await assert.rejects(() => connection.query(
-            `INSERT INTO AdminAuditLogs
+            )
+        );
+        await assert.rejects(() =>
+            connection.query(
+                `INSERT INTO AdminAuditLogs
                (ActorUserId, Action, TargetType, TargetId, BeforeValues, AfterValues, CorrelationId)
              VALUES (999999, ${validValues})`
-        ));
-        await assert.rejects(() => connection.query(
-            `INSERT INTO AdminAuditLogs
+            )
+        );
+        await assert.rejects(() =>
+            connection.query(
+                `INSERT INTO AdminAuditLogs
                (ActorUserId, Action, TargetType, TargetId, BeforeValues, AfterValues, CorrelationId)
              VALUES
                (900, ' ', 'community_user', '901', JSON_OBJECT(), JSON_OBJECT(),
                 '00000000-0000-4000-8000-000000000902')`
-        ));
-        await assert.rejects(() => connection.query(
-            `INSERT INTO AdminAuditLogs
+            )
+        );
+        await assert.rejects(() =>
+            connection.query(
+                `INSERT INTO AdminAuditLogs
                (ActorUserId, Action, TargetType, TargetId, BeforeValues, AfterValues, CorrelationId)
              VALUES
                (900, 'users.ban', 'community_user', '901', JSON_ARRAY('active'), JSON_OBJECT(),
                 '00000000-0000-4000-8000-000000000903')`
-        ));
-        await assert.rejects(() => connection.query(
-            `INSERT INTO AdminAuditLogs
+            )
+        );
+        await assert.rejects(() =>
+            connection.query(
+                `INSERT INTO AdminAuditLogs
                (ActorUserId, Action, TargetType, TargetId, BeforeValues, AfterValues, CorrelationId)
              VALUES
                (900, 'users.ban', 'community_user', '901', JSON_OBJECT(), JSON_OBJECT(), 'too-short')`
-        ));
+            )
+        );
     });
 
     it('keeps audit records immutable and preserves their actor', async () => {
-        await assert.rejects(() => connection.query(
-            `UPDATE AdminAuditLogs
+        await assert.rejects(
+            () =>
+                connection.query(
+                    `UPDATE AdminAuditLogs
              SET Reason = 'A rewritten reason.'
              WHERE CorrelationId = '00000000-0000-4000-8000-000000000900'`
-        ), (error) => assertImmutableAuditError(error, 'UPDATE'));
-        await assert.rejects(() => connection.query(
-            `DELETE FROM AdminAuditLogs
+                ),
+            (error) => assertImmutableAuditError(error, 'UPDATE')
+        );
+        await assert.rejects(
+            () =>
+                connection.query(
+                    `DELETE FROM AdminAuditLogs
              WHERE CorrelationId = '00000000-0000-4000-8000-000000000900'`
-        ), (error) => assertImmutableAuditError(error, 'DELETE'));
+                ),
+            (error) => assertImmutableAuditError(error, 'DELETE')
+        );
         await assert.rejects(() => connection.query('DELETE FROM Users WHERE Id = 900'));
 
         const [remainingLogs] = await connection.query(
@@ -561,31 +576,42 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
         const auditLogId = (auditRows as Array<{ Id: number }>)[0]?.Id;
         assert.ok(auditLogId);
         await assert.rejects(
-            () => new AdminUserRepositoryMysql(pool).createModerationLog(
-                auditLogId,
-                999,
-                connection as unknown as Parameters<AdminUserRepositoryMysql['createModerationLog']>[2]
-            ),
+            () =>
+                new AdminUserRepositoryMysql(pool).createModerationLog(
+                    auditLogId,
+                    999,
+                    connection as unknown as Parameters<AdminUserRepositoryMysql['createModerationLog']>[2]
+                ),
             /does not match its administrative audit entry/
         );
-        await assert.rejects(() => connection.query(
-            `INSERT INTO UserModerationLogs (AdminAuditLogId, UserId)
+        await assert.rejects(() =>
+            connection.query(
+                `INSERT INTO UserModerationLogs (AdminAuditLogId, UserId)
              VALUES (999999, 901)`
-        ));
-        await assert.rejects(() => connection.query(
-            `UPDATE UserModerationLogs
+            )
+        );
+        await assert.rejects(
+            () =>
+                connection.query(
+                    `UPDATE UserModerationLogs
              SET UserId = 901
              WHERE AdminAuditLogId = (
                SELECT Id FROM AdminAuditLogs
                WHERE CorrelationId = '00000000-0000-4000-8000-000000000905'
              )`
-        ), /User moderation logs are append-only: UPDATE is forbidden/);
-        await assert.rejects(() => connection.query(
-            `DELETE FROM UserModerationLogs
+                ),
+            /User moderation logs are append-only: UPDATE is forbidden/
+        );
+        await assert.rejects(
+            () =>
+                connection.query(
+                    `DELETE FROM UserModerationLogs
              WHERE AdminAuditLogId = (
                SELECT Id FROM AdminAuditLogs
                WHERE CorrelationId = '00000000-0000-4000-8000-000000000905'
              )`
-        ), /User moderation logs are append-only: DELETE is forbidden/);
+                ),
+            /User moderation logs are append-only: DELETE is forbidden/
+        );
     });
 });

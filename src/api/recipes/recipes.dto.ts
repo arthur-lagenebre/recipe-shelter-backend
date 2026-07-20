@@ -1,5 +1,19 @@
 import { badRequest } from '../../utils/errors.js';
-import { getBoundedArray, getBoundedInteger, getBoundedNullableInteger, getBoundedNullableNumber, getBoundedString, getOptionalNullableNumber, getOptionalNullableString, getOptionalNumber, getOptionalString, getRequiredNumber, getRequiredPositiveInteger, getRequiredString, isRecord } from '../http/dto.helpers.js';
+import {
+    getBoundedArray,
+    getBoundedInteger,
+    getBoundedNullableInteger,
+    getBoundedNullableNumber,
+    getBoundedString,
+    getOptionalNullableNumber,
+    getOptionalNullableString,
+    getOptionalNumber,
+    getOptionalString,
+    getRequiredNumber,
+    getRequiredPositiveInteger,
+    getRequiredString,
+    isRecord
+} from '../http/dto.helpers.js';
 
 import type { RecipeIngredientInput, RecipeStepInput, RecipeEquipmentInput } from '../../repositories/recipes/recipe.types.js';
 import type { RecipeSearchFilters } from '../../repositories/recipes/recipe.types.js';
@@ -45,25 +59,42 @@ const MAX_RECIPE_STEPS = 100;
 const MAX_RECIPE_EQUIPMENTS = 50;
 
 function parseIngredient(item: unknown, index: number): RecipeIngredientInput {
-    if (!isRecord(item))
-        throw badRequest(`Ingredient #${index + 1} is invalid`, 'RECIPES_CREATE_BAD_INGREDIENT');
+    if (!isRecord(item)) throw badRequest(`Ingredient #${index + 1} is invalid`, 'RECIPES_CREATE_BAD_INGREDIENT');
 
     const unit = getOptionalNullableString(item.unit, 'Ingredient unit must be a string or null', 'RECIPES_CREATE_BAD_INGREDIENT_UNIT');
     const note = getOptionalString(item.note, 'Ingredient note must be a string', 'RECIPES_CREATE_BAD_INGREDIENT_NOTE');
-    const sortOrder = getOptionalNumber(item.sortOrder, 'Ingredient sortOrder must be a number', 'RECIPES_CREATE_BAD_INGREDIENT_SORT_ORDER');
-    const displayText = getRequiredString(item.displayText, 'Ingredient displayText is required', 'RECIPES_CREATE_BAD_INGREDIENT_DISPLAY_TEXT');
+    const sortOrder = getOptionalNumber(
+        item.sortOrder,
+        'Ingredient sortOrder must be a number',
+        'RECIPES_CREATE_BAD_INGREDIENT_SORT_ORDER'
+    );
+    const displayText = getRequiredString(
+        item.displayText,
+        'Ingredient displayText is required',
+        'RECIPES_CREATE_BAD_INGREDIENT_DISPLAY_TEXT'
+    );
 
     if (Array.from(displayText).length > MAX_RECIPE_INGREDIENT_DISPLAY_TEXT_LENGTH)
         throw badRequest('Ingredient displayText must not exceed 255 characters', 'RECIPES_CREATE_BAD_INGREDIENT_DISPLAY_TEXT');
 
-    const ingredientId = getOptionalNullableNumber(item.ingredientId, 'IngredientId must be a number or null', 'RECIPES_CREATE_BAD_INGREDIENT_ID');
+    const ingredientId = getOptionalNullableNumber(
+        item.ingredientId,
+        'IngredientId must be a number or null',
+        'RECIPES_CREATE_BAD_INGREDIENT_ID'
+    );
     if (ingredientId !== undefined && ingredientId !== null && (!Number.isSafeInteger(ingredientId) || ingredientId <= 0))
         throw badRequest('IngredientId must be a positive integer or null', 'RECIPES_CREATE_BAD_INGREDIENT_ID');
 
     return {
         ingredientId,
         displayText,
-        quantity: getBoundedNullableNumber(item.quantity, MIN_RECIPE_INGREDIENT_QUANTITY, MAX_RECIPE_INGREDIENT_QUANTITY, 'Ingredient quantity must be a number between 0 and 10000', 'RECIPES_CREATE_BAD_INGREDIENT_QUANTITY'),
+        quantity: getBoundedNullableNumber(
+            item.quantity,
+            MIN_RECIPE_INGREDIENT_QUANTITY,
+            MAX_RECIPE_INGREDIENT_QUANTITY,
+            'Ingredient quantity must be a number between 0 and 10000',
+            'RECIPES_CREATE_BAD_INGREDIENT_QUANTITY'
+        ),
         unit,
         note,
         sortOrder
@@ -71,8 +102,7 @@ function parseIngredient(item: unknown, index: number): RecipeIngredientInput {
 }
 
 function parseStep(item: unknown, index: number): RecipeStepInput {
-    if (!isRecord(item))
-        throw badRequest(`Step #${index + 1} is invalid`, 'RECIPES_CREATE_BAD_STEP');
+    if (!isRecord(item)) throw badRequest(`Step #${index + 1} is invalid`, 'RECIPES_CREATE_BAD_STEP');
 
     return {
         stepNumber: getOptionalNumber(item.stepNumber, 'StepNumber must be a number', 'RECIPES_CREATE_BAD_STEP_NUMBER'),
@@ -81,8 +111,7 @@ function parseStep(item: unknown, index: number): RecipeStepInput {
 }
 
 function parseEquipment(item: unknown, index: number): RecipeEquipmentInput {
-    if (!isRecord(item))
-        throw badRequest(`Equipment #${index + 1} is invalid`, 'RECIPES_CREATE_BAD_EQUIPMENT');
+    if (!isRecord(item)) throw badRequest(`Equipment #${index + 1} is invalid`, 'RECIPES_CREATE_BAD_EQUIPMENT');
 
     return {
         equipmentId: getRequiredNumber(item.equipmentId, 'EquipmentId must be a number', 'RECIPES_CREATE_BAD_EQUIPMENT_ID')
@@ -94,8 +123,7 @@ function parseTagId(item: unknown): number {
 }
 
 function parseRecipeContentBody(body: unknown, codePrefix: 'RECIPES_CREATE' | 'RECIPES_UPDATE'): RecipeBody {
-    if (!isRecord(body))
-        throw badRequest('Invalid body', `${codePrefix}_BAD_BODY`);
+    if (!isRecord(body)) throw badRequest('Invalid body', `${codePrefix}_BAD_BODY`);
 
     const title = getRequiredString(body.title, 'Title is required', `${codePrefix}_MISSING_TITLE`);
 
@@ -103,17 +131,83 @@ function parseRecipeContentBody(body: unknown, codePrefix: 'RECIPES_CREATE' | 'R
         throw badRequest('Title must be between 5 and 200 characters', `${codePrefix}_WEAK_TITLE`);
 
     const categoryId = getOptionalNullableNumber(body.categoryId, 'Category must be a number', `${codePrefix}_BAD_CATEGORY`);
-    const description = getBoundedString(body.description, 0, MAX_RECIPE_DESCRIPTION_LENGTH, 'Description must not exceed 5000 characters', `${codePrefix}_BAD_DESCRIPTION`);
-    const prepTimeMinutes = getBoundedInteger(body.prepTimeMinutes, MIN_RECIPE_PREP_TIME_MINUTES, MAX_RECIPE_PREP_TIME_MINUTES, 'Prep time must be an integer between 0 and 1440', `${codePrefix}_BAD_PREP_TIME`);
-    const restTimeMinutes = getBoundedNullableInteger(body.restTimeMinutes, MIN_RECIPE_REST_TIME_MINUTES, MAX_RECIPE_REST_TIME_MINUTES, 'Rest time must be an integer between 0 and 43200', `${codePrefix}_BAD_REST_TIME`);
-    const cookTimeMinutes = getBoundedNullableInteger(body.cookTimeMinutes, MIN_RECIPE_COOK_TIME_MINUTES, MAX_RECIPE_COOK_TIME_MINUTES, 'Cook time must be an integer between 0 and 4320', `${codePrefix}_BAD_COOK_TIME`);
-    const servings = getBoundedInteger(body.servings, MIN_RECIPE_SERVINGS, MAX_RECIPE_SERVINGS, 'Servings must be an integer between 1 and 100', `${codePrefix}_BAD_SERVINGS`);
-    const tagIds = getBoundedArray(body.tagIds, MAX_RECIPE_TAGS, parseTagId, 'Tags must be an array of at most 20 items', `${codePrefix}_BAD_TAGS`);
-    const ingredients = getBoundedArray(body.ingredients, MAX_RECIPE_INGREDIENTS, parseIngredient, 'Ingredients must be an array of at most 100 items', `${codePrefix}_BAD_INGREDIENTS`);
-    const steps = getBoundedArray(body.steps, MAX_RECIPE_STEPS, parseStep, 'Steps must be an array of at most 100 items', `${codePrefix}_BAD_STEPS`);
-    const equipments = getBoundedArray(body.equipments, MAX_RECIPE_EQUIPMENTS, parseEquipment, 'Equipments must be an array of at most 50 items', `${codePrefix}_BAD_EQUIPMENTS`);
+    const description = getBoundedString(
+        body.description,
+        0,
+        MAX_RECIPE_DESCRIPTION_LENGTH,
+        'Description must not exceed 5000 characters',
+        `${codePrefix}_BAD_DESCRIPTION`
+    );
+    const prepTimeMinutes = getBoundedInteger(
+        body.prepTimeMinutes,
+        MIN_RECIPE_PREP_TIME_MINUTES,
+        MAX_RECIPE_PREP_TIME_MINUTES,
+        'Prep time must be an integer between 0 and 1440',
+        `${codePrefix}_BAD_PREP_TIME`
+    );
+    const restTimeMinutes = getBoundedNullableInteger(
+        body.restTimeMinutes,
+        MIN_RECIPE_REST_TIME_MINUTES,
+        MAX_RECIPE_REST_TIME_MINUTES,
+        'Rest time must be an integer between 0 and 43200',
+        `${codePrefix}_BAD_REST_TIME`
+    );
+    const cookTimeMinutes = getBoundedNullableInteger(
+        body.cookTimeMinutes,
+        MIN_RECIPE_COOK_TIME_MINUTES,
+        MAX_RECIPE_COOK_TIME_MINUTES,
+        'Cook time must be an integer between 0 and 4320',
+        `${codePrefix}_BAD_COOK_TIME`
+    );
+    const servings = getBoundedInteger(
+        body.servings,
+        MIN_RECIPE_SERVINGS,
+        MAX_RECIPE_SERVINGS,
+        'Servings must be an integer between 1 and 100',
+        `${codePrefix}_BAD_SERVINGS`
+    );
+    const tagIds = getBoundedArray(
+        body.tagIds,
+        MAX_RECIPE_TAGS,
+        parseTagId,
+        'Tags must be an array of at most 20 items',
+        `${codePrefix}_BAD_TAGS`
+    );
+    const ingredients = getBoundedArray(
+        body.ingredients,
+        MAX_RECIPE_INGREDIENTS,
+        parseIngredient,
+        'Ingredients must be an array of at most 100 items',
+        `${codePrefix}_BAD_INGREDIENTS`
+    );
+    const steps = getBoundedArray(
+        body.steps,
+        MAX_RECIPE_STEPS,
+        parseStep,
+        'Steps must be an array of at most 100 items',
+        `${codePrefix}_BAD_STEPS`
+    );
+    const equipments = getBoundedArray(
+        body.equipments,
+        MAX_RECIPE_EQUIPMENTS,
+        parseEquipment,
+        'Equipments must be an array of at most 50 items',
+        `${codePrefix}_BAD_EQUIPMENTS`
+    );
 
-    return { categoryId, title, description, prepTimeMinutes, restTimeMinutes, cookTimeMinutes, servings, tagIds, ingredients, steps, equipments };
+    return {
+        categoryId,
+        title,
+        description,
+        prepTimeMinutes,
+        restTimeMinutes,
+        cookTimeMinutes,
+        servings,
+        tagIds,
+        ingredients,
+        steps,
+        equipments
+    };
 }
 
 export function parseCreateRecipeBody(body: unknown): CreateRecipeBody {
@@ -127,8 +221,7 @@ export function parseUpdateRecipeBody(body: unknown): UpdateRecipeBody {
 export function parseRecipeIdParam(value: unknown): number {
     const recipeId = typeof value === 'string' ? Number(value) : NaN;
 
-    if (!Number.isInteger(recipeId) || recipeId <= 0)
-        throw badRequest('Recipe id must be a positive integer', 'RECIPES_BAD_ID');
+    if (!Number.isInteger(recipeId) || recipeId <= 0) throw badRequest('Recipe id must be a positive integer', 'RECIPES_BAD_ID');
 
     return recipeId;
 }
@@ -136,18 +229,15 @@ export function parseRecipeIdParam(value: unknown): number {
 export function parseRecipeSlugParam(value: unknown): string {
     const slug = typeof value === 'string' ? value.trim() : '';
 
-    if (!slug)
-        throw badRequest('Recipe slug is required', 'RECIPES_BAD_SLUG');
+    if (!slug) throw badRequest('Recipe slug is required', 'RECIPES_BAD_SLUG');
 
     return slug;
 }
 
 export function parseRecipeFeedLimitQuery(query: unknown): number {
-    if (!isRecord(query))
-        throw badRequest('Invalid query', 'RECIPES_FEED_BAD_QUERY');
+    if (!isRecord(query)) throw badRequest('Invalid query', 'RECIPES_FEED_BAD_QUERY');
 
-    if (query.limit === undefined)
-        return DEFAULT_RECIPE_FEED_LIMIT;
+    if (query.limit === undefined) return DEFAULT_RECIPE_FEED_LIMIT;
 
     const requestedLimit = parsePositiveIntegerQueryValue(query.limit, 'Limit must be a positive integer', 'RECIPES_FEED_BAD_LIMIT');
 
@@ -155,30 +245,25 @@ export function parseRecipeFeedLimitQuery(query: unknown): number {
 }
 
 function parsePositiveIntegerQueryValue(value: unknown, message: string, code: string): number {
-    if (typeof value !== 'string')
-        throw badRequest(message, code);
+    if (typeof value !== 'string') throw badRequest(message, code);
 
     const parsedValue = Number(value);
-    if (!Number.isInteger(parsedValue) || parsedValue <= 0)
-        throw badRequest(message, code);
+    if (!Number.isInteger(parsedValue) || parsedValue <= 0) throw badRequest(message, code);
 
     return parsedValue;
 }
 
 function parseCommaSeparatedPositiveIntegerQueryValue(value: unknown, message: string, code: string): number[] {
-    if (typeof value !== 'string')
-        throw badRequest(message, code);
+    if (typeof value !== 'string') throw badRequest(message, code);
 
     const values = new Set<number>();
 
     for (const rawPart of value.split(',')) {
         const part = rawPart.trim();
-        if (!/^[1-9]\d*$/.test(part))
-            throw badRequest(message, code);
+        if (!/^[1-9]\d*$/.test(part)) throw badRequest(message, code);
 
         const parsedValue = Number(part);
-        if (!Number.isSafeInteger(parsedValue))
-            throw badRequest(message, code);
+        if (!Number.isSafeInteger(parsedValue)) throw badRequest(message, code);
 
         values.add(parsedValue);
     }
@@ -187,77 +272,107 @@ function parseCommaSeparatedPositiveIntegerQueryValue(value: unknown, message: s
 }
 
 function parseTagIdsQueryValue(value: unknown): number[] {
-    return parseCommaSeparatedPositiveIntegerQueryValue(value, 'Tag ids must be a comma-separated list of positive integers', 'RECIPES_SEARCH_BAD_TAGS');
+    return parseCommaSeparatedPositiveIntegerQueryValue(
+        value,
+        'Tag ids must be a comma-separated list of positive integers',
+        'RECIPES_SEARCH_BAD_TAGS'
+    );
 }
 
 function parseExcludedTagIdsQueryValue(value: unknown): number[] {
-    return parseCommaSeparatedPositiveIntegerQueryValue(value, 'Excluded tag ids must be a comma-separated list of positive integers', 'RECIPES_SEARCH_BAD_EXCLUDED_TAGS');
+    return parseCommaSeparatedPositiveIntegerQueryValue(
+        value,
+        'Excluded tag ids must be a comma-separated list of positive integers',
+        'RECIPES_SEARCH_BAD_EXCLUDED_TAGS'
+    );
 }
 
 function parseIngredientIdsQueryValue(value: unknown): number[] {
-    return parseCommaSeparatedPositiveIntegerQueryValue(value, 'Ingredient ids must be a comma-separated list of positive integers', 'RECIPES_SEARCH_BAD_INGREDIENTS');
+    return parseCommaSeparatedPositiveIntegerQueryValue(
+        value,
+        'Ingredient ids must be a comma-separated list of positive integers',
+        'RECIPES_SEARCH_BAD_INGREDIENTS'
+    );
 }
 
 function parseExcludedIngredientIdsQueryValue(value: unknown): number[] {
-    return parseCommaSeparatedPositiveIntegerQueryValue(value, 'Excluded ingredient ids must be a comma-separated list of positive integers', 'RECIPES_SEARCH_BAD_EXCLUDED_INGREDIENTS');
+    return parseCommaSeparatedPositiveIntegerQueryValue(
+        value,
+        'Excluded ingredient ids must be a comma-separated list of positive integers',
+        'RECIPES_SEARCH_BAD_EXCLUDED_INGREDIENTS'
+    );
 }
 
-function assertNoSearchFilterConflict(includedIds: number[] | undefined, excludedIds: number[] | undefined, message: string, code: string): void {
-    if (!includedIds?.length || !excludedIds?.length)
-        return;
+function assertNoSearchFilterConflict(
+    includedIds: number[] | undefined,
+    excludedIds: number[] | undefined,
+    message: string,
+    code: string
+): void {
+    if (!includedIds?.length || !excludedIds?.length) return;
 
     const excludedIdSet = new Set(excludedIds);
-    if (includedIds.some((id) => excludedIdSet.has(id)))
-        throw badRequest(message, code);
+    if (includedIds.some((id) => excludedIdSet.has(id))) throw badRequest(message, code);
 }
 
 export function parseRecipeSearchQuery(query: unknown): RecipeSearchQuery {
-    if (!isRecord(query))
-        throw badRequest('Invalid query', 'RECIPES_SEARCH_BAD_QUERY');
+    if (!isRecord(query)) throw badRequest('Invalid query', 'RECIPES_SEARCH_BAD_QUERY');
 
     const filters: RecipeSearchQuery = {};
 
     if (query.q !== undefined) {
-        if (typeof query.q !== 'string')
-            throw badRequest('Search query must be a string', 'RECIPES_SEARCH_BAD_Q');
+        if (typeof query.q !== 'string') throw badRequest('Search query must be a string', 'RECIPES_SEARCH_BAD_Q');
 
         const q = query.q.trim();
-        if (q)
-            filters.q = q;
+        if (q) filters.q = q;
     }
 
     if (query.categoryId !== undefined)
-        filters.categoryId = parsePositiveIntegerQueryValue(query.categoryId, 'Category id must be a positive integer', 'RECIPES_SEARCH_BAD_CATEGORY');
+        filters.categoryId = parsePositiveIntegerQueryValue(
+            query.categoryId,
+            'Category id must be a positive integer',
+            'RECIPES_SEARCH_BAD_CATEGORY'
+        );
 
     if (query.tagIds !== undefined) {
         const tagIds = parseTagIdsQueryValue(query.tagIds);
-        if (tagIds.length)
-            filters.tagIds = tagIds;
+        if (tagIds.length) filters.tagIds = tagIds;
     }
 
     if (query.excludedTagIds !== undefined) {
         const excludedTagIds = parseExcludedTagIdsQueryValue(query.excludedTagIds);
-        if (excludedTagIds.length)
-            filters.excludedTagIds = excludedTagIds;
+        if (excludedTagIds.length) filters.excludedTagIds = excludedTagIds;
     }
 
     if (query.ingredientIds !== undefined) {
         const ingredientIds = parseIngredientIdsQueryValue(query.ingredientIds);
-        if (ingredientIds.length)
-            filters.ingredientIds = ingredientIds;
+        if (ingredientIds.length) filters.ingredientIds = ingredientIds;
     }
 
     if (query.excludedIngredientIds !== undefined) {
         const excludedIngredientIds = parseExcludedIngredientIdsQueryValue(query.excludedIngredientIds);
-        if (excludedIngredientIds.length)
-            filters.excludedIngredientIds = excludedIngredientIds;
+        if (excludedIngredientIds.length) filters.excludedIngredientIds = excludedIngredientIds;
     }
 
-    assertNoSearchFilterConflict(filters.tagIds, filters.excludedTagIds, 'A tag id cannot be both included and excluded', 'RECIPES_SEARCH_TAG_FILTER_CONFLICT');
-    assertNoSearchFilterConflict(filters.ingredientIds, filters.excludedIngredientIds, 'An ingredient id cannot be both included and excluded', 'RECIPES_SEARCH_INGREDIENT_FILTER_CONFLICT');
+    assertNoSearchFilterConflict(
+        filters.tagIds,
+        filters.excludedTagIds,
+        'A tag id cannot be both included and excluded',
+        'RECIPES_SEARCH_TAG_FILTER_CONFLICT'
+    );
+    assertNoSearchFilterConflict(
+        filters.ingredientIds,
+        filters.excludedIngredientIds,
+        'An ingredient id cannot be both included and excluded',
+        'RECIPES_SEARCH_INGREDIENT_FILTER_CONFLICT'
+    );
 
     if (query.maxTotalTimeMinutes !== undefined)
-        filters.maxTotalTimeMinutes = parsePositiveIntegerQueryValue(query.maxTotalTimeMinutes, 'Total time must be a positive integer', 'RECIPES_SEARCH_BAD_TOTAL_TIME');
+        filters.maxTotalTimeMinutes = parsePositiveIntegerQueryValue(
+            query.maxTotalTimeMinutes,
+            'Total time must be a positive integer',
+            'RECIPES_SEARCH_BAD_TOTAL_TIME'
+        );
 
     return filters;
 }

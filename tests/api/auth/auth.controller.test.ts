@@ -76,16 +76,11 @@ async function runHandler(handler: RequestHandler, req: unknown, res: TestRespon
 
     await new Promise((resolve) => setImmediate(resolve));
 
-    if (nextError)
-        throw nextError;
+    if (nextError) throw nextError;
 }
 
 function createController(authService: unknown) {
-    return createAuthController(
-        authService as AuthService,
-        {} as PasswordResetService,
-        {} as EmailValidationService
-    );
+    return createAuthController(authService as AuthService, {} as PasswordResetService, {} as EmailValidationService);
 }
 
 describe('auth.controller', () => {
@@ -124,9 +119,13 @@ describe('auth.controller', () => {
         });
         const res = createResponse();
 
-        await runHandler(controller.staffLoginOptions, {
-            body: { mail: 'staff@example.com', password: 'secret' }
-        }, res);
+        await runHandler(
+            controller.staffLoginOptions,
+            {
+                body: { mail: 'staff@example.com', password: 'secret' }
+            },
+            res
+        );
 
         assert.equal(res.statusCode, 200);
         assert.deepEqual(res.body, { flowId: 'flow-1', publicKey: { challenge: 'challenge' } });
@@ -144,17 +143,24 @@ describe('auth.controller', () => {
         });
         const res = createResponse();
 
-        await runHandler(controller.staffLoginVerify, {
-            body: {
-                flowId: 'flow-1',
-                credential: {
-                    id: 'credential-1', rawId: 'credential-1', type: 'public-key', clientExtensionResults: {},
-                    response: { clientDataJSON: 'data', authenticatorData: 'auth-data', signature: 'signature' }
-                }
+        await runHandler(
+            controller.staffLoginVerify,
+            {
+                body: {
+                    flowId: 'flow-1',
+                    credential: {
+                        id: 'credential-1',
+                        rawId: 'credential-1',
+                        type: 'public-key',
+                        clientExtensionResults: {},
+                        response: { clientDataJSON: 'data', authenticatorData: 'auth-data', signature: 'signature' }
+                    }
+                },
+                ip: '192.0.2.10',
+                headers: { 'user-agent': ` ${'browser'.repeat(100)} ` }
             },
-            ip: '192.0.2.10',
-            headers: { 'user-agent': ` ${'browser'.repeat(100)} ` }
-        }, res);
+            res
+        );
 
         assert.equal(res.statusCode, 200);
         assert.deepEqual(res.body, { user: staffUser });
@@ -162,7 +168,10 @@ describe('auth.controller', () => {
         assert.equal(typeof receivedInputs[0]?.userAgent, 'string');
         assert.equal((receivedInputs[0]?.userAgent as string).length, 512);
         assert.equal('password' in (receivedInputs[0] ?? {}), false);
-        assert.deepEqual(res.cookies.map(({ name }) => name), [adminSessionCookieName]);
+        assert.deepEqual(
+            res.cookies.map(({ name }) => name),
+            [adminSessionCookieName]
+        );
         assert.equal(env.auth.admin.sessionCookiePath, '/api/v1');
         assert.equal(res.cookies[0].options.path, env.auth.admin.sessionCookiePath);
         assert.equal(res.cookies[0].options.maxAge, env.auth.admin.sessionCookieMaxAgeMs);
@@ -178,15 +187,22 @@ describe('auth.controller', () => {
             }
         });
         const credential = {
-            id: 'credential-1', rawId: 'credential-1', type: 'public-key', clientExtensionResults: {},
+            id: 'credential-1',
+            rawId: 'credential-1',
+            type: 'public-key',
+            clientExtensionResults: {},
             response: { clientDataJSON: 'data', attestationObject: 'attestation' }
         };
         const res = createResponse();
 
-        await runHandler(controller.activateStaffInvitation, {
-            params: { token: ' invitation-token ' },
-            body: { flowId: 'flow-1', password: 'Recipe42?', credential }
-        }, res);
+        await runHandler(
+            controller.activateStaffInvitation,
+            {
+                params: { token: ' invitation-token ' },
+                body: { flowId: 'flow-1', password: 'Recipe42?', credential }
+            },
+            res
+        );
 
         assert.deepEqual(receivedInput, {
             invitationToken: 'invitation-token',
@@ -223,12 +239,15 @@ describe('auth.controller', () => {
     });
 
     it('clears only the admin cookie on staff logout', async () => {
-        const controller = createController({ async logout() { } });
+        const controller = createController({ async logout() {} });
         const res = createResponse();
 
         await runHandler(controller.staffLogout, { cookies: { [adminSessionCookieName]: 'admin-token' } }, res);
 
-        assert.deepEqual(res.clearedCookies.map(({ name }) => name), [adminSessionCookieName]);
+        assert.deepEqual(
+            res.clearedCookies.map(({ name }) => name),
+            [adminSessionCookieName]
+        );
         assert.equal(res.clearedCookies[0].options.path, env.auth.admin.sessionCookiePath);
     });
 });

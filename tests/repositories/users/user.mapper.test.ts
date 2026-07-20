@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { mapCommunityProfile, mapStaffProfile, mapUser, mapUserWithPassword } from '../../../src/repositories/users/user.mappers.js';
+import { mapCommunityProfile, mapStaffProfile, mapUser, mapUserWithPassword } from '../../../src/repositories/users/user.mapper.js';
 
 import type { CommunityProfileRow, StaffProfileRow, UserRow, UserWithPasswordRow } from '../../../src/repositories/users/user.types.js';
 
@@ -101,24 +101,25 @@ describe('user mapper', () => {
     });
 
     it('rejects unsupported statuses and cross-profile assignments', () => {
+        assert.throws(() => mapUser({ ...baseRow, AccountType: 'partner' } as unknown as UserRow), {
+            name: 'TypeError',
+            message: 'Invalid account type: partner'
+        });
         assert.throws(
-            () => mapUser({ ...baseRow, AccountType: 'partner' } as unknown as UserRow),
-            { name: 'TypeError', message: 'Invalid account type: partner' }
-        );
-        assert.throws(
-            () => mapUser({
-                ...baseRow,
-                AccountType: 'staff',
-                CommunityProfileUserId: 2,
-                CommunityStatus: 'active',
-                StaffProfileUserId: 2,
-                StaffStatus: 'active'
-            } as unknown as UserRow),
+            () =>
+                mapUser({
+                    ...baseRow,
+                    AccountType: 'staff',
+                    CommunityProfileUserId: 2,
+                    CommunityStatus: 'active',
+                    StaffProfileUserId: 2,
+                    StaffStatus: 'active'
+                } as unknown as UserRow),
             { name: 'TypeError', message: 'Invalid profile assignment for staff user: 2' }
         );
-        assert.throws(
-            () => mapStaffProfile({ UserId: 1, Status: 'banned', CreatedAt: now, UpdatedAt: now } as StaffProfileRow),
-            { name: 'TypeError', message: 'Invalid staff status: banned' }
-        );
+        assert.throws(() => mapStaffProfile({ UserId: 1, Status: 'banned', CreatedAt: now, UpdatedAt: now } as StaffProfileRow), {
+            name: 'TypeError',
+            message: 'Invalid staff status: banned'
+        });
     });
 });

@@ -1,10 +1,10 @@
 import { badRequest, forbidden, internalError, notFound } from '../../utils/errors.js';
 
-import type { CommentRepository } from '../../repositories/comments/comments.repository.interface.js';
-import type { CreateCommentInput, PublicComment, UpdateCommentInput } from '../../repositories/comments/comments.types.js';
+import type { CommentRepository } from '../../repositories/comment/comment.repository.interface.js';
+import type { CreateCommentInput, PublicComment, UpdateCommentInput } from '../../repositories/comment/comment.types.js';
 
 export class CommentService {
-    constructor(private readonly commentRepository: CommentRepository) { }
+    constructor(private readonly commentRepository: CommentRepository) {}
 
     async createComment(input: CreateCommentInput): Promise<PublicComment> {
         if (input.parentCommentId !== undefined && input.parentCommentId !== null)
@@ -12,8 +12,7 @@ export class CommentService {
 
         const comment = await this.commentRepository.create(input);
 
-        if (!comment)
-            throw internalError('Comment cannot be created', 'COMMENT_CANNOT_BE_CREATED');
+        if (!comment) throw internalError('Comment cannot be created', 'COMMENT_CANNOT_BE_CREATED');
 
         return comment;
     }
@@ -21,16 +20,13 @@ export class CommentService {
     async updateComment(input: UpdateCommentInput): Promise<PublicComment> {
         const comment = await this.commentRepository.findById(input.id);
 
-        if (!comment)
-            throw notFound('Comment not found', 'COMMENT_NOT_FOUND');
+        if (!comment) throw notFound('Comment not found', 'COMMENT_NOT_FOUND');
 
-        if (comment.userId !== input.userId)
-            throw forbidden('Comment access denied', 'COMMENT_ACCESS_DENIED');
+        if (comment.userId !== input.userId) throw forbidden('Comment access denied', 'COMMENT_ACCESS_DENIED');
 
         const updated = await this.commentRepository.update(input);
 
-        if (!updated)
-            throw forbidden('Comment access denied', 'COMMENT_ACCESS_DENIED');
+        if (!updated) throw forbidden('Comment access denied', 'COMMENT_ACCESS_DENIED');
 
         return updated;
     }
@@ -38,11 +34,9 @@ export class CommentService {
     async deleteComment(id: number, userId: number): Promise<boolean> {
         const comment = await this.commentRepository.findById(id);
 
-        if (!comment)
-            throw notFound('Comment not found', 'COMMENT_NOT_FOUND');
+        if (!comment) throw notFound('Comment not found', 'COMMENT_NOT_FOUND');
 
-        if (comment.userId !== userId)
-            throw forbidden('Comment access denied', 'COMMENT_ACCESS_DENIED');
+        if (comment.userId !== userId) throw forbidden('Comment access denied', 'COMMENT_ACCESS_DENIED');
 
         return await this.commentRepository.softDelete(id, userId);
     }
@@ -50,8 +44,7 @@ export class CommentService {
     async findCommentsForRecipe(recipeid: number): Promise<PublicComment[]> {
         const comments = await this.commentRepository.findByRecipeId(recipeid);
 
-        if (!comments)
-            throw notFound('comments not found', 'COMMENTS_NOT_FOUND');
+        if (!comments) throw notFound('comments not found', 'COMMENTS_NOT_FOUND');
 
         return comments;
     }
@@ -59,8 +52,7 @@ export class CommentService {
     private async requireRootParentComment(parentCommentId: number): Promise<void> {
         const parent = await this.commentRepository.findById(parentCommentId);
 
-        if (!parent)
-            throw notFound('Parent comment not found', 'COMMENTS_PARENT_NOT_FOUND');
+        if (!parent) throw notFound('Parent comment not found', 'COMMENTS_PARENT_NOT_FOUND');
 
         if (parent.parentCommentId !== null && parent.parentCommentId !== undefined)
             throw badRequest('Only one reply level is allowed', 'COMMENTS_CREATE_NESTED_REPLY');

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { beforeEach, describe, it } from 'node:test';
 
-import { AdminCommentService } from '../../../src/services/admin/admin.comments.services.js';
+import { AdminCommentService } from '../../../src/services/admin/admin.comments.service.js';
 import { HttpError } from '../../../src/utils/errors.js';
 import { TestAdminAuditRecorder, testAdminAuditContext } from '../../helpers/admin-audit.js';
 
@@ -88,8 +88,7 @@ class FakeAdminCommentRepository implements AdminCommentRepository {
     async update(input: AdminUpdateCommentInput): Promise<AdminComment | null> {
         this.updatedInput = input;
 
-        if (!this.comment)
-            return null;
+        if (!this.comment) return null;
 
         return { ...this.comment, ...input };
     }
@@ -335,11 +334,16 @@ describe('AdminCommentService', () => {
         repository.comment = null;
 
         await assert.rejects(
-            () => service.update({
-                id: 1,
-                rating: 4,
-                comment: 'Missing'
-            }, 99, testAdminAuditContext),
+            () =>
+                service.update(
+                    {
+                        id: 1,
+                        rating: 4,
+                        comment: 'Missing'
+                    },
+                    99,
+                    testAdminAuditContext
+                ),
             (error) => {
                 assertHttpError(error, 'COMMENTS_NOT_FOUND', 404);
 

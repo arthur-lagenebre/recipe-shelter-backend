@@ -1,9 +1,9 @@
 import crypto from 'node:crypto';
 
 export function generateStaffInvitationToken(): string {
-  return crypto.randomBytes(32).toString('hex');
+    return crypto.randomBytes(32).toString('hex');
 }
 
 export function hashStaffInvitationToken(token: string): string {
-  return crypto.createHash('sha256').update(token).digest('hex');
+    return crypto.createHash('sha256').update(token).digest('hex');
 }

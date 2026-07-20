@@ -1,10 +1,10 @@
-import { toDbError } from "./errors.js";
-import { pool } from "./pool.js";
-import { logger } from "../utils/logger.js";
+import { toDbError } from './errors.js';
+import { pool } from './pool.js';
+import { logger } from '../utils/logger.js';
 
-import type { Pool, PoolConnection, RowDataPacket, ResultSetHeader } from "mysql2/promise";
+import type { Pool, PoolConnection, RowDataPacket, ResultSetHeader } from 'mysql2/promise';
 
-type ExecuteParams = Parameters<Pool["execute"]>[1];
+type ExecuteParams = Parameters<Pool['execute']>[1];
 export type Queryable = Pool | PoolConnection;
 
 const SLOW_QUERY_MS = 200;
@@ -18,7 +18,11 @@ function debugLog(sql: string, params: ExecuteParams | undefined, ms: number) {
     logger.debug(`[db] ${ms.toFixed(1)}ms ${sql}`, params ? { params } : undefined);
 }
 
-export async function query<T extends RowDataPacket[] | ResultSetHeader>(sql: string, params?: ExecuteParams, conn?: Queryable): Promise<T> {
+export async function query<T extends RowDataPacket[] | ResultSetHeader>(
+    sql: string,
+    params?: ExecuteParams,
+    conn?: Queryable
+): Promise<T> {
     const start = performance.now();
 
     try {
@@ -28,7 +32,6 @@ export async function query<T extends RowDataPacket[] | ResultSetHeader>(sql: st
         debugLog(sql, params, performance.now() - start);
 
         return rows as T;
-
     } catch (err) {
         logger.error(`[db] FAILED ${sql}`, { params });
         throw toDbError(err, sql);

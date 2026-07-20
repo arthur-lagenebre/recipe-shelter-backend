@@ -4,8 +4,8 @@ import { beforeEach, describe, it } from 'node:test';
 import { FavoriteService } from '../../../src/services/favorites/favorites.service.js';
 import { HttpError } from '../../../src/utils/errors.js';
 
-import type { FavoriteRepository } from '../../../src/repositories/favorites/favorites.repository.interface.js';
-import type { Favorite } from '../../../src/repositories/favorites/favorites.types.js';
+import type { FavoriteRepository } from '../../../src/repositories/favorite/favorite.repository.interface.js';
+import type { Favorite } from '../../../src/repositories/favorite/favorite.types.js';
 import type { RecipeRepository } from '../../../src/repositories/recipes/recipe.repository.interface.js';
 import type { Recipe, RecipeDetail, RecipeListItem, RecipeSummary } from '../../../src/repositories/recipes/recipe.types.js';
 import type { PaginatedResult, PaginationOptions } from '../../../src/utils/pagination.js';
@@ -167,7 +167,7 @@ describe('FavoriteService', () => {
         service = new FavoriteService(repository, recipeRepository);
     });
 
-    it('creates a favorite for another user\'s published recipe', async () => {
+    it("creates a favorite for another user's published recipe", async () => {
         recipeRepository.recipe = { ...storedRecipe, userId: 8, status: 'published' };
 
         assert.deepEqual(await service.createFavorite(7, 12), favorite);
@@ -175,7 +175,7 @@ describe('FavoriteService', () => {
         assert.deepEqual(repository.createInput, { userId: 7, recipeId: 12 });
     });
 
-    it('creates a favorite for the authenticated user\'s own draft recipe', async () => {
+    it("creates a favorite for the authenticated user's own draft recipe", async () => {
         assert.deepEqual(await service.createFavorite(7, 12), favorite);
         assert.deepEqual(repository.createInput, { userId: 7, recipeId: 12 });
     });

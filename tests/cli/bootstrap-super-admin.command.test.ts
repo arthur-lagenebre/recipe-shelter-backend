@@ -1,24 +1,26 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { BOOTSTRAP_SUPER_ADMIN_USAGE, CommandUsageError, parseBootstrapSuperAdminArgs, runBootstrapSuperAdminCommand } from '../../src/cli/bootstrap-super-admin.command.js';
+import {
+    BOOTSTRAP_SUPER_ADMIN_USAGE,
+    CommandUsageError,
+    parseBootstrapSuperAdminArgs,
+    runBootstrapSuperAdminCommand
+} from '../../src/cli/bootstrap-super-admin.command.js';
 
 describe('bootstrap SuperAdmin command', () => {
     it('accepts only the non-secret identity arguments', () => {
-        assert.deepEqual(
-            parseBootstrapSuperAdminArgs(['--email', 'first@example.com', '--username=first-admin']),
-            { help: false, mail: 'first@example.com', username: 'first-admin' }
-        );
+        assert.deepEqual(parseBootstrapSuperAdminArgs(['--email', 'first@example.com', '--username=first-admin']), {
+            help: false,
+            mail: 'first@example.com',
+            username: 'first-admin'
+        });
     });
 
     it('never accepts or repeats secrets supplied as arguments', () => {
         for (const argument of ['--password=NeverPrintThis42!', '--token=NeverPrintThisToken']) {
             assert.throws(
-                () => parseBootstrapSuperAdminArgs([
-                    '--email=first@example.com',
-                    '--username=first-admin',
-                    argument
-                ]),
+                () => parseBootstrapSuperAdminArgs(['--email=first@example.com', '--username=first-admin', argument]),
                 (error) => {
                     assert.ok(error instanceof CommandUsageError);
                     assert.doesNotMatch(error.message, /NeverPrintThis/);
@@ -32,20 +34,17 @@ describe('bootstrap SuperAdmin command', () => {
         const outputs: string[] = [];
         let receivedInput: { mail: string; username: string } | null = null;
 
-        await runBootstrapSuperAdminCommand(
-            ['--email=first@example.com', '--username=first-admin'],
-            {
-                service: {
-                    async bootstrap(input) {
-                        receivedInput = input;
-                        return { userId: 42 };
-                    }
-                },
-                writeOutput(message) {
-                    outputs.push(message);
+        await runBootstrapSuperAdminCommand(['--email=first@example.com', '--username=first-admin'], {
+            service: {
+                async bootstrap(input) {
+                    receivedInput = input;
+                    return { userId: 42 };
                 }
+            },
+            writeOutput(message) {
+                outputs.push(message);
             }
-        );
+        });
 
         assert.deepEqual(receivedInput, {
             mail: 'first@example.com',

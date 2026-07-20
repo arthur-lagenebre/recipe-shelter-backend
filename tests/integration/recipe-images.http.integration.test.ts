@@ -37,8 +37,7 @@ const processor = new RecipeImageProcessor();
 
 const imageService = {
     async replace(_recipeId: number, _auth: unknown, upload: { buffer: Buffer } | undefined, altText: unknown) {
-        if (!upload)
-            throw badRequest('An image file is required', 'IMAGE_REQUIRED');
+        if (!upload) throw badRequest('An image file is required', 'IMAGE_REQUIRED');
 
         const normalizedAltText = normalizeAltText(altText);
         const result = await processor.process(upload.buffer);
@@ -53,7 +52,7 @@ const imageService = {
             altText: normalizedAltText
         };
     },
-    async delete() { }
+    async delete() {}
 };
 
 let sessionCookie = '';
@@ -65,17 +64,18 @@ function authenticatedHeaders(): HeadersInit {
 function formWithFile(buffer: Buffer, filename: string, contentType: string, altText?: string): FormData {
     const form = new FormData();
     form.append('image', new Blob([new Uint8Array(buffer)], { type: contentType }), filename);
-    if (altText !== undefined)
-        form.append('altText', altText);
+    if (altText !== undefined) form.append('altText', altText);
     return form;
 }
 
 async function jpegFixture(): Promise<Buffer> {
-    return sharp({ create: { width: 80, height: 40, channels: 3, background: 'orange' } }).jpeg().toBuffer();
+    return sharp({ create: { width: 80, height: 40, channels: 3, background: 'orange' } })
+        .jpeg()
+        .toBuffer();
 }
 
 async function errorCode(response: Response): Promise<string> {
-    const payload = await response.json() as { error: { code: string } };
+    const payload = (await response.json()) as { error: { code: string } };
     return payload.error.code;
 }
 
@@ -143,7 +143,7 @@ describe('recipe image multipart HTTP integration', () => {
         });
 
         assert.equal(response.status, 200);
-        const body = await response.json() as { altText: string; width: number; height: number };
+        const body = (await response.json()) as { altText: string; width: number; height: number };
         assert.equal(body.altText, 'Photo du plat');
         assert.deepEqual([body.width, body.height], [80, 40]);
     });

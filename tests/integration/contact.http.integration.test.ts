@@ -4,7 +4,7 @@ import { describe, it } from 'node:test';
 import express from 'express';
 
 import { createContactController } from '../../src/api/contact/contact.controller.js';
-import { createContactRouter } from '../../src/api/contact/contact.router.js';
+import { createContactRouter } from '../../src/api/contact/contact.routes.js';
 import { errorHandler } from '../../src/middlewares/error-handler.js';
 import { ContactService } from '../../src/services/contact/contact.service.js';
 import { startHttpTestServer } from '../helpers/http-test-server.js';
@@ -58,10 +58,7 @@ describe('contact HTTP integration', () => {
         assert.equal(response.status, 200);
         assert.deepEqual(await response.json(), { message: 'Contact message sent' });
         assert.equal(mailer.messages.length, 1);
-        assert.deepEqual(
-            { ...mailer.messages[0], sentAt: undefined },
-            { ...validMessage, sentAt: undefined }
-        );
+        assert.deepEqual({ ...mailer.messages[0], sentAt: undefined }, { ...validMessage, sentAt: undefined });
         assert.ok(mailer.messages[0]?.sentAt instanceof Date);
     });
 
@@ -71,14 +68,13 @@ describe('contact HTTP integration', () => {
 
         const invalid = await sendContact(server.baseUrl, { ...validMessage, email: 'invalid' });
         assert.equal(invalid.status, 400);
-        assert.equal((await invalid.json() as { error: { code: string } }).error.code, 'CONTACT_INVALID_EMAIL');
+        assert.equal(((await invalid.json()) as { error: { code: string } }).error.code, 'CONTACT_INVALID_EMAIL');
 
-        for (let attempt = 0; attempt < 4; attempt++)
-            assert.equal((await sendContact(server.baseUrl, validMessage)).status, 200);
+        for (let attempt = 0; attempt < 4; attempt++) assert.equal((await sendContact(server.baseUrl, validMessage)).status, 200);
 
         const limited = await sendContact(server.baseUrl, validMessage);
         assert.equal(limited.status, 429);
-        assert.equal((await limited.json() as { error: { code: string } }).error.code, 'RATE_LIMIT');
+        assert.equal(((await limited.json()) as { error: { code: string } }).error.code, 'RATE_LIMIT');
         assert.equal(mailer.messages.length, 4);
     });
 });

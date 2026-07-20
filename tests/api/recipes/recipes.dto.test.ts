@@ -1,7 +1,14 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { parseCreateRecipeBody, parseRecipeFeedLimitQuery, parseRecipeIdParam, parseRecipeSearchQuery, parseRecipeSlugParam, parseUpdateRecipeBody } from '../../../src/api/recipes/recipes.dto.js';
+import {
+    parseCreateRecipeBody,
+    parseRecipeFeedLimitQuery,
+    parseRecipeIdParam,
+    parseRecipeSearchQuery,
+    parseRecipeSlugParam,
+    parseUpdateRecipeBody
+} from '../../../src/api/recipes/recipes.dto.js';
 import { HttpError } from '../../../src/utils/errors.js';
 
 function assertHttpError(error: unknown, code: string, status: number): void {
@@ -21,7 +28,16 @@ describe('recipes.dto', () => {
             cookTimeMinutes: 35,
             servings: 6,
             tagIds: [1, 2],
-            ingredients: [{ ingredientId: 7, displayText: '  pommes Golden en quartiers  ', quantity: 2, unit: ' pcs ', note: '  golden  ', sortOrder: 3 }],
+            ingredients: [
+                {
+                    ingredientId: 7,
+                    displayText: '  pommes Golden en quartiers  ',
+                    quantity: 2,
+                    unit: ' pcs ',
+                    note: '  golden  ',
+                    sortOrder: 3
+                }
+            ],
             steps: [{ description: '  Couper les pommes.  ' }],
             equipments: [{ equipmentId: 4 }]
         });
@@ -35,7 +51,9 @@ describe('recipes.dto', () => {
             cookTimeMinutes: 35,
             servings: 6,
             tagIds: [1, 2],
-            ingredients: [{ ingredientId: 7, displayText: 'pommes Golden en quartiers', quantity: 2, unit: 'pcs', note: 'golden', sortOrder: 3 }],
+            ingredients: [
+                { ingredientId: 7, displayText: 'pommes Golden en quartiers', quantity: 2, unit: 'pcs', note: 'golden', sortOrder: 3 }
+            ],
             steps: [{ stepNumber: undefined, description: 'Couper les pommes.' }],
             equipments: [{ equipmentId: 4 }]
         });
@@ -132,14 +150,25 @@ describe('recipes.dto', () => {
         assert.deepEqual(
             parseCreateRecipeBody({
                 title: 'Soupe lunaire',
-                ingredients: [
-                    { displayText: 'Poudre de lune' },
-                    { ingredientId: null, displayText: 'Eau filtree' }
-                ]
+                ingredients: [{ displayText: 'Poudre de lune' }, { ingredientId: null, displayText: 'Eau filtree' }]
             }).ingredients,
             [
-                { ingredientId: undefined, displayText: 'Poudre de lune', quantity: undefined, unit: undefined, note: undefined, sortOrder: undefined },
-                { ingredientId: null, displayText: 'Eau filtree', quantity: undefined, unit: undefined, note: undefined, sortOrder: undefined }
+                {
+                    ingredientId: undefined,
+                    displayText: 'Poudre de lune',
+                    quantity: undefined,
+                    unit: undefined,
+                    note: undefined,
+                    sortOrder: undefined
+                },
+                {
+                    ingredientId: null,
+                    displayText: 'Eau filtree',
+                    quantity: undefined,
+                    unit: undefined,
+                    note: undefined,
+                    sortOrder: undefined
+                }
             ]
         );
     });
@@ -241,7 +270,14 @@ describe('recipes.dto', () => {
                 ]
             }).ingredients,
             [
-                { ingredientId: 7, displayText: 'thé vert en vrac', quantity: undefined, unit: undefined, note: undefined, sortOrder: undefined },
+                {
+                    ingredientId: 7,
+                    displayText: 'thé vert en vrac',
+                    quantity: undefined,
+                    unit: undefined,
+                    note: undefined,
+                    sortOrder: undefined
+                },
                 { ingredientId: 8, displayText: 'eau filtrée', quantity: null, unit: undefined, note: undefined, sortOrder: undefined }
             ]
         );
@@ -249,7 +285,11 @@ describe('recipes.dto', () => {
 
     it('rejects a non-numeric ingredient quantity', () => {
         assert.throws(
-            () => parseCreateRecipeBody({ title: 'Thé maison', ingredients: [{ ingredientId: 7, displayText: 'thé vert', quantity: 'two' }] }),
+            () =>
+                parseCreateRecipeBody({
+                    title: 'Thé maison',
+                    ingredients: [{ ingredientId: 7, displayText: 'thé vert', quantity: 'two' }]
+                }),
             (error) => {
                 assertHttpError(error, 'RECIPES_CREATE_BAD_INGREDIENT_QUANTITY', 400);
                 return true;
@@ -394,15 +434,26 @@ describe('recipes.dto', () => {
     });
 
     it('combines title search, category, included and excluded relations, and total time filters', () => {
-        assert.deepEqual(parseRecipeSearchQuery({ q: 'porc', categoryId: '3', tagIds: '1,2', excludedTagIds: '8', ingredientIds: '18,103', excludedIngredientIds: '10,11', maxTotalTimeMinutes: '60' }), {
-            q: 'porc',
-            categoryId: 3,
-            tagIds: [1, 2],
-            excludedTagIds: [8],
-            ingredientIds: [18, 103],
-            excludedIngredientIds: [10, 11],
-            maxTotalTimeMinutes: 60
-        });
+        assert.deepEqual(
+            parseRecipeSearchQuery({
+                q: 'porc',
+                categoryId: '3',
+                tagIds: '1,2',
+                excludedTagIds: '8',
+                ingredientIds: '18,103',
+                excludedIngredientIds: '10,11',
+                maxTotalTimeMinutes: '60'
+            }),
+            {
+                q: 'porc',
+                categoryId: 3,
+                tagIds: [1, 2],
+                excludedTagIds: [8],
+                ingredientIds: [18, 103],
+                excludedIngredientIds: [10, 11],
+                maxTotalTimeMinutes: 60
+            }
+        );
     });
 
     it('ignores pagination keys in a search query', () => {

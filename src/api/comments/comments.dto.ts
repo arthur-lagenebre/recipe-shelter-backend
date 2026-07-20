@@ -18,8 +18,7 @@ export type UpdateCommentBody = {
 function parsePositiveIntegerParam(value: unknown, message: string, code: string): number {
     const id = typeof value === 'string' ? Number(value) : NaN;
 
-    if (!Number.isInteger(id) || id <= 0)
-        throw badRequest(message, code);
+    if (!Number.isInteger(id) || id <= 0) throw badRequest(message, code);
 
     return id;
 }
@@ -34,7 +33,11 @@ function parseRating(value: unknown, codePrefix: 'COMMENTS_CREATE' | 'COMMENTS_U
 }
 
 function parseParentCommentId(value: unknown): number | null | undefined {
-    const parentCommentId = getOptionalNullableNumber(value, 'Parent comment id must be a number or null', 'COMMENTS_CREATE_BAD_PARENT_COMMENT_ID');
+    const parentCommentId = getOptionalNullableNumber(
+        value,
+        'Parent comment id must be a number or null',
+        'COMMENTS_CREATE_BAD_PARENT_COMMENT_ID'
+    );
 
     if (parentCommentId !== undefined && parentCommentId !== null && (!Number.isInteger(parentCommentId) || parentCommentId <= 0))
         throw badRequest('Parent comment id must be a positive integer', 'COMMENTS_CREATE_BAD_PARENT_COMMENT_ID');
@@ -43,10 +46,15 @@ function parseParentCommentId(value: unknown): number | null | undefined {
 }
 
 export function parseCreateCommentBody(body: unknown): CreateCommentBody {
-    if (!isRecord(body))
-        throw badRequest('Invalid body', 'COMMENTS_CREATE_BAD_BODY');
+    if (!isRecord(body)) throw badRequest('Invalid body', 'COMMENTS_CREATE_BAD_BODY');
 
-    const comment = getRequiredBoundedString(body.comment, MIN_COMMENT_LENGTH, MAX_COMMENT_LENGTH, 'Comment is required', 'COMMENTS_CREATE_MISSING_COMMENT');
+    const comment = getRequiredBoundedString(
+        body.comment,
+        MIN_COMMENT_LENGTH,
+        MAX_COMMENT_LENGTH,
+        'Comment is required',
+        'COMMENTS_CREATE_MISSING_COMMENT'
+    );
     const parentCommentId = parseParentCommentId(body.parentCommentId);
     const rating = parseRating(body.rating, 'COMMENTS_CREATE');
 
@@ -57,10 +65,15 @@ export function parseCreateCommentBody(body: unknown): CreateCommentBody {
 }
 
 export function parseUpdateCommentBody(body: unknown): UpdateCommentBody {
-    if (!isRecord(body))
-        throw badRequest('Invalid body', 'COMMENTS_UPDATE_BAD_BODY');
+    if (!isRecord(body)) throw badRequest('Invalid body', 'COMMENTS_UPDATE_BAD_BODY');
 
-    const comment = getRequiredBoundedString(body.comment, MIN_COMMENT_LENGTH, MAX_COMMENT_LENGTH, 'Comment is required', 'COMMENTS_UPDATE_MISSING_COMMENT');
+    const comment = getRequiredBoundedString(
+        body.comment,
+        MIN_COMMENT_LENGTH,
+        MAX_COMMENT_LENGTH,
+        'Comment is required',
+        'COMMENTS_UPDATE_MISSING_COMMENT'
+    );
 
     return { rating: parseRating(body.rating, 'COMMENTS_UPDATE'), comment };
 }

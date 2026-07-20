@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { parseCategoryIdParam } from '../../src/api/category/category.dto.js';
+import { parseCategoryIdParam } from '../../src/api/categories/categories.dto.js';
 import { parseEquipmentIdParam } from '../../src/api/equipments/equipments.dto.js';
 import { parseRecipeIdParam } from '../../src/api/favorites/favorites.dto.js';
 import { parseIngredientIdParam } from '../../src/api/ingredients/ingredients.dto.js';
-import { parseTagIdParam } from '../../src/api/tag/tags.dto.js';
+import { parseTagIdParam } from '../../src/api/tags/tags.dto.js';
 import { HttpError } from '../../src/utils/errors.js';
 
 type IdParserCase = {

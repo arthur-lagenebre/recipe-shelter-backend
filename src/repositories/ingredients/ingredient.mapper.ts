@@ -1,4 +1,4 @@
-import type { Ingredient, IngredientAlias, IngredientAliasRow, IngredientRow } from "./ingredient.types.js";
+import type { Ingredient, IngredientAlias, IngredientAliasRow, IngredientRow } from './ingredient.types.js';
 
 export function mapIngredient(row: IngredientRow): Ingredient {
     return {

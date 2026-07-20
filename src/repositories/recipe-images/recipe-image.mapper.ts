@@ -1,4 +1,10 @@
-import type { PublicImageUrlBuilder, RecipeCoverImageDto, RecipeImage, RecipeImageJoinedRow, RecipeImageRow } from './recipe-image.types.js';
+import type {
+    PublicImageUrlBuilder,
+    RecipeCoverImageDto,
+    RecipeImage,
+    RecipeImageJoinedRow,
+    RecipeImageRow
+} from './recipe-image.types.js';
 
 export function mapRecipeImage(row: RecipeImageRow): RecipeImage {
     return {
@@ -19,10 +25,15 @@ export function mapRecipeImage(row: RecipeImageRow): RecipeImage {
 }
 
 export function mapJoinedRecipeCoverImage(row: RecipeImageJoinedRow, getPublicUrl: PublicImageUrlBuilder): RecipeCoverImageDto | null {
-    if (!row.CoverImageId)
-        return null;
+    if (!row.CoverImageId) return null;
 
-    if (!row.CoverImageLargeStorageKey || !row.CoverImageMediumStorageKey || !row.CoverImageThumbnailStorageKey || row.CoverImageWidth === null || row.CoverImageHeight === null)
+    if (
+        !row.CoverImageLargeStorageKey ||
+        !row.CoverImageMediumStorageKey ||
+        !row.CoverImageThumbnailStorageKey ||
+        row.CoverImageWidth === null ||
+        row.CoverImageHeight === null
+    )
         throw new Error(`Recipe image ${row.CoverImageId} has incomplete metadata`);
 
     return {

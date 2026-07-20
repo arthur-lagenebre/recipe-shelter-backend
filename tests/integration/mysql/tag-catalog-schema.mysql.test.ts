@@ -4,11 +4,11 @@ import { after, before, describe, it } from 'node:test';
 
 import mysql from 'mysql2/promise';
 
-import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin-audit.repository.mysql.js';
+import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin.audit.repository.mysql.js';
 import { AdminTagRepositoryMysql } from '../../../src/repositories/admin/admin.tags.repository.mysql.js';
 import { TagRepositoryMysql } from '../../../src/repositories/tag/tag.repository.mysql.js';
-import { AdminAuditActionRunnerMysql } from '../../../src/services/admin/admin-audit-action.runner.js';
-import { AdminAuditService } from '../../../src/services/admin/admin-audit.service.js';
+import { AdminAuditActionRunnerMysql } from '../../../src/services/admin/admin.audit-action.runner.js';
+import { AdminAuditService } from '../../../src/services/admin/admin.audit.service.js';
 import { AdminTagService } from '../../../src/services/admin/admin.tags.service.js';
 import { env } from '../../../src/utils/env.js';
 
@@ -16,16 +16,12 @@ const baseTestDatabaseName = process.env.TEST_DB_NAME?.trim() ?? '';
 const mysqlEnabled = Boolean(baseTestDatabaseName);
 
 function requireTagCatalogTestDatabaseName(): string {
-    if (!/^[a-zA-Z0-9_]+$/.test(baseTestDatabaseName))
-        throw new Error('TEST_DB_NAME must contain only letters, numbers and underscores');
-    if (!baseTestDatabaseName.toLowerCase().includes('test'))
-        throw new Error('TEST_DB_NAME must contain "test"');
-    if (baseTestDatabaseName === env.db.name)
-        throw new Error('TEST_DB_NAME must be different from DB_NAME');
+    if (!/^[a-zA-Z0-9_]+$/.test(baseTestDatabaseName)) throw new Error('TEST_DB_NAME must contain only letters, numbers and underscores');
+    if (!baseTestDatabaseName.toLowerCase().includes('test')) throw new Error('TEST_DB_NAME must contain "test"');
+    if (baseTestDatabaseName === env.db.name) throw new Error('TEST_DB_NAME must be different from DB_NAME');
 
     const databaseName = `${baseTestDatabaseName}_tag_catalog`;
-    if (databaseName.length > 64)
-        throw new Error('TEST_DB_NAME is too long for the tag catalog integration database suffix');
+    if (databaseName.length > 64) throw new Error('TEST_DB_NAME is too long for the tag catalog integration database suffix');
     return databaseName;
 }
 
@@ -44,10 +40,7 @@ function assertTagDeletionRejected(error: unknown): boolean {
 
     assert.equal(mysqlError.errno, 1644);
     assert.equal(mysqlError.sqlState, '45000');
-    assert.equal(
-        mysqlError.sqlMessage,
-        'Tags cannot be physically deleted; deprecate or merge them instead'
-    );
+    assert.equal(mysqlError.sqlMessage, 'Tags cannot be physically deleted; deprecate or merge them instead');
     return true;
 }
 
@@ -62,10 +55,7 @@ function assertReferencedTagDeletionRejected(error: unknown): boolean {
 
     assert.equal(mysqlError.errno, 1644);
     assert.equal(mysqlError.sqlState, '45000');
-    assert.equal(
-        mysqlError.sqlMessage,
-        'Referenced tags cannot be physically deleted; deprecate or merge them instead'
-    );
+    assert.equal(mysqlError.sqlMessage, 'Referenced tags cannot be physically deleted; deprecate or merge them instead');
     return true;
 }
 
@@ -98,9 +88,7 @@ describe('tag catalog schema integration', { skip: !mysqlEnabled && 'Set TEST_DB
         });
 
         await connection.query(`DROP DATABASE IF EXISTS \`${databaseName}\``);
-        await connection.query(
-            `CREATE DATABASE \`${databaseName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
-        );
+        await connection.query(`CREATE DATABASE \`${databaseName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
 
         const schemaPath = new URL('../../../database/migrations/1_create_schema.sql', import.meta.url);
         const seedPath = new URL('../../../database/seed.sql', import.meta.url);
@@ -121,8 +109,7 @@ describe('tag catalog schema integration', { skip: !mysqlEnabled && 'Set TEST_DB
     });
 
     after(async () => {
-        if (pool)
-            await pool.end();
+        if (pool) await pool.end();
         if (connection) {
             await connection.query(`DROP DATABASE IF EXISTS \`${requireTagCatalogTestDatabaseName()}\``);
             await connection.end();
@@ -214,21 +201,24 @@ describe('tag catalog schema integration', { skip: !mysqlEnabled && 'Set TEST_DB
         const tags = await new TagRepositoryMysql(pool).findAll();
         const vegetarian = tags.find(({ slug }) => slug === 'vegetarien');
         assert.ok(vegetarian);
-        assert.deepEqual({
-            name: vegetarian.name,
-            normalizedName: vegetarian.normalizedName,
-            description: vegetarian.description,
-            status: vegetarian.status,
-            mergedIntoTagId: vegetarian.mergedIntoTagId,
-            groupSlug: vegetarian.group.slug
-        }, {
-            name: 'Végétarien',
-            normalizedName: 'vegetarien',
-            description: null,
-            status: 'active',
-            mergedIntoTagId: null,
-            groupSlug: 'regimes-alimentaires'
-        });
+        assert.deepEqual(
+            {
+                name: vegetarian.name,
+                normalizedName: vegetarian.normalizedName,
+                description: vegetarian.description,
+                status: vegetarian.status,
+                mergedIntoTagId: vegetarian.mergedIntoTagId,
+                groupSlug: vegetarian.group.slug
+            },
+            {
+                name: 'Végétarien',
+                normalizedName: 'vegetarien',
+                description: null,
+                status: 'active',
+                mergedIntoTagId: null,
+                groupSlug: 'regimes-alimentaires'
+            }
+        );
         assert.ok(vegetarian.createdAt instanceof Date);
         assert.ok(vegetarian.updatedAt instanceof Date);
     });
@@ -248,19 +238,22 @@ describe('tag catalog schema integration', { skip: !mysqlEnabled && 'Set TEST_DB
 
         for (const { name, slug } of activeVariants) {
             await assert.rejects(
-                () => connection.query(
-                    `INSERT INTO Tags (GroupId, Name, NormalizedName, Slug)
+                () =>
+                    connection.query(
+                        `INSERT INTO Tags (GroupId, Name, NormalizedName, Slug)
                      VALUES (1, ?, 'creme brulee', ?)`,
-                    [name, slug]
-                ),
+                        [name, slug]
+                    ),
                 assertActiveNormalizedDuplicateRejected
             );
         }
 
-        await assert.rejects(() => connection.query(
-            `INSERT INTO Tags (GroupId, Name, NormalizedName, Slug, Status)
+        await assert.rejects(() =>
+            connection.query(
+                `INSERT INTO Tags (GroupId, Name, NormalizedName, Slug, Status)
              VALUES (1, 'Crème brûlée', 'unrelated value', 'normalization-mismatch', 'deprecated')`
-        ));
+            )
+        );
 
         await connection.query(
             `INSERT INTO Tags (Id, GroupId, Name, NormalizedName, Slug, Status) VALUES
@@ -313,49 +306,62 @@ describe('tag catalog schema integration', { skip: !mysqlEnabled && 'Set TEST_DB
         assert.equal(canonical.description, 'Updated canonical target');
         assert.ok(canonical.updatedAt >= canonical.createdAt);
 
-        await assert.rejects(() => connection.query(
-            `INSERT INTO Tags (GroupId, Name, NormalizedName, Slug, Status)
+        await assert.rejects(() =>
+            connection.query(
+                `INSERT INTO Tags (GroupId, Name, NormalizedName, Slug, Status)
              VALUES (1, 'Missing merge target', 'missing merge target', 'missing-merge-target', 'merged')`
-        ));
-        await assert.rejects(() => connection.query(
-            `INSERT INTO Tags (GroupId, Name, NormalizedName, Slug, Status, MergedIntoTagId)
-             VALUES (1, 'Unexpected merge target', 'unexpected merge target', 'unexpected-merge-target', 'active', 900)`
-        ));
-        await assert.rejects(() => connection.query(
-            `INSERT INTO Tags (Id, GroupId, Name, NormalizedName, Slug, Status, MergedIntoTagId)
-             VALUES (903, 1, 'Self merge', 'self merge', 'self-merge', 'merged', 903)`
-        ));
-        await assert.rejects(() => connection.query(
-            `INSERT INTO Tags (GroupId, Name, NormalizedName, Slug, Status, MergedIntoTagId)
-             VALUES (1, 'Unknown merge target', 'unknown merge target', 'unknown-merge-target', 'merged', 999999)`
-        ));
-        await assert.rejects(() => connection.query(
-            `INSERT INTO Tags (GroupId, Name, NormalizedName, Slug, Status, MergedIntoTagId)
-             VALUES (1, 'Deprecated merge target', 'deprecated merge target', 'deprecated-merge-target', 'merged', 901)`
-        ));
-        await assert.rejects(() => connection.query(
-            `UPDATE Tags SET Status = 'deprecated' WHERE Id = 900`
-        ));
-        await assert.rejects(() => connection.query(
-            `INSERT INTO Tags (GroupId, Name, NormalizedName, Slug)
-             VALUES (1, 'Mismatched normalized name', 'another value', 'mismatched-normalized-name')`
-        ));
-        await assert.rejects(() => connection.query(
-            `INSERT INTO Tags (GroupId, Name, NormalizedName, Slug)
-             VALUES (1, 'Uppercase normalized name', 'UPPERCASE FIXTURE', 'uppercase-fixture')`
-        ));
-        await assert.rejects(() => connection.query(
-            `INSERT INTO Tags (GroupId, Name, NormalizedName, Slug)
-             VALUES (1, 'Invalid slug', 'invalid slug', 'Invalid Slug')`
-        ));
-        await assert.rejects(() => connection.query(
-            `INSERT INTO Tags (GroupId, Name, NormalizedName, Slug, Description)
-             VALUES (1, 'Blank description', 'blank description', 'blank-description', '   ')`
-        ));
-        await assert.rejects(
-            () => connection.query(`DELETE FROM Tags WHERE Id = 901`),
-            assertTagDeletionRejected
+            )
         );
+        await assert.rejects(() =>
+            connection.query(
+                `INSERT INTO Tags (GroupId, Name, NormalizedName, Slug, Status, MergedIntoTagId)
+             VALUES (1, 'Unexpected merge target', 'unexpected merge target', 'unexpected-merge-target', 'active', 900)`
+            )
+        );
+        await assert.rejects(() =>
+            connection.query(
+                `INSERT INTO Tags (Id, GroupId, Name, NormalizedName, Slug, Status, MergedIntoTagId)
+             VALUES (903, 1, 'Self merge', 'self merge', 'self-merge', 'merged', 903)`
+            )
+        );
+        await assert.rejects(() =>
+            connection.query(
+                `INSERT INTO Tags (GroupId, Name, NormalizedName, Slug, Status, MergedIntoTagId)
+             VALUES (1, 'Unknown merge target', 'unknown merge target', 'unknown-merge-target', 'merged', 999999)`
+            )
+        );
+        await assert.rejects(() =>
+            connection.query(
+                `INSERT INTO Tags (GroupId, Name, NormalizedName, Slug, Status, MergedIntoTagId)
+             VALUES (1, 'Deprecated merge target', 'deprecated merge target', 'deprecated-merge-target', 'merged', 901)`
+            )
+        );
+        await assert.rejects(() => connection.query(`UPDATE Tags SET Status = 'deprecated' WHERE Id = 900`));
+        await assert.rejects(() =>
+            connection.query(
+                `INSERT INTO Tags (GroupId, Name, NormalizedName, Slug)
+             VALUES (1, 'Mismatched normalized name', 'another value', 'mismatched-normalized-name')`
+            )
+        );
+        await assert.rejects(() =>
+            connection.query(
+                `INSERT INTO Tags (GroupId, Name, NormalizedName, Slug)
+             VALUES (1, 'Uppercase normalized name', 'UPPERCASE FIXTURE', 'uppercase-fixture')`
+            )
+        );
+        await assert.rejects(() =>
+            connection.query(
+                `INSERT INTO Tags (GroupId, Name, NormalizedName, Slug)
+             VALUES (1, 'Invalid slug', 'invalid slug', 'Invalid Slug')`
+            )
+        );
+        await assert.rejects(() =>
+            connection.query(
+                `INSERT INTO Tags (GroupId, Name, NormalizedName, Slug, Description)
+             VALUES (1, 'Blank description', 'blank description', 'blank-description', '   ')`
+            )
+        );
+        await assert.rejects(() => connection.query(`DELETE FROM Tags WHERE Id = 901`), assertTagDeletionRejected);
     });
 
     it('persists paginated administration writes and merges recipe relationships without deleting tags', async () => {
@@ -366,43 +372,59 @@ describe('tag catalog schema integration', { skip: !mysqlEnabled && 'Set TEST_DB
             await db.beginTransaction();
 
             assert.equal(await repository.groupExists(1, db), true);
-            const createdResult = await repository.create({
-                groupId: 1,
-                name: 'Administrative fixture',
-                normalizedName: 'administrative fixture',
-                slug: 'administrative-fixture',
-                description: 'Created through the administrative repository'
-            }, db);
+            const createdResult = await repository.create(
+                {
+                    groupId: 1,
+                    name: 'Administrative fixture',
+                    normalizedName: 'administrative fixture',
+                    slug: 'administrative-fixture',
+                    description: 'Created through the administrative repository'
+                },
+                db
+            );
             assert.equal(createdResult.status, 'written');
-            if (createdResult.status !== 'written')
-                throw new Error('Expected the administrative tag fixture to be created');
+            if (createdResult.status !== 'written') throw new Error('Expected the administrative tag fixture to be created');
 
-            assert.deepEqual(await repository.create({
-                groupId: 1,
-                name: 'ADMINISTRATIVE FIXTURE',
-                normalizedName: 'administrative fixture',
-                slug: 'administrative-fixture-copy',
-                description: null
-            }, db), { status: 'normalized_name_taken' });
-            assert.deepEqual(await repository.create({
-                groupId: 1,
-                name: 'Other administrative fixture',
-                normalizedName: 'other administrative fixture',
-                slug: 'administrative-fixture',
-                description: null
-            }, db), { status: 'slug_taken' });
+            assert.deepEqual(
+                await repository.create(
+                    {
+                        groupId: 1,
+                        name: 'ADMINISTRATIVE FIXTURE',
+                        normalizedName: 'administrative fixture',
+                        slug: 'administrative-fixture-copy',
+                        description: null
+                    },
+                    db
+                ),
+                { status: 'normalized_name_taken' }
+            );
+            assert.deepEqual(
+                await repository.create(
+                    {
+                        groupId: 1,
+                        name: 'Other administrative fixture',
+                        normalizedName: 'other administrative fixture',
+                        slug: 'administrative-fixture',
+                        description: null
+                    },
+                    db
+                ),
+                { status: 'slug_taken' }
+            );
 
-            const updatedResult = await repository.update({
-                id: createdResult.tag.id,
-                groupId: 2,
-                name: 'Administrative updated fixture',
-                normalizedName: 'administrative updated fixture',
-                slug: 'administrative-updated-fixture',
-                description: null
-            }, db);
+            const updatedResult = await repository.update(
+                {
+                    id: createdResult.tag.id,
+                    groupId: 2,
+                    name: 'Administrative updated fixture',
+                    normalizedName: 'administrative updated fixture',
+                    slug: 'administrative-updated-fixture',
+                    description: null
+                },
+                db
+            );
             assert.equal(updatedResult.status, 'written');
-            if (updatedResult.status !== 'written')
-                throw new Error('Expected the administrative tag fixture to be updated');
+            if (updatedResult.status !== 'written') throw new Error('Expected the administrative tag fixture to be updated');
             assert.equal(updatedResult.tag.group.id, 2);
 
             const page = await repository.find(
@@ -445,7 +467,10 @@ describe('tag catalog schema integration', { skip: !mysqlEnabled && 'Set TEST_DB
             );
 
             const locked = await repository.findByIdsForUpdate([930, 931], db);
-            assert.deepEqual(locked.map((tag) => tag.id), [930, 931]);
+            assert.deepEqual(
+                locked.map((tag) => tag.id),
+                [930, 931]
+            );
             const merged = await repository.merge(930, 931, db);
             assert.deepEqual(merged, {
                 merged: true,
@@ -480,10 +505,11 @@ describe('tag catalog schema integration', { skip: !mysqlEnabled && 'Set TEST_DB
             ]);
 
             await assert.rejects(
-                () => db.execute(
-                    `INSERT INTO RecipeTags (RecipeId, TagId)
+                () =>
+                    db.execute(
+                        `INSERT INTO RecipeTags (RecipeId, TagId)
                      VALUES (930, 930)`
-                ),
+                    ),
                 /Recipes can only reference active canonical tags/
             );
 
@@ -495,10 +521,7 @@ describe('tag catalog schema integration', { skip: !mysqlEnabled && 'Set TEST_DB
                 `INSERT INTO RecipeTags (RecipeId, TagId)
                  VALUES (930, 933)`
             );
-            await assert.rejects(
-                () => db.execute(`DELETE FROM Tags WHERE Id = 933`),
-                assertReferencedTagDeletionRejected
-            );
+            await assert.rejects(() => db.execute(`DELETE FROM Tags WHERE Id = 933`), assertReferencedTagDeletionRejected);
 
             const [retainedActiveTag] = await db.query(
                 `SELECT tags.Id, tags.Status, COUNT(recipe_tags.RecipeId) AS RecipeCount
@@ -507,11 +530,13 @@ describe('tag catalog schema integration', { skip: !mysqlEnabled && 'Set TEST_DB
                  WHERE tags.Id = 933
                  GROUP BY tags.Id, tags.Status`
             );
-            assert.deepEqual(retainedActiveTag, [{
-                Id: 933,
-                Status: 'active',
-                RecipeCount: 1
-            }]);
+            assert.deepEqual(retainedActiveTag, [
+                {
+                    Id: 933,
+                    Status: 'active',
+                    RecipeCount: 1
+                }
+            ]);
 
             assert.equal(await repository.deprecate(933, db), true);
             const [retainedDeprecatedTag] = await db.query(
@@ -521,18 +546,21 @@ describe('tag catalog schema integration', { skip: !mysqlEnabled && 'Set TEST_DB
                  WHERE tags.Id = 933
                  GROUP BY tags.Id, tags.Status`
             );
-            assert.deepEqual(retainedDeprecatedTag, [{
-                Id: 933,
-                Status: 'deprecated',
-                RecipeCount: 1
-            }]);
+            assert.deepEqual(retainedDeprecatedTag, [
+                {
+                    Id: 933,
+                    Status: 'deprecated',
+                    RecipeCount: 1
+                }
+            ]);
 
             await assert.rejects(
-                () => db.execute(
-                    `UPDATE Tags
+                () =>
+                    db.execute(
+                        `UPDATE Tags
                      SET Status = 'merged', MergedIntoTagId = 931
                      WHERE Id = 933`
-                ),
+                    ),
                 /A tag must have no recipe associations before being merged/
             );
         } finally {
@@ -570,17 +598,19 @@ describe('tag catalog schema integration', { skip: !mysqlEnabled && 'Set TEST_DB
         );
         const targetBefore = (targetBeforeRows as Array<Record<string, unknown>>)[0];
         const repository = new AdminTagRepositoryMysql(pool);
-        const auditActions = new AdminAuditActionRunnerMysql(
-            pool,
-            (db) => new AdminAuditService(new AdminAuditRepositoryMysql(db))
-        );
+        const auditActions = new AdminAuditActionRunnerMysql(pool, (db) => new AdminAuditService(new AdminAuditRepositoryMysql(db)));
         const service = new AdminTagService(repository, auditActions);
         const correlationId = '00000000-0000-4000-8000-000000000950';
 
-        const merged = await service.merge(950, {
-            targetTagId: 951,
-            reason: 'Doublon confirmé par le test transactionnel.'
-        }, 950, { correlationId });
+        const merged = await service.merge(
+            950,
+            {
+                targetTagId: 951,
+                reason: 'Doublon confirmé par le test transactionnel.'
+            },
+            950,
+            { correlationId }
+        );
 
         assert.equal(merged.status, 'merged');
         assert.equal(merged.mergedIntoTagId, 951);
@@ -630,22 +660,24 @@ describe('tag catalog schema integration', { skip: !mysqlEnabled && 'Set TEST_DB
              WHERE CorrelationId = ?`,
             [correlationId]
         );
-        assert.deepEqual(auditRows, [{
-            Action: 'tags.merge',
-            TargetType: 'tag',
-            TargetId: '950',
-            Reason: 'Doublon confirmé par le test transactionnel.',
-            BeforeSourceStatus: 'active',
-            BeforeSourceRecipeCount: 2,
-            BeforeTargetRecipeCount: 1,
-            BeforeSharedRecipeCount: 1,
-            AfterSourceStatus: 'merged',
-            AfterSourceRecipeCount: 0,
-            AfterTargetRecipeCount: 2,
-            TransferredRecipeCount: 1,
-            DeduplicatedRecipeCount: 1,
-            RedirectedMergedTagCount: 1
-        }]);
+        assert.deepEqual(auditRows, [
+            {
+                Action: 'tags.merge',
+                TargetType: 'tag',
+                TargetId: '950',
+                Reason: 'Doublon confirmé par le test transactionnel.',
+                BeforeSourceStatus: 'active',
+                BeforeSourceRecipeCount: 2,
+                BeforeTargetRecipeCount: 1,
+                BeforeSharedRecipeCount: 1,
+                AfterSourceStatus: 'merged',
+                AfterSourceRecipeCount: 0,
+                AfterTargetRecipeCount: 2,
+                TransferredRecipeCount: 1,
+                DeduplicatedRecipeCount: 1,
+                RedirectedMergedTagCount: 1
+            }
+        ]);
 
         const failedCorrelationId = '00000000-0000-4000-8000-000000000951';
         const failingService = new AdminTagService(
@@ -657,10 +689,16 @@ describe('tag catalog schema integration', { skip: !mysqlEnabled && 'Set TEST_DB
             }))
         );
         await assert.rejects(
-            () => failingService.merge(953, {
-                targetTagId: 954,
-                reason: 'Cette fusion doit être entièrement annulée.'
-            }, 950, { correlationId: failedCorrelationId }),
+            () =>
+                failingService.merge(
+                    953,
+                    {
+                        targetTagId: 954,
+                        reason: 'Cette fusion doit être entièrement annulée.'
+                    },
+                    950,
+                    { correlationId: failedCorrelationId }
+                ),
             /forced tag merge audit failure/
         );
 
@@ -673,13 +711,15 @@ describe('tag catalog schema integration', { skip: !mysqlEnabled && 'Set TEST_DB
              WHERE source.Id = 953`,
             [failedCorrelationId]
         );
-        assert.deepEqual(rolledBack, [{
-            SourceStatus: 'active',
-            MergedIntoTagId: null,
-            SourceRecipeCount: 1,
-            TargetRecipeCount: 0,
-            AuditCount: 0
-        }]);
+        assert.deepEqual(rolledBack, [
+            {
+                SourceStatus: 'active',
+                MergedIntoTagId: null,
+                SourceRecipeCount: 1,
+                TargetRecipeCount: 0,
+                AuditCount: 0
+            }
+        ]);
     });
 
     it('serializes a concurrent recipe association so it cannot recreate a merged source link', async () => {
@@ -697,13 +737,15 @@ describe('tag catalog schema integration', { skip: !mysqlEnabled && 'Set TEST_DB
             const repository = new AdminTagRepositoryMysql(pool);
             await repository.findByIdsForUpdate([960, 961], mergeDb);
 
-            const pendingAssociation = recipeDb.execute(
-                `INSERT INTO RecipeTags (RecipeId, TagId)
+            const pendingAssociation = recipeDb
+                .execute(
+                    `INSERT INTO RecipeTags (RecipeId, TagId)
                  VALUES (950, 960)`
-            ).then(
-                () => null,
-                (error: unknown) => error
-            );
+                )
+                .then(
+                    () => null,
+                    (error: unknown) => error
+                );
 
             const result = await repository.merge(960, 961, mergeDb);
             assert.equal(result.merged, true);
@@ -724,12 +766,14 @@ describe('tag catalog schema integration', { skip: !mysqlEnabled && 'Set TEST_DB
                  FROM Tags AS source
                  WHERE source.Id = 960`
             );
-            assert.deepEqual(persistedState, [{
-                SourceStatus: 'merged',
-                MergedIntoTagId: 961,
-                SourceRecipeCount: 0,
-                TargetRecipeCount: 0
-            }]);
+            assert.deepEqual(persistedState, [
+                {
+                    SourceStatus: 'merged',
+                    MergedIntoTagId: 961,
+                    SourceRecipeCount: 0,
+                    TargetRecipeCount: 0
+                }
+            ]);
         } finally {
             await mergeDb.rollback();
             await recipeDb.rollback();

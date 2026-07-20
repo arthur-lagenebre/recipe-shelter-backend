@@ -1,5 +1,6 @@
 import { parseUpdateEmailBody, parseUpdatePasswordBody, parseUpdateUsernameBody, parseUsernameParam } from './users.dto.js';
 import { verifySessionToken } from '../../services/auth/session-token.js';
+import { unauthorized } from '../../utils/errors.js';
 import { getSessionToken } from '../../utils/session-cookie.js';
 import { asyncHandler } from '../http/async-handler.js';
 
@@ -8,11 +9,7 @@ import type { UserService } from '../../services/users/users.service.js';
 export function createUsersController(userService: UserService) {
     return {
         me: asyncHandler(async (req, res) => {
-            if (!req.auth) {
-                res.status(401).json({ error: { message: 'Unauthorized', code: 'AUTH_UNAUTHORIZED' } });
-
-                return;
-            }
+            if (!req.auth) throw unauthorized('Unauthorized', 'AUTH_UNAUTHORIZED');
 
             const profile = await userService.getMe(req.auth.userId);
             res.status(200).json(profile);
@@ -26,10 +23,7 @@ export function createUsersController(userService: UserService) {
         }),
 
         updateEmail: asyncHandler(async (req, res) => {
-            if (!req.auth) {
-                res.status(401).json({ error: { message: 'Unauthorized', code: 'AUTH_UNAUTHORIZED' } });
-                return;
-            }
+            if (!req.auth) throw unauthorized('Unauthorized', 'AUTH_UNAUTHORIZED');
 
             const input = parseUpdateEmailBody(req.body);
             const profile = await userService.updateEmail(req.auth.userId, input.newEmail, input.currentPassword);
@@ -38,11 +32,7 @@ export function createUsersController(userService: UserService) {
         }),
 
         updatePassword: asyncHandler(async (req, res) => {
-            if (!req.auth) {
-                res.status(401).json({ error: { message: 'Unauthorized', code: 'AUTH_UNAUTHORIZED' } });
-
-                return;
-            }
+            if (!req.auth) throw unauthorized('Unauthorized', 'AUTH_UNAUTHORIZED');
 
             const input = parseUpdatePasswordBody(req.body);
             const token = getSessionToken(req, 'app');
@@ -51,8 +41,7 @@ export function createUsersController(userService: UserService) {
             try {
                 const session = token ? verifySessionToken(token, 'app') : null;
 
-                if (session?.userId === req.auth.userId)
-                    currentSessionId = session.sessionId;
+                if (session?.userId === req.auth.userId) currentSessionId = session.sessionId;
             } catch {
                 currentSessionId = null;
             }
@@ -63,11 +52,7 @@ export function createUsersController(userService: UserService) {
         }),
 
         updateUsername: asyncHandler(async (req, res) => {
-            if (!req.auth) {
-                res.status(401).json({ error: { message: 'Unauthorized', code: 'AUTH_UNAUTHORIZED' } });
-
-                return;
-            }
+            if (!req.auth) throw unauthorized('Unauthorized', 'AUTH_UNAUTHORIZED');
 
             const input = parseUpdateUsernameBody(req.body);
             const profile = await userService.updateUsername(req.auth.userId, input.currentPassword, input.newUsername);

@@ -1,6 +1,30 @@
 import { mapJoinedRecipeCoverImage } from '../recipe-images/recipe-image.mapper.js';
 
-import type { Recipe, RecipeDetail, RecipeDetailComment, RecipeDetailCommentRow, RecipeDetailEquipment, RecipeDetailIngredient, RecipeDetailIngredientRow, RecipeDetailRow, RecipeDetailStep, RecipeDetailStepRow, RecipeDetailTag, RecipeDetailTagRow, RecipeDetailEquipmentRow, RecipeIngredient, RecipeIngredientRow, RecipeListItem, RecipeListItemRow, RecipeRow, RecipeStep, RecipeStepRow, RecipeSummary, RecipeEquipment, RecipeEquipmentRow } from './recipe.types.js';
+import type {
+    Recipe,
+    RecipeDetail,
+    RecipeDetailComment,
+    RecipeDetailCommentRow,
+    RecipeDetailEquipment,
+    RecipeDetailIngredient,
+    RecipeDetailIngredientRow,
+    RecipeDetailRow,
+    RecipeDetailStep,
+    RecipeDetailStepRow,
+    RecipeDetailTag,
+    RecipeDetailTagRow,
+    RecipeDetailEquipmentRow,
+    RecipeIngredient,
+    RecipeIngredientRow,
+    RecipeListItem,
+    RecipeListItemRow,
+    RecipeRow,
+    RecipeStep,
+    RecipeStepRow,
+    RecipeSummary,
+    RecipeEquipment,
+    RecipeEquipmentRow
+} from './recipe.types.js';
 import type { PublicImageUrlBuilder } from '../recipe-images/recipe-image.types.js';
 
 const missingPublicImageUrlBuilder: PublicImageUrlBuilder = () => {
@@ -76,7 +100,10 @@ export function mapRecipeEquipment(row: RecipeEquipmentRow): RecipeEquipment {
     };
 }
 
-export function mapRecipeListItem(row: RecipeListItemRow, getPublicUrl: PublicImageUrlBuilder = missingPublicImageUrlBuilder): RecipeListItem {
+export function mapRecipeListItem(
+    row: RecipeListItemRow,
+    getPublicUrl: PublicImageUrlBuilder = missingPublicImageUrlBuilder
+): RecipeListItem {
     return {
         id: row.Id,
         title: row.Title,
@@ -182,8 +209,7 @@ export function mapRecipeDetailComments(rows: RecipeDetailCommentRow[]): RecipeD
     const commentsById = new Map<number, RecipeDetailComment>();
     const rootComments: RecipeDetailComment[] = [];
 
-    for (const row of rows)
-        commentsById.set(row.Id, mapRecipeDetailComment(row));
+    for (const row of rows) commentsById.set(row.Id, mapRecipeDetailComment(row));
 
     for (const comment of commentsById.values()) {
         if (comment.parentCommentId === null) {
@@ -192,19 +218,16 @@ export function mapRecipeDetailComments(rows: RecipeDetailCommentRow[]): RecipeD
         }
 
         const parent = commentsById.get(comment.parentCommentId);
-        if (parent)
-            parent.children.push(comment);
+        if (parent) parent.children.push(comment);
     }
 
     return rootComments;
 }
 
 function mapRecipeDetailCommentText(row: RecipeDetailCommentRow): string {
-    if (row.DeletedAt !== null)
-        return 'Commentaire supprimé par son auteur.';
+    if (row.DeletedAt !== null) return 'Commentaire supprimé par son auteur.';
 
-    if (row.ModeratedAt !== null)
-        return 'Ce commentaire a été masqué par la modération.';
+    if (row.ModeratedAt !== null) return 'Ce commentaire a été masqué par la modération.';
 
     return row.Comment;
 }

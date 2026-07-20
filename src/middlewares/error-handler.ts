@@ -10,15 +10,14 @@ type AppError = {
 };
 
 export function errorHandler(err: AppError, _req: Request, res: Response, _next: NextFunction) {
-  const statusCode = err.statusCode ?? err.status ?? 500;
+    const statusCode = err.statusCode ?? err.status ?? 500;
 
-  if (statusCode >= 500)
-    logger.error('[http] Internal error', err);
+    if (statusCode >= 500) logger.error('[http] Internal error', err);
 
-  res.status(statusCode).json({
-    error: {
-      message: err.message ?? 'Internal server error',
-      code: err.code ?? 'INTERNAL_ERROR'
-    }
-  });
+    res.status(statusCode).json({
+        error: {
+            message: err.message ?? 'Internal server error',
+            code: err.code ?? 'INTERNAL_ERROR'
+        }
+    });
 }

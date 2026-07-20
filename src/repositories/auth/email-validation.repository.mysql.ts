@@ -1,4 +1,8 @@
-import type { EmailValidationCreateInput, EmailValidationRepository, EmailValidationRecord } from './email-validation.repository.interface.js';
+import type {
+    EmailValidationCreateInput,
+    EmailValidationRepository,
+    EmailValidationRecord
+} from './email-validation.repository.interface.js';
 import type { Pool } from 'mysql2/promise';
 
 export interface EmailValidationRow {
@@ -11,7 +15,7 @@ export interface EmailValidationRow {
 }
 
 export class EmailValidationRepositoryMysql implements EmailValidationRepository {
-    constructor(private readonly db: Pool) { }
+    constructor(private readonly db: Pool) {}
 
     async create(input: EmailValidationCreateInput): Promise<void> {
         await this.db.execute(

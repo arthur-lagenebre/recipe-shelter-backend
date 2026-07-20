@@ -1,7 +1,14 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { getBoundedArray, getBoundedInteger, getBoundedNullableInteger, getBoundedNullableNumber, getBoundedString, getRequiredBoundedString } from '../../../src/api/http/dto.helpers.js';
+import {
+    getBoundedArray,
+    getBoundedInteger,
+    getBoundedNullableInteger,
+    getBoundedNullableNumber,
+    getBoundedString,
+    getRequiredBoundedString
+} from '../../../src/api/http/dto.helpers.js';
 import { HttpError } from '../../../src/utils/errors.js';
 
 function assertHttpError(error: unknown, code: string, status: number): void {
@@ -24,31 +31,43 @@ describe('dto.helpers bounded validators', () => {
         });
 
         it('rejects a value below the minimum', () => {
-            assert.throws(() => getBoundedInteger(0, 1, 10, 'msg', 'CODE'), (error) => {
-                assertHttpError(error, 'CODE', 400);
-                return true;
-            });
+            assert.throws(
+                () => getBoundedInteger(0, 1, 10, 'msg', 'CODE'),
+                (error) => {
+                    assertHttpError(error, 'CODE', 400);
+                    return true;
+                }
+            );
         });
 
         it('rejects a value above the maximum', () => {
-            assert.throws(() => getBoundedInteger(11, 1, 10, 'msg', 'CODE'), (error) => {
-                assertHttpError(error, 'CODE', 400);
-                return true;
-            });
+            assert.throws(
+                () => getBoundedInteger(11, 1, 10, 'msg', 'CODE'),
+                (error) => {
+                    assertHttpError(error, 'CODE', 400);
+                    return true;
+                }
+            );
         });
 
         it('rejects a non-integer number', () => {
-            assert.throws(() => getBoundedInteger(5.5, 1, 10, 'msg', 'CODE'), (error) => {
-                assertHttpError(error, 'CODE', 400);
-                return true;
-            });
+            assert.throws(
+                () => getBoundedInteger(5.5, 1, 10, 'msg', 'CODE'),
+                (error) => {
+                    assertHttpError(error, 'CODE', 400);
+                    return true;
+                }
+            );
         });
 
         it('rejects a non-number', () => {
-            assert.throws(() => getBoundedInteger('5', 1, 10, 'msg', 'CODE'), (error) => {
-                assertHttpError(error, 'CODE', 400);
-                return true;
-            });
+            assert.throws(
+                () => getBoundedInteger('5', 1, 10, 'msg', 'CODE'),
+                (error) => {
+                    assertHttpError(error, 'CODE', 400);
+                    return true;
+                }
+            );
         });
     });
 
@@ -65,10 +84,13 @@ describe('dto.helpers bounded validators', () => {
 
         it('rejects out-of-bounds and non-integer values', () => {
             for (const value of [-1, 11, 5.5]) {
-                assert.throws(() => getBoundedNullableInteger(value, 0, 10, 'msg', 'CODE'), (error) => {
-                    assertHttpError(error, 'CODE', 400);
-                    return true;
-                });
+                assert.throws(
+                    () => getBoundedNullableInteger(value, 0, 10, 'msg', 'CODE'),
+                    (error) => {
+                        assertHttpError(error, 'CODE', 400);
+                        return true;
+                    }
+                );
             }
         });
     });
@@ -85,18 +107,24 @@ describe('dto.helpers bounded validators', () => {
 
         it('rejects out-of-bounds values', () => {
             for (const value of [-0.1, 100.1]) {
-                assert.throws(() => getBoundedNullableNumber(value, 0, 100, 'msg', 'CODE'), (error) => {
-                    assertHttpError(error, 'CODE', 400);
-                    return true;
-                });
+                assert.throws(
+                    () => getBoundedNullableNumber(value, 0, 100, 'msg', 'CODE'),
+                    (error) => {
+                        assertHttpError(error, 'CODE', 400);
+                        return true;
+                    }
+                );
             }
         });
 
         it('rejects a non-number', () => {
-            assert.throws(() => getBoundedNullableNumber('2', 0, 100, 'msg', 'CODE'), (error) => {
-                assertHttpError(error, 'CODE', 400);
-                return true;
-            });
+            assert.throws(
+                () => getBoundedNullableNumber('2', 0, 100, 'msg', 'CODE'),
+                (error) => {
+                    assertHttpError(error, 'CODE', 400);
+                    return true;
+                }
+            );
         });
     });
 
@@ -115,33 +143,45 @@ describe('dto.helpers bounded validators', () => {
         });
 
         it('rejects a string shorter than minLength', () => {
-            assert.throws(() => getBoundedString('ab', 3, 10, 'msg', 'CODE'), (error) => {
-                assertHttpError(error, 'CODE', 400);
-                return true;
-            });
+            assert.throws(
+                () => getBoundedString('ab', 3, 10, 'msg', 'CODE'),
+                (error) => {
+                    assertHttpError(error, 'CODE', 400);
+                    return true;
+                }
+            );
         });
 
         it('rejects a string longer than maxLength', () => {
-            assert.throws(() => getBoundedString('a'.repeat(11), 0, 10, 'msg', 'CODE'), (error) => {
-                assertHttpError(error, 'CODE', 400);
-                return true;
-            });
+            assert.throws(
+                () => getBoundedString('a'.repeat(11), 0, 10, 'msg', 'CODE'),
+                (error) => {
+                    assertHttpError(error, 'CODE', 400);
+                    return true;
+                }
+            );
         });
 
         it('counts unicode characters correctly', () => {
             const emoji = '😀'.repeat(5);
             assert.equal(getBoundedString(emoji, 0, 5, 'msg', 'CODE'), emoji);
-            assert.throws(() => getBoundedString('😀'.repeat(6), 0, 5, 'msg', 'CODE'), (error) => {
-                assertHttpError(error, 'CODE', 400);
-                return true;
-            });
+            assert.throws(
+                () => getBoundedString('😀'.repeat(6), 0, 5, 'msg', 'CODE'),
+                (error) => {
+                    assertHttpError(error, 'CODE', 400);
+                    return true;
+                }
+            );
         });
 
         it('rejects a non-string', () => {
-            assert.throws(() => getBoundedString(5, 0, 10, 'msg', 'CODE'), (error) => {
-                assertHttpError(error, 'CODE', 400);
-                return true;
-            });
+            assert.throws(
+                () => getBoundedString(5, 0, 10, 'msg', 'CODE'),
+                (error) => {
+                    assertHttpError(error, 'CODE', 400);
+                    return true;
+                }
+            );
         });
     });
 
@@ -152,34 +192,42 @@ describe('dto.helpers bounded validators', () => {
 
         it('rejects an absent or blank value', () => {
             for (const value of [undefined, null, '   ']) {
-                assert.throws(() => getRequiredBoundedString(value, 1, 10, 'msg', 'CODE'), (error) => {
-                    assertHttpError(error, 'CODE', 400);
-                    return true;
-                });
+                assert.throws(
+                    () => getRequiredBoundedString(value, 1, 10, 'msg', 'CODE'),
+                    (error) => {
+                        assertHttpError(error, 'CODE', 400);
+                        return true;
+                    }
+                );
             }
         });
 
         it('rejects a string longer than maxLength', () => {
-            assert.throws(() => getRequiredBoundedString('a'.repeat(11), 1, 10, 'msg', 'CODE'), (error) => {
-                assertHttpError(error, 'CODE', 400);
-                return true;
-            });
+            assert.throws(
+                () => getRequiredBoundedString('a'.repeat(11), 1, 10, 'msg', 'CODE'),
+                (error) => {
+                    assertHttpError(error, 'CODE', 400);
+                    return true;
+                }
+            );
         });
 
         it('counts unicode characters correctly', () => {
             const emoji = '😀'.repeat(5);
             assert.equal(getRequiredBoundedString(emoji, 1, 5, 'msg', 'CODE'), emoji);
-            assert.throws(() => getRequiredBoundedString('😀'.repeat(6), 1, 5, 'msg', 'CODE'), (error) => {
-                assertHttpError(error, 'CODE', 400);
-                return true;
-            });
+            assert.throws(
+                () => getRequiredBoundedString('😀'.repeat(6), 1, 5, 'msg', 'CODE'),
+                (error) => {
+                    assertHttpError(error, 'CODE', 400);
+                    return true;
+                }
+            );
         });
     });
 
     describe('getBoundedArray', () => {
         const parser = (item: unknown) => {
-            if (typeof item !== 'number')
-                throw new Error('should not be called on an already-invalid array');
+            if (typeof item !== 'number') throw new Error('should not be called on an already-invalid array');
             return item * 2;
         };
 
@@ -193,18 +241,24 @@ describe('dto.helpers bounded validators', () => {
         });
 
         it('rejects a non-array', () => {
-            assert.throws(() => getBoundedArray('not an array', 5, parser, 'msg', 'CODE'), (error) => {
-                assertHttpError(error, 'CODE', 400);
-                return true;
-            });
+            assert.throws(
+                () => getBoundedArray('not an array', 5, parser, 'msg', 'CODE'),
+                (error) => {
+                    assertHttpError(error, 'CODE', 400);
+                    return true;
+                }
+            );
         });
 
         it('rejects an array longer than maxLength without invoking the parser', () => {
             const oversized = new Array(6).fill('anything-invalid-for-parser');
-            assert.throws(() => getBoundedArray(oversized, 5, parser, 'msg', 'CODE'), (error) => {
-                assertHttpError(error, 'CODE', 400);
-                return true;
-            });
+            assert.throws(
+                () => getBoundedArray(oversized, 5, parser, 'msg', 'CODE'),
+                (error) => {
+                    assertHttpError(error, 'CODE', 400);
+                    return true;
+                }
+            );
         });
     });
 });

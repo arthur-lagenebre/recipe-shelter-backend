@@ -17,43 +17,51 @@ describe('RecipeRepositoryMysql.searchPublished', () => {
             async execute(sql: string, params: unknown) {
                 calls.push({ sql, params });
 
-                if (sql.includes('COUNT(*)'))
-                    return [[{ Count: 3 }], []];
+                if (sql.includes('COUNT(*)')) return [[{ Count: 3 }], []];
 
-                return [[{
-                    Id: 42,
-                    Title: 'Filter fixture',
-                    Slug: 'filter-fixture',
-                    Description: 'Fixture',
-                    CoverImageId: null,
-                    CoverImageLargeStorageKey: null,
-                    CoverImageMediumStorageKey: null,
-                    CoverImageThumbnailStorageKey: null,
-                    CoverImageWidth: null,
-                    CoverImageHeight: null,
-                    CoverImageAltText: null,
-                    Category: 'Main',
-                    PrepTimeMinutes: 10,
-                    RestTimeMinutes: null,
-                    CookTimeMinutes: 20,
-                    Servings: 4,
-                    AuthorUsername: 'author',
-                    PublishedAt: new Date('2026-07-13T10:00:00.000Z'),
-                    IsFavorite: 0
-                }], []];
+                return [
+                    [
+                        {
+                            Id: 42,
+                            Title: 'Filter fixture',
+                            Slug: 'filter-fixture',
+                            Description: 'Fixture',
+                            CoverImageId: null,
+                            CoverImageLargeStorageKey: null,
+                            CoverImageMediumStorageKey: null,
+                            CoverImageThumbnailStorageKey: null,
+                            CoverImageWidth: null,
+                            CoverImageHeight: null,
+                            CoverImageAltText: null,
+                            Category: 'Main',
+                            PrepTimeMinutes: 10,
+                            RestTimeMinutes: null,
+                            CookTimeMinutes: 20,
+                            Servings: 4,
+                            AuthorUsername: 'author',
+                            PublishedAt: new Date('2026-07-13T10:00:00.000Z'),
+                            IsFavorite: 0
+                        }
+                    ],
+                    []
+                ];
             }
         } as unknown as Pool;
         const repository = new RecipeRepositoryMysql(db);
 
-        const result = await repository.searchPublished(7, {
-            q: 'fixture',
-            categoryId: 3,
-            tagIds: [1, 2],
-            excludedTagIds: [8],
-            ingredientIds: [4, 5],
-            excludedIngredientIds: [10, 11],
-            maxTotalTimeMinutes: 60
-        }, { page: 2, limit: 12, offset: 12 });
+        const result = await repository.searchPublished(
+            7,
+            {
+                q: 'fixture',
+                categoryId: 3,
+                tagIds: [1, 2],
+                excludedTagIds: [8],
+                ingredientIds: [4, 5],
+                excludedIngredientIds: [10, 11],
+                maxTotalTimeMinutes: 60
+            },
+            { page: 2, limit: 12, offset: 12 }
+        );
 
         assert.equal(calls.length, 2);
         const [countCall, pageCall] = calls;

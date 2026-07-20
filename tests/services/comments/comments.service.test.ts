@@ -4,8 +4,8 @@ import { beforeEach, describe, it } from 'node:test';
 import { CommentService } from '../../../src/services/comments/comments.service.js';
 import { HttpError } from '../../../src/utils/errors.js';
 
-import type { CommentRepository } from '../../../src/repositories/comments/comments.repository.interface.js';
-import type { Comment, CreateCommentInput, PublicComment, UpdateCommentInput } from '../../../src/repositories/comments/comments.types.js';
+import type { CommentRepository } from '../../../src/repositories/comment/comment.repository.interface.js';
+import type { Comment, CreateCommentInput, PublicComment, UpdateCommentInput } from '../../../src/repositories/comment/comment.types.js';
 
 const baseComment: Comment = {
     id: 1,
@@ -49,8 +49,7 @@ class FakeCommentRepository implements CommentRepository {
     async create(input: CreateCommentInput): Promise<PublicComment> {
         this.createdInput = input;
 
-        if (this.createResult === null)
-            return null as never;
+        if (this.createResult === null) return null as never;
 
         return {
             ...basePublicComment,
@@ -69,8 +68,7 @@ class FakeCommentRepository implements CommentRepository {
     async update(input: UpdateCommentInput): Promise<PublicComment | null> {
         this.updatedInput = input;
 
-        if (this.comment?.userId !== input.userId)
-            return null;
+        if (this.comment?.userId !== input.userId) return null;
 
         return {
             ...basePublicComment,
@@ -150,12 +148,13 @@ describe('CommentService', () => {
         repository.comment = { ...baseComment, parentCommentId: 99 };
 
         await assert.rejects(
-            () => service.createComment({
-                recipeId: 10,
-                userId: 20,
-                parentCommentId: 1,
-                comment: 'Nested reply'
-            }),
+            () =>
+                service.createComment({
+                    recipeId: 10,
+                    userId: 20,
+                    parentCommentId: 1,
+                    comment: 'Nested reply'
+                }),
             (error) => {
                 assertHttpError(error, 'COMMENTS_CREATE_NESTED_REPLY', 400);
 
@@ -169,12 +168,13 @@ describe('CommentService', () => {
         repository.comment = null;
 
         await assert.rejects(
-            () => service.createComment({
-                recipeId: 10,
-                userId: 20,
-                parentCommentId: 1,
-                comment: 'Missing parent'
-            }),
+            () =>
+                service.createComment({
+                    recipeId: 10,
+                    userId: 20,
+                    parentCommentId: 1,
+                    comment: 'Missing parent'
+                }),
             (error) => {
                 assertHttpError(error, 'COMMENTS_PARENT_NOT_FOUND', 404);
                 return true;
@@ -185,11 +185,12 @@ describe('CommentService', () => {
         repository.createResult = null;
 
         await assert.rejects(
-            () => service.createComment({
-                recipeId: 10,
-                userId: 20,
-                comment: 'Create fails'
-            }),
+            () =>
+                service.createComment({
+                    recipeId: 10,
+                    userId: 20,
+                    comment: 'Create fails'
+                }),
             (error) => {
                 assertHttpError(error, 'COMMENT_CANNOT_BE_CREATED', 500);
                 return true;
@@ -216,12 +217,13 @@ describe('CommentService', () => {
         repository.comment = null;
 
         await assert.rejects(
-            () => service.updateComment({
-                id: 99,
-                userId: 20,
-                rating: 4,
-                comment: 'Missing'
-            }),
+            () =>
+                service.updateComment({
+                    id: 99,
+                    userId: 20,
+                    rating: 4,
+                    comment: 'Missing'
+                }),
             (error) => {
                 assertHttpError(error, 'COMMENT_NOT_FOUND', 404);
 
@@ -232,12 +234,13 @@ describe('CommentService', () => {
 
     it('rejects update when the user does not own the comment', async () => {
         await assert.rejects(
-            () => service.updateComment({
-                id: 1,
-                userId: 99,
-                rating: 4,
-                comment: 'Not mine'
-            }),
+            () =>
+                service.updateComment({
+                    id: 1,
+                    userId: 99,
+                    rating: 4,
+                    comment: 'Not mine'
+                }),
             (error) => {
                 assertHttpError(error, 'COMMENT_ACCESS_DENIED', 403);
 

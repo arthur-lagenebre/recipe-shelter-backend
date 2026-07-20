@@ -1,8 +1,8 @@
-import { ADMIN_AUDIT_EVENT_TYPES, ADMIN_AUDIT_TARGET_TYPES } from './admin-audit.events.js';
+import { ADMIN_AUDIT_EVENT_TYPES, ADMIN_AUDIT_TARGET_TYPES } from './admin.audit.events.js';
 import { badRequest, forbidden, notFound } from '../../utils/errors.js';
 
-import type { AdminAuditActionRunner } from './admin-audit-action.runner.js';
-import type { AdminAuditRequestContext } from './admin-audit.service.js';
+import type { AdminAuditActionRunner } from './admin.audit-action.runner.js';
+import type { AdminAuditRequestContext } from './admin.audit.service.js';
 import type { AdminUserRepository } from '../../repositories/admin/admin.users.repository.interface.js';
 import type { AdminUserDetails, BannedUser, UserModerationAction } from '../../repositories/admin/admin.users.types.js';
 import type { UserRepository } from '../../repositories/users/user.repository.interface.js';
@@ -26,7 +26,11 @@ export type AdminUserProfileDto = AdminUserDetails & {
 };
 
 export class AdminUserService {
-    constructor(private readonly users: UserRepository, private readonly adminUsers: AdminUserRepository, private readonly auditActions: AdminAuditActionRunner) { }
+    constructor(
+        private readonly users: UserRepository,
+        private readonly adminUsers: AdminUserRepository,
+        private readonly auditActions: AdminAuditActionRunner
+    ) {}
 
     async getBannedUsersForAdmin(): Promise<BannedUser[]> {
         return this.adminUsers.findBannedForAdmin();
@@ -39,8 +43,7 @@ export class AdminUserService {
     async getAdminUserProfile(userId: number): Promise<AdminUserProfileDto> {
         const user = await this.adminUsers.findAdminUserById(userId);
 
-        if (!user)
-            throw notFound('User not found', 'USER_NOT_FOUND');
+        if (!user) throw notFound('User not found', 'USER_NOT_FOUND');
 
         const moderationLogs = await this.adminUsers.findModerationLogsByUserId(userId);
 
@@ -56,8 +59,7 @@ export class AdminUserService {
                     createdAt: log.createdAt
                 };
 
-                if (log.adminUsername)
-                    dto.adminUsername = log.adminUsername;
+                if (log.adminUsername) dto.adminUsername = log.adminUsername;
 
                 return dto;
             })
@@ -67,14 +69,12 @@ export class AdminUserService {
     async ban(userId: number, adminUserId: number, reason: string, context: AdminAuditRequestContext): Promise<boolean> {
         const cleanReason = validateModerationReason(reason, 'ban');
 
-        if (userId === adminUserId)
-            throw forbidden('Admin users cannot ban themselves', 'ADMIN_USERS_BAN_SELF_FORBIDDEN');
+        if (userId === adminUserId) throw forbidden('Admin users cannot ban themselves', 'ADMIN_USERS_BAN_SELF_FORBIDDEN');
 
         return this.auditActions.run(async ({ db, audit }) => {
             const user = await this.users.findById(userId, db);
 
-            if (!user)
-                throw notFound('User not found', 'USER_NOT_FOUND');
+            if (!user) throw notFound('User not found', 'USER_NOT_FOUND');
 
             if (user.accountType !== 'community')
                 throw forbidden('Staff accounts cannot be community-moderated', 'ADMIN_USERS_STAFF_MODERATION_FORBIDDEN');
@@ -110,8 +110,7 @@ export class AdminUserService {
         return this.auditActions.run(async ({ db, audit }) => {
             const user = await this.users.findById(userId, db);
 
-            if (!user)
-                throw notFound('User not found', 'USER_NOT_FOUND');
+            if (!user) throw notFound('User not found', 'USER_NOT_FOUND');
 
             if (user.accountType !== 'community')
                 throw forbidden('Staff accounts cannot be community-moderated', 'ADMIN_USERS_STAFF_MODERATION_FORBIDDEN');
@@ -156,20 +155,13 @@ function validateModerationReason(reason: string, action: 'ban' | 'unban'): stri
     const label = action === 'ban' ? 'Ban' : 'Unban';
     const codePrefix = action === 'ban' ? 'ADMIN_USERS_BAN' : 'ADMIN_USERS_UNBAN';
 
-    if (!cleanReason)
-        throw badRequest(`${label} reason is required`, `${codePrefix}_MISSING_REASON`);
+    if (!cleanReason) throw badRequest(`${label} reason is required`, `${codePrefix}_MISSING_REASON`);
 
     if (cleanReason.length < MODERATION_REASON_MIN_LENGTH)
-        throw badRequest(
-            `${label} reason must be at least ${MODERATION_REASON_MIN_LENGTH} characters`,
-            `${codePrefix}_REASON_TOO_SHORT`
-        );
+        throw badRequest(`${label} reason must be at least ${MODERATION_REASON_MIN_LENGTH} characters`, `${codePrefix}_REASON_TOO_SHORT`);
 
     if (cleanReason.length > MODERATION_REASON_MAX_LENGTH)
-        throw badRequest(
-            `${label} reason must be at most ${MODERATION_REASON_MAX_LENGTH} characters`,
-            `${codePrefix}_REASON_TOO_LONG`
-        );
+        throw badRequest(`${label} reason must be at most ${MODERATION_REASON_MAX_LENGTH} characters`, `${codePrefix}_REASON_TOO_LONG`);
 
     return cleanReason;
 }

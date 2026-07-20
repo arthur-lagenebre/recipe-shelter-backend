@@ -4,7 +4,12 @@ import { beforeEach, describe, it } from 'node:test';
 import { SuperAdminBootstrapService } from '../../../src/services/bootstrap/super-admin-bootstrap.service.js';
 import { HttpError } from '../../../src/utils/errors.js';
 
-import type { BeforeFirstSuperAdminCommit, CreateFirstSuperAdminInput, CreateFirstSuperAdminResult, SuperAdminBootstrapRepository } from '../../../src/repositories/bootstrap/super-admin-bootstrap.repository.interface.js';
+import type {
+    BeforeFirstSuperAdminCommit,
+    CreateFirstSuperAdminInput,
+    CreateFirstSuperAdminResult,
+    SuperAdminBootstrapRepository
+} from '../../../src/repositories/bootstrap/super-admin-bootstrap.repository.interface.js';
 import type { SuperAdminBootstrapInvitationMailInput } from '../../../src/services/mail/mail.types.js';
 
 class FakeSuperAdminBootstrapRepository implements SuperAdminBootstrapRepository {
@@ -13,8 +18,7 @@ class FakeSuperAdminBootstrapRepository implements SuperAdminBootstrapRepository
 
     async createFirst(input: CreateFirstSuperAdminInput, beforeCommit: BeforeFirstSuperAdminCommit): Promise<CreateFirstSuperAdminResult> {
         this.createInput = input;
-        if (this.createResult.status === 'created')
-            await beforeCommit({ userId: this.createResult.userId });
+        if (this.createResult.status === 'created') await beforeCommit({ userId: this.createResult.userId });
         return this.createResult;
     }
 }
@@ -25,8 +29,7 @@ class FakeBootstrapMailer {
 
     async sendSuperAdminBootstrapInvitationEmail(input: SuperAdminBootstrapInvitationMailInput): Promise<void> {
         this.input = input;
-        if (this.error)
-            throw this.error;
+        if (this.error) throw this.error;
     }
 }
 
@@ -87,10 +90,7 @@ describe('SuperAdminBootstrapService', () => {
         const deliveryError = new Error('mail delivery failed');
         mailer.error = deliveryError;
 
-        await assert.rejects(
-            () => service.bootstrap({ mail: 'first.admin@example.com', username: 'FirstAdmin' }),
-            deliveryError
-        );
+        await assert.rejects(() => service.bootstrap({ mail: 'first.admin@example.com', username: 'FirstAdmin' }), deliveryError);
         assert.equal(mailer.input?.to, 'first.admin@example.com');
     });
 
@@ -147,7 +147,10 @@ describe('SuperAdminBootstrapService', () => {
         ];
 
         for (const { input, code } of invalidInputs)
-            await assert.rejects(() => service.bootstrap(input), (error) => assertHttpError(error, code, 400));
+            await assert.rejects(
+                () => service.bootstrap(input),
+                (error) => assertHttpError(error, code, 400)
+            );
 
         assert.equal(hashedTokenInput, null);
         assert.equal(repository.createInput, null);

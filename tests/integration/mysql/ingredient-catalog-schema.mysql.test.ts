@@ -4,13 +4,13 @@ import { after, before, describe, it } from 'node:test';
 
 import mysql from 'mysql2/promise';
 
-import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin-audit.repository.mysql.js';
+import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin.audit.repository.mysql.js';
 import { AdminIngredientRepositoryMysql } from '../../../src/repositories/admin/admin.ingredients.repository.mysql.js';
 import { AdminRecipeRepositoryMysql } from '../../../src/repositories/admin/admin.recipe.repository.mysql.js';
 import { IngredientRepositoryMysql } from '../../../src/repositories/ingredients/ingredient.repository.mysql.js';
 import { RecipeRepositoryMysql } from '../../../src/repositories/recipes/recipe.repository.mysql.js';
-import { AdminAuditActionRunnerMysql } from '../../../src/services/admin/admin-audit-action.runner.js';
-import { AdminAuditService } from '../../../src/services/admin/admin-audit.service.js';
+import { AdminAuditActionRunnerMysql } from '../../../src/services/admin/admin.audit-action.runner.js';
+import { AdminAuditService } from '../../../src/services/admin/admin.audit.service.js';
 import { AdminIngredientService } from '../../../src/services/admin/admin.ingredients.service.js';
 import { env } from '../../../src/utils/env.js';
 
@@ -18,16 +18,12 @@ const baseTestDatabaseName = process.env.TEST_DB_NAME?.trim() ?? '';
 const mysqlEnabled = Boolean(baseTestDatabaseName);
 
 function requireIngredientCatalogTestDatabaseName(): string {
-    if (!/^[a-zA-Z0-9_]+$/.test(baseTestDatabaseName))
-        throw new Error('TEST_DB_NAME must contain only letters, numbers and underscores');
-    if (!baseTestDatabaseName.toLowerCase().includes('test'))
-        throw new Error('TEST_DB_NAME must contain "test"');
-    if (baseTestDatabaseName === env.db.name)
-        throw new Error('TEST_DB_NAME must be different from DB_NAME');
+    if (!/^[a-zA-Z0-9_]+$/.test(baseTestDatabaseName)) throw new Error('TEST_DB_NAME must contain only letters, numbers and underscores');
+    if (!baseTestDatabaseName.toLowerCase().includes('test')) throw new Error('TEST_DB_NAME must contain "test"');
+    if (baseTestDatabaseName === env.db.name) throw new Error('TEST_DB_NAME must be different from DB_NAME');
 
     const databaseName = `${baseTestDatabaseName}_ingredient_catalog`;
-    if (databaseName.length > 64)
-        throw new Error('TEST_DB_NAME is too long for the ingredient catalog integration database suffix');
+    if (databaseName.length > 64) throw new Error('TEST_DB_NAME is too long for the ingredient catalog integration database suffix');
     return databaseName;
 }
 
@@ -72,28 +68,19 @@ function assertAliasTargetRejected(error: unknown): boolean {
 
     assert.equal(mysqlError.errno, 1644);
     assert.equal(mysqlError.sqlState, '45000');
-    assert.equal(
-        mysqlError.sqlMessage,
-        'Ingredient aliases can only reference active canonical ingredients'
-    );
+    assert.equal(mysqlError.sqlMessage, 'Ingredient aliases can only reference active canonical ingredients');
     return true;
 }
 
 function assertMergeSourceNameAliasProtected(error: unknown): boolean {
     assert.ok(error instanceof Error);
-    assert.equal(
-        (error as Error & { code?: string }).code,
-        'ADMIN_INGREDIENT_ALIASES_MERGE_SOURCE_NAME_PROTECTED'
-    );
+    assert.equal((error as Error & { code?: string }).code, 'ADMIN_INGREDIENT_ALIASES_MERGE_SOURCE_NAME_PROTECTED');
     return true;
 }
 
 function assertMergeSourceNameAliasConflict(error: unknown): boolean {
     assert.ok(error instanceof Error);
-    assert.equal(
-        (error as Error & { code?: string }).code,
-        'ADMIN_INGREDIENTS_MERGE_SOURCE_NAME_ALIAS_CONFLICT'
-    );
+    assert.equal((error as Error & { code?: string }).code, 'ADMIN_INGREDIENTS_MERGE_SOURCE_NAME_ALIAS_CONFLICT');
     return true;
 }
 
@@ -108,10 +95,7 @@ function assertRecipeIngredientTargetRejected(error: unknown): boolean {
 
     assert.equal(mysqlError.errno, 1644);
     assert.equal(mysqlError.sqlState, '45000');
-    assert.equal(
-        mysqlError.sqlMessage,
-        'Recipes can only reference active canonical ingredients'
-    );
+    assert.equal(mysqlError.sqlMessage, 'Recipes can only reference active canonical ingredients');
     return true;
 }
 
@@ -126,10 +110,7 @@ function assertIngredientDeletionRejected(error: unknown): boolean {
 
     assert.equal(mysqlError.errno, 1644);
     assert.equal(mysqlError.sqlState, '45000');
-    assert.equal(
-        mysqlError.sqlMessage,
-        'Ingredients cannot be physically deleted; deprecate or merge them instead'
-    );
+    assert.equal(mysqlError.sqlMessage, 'Ingredients cannot be physically deleted; deprecate or merge them instead');
     return true;
 }
 
@@ -149,9 +130,7 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
         });
 
         await connection.query(`DROP DATABASE IF EXISTS \`${databaseName}\``);
-        await connection.query(
-            `CREATE DATABASE \`${databaseName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
-        );
+        await connection.query(`CREATE DATABASE \`${databaseName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
 
         const schemaPath = new URL('../../../database/migrations/1_create_schema.sql', import.meta.url);
         const seedPath = new URL('../../../database/seed.sql', import.meta.url);
@@ -172,8 +151,7 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
     });
 
     after(async () => {
-        if (pool)
-            await pool.end();
+        if (pool) await pool.end();
         if (connection) {
             await connection.query(`DROP DATABASE IF EXISTS \`${requireIngredientCatalogTestDatabaseName()}\``);
             await connection.end();
@@ -228,17 +206,20 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
         const ingredients = await new IngredientRepositoryMysql(pool).findAll();
         const freshCream = ingredients.find(({ slug }) => slug === 'creme-fraiche');
         assert.ok(freshCream);
-        assert.deepEqual({
-            name: freshCream.name,
-            normalizedName: freshCream.normalizedName,
-            status: freshCream.status,
-            mergedIntoIngredientId: freshCream.mergedIntoIngredientId
-        }, {
-            name: 'Crème fraîche',
-            normalizedName: 'creme fraiche',
-            status: 'active',
-            mergedIntoIngredientId: null
-        });
+        assert.deepEqual(
+            {
+                name: freshCream.name,
+                normalizedName: freshCream.normalizedName,
+                status: freshCream.status,
+                mergedIntoIngredientId: freshCream.mergedIntoIngredientId
+            },
+            {
+                name: 'Crème fraîche',
+                normalizedName: 'creme fraiche',
+                status: 'active',
+                mergedIntoIngredientId: null
+            }
+        );
         assert.ok(freshCream.createdAt instanceof Date);
         assert.ok(freshCream.updatedAt instanceof Date);
     });
@@ -273,11 +254,7 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
         );
         assert.deepEqual(
             (indexes as Array<{ IndexName: string }>).map(({ IndexName }) => IndexName),
-            [
-                'idx_ingredient_aliases_ingredient_language',
-                'ingredient_aliases_language_normalized_name_UK',
-                'PRIMARY'
-            ]
+            ['idx_ingredient_aliases_ingredient_language', 'ingredient_aliases_language_normalized_name_UK', 'PRIMARY']
         );
 
         const [foreignKeys] = await connection.query(
@@ -289,11 +266,13 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
                AND REFERENCED_TABLE_NAME IS NOT NULL`,
             [databaseName]
         );
-        assert.deepEqual(foreignKeys, [{
-            ColumnName: 'IngredientId',
-            ReferencedTableName: 'ingredients',
-            ReferencedColumnName: 'Id'
-        }]);
+        assert.deepEqual(foreignKeys, [
+            {
+                ColumnName: 'IngredientId',
+                ReferencedTableName: 'ingredients',
+                ReferencedColumnName: 'Id'
+            }
+        ]);
 
         const [protectionTriggers] = await connection.query(
             `SELECT TRIGGER_NAME AS TriggerName, ACTION_TIMING AS ActionTiming,
@@ -303,11 +282,13 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
                AND TRIGGER_NAME = 'ingredient_aliases_merged_name_BD'`,
             [databaseName]
         );
-        assert.deepEqual(protectionTriggers, [{
-            TriggerName: 'ingredient_aliases_merged_name_BD',
-            ActionTiming: 'BEFORE',
-            EventManipulation: 'DELETE'
-        }]);
+        assert.deepEqual(protectionTriggers, [
+            {
+                TriggerName: 'ingredient_aliases_merged_name_BD',
+                ActionTiming: 'BEFORE',
+                EventManipulation: 'DELETE'
+            }
+        ]);
     });
 
     it('stores free-text ingredients while recipe search uses canonical ingredient ids when available', async () => {
@@ -385,42 +366,48 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
 
         const recipes = new RecipeRepositoryMysql(pool);
         const editableRecipe = await recipes.findById(970);
-        assert.deepEqual(editableRecipe?.ingredients.map(({ ingredientId, displayText, quantity, unit, note, sortOrder }) => ({
-            ingredientId,
-            displayText,
-            quantity,
-            unit,
-            note,
-            sortOrder
-        })), [
-            {
-                ingredientId: 974,
-                displayText: 'une pincée de fleur de sel',
-                quantity: null,
-                unit: null,
-                note: 'à ajuster',
-                sortOrder: 1
-            },
-            {
-                ingredientId: 970,
-                displayText: '2 grosses tomates bien mûres',
-                quantity: 2,
-                unit: 'pièces',
-                note: 'mondées',
-                sortOrder: 2
-            },
-            {
-                ingredientId: null,
-                displayText: 'Poudre de lune brute',
-                quantity: 1,
-                unit: 'pincée',
-                note: null,
-                sortOrder: 3
-            }
-        ]);
+        assert.deepEqual(
+            editableRecipe?.ingredients.map(({ ingredientId, displayText, quantity, unit, note, sortOrder }) => ({
+                ingredientId,
+                displayText,
+                quantity,
+                unit,
+                note,
+                sortOrder
+            })),
+            [
+                {
+                    ingredientId: 974,
+                    displayText: 'une pincée de fleur de sel',
+                    quantity: null,
+                    unit: null,
+                    note: 'à ajuster',
+                    sortOrder: 1
+                },
+                {
+                    ingredientId: 970,
+                    displayText: '2 grosses tomates bien mûres',
+                    quantity: 2,
+                    unit: 'pièces',
+                    note: 'mondées',
+                    sortOrder: 2
+                },
+                {
+                    ingredientId: null,
+                    displayText: 'Poudre de lune brute',
+                    quantity: 1,
+                    unit: 'pincée',
+                    note: null,
+                    sortOrder: 3
+                }
+            ]
+        );
 
         const searchResult = await recipes.searchPublished(null, { ingredientIds: [970] }, { page: 1, limit: 12, offset: 0 });
-        assert.deepEqual(searchResult.items.map(({ id }) => id), [970]);
+        assert.deepEqual(
+            searchResult.items.map(({ id }) => id),
+            [970]
+        );
         const publicRecipe = await recipes.findPublishedBySlug(null, 'recipe-ingredient-fixture');
         assert.equal(publicRecipe?.ingredients[1]?.name, 'Canonical tomato fixture');
         assert.equal(publicRecipe?.ingredients[1]?.displayText, '2 grosses tomates bien mûres');
@@ -445,39 +432,43 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
         });
 
         await assert.rejects(
-            () => connection.query(
-                `INSERT INTO RecipeIngredients (RecipeId, IngredientId, DisplayText)
+            () =>
+                connection.query(
+                    `INSERT INTO RecipeIngredients (RecipeId, IngredientId, DisplayText)
                  VALUES (970, 971, 'ancien ingrédient')`
-            ),
+                ),
             assertRecipeIngredientTargetRejected
         );
         await assert.rejects(
-            () => connection.query(
-                `INSERT INTO RecipeIngredients (RecipeId, IngredientId, DisplayText)
+            () =>
+                connection.query(
+                    `INSERT INTO RecipeIngredients (RecipeId, IngredientId, DisplayText)
                  VALUES (970, 973, 'ingrédient déjà fusionné')`
-            ),
+                ),
             assertRecipeIngredientTargetRejected
         );
         await assert.rejects(
-            () => connection.query(
-                `UPDATE RecipeIngredients
+            () =>
+                connection.query(
+                    `UPDATE RecipeIngredients
                  SET IngredientId = 971
                  WHERE Id = 971`
-            ),
+                ),
             assertRecipeIngredientTargetRejected
         );
-        await assert.rejects(
-            () => connection.query(
+        await assert.rejects(() =>
+            connection.query(
                 `INSERT INTO RecipeIngredients (RecipeId, IngredientId, DisplayText)
                  VALUES (970, 970, '   ')`
             )
         );
         await assert.rejects(
-            () => connection.query(
-                `UPDATE Ingredients
+            () =>
+                connection.query(
+                    `UPDATE Ingredients
                  SET Status = 'merged', MergedIntoIngredientId = 972
                  WHERE Id = 970`
-            ),
+                ),
             /An ingredient must have no recipe associations before being merged/
         );
     });
@@ -505,11 +496,14 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
             ]
         });
 
-        assert.deepEqual(recipe.ingredients.map(({ ingredientId, displayText }) => ({ ingredientId, displayText })), [
-            { ingredientId: 975, displayText: 'Moon water fixture' },
-            { ingredientId: 976, displayText: 'Star dust fixture' },
-            { ingredientId: null, displayText: 'Nebula flakes fixture' }
-        ]);
+        assert.deepEqual(
+            recipe.ingredients.map(({ ingredientId, displayText }) => ({ ingredientId, displayText })),
+            [
+                { ingredientId: 975, displayText: 'Moon water fixture' },
+                { ingredientId: 976, displayText: 'Star dust fixture' },
+                { ingredientId: null, displayText: 'Nebula flakes fixture' }
+            ]
+        );
 
         const [initialProposals] = await connection.query(
             `SELECT ProposalType, ProposedName, NormalizedName, Status
@@ -517,24 +511,31 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
              WHERE RecipeId = ?`,
             [recipe.id]
         );
-        assert.deepEqual(initialProposals, [{
-            ProposalType: 'ingredient',
-            ProposedName: 'Nebula flakes fixture',
-            NormalizedName: 'nebula flakes fixture',
-            Status: 'pending'
-        }]);
-        assert.equal((await new IngredientRepositoryMysql(pool).findAll()).some(({ normalizedName }) => normalizedName === 'nebula flakes fixture'), false);
+        assert.deepEqual(initialProposals, [
+            {
+                ProposalType: 'ingredient',
+                ProposedName: 'Nebula flakes fixture',
+                NormalizedName: 'nebula flakes fixture',
+                Status: 'pending'
+            }
+        ]);
+        assert.equal(
+            (await new IngredientRepositoryMysql(pool).findAll()).some(({ normalizedName }) => normalizedName === 'nebula flakes fixture'),
+            false
+        );
 
         const updated = await recipes.updateDraft({
             id: recipe.id,
             userId: 975,
             title: recipe.title,
             slug: recipe.slug,
-            ingredients: [{
-                ingredientId: null,
-                displayText: 'NEBULA---FLAKES FIXTURE',
-                normalizedName: 'nebula flakes fixture'
-            }]
+            ingredients: [
+                {
+                    ingredientId: null,
+                    displayText: 'NEBULA---FLAKES FIXTURE',
+                    normalizedName: 'nebula flakes fixture'
+                }
+            ]
         });
         assert.equal(updated.ingredients[0]?.ingredientId, null);
         assert.equal(updated.ingredients[0]?.displayText, 'NEBULA---FLAKES FIXTURE');
@@ -581,13 +582,16 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
         try {
             await db.beginTransaction();
             await repository.findByIdsForUpdate([980, 981], db);
-            const result = await repository.merge({
-                sourceIngredientId: 980,
-                targetIngredientId: 981,
-                sourceName: 'Ingredient merge source',
-                sourceNormalizedName: 'ingredient merge source',
-                sourceNameLanguageCode: 'fr'
-            }, db);
+            const result = await repository.merge(
+                {
+                    sourceIngredientId: 980,
+                    targetIngredientId: 981,
+                    sourceName: 'Ingredient merge source',
+                    sourceNormalizedName: 'ingredient merge source',
+                    sourceNameLanguageCode: 'fr'
+                },
+                db
+            );
             await db.commit();
 
             assert.deepEqual(result, {
@@ -615,13 +619,15 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
              FROM RecipeIngredients
              WHERE Id = 980`
         );
-        assert.deepEqual(recipeIngredients, [{
-            IngredientId: 981,
-            DisplayText: 'deux belles poignées selon l’auteur',
-            Quantity: '2.000',
-            Unit: 'poignées',
-            Note: 'texte conservé'
-        }]);
+        assert.deepEqual(recipeIngredients, [
+            {
+                IngredientId: 981,
+                DisplayText: 'deux belles poignées selon l’auteur',
+                Quantity: '2.000',
+                Unit: 'poignées',
+                Note: 'texte conservé'
+            }
+        ]);
 
         const [aliases] = await connection.query(
             `SELECT IngredientId, Name, LanguageCode
@@ -646,12 +652,13 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
         ]);
 
         await assert.rejects(
-            () => connection.query(
-                `DELETE FROM IngredientAliases
+            () =>
+                connection.query(
+                    `DELETE FROM IngredientAliases
                  WHERE IngredientId = 981
                    AND LanguageCode = 'fr'
                    AND NormalizedName = 'ingredient merge source'`
-            ),
+                ),
             /A merged ingredient source-name alias cannot be deleted/
         );
     });
@@ -681,17 +688,19 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
         );
 
         const repository = new AdminIngredientRepositoryMysql(pool);
-        const auditActions = new AdminAuditActionRunnerMysql(
-            pool,
-            (db) => new AdminAuditService(new AdminAuditRepositoryMysql(db))
-        );
+        const auditActions = new AdminAuditActionRunnerMysql(pool, (db) => new AdminAuditService(new AdminAuditRepositoryMysql(db)));
         const service = new AdminIngredientService(repository, auditActions);
         const correlationId = '00000000-0000-4000-8000-000000000985';
 
-        const merged = await service.merge(985, {
-            targetIngredientId: 986,
-            reason: 'Doublon confirmé par le test transactionnel.'
-        }, 985, { correlationId });
+        const merged = await service.merge(
+            985,
+            {
+                targetIngredientId: 986,
+                reason: 'Doublon confirmé par le test transactionnel.'
+            },
+            985,
+            { correlationId }
+        );
 
         assert.equal(merged.status, 'merged');
         assert.equal(merged.mergedIntoIngredientId, 986);
@@ -776,21 +785,23 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
              WHERE CorrelationId = ?`,
             [correlationId]
         );
-        assert.deepEqual(auditRows, [{
-            Action: 'ingredients.merge',
-            TargetType: 'ingredient',
-            TargetId: '985',
-            Reason: 'Doublon confirmé par le test transactionnel.',
-            BeforeSourceStatus: 'active',
-            BeforeSourceRecipeCount: 2,
-            BeforeSourceAliasCount: 1,
-            AfterSourceStatus: 'merged',
-            AfterTargetRecipeCount: 3,
-            DisplayTextPreserved: 'true',
-            AfterTargetAliasCount: 2,
-            SourceNameAliasResolution: 'created',
-            RedirectedMergedIngredientCount: 1
-        }]);
+        assert.deepEqual(auditRows, [
+            {
+                Action: 'ingredients.merge',
+                TargetType: 'ingredient',
+                TargetId: '985',
+                Reason: 'Doublon confirmé par le test transactionnel.',
+                BeforeSourceStatus: 'active',
+                BeforeSourceRecipeCount: 2,
+                BeforeSourceAliasCount: 1,
+                AfterSourceStatus: 'merged',
+                AfterTargetRecipeCount: 3,
+                DisplayTextPreserved: 'true',
+                AfterTargetAliasCount: 2,
+                SourceNameAliasResolution: 'created',
+                RedirectedMergedIngredientCount: 1
+            }
+        ]);
 
         const [sourceNameAliasRows] = await connection.query(
             `SELECT Id
@@ -804,24 +815,32 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
         const protectedUpdateCorrelationId = '00000000-0000-4000-8000-000000000987';
         const protectedDeleteCorrelationId = '00000000-0000-4000-8000-000000000988';
         await assert.rejects(
-            () => service.updateAlias(986, sourceNameAliasId, {
-                name: 'Source historique modifiée'
-            }, 985, { correlationId: protectedUpdateCorrelationId }),
+            () =>
+                service.updateAlias(
+                    986,
+                    sourceNameAliasId,
+                    {
+                        name: 'Source historique modifiée'
+                    },
+                    985,
+                    { correlationId: protectedUpdateCorrelationId }
+                ),
             assertMergeSourceNameAliasProtected
         );
         await assert.rejects(
-            () => service.deleteAlias(
-                986,
-                sourceNameAliasId,
-                985,
-                { correlationId: protectedDeleteCorrelationId }
-            ),
+            () => service.deleteAlias(986, sourceNameAliasId, 985, { correlationId: protectedDeleteCorrelationId }),
             assertMergeSourceNameAliasProtected
         );
 
-        const updatedOrdinaryAlias = await service.updateAlias(986, 985, {
-            name: 'Updated transactional synonym'
-        }, 985, { correlationId: '00000000-0000-4000-8000-000000000989' });
+        const updatedOrdinaryAlias = await service.updateAlias(
+            986,
+            985,
+            {
+                name: 'Updated transactional synonym'
+            },
+            985,
+            { correlationId: '00000000-0000-4000-8000-000000000989' }
+        );
         assert.equal(updatedOrdinaryAlias.name, 'Updated transactional synonym');
         const [protectedAliasState] = await connection.query(
             `SELECT Name,
@@ -831,10 +850,12 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
              WHERE Id = ?`,
             [protectedUpdateCorrelationId, protectedDeleteCorrelationId, sourceNameAliasId]
         );
-        assert.deepEqual(protectedAliasState, [{
-            Name: 'Transactional ingredient source',
-            RejectedAuditCount: 0
-        }]);
+        assert.deepEqual(protectedAliasState, [
+            {
+                Name: 'Transactional ingredient source',
+                RejectedAuditCount: 0
+            }
+        ]);
 
         const failedCorrelationId = '00000000-0000-4000-8000-000000000986';
         const failingService = new AdminIngredientService(
@@ -846,10 +867,16 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
             }))
         );
         await assert.rejects(
-            () => failingService.merge(988, {
-                targetIngredientId: 989,
-                reason: 'Cette fusion doit être entièrement annulée.'
-            }, 985, { correlationId: failedCorrelationId }),
+            () =>
+                failingService.merge(
+                    988,
+                    {
+                        targetIngredientId: 989,
+                        reason: 'Cette fusion doit être entièrement annulée.'
+                    },
+                    985,
+                    { correlationId: failedCorrelationId }
+                ),
             /forced ingredient merge audit failure/
         );
 
@@ -864,14 +891,16 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
              WHERE source.Id = 988`,
             [failedCorrelationId]
         );
-        assert.deepEqual(rolledBack, [{
-            SourceStatus: 'active',
-            MergedIntoIngredientId: null,
-            SourceRecipeCount: 1,
-            TargetRecipeCount: 0,
-            SourceNameAliasCount: 0,
-            AuditCount: 0
-        }]);
+        assert.deepEqual(rolledBack, [
+            {
+                SourceStatus: 'active',
+                MergedIntoIngredientId: null,
+                SourceRecipeCount: 1,
+                TargetRecipeCount: 0,
+                SourceNameAliasCount: 0,
+                AuditCount: 0
+            }
+        ]);
     });
 
     it('rejects an alias collision without changing recipes, ingredients or audit history', async () => {
@@ -889,17 +918,20 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
         const repository = new AdminIngredientRepositoryMysql(pool);
         const service = new AdminIngredientService(
             repository,
-            new AdminAuditActionRunnerMysql(
-                pool,
-                (db) => new AdminAuditService(new AdminAuditRepositoryMysql(db))
-            )
+            new AdminAuditActionRunnerMysql(pool, (db) => new AdminAuditService(new AdminAuditRepositoryMysql(db)))
         );
         const correlationId = '00000000-0000-4000-8000-000000000990';
         await assert.rejects(
-            () => service.merge(990, {
-                targetIngredientId: 991,
-                reason: 'Le nom source entre en collision avec un alias tiers.'
-            }, 985, { correlationId }),
+            () =>
+                service.merge(
+                    990,
+                    {
+                        targetIngredientId: 991,
+                        reason: 'Le nom source entre en collision avec un alias tiers.'
+                    },
+                    985,
+                    { correlationId }
+                ),
             assertMergeSourceNameAliasConflict
         );
 
@@ -916,14 +948,16 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
              WHERE source.Id = 990`,
             [correlationId]
         );
-        assert.deepEqual(unchangedState, [{
-            SourceStatus: 'active',
-            MergedIntoIngredientId: null,
-            RecipeIngredientId: 990,
-            DisplayText: 'libellé auteur conservé après conflit',
-            AliasOwnerId: 992,
-            AuditCount: 0
-        }]);
+        assert.deepEqual(unchangedState, [
+            {
+                SourceStatus: 'active',
+                MergedIntoIngredientId: null,
+                RecipeIngredientId: 990,
+                DisplayText: 'libellé auteur conservé après conflit',
+                AliasOwnerId: 992,
+                AuditCount: 0
+            }
+        ]);
     });
 
     it('serializes a concurrent recipe ingredient so it cannot recreate a merged source reference', async () => {
@@ -941,21 +975,26 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
             const repository = new AdminIngredientRepositoryMysql(pool);
             await repository.findByIdsForUpdate([995, 996], mergeDb);
 
-            const pendingAssociation = recipeDb.execute(
-                `INSERT INTO RecipeIngredients (Id, RecipeId, IngredientId, DisplayText)
+            const pendingAssociation = recipeDb
+                .execute(
+                    `INSERT INTO RecipeIngredients (Id, RecipeId, IngredientId, DisplayText)
                  VALUES (995, 985, 995, 'référence concurrente')`
-            ).then(
-                () => null,
-                (error: unknown) => error
-            );
+                )
+                .then(
+                    () => null,
+                    (error: unknown) => error
+                );
 
-            const result = await repository.merge({
-                sourceIngredientId: 995,
-                targetIngredientId: 996,
-                sourceName: 'Concurrent ingredient source',
-                sourceNormalizedName: 'concurrent ingredient source',
-                sourceNameLanguageCode: 'fr'
-            }, mergeDb);
+            const result = await repository.merge(
+                {
+                    sourceIngredientId: 995,
+                    targetIngredientId: 996,
+                    sourceName: 'Concurrent ingredient source',
+                    sourceNormalizedName: 'concurrent ingredient source',
+                    sourceNameLanguageCode: 'fr'
+                },
+                mergeDb
+            );
             assert.equal(result.status, 'merged');
             await mergeDb.commit();
 
@@ -974,12 +1013,14 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
                  FROM Ingredients AS source
                  WHERE source.Id = 995`
             );
-            assert.deepEqual(persistedState, [{
-                SourceStatus: 'merged',
-                MergedIntoIngredientId: 996,
-                SourceRecipeCount: 0,
-                TargetRecipeCount: 0
-            }]);
+            assert.deepEqual(persistedState, [
+                {
+                    SourceStatus: 'merged',
+                    MergedIntoIngredientId: 996,
+                    SourceRecipeCount: 0,
+                    TargetRecipeCount: 0
+                }
+            ]);
         } finally {
             await mergeDb.rollback();
             await recipeDb.rollback();
@@ -1003,11 +1044,12 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
 
         for (const { name, slug } of activeVariants) {
             await assert.rejects(
-                () => connection.query(
-                    `INSERT INTO Ingredients (Name, NormalizedName, Slug)
+                () =>
+                    connection.query(
+                        `INSERT INTO Ingredients (Name, NormalizedName, Slug)
                      VALUES (?, 'creme brulee', ?)`,
-                    [name, slug]
-                ),
+                        [name, slug]
+                    ),
                 assertActiveNormalizedDuplicateRejected
             );
         }
@@ -1065,41 +1107,50 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
         assert.equal(canonical.name, 'Canonical ingredient fixture updated');
         assert.ok(canonical.updatedAt >= canonical.createdAt);
 
-        await assert.rejects(() => connection.query(
-            `INSERT INTO Ingredients (Name, NormalizedName, Slug, Status)
+        await assert.rejects(() =>
+            connection.query(
+                `INSERT INTO Ingredients (Name, NormalizedName, Slug, Status)
              VALUES ('Missing merge target', 'missing merge target', 'missing-ingredient-merge-target', 'merged')`
-        ));
-        await assert.rejects(() => connection.query(
-            `INSERT INTO Ingredients (Name, NormalizedName, Slug, Status, MergedIntoIngredientId)
-             VALUES ('Unexpected merge target', 'unexpected merge target', 'unexpected-ingredient-merge-target', 'active', 900)`
-        ));
-        await assert.rejects(() => connection.query(
-            `INSERT INTO Ingredients (Id, Name, NormalizedName, Slug, Status, MergedIntoIngredientId)
-             VALUES (903, 'Self ingredient merge', 'self ingredient merge', 'self-ingredient-merge', 'merged', 903)`
-        ));
-        await assert.rejects(() => connection.query(
-            `INSERT INTO Ingredients (Name, NormalizedName, Slug, Status, MergedIntoIngredientId)
-             VALUES ('Unknown merge target', 'unknown merge target', 'unknown-ingredient-merge-target', 'merged', 999999)`
-        ));
-        await assert.rejects(() => connection.query(
-            `INSERT INTO Ingredients (Name, NormalizedName, Slug, Status, MergedIntoIngredientId)
-             VALUES ('Deprecated merge target', 'deprecated merge target', 'deprecated-ingredient-merge-target', 'merged', 901)`
-        ));
-        await assert.rejects(() => connection.query(
-            `UPDATE Ingredients SET Status = 'deprecated' WHERE Id = 900`
-        ));
-        await assert.rejects(() => connection.query(
-            `INSERT INTO Ingredients (Name, NormalizedName, Slug)
-             VALUES ('Mismatched normalized ingredient', 'another value', 'mismatched-normalized-ingredient')`
-        ));
-        await assert.rejects(() => connection.query(
-            `INSERT INTO Ingredients (Name, NormalizedName, Slug)
-             VALUES ('Invalid ingredient slug', 'invalid ingredient slug', 'Invalid Ingredient Slug')`
-        ));
-        await assert.rejects(
-            () => connection.query(`DELETE FROM Ingredients WHERE Id = 901`),
-            assertIngredientDeletionRejected
+            )
         );
+        await assert.rejects(() =>
+            connection.query(
+                `INSERT INTO Ingredients (Name, NormalizedName, Slug, Status, MergedIntoIngredientId)
+             VALUES ('Unexpected merge target', 'unexpected merge target', 'unexpected-ingredient-merge-target', 'active', 900)`
+            )
+        );
+        await assert.rejects(() =>
+            connection.query(
+                `INSERT INTO Ingredients (Id, Name, NormalizedName, Slug, Status, MergedIntoIngredientId)
+             VALUES (903, 'Self ingredient merge', 'self ingredient merge', 'self-ingredient-merge', 'merged', 903)`
+            )
+        );
+        await assert.rejects(() =>
+            connection.query(
+                `INSERT INTO Ingredients (Name, NormalizedName, Slug, Status, MergedIntoIngredientId)
+             VALUES ('Unknown merge target', 'unknown merge target', 'unknown-ingredient-merge-target', 'merged', 999999)`
+            )
+        );
+        await assert.rejects(() =>
+            connection.query(
+                `INSERT INTO Ingredients (Name, NormalizedName, Slug, Status, MergedIntoIngredientId)
+             VALUES ('Deprecated merge target', 'deprecated merge target', 'deprecated-ingredient-merge-target', 'merged', 901)`
+            )
+        );
+        await assert.rejects(() => connection.query(`UPDATE Ingredients SET Status = 'deprecated' WHERE Id = 900`));
+        await assert.rejects(() =>
+            connection.query(
+                `INSERT INTO Ingredients (Name, NormalizedName, Slug)
+             VALUES ('Mismatched normalized ingredient', 'another value', 'mismatched-normalized-ingredient')`
+            )
+        );
+        await assert.rejects(() =>
+            connection.query(
+                `INSERT INTO Ingredients (Name, NormalizedName, Slug)
+             VALUES ('Invalid ingredient slug', 'invalid ingredient slug', 'Invalid Ingredient Slug')`
+            )
+        );
+        await assert.rejects(() => connection.query(`DELETE FROM Ingredients WHERE Id = 901`), assertIngredientDeletionRejected);
     });
 
     it('accepts valid localized aliases and rejects normalized conflicts', async () => {
@@ -1114,18 +1165,15 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
              VALUES (920, 'Pois chiche', 'pois chiche', 'fr')`
         );
 
-        const normalizedVariants = [
-            'POIS CHICHE',
-            'Pois   chiche',
-            'Pois---chiche!!!'
-        ];
+        const normalizedVariants = ['POIS CHICHE', 'Pois   chiche', 'Pois---chiche!!!'];
         for (const name of normalizedVariants) {
             await assert.rejects(
-                () => connection.query(
-                    `INSERT INTO IngredientAliases (IngredientId, Name, NormalizedName, LanguageCode)
+                () =>
+                    connection.query(
+                        `INSERT INTO IngredientAliases (IngredientId, Name, NormalizedName, LanguageCode)
                      VALUES (921, ?, 'pois chiche', 'fr')`,
-                    [name]
-                ),
+                        [name]
+                    ),
                 assertAliasNormalizedDuplicateRejected
             );
         }
@@ -1158,24 +1206,27 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
         );
 
         await assert.rejects(
-            () => connection.query(
-                `INSERT INTO IngredientAliases (IngredientId, Name, NormalizedName, LanguageCode)
+            () =>
+                connection.query(
+                    `INSERT INTO IngredientAliases (IngredientId, Name, NormalizedName, LanguageCode)
                  VALUES (999999, 'Unknown target alias', 'unknown target alias', 'fr')`
-            ),
+                ),
             assertAliasTargetRejected
         );
         await assert.rejects(
-            () => connection.query(
-                `INSERT INTO IngredientAliases (IngredientId, Name, NormalizedName, LanguageCode)
+            () =>
+                connection.query(
+                    `INSERT INTO IngredientAliases (IngredientId, Name, NormalizedName, LanguageCode)
                  VALUES (931, 'Deprecated target alias', 'deprecated target alias', 'fr')`
-            ),
+                ),
             assertAliasTargetRejected
         );
         await assert.rejects(
-            () => connection.query(
-                `INSERT INTO IngredientAliases (IngredientId, Name, NormalizedName, LanguageCode)
+            () =>
+                connection.query(
+                    `INSERT INTO IngredientAliases (IngredientId, Name, NormalizedName, LanguageCode)
                  VALUES (932, 'Merged target alias', 'merged target alias', 'fr')`
-            ),
+                ),
             assertAliasTargetRejected
         );
 
@@ -1184,11 +1235,12 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
              VALUES (933, 'Valid target alias', 'valid target alias', 'fr')`
         );
         await assert.rejects(
-            () => connection.query(
-                `UPDATE IngredientAliases
+            () =>
+                connection.query(
+                    `UPDATE IngredientAliases
                  SET IngredientId = 931
                  WHERE NormalizedName = 'valid target alias' AND LanguageCode = 'fr'`
-            ),
+                ),
             assertAliasTargetRejected
         );
         await assert.rejects(
@@ -1217,11 +1269,13 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
         ];
 
         for (const alias of invalidAliases) {
-            await assert.rejects(() => connection.query(
-                `INSERT INTO IngredientAliases (IngredientId, Name, NormalizedName, LanguageCode)
+            await assert.rejects(() =>
+                connection.query(
+                    `INSERT INTO IngredientAliases (IngredientId, Name, NormalizedName, LanguageCode)
                  VALUES (940, ?, ?, ?)`,
-                [alias.name, alias.normalizedName, alias.languageCode]
-            ));
+                    [alias.name, alias.normalizedName, alias.languageCode]
+                )
+            );
         }
     });
 });

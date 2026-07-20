@@ -66,13 +66,7 @@ const EXPECTED_SEED_COUNTS: Record<string, number> = {
     equipments: 83
 };
 
-const EXPECTED_ROLE_CODES = [
-    'CatalogManager',
-    'CommentModerator',
-    'RecipeModerator',
-    'SuperAdmin',
-    'UserAdmin'
-];
+const EXPECTED_ROLE_CODES = ['CatalogManager', 'CommentModerator', 'RecipeModerator', 'SuperAdmin', 'UserAdmin'];
 
 const EXPECTED_CONSTRAINT_COUNT = 175;
 const EXPECTED_DECLARED_INDEX_COUNT = 128;
@@ -87,16 +81,12 @@ type SchemaInventory = {
 };
 
 function requireInitializationTestDatabaseName(): string {
-    if (!/^[a-zA-Z0-9_]+$/.test(baseTestDatabaseName))
-        throw new Error('TEST_DB_NAME must contain only letters, numbers and underscores');
-    if (!baseTestDatabaseName.toLowerCase().includes('test'))
-        throw new Error('TEST_DB_NAME must contain "test"');
-    if (baseTestDatabaseName === env.db.name)
-        throw new Error('TEST_DB_NAME must be different from DB_NAME');
+    if (!/^[a-zA-Z0-9_]+$/.test(baseTestDatabaseName)) throw new Error('TEST_DB_NAME must contain only letters, numbers and underscores');
+    if (!baseTestDatabaseName.toLowerCase().includes('test')) throw new Error('TEST_DB_NAME must contain "test"');
+    if (baseTestDatabaseName === env.db.name) throw new Error('TEST_DB_NAME must be different from DB_NAME');
 
     const databaseName = `${baseTestDatabaseName}_initialization`;
-    if (databaseName.length > 64)
-        throw new Error('TEST_DB_NAME is too long for the initialization integration database suffix');
+    if (databaseName.length > 64) throw new Error('TEST_DB_NAME is too long for the initialization integration database suffix');
     return databaseName;
 }
 
@@ -116,13 +106,10 @@ function extractSchemaInventory(schema: string): SchemaInventory {
         triggers: []
     };
 
-    for (const match of schema.matchAll(
-        /CREATE\s+TABLE\s+`?([a-zA-Z0-9_]+)`?\s*\(([\s\S]*?)\)\s*ENGINE=/gi
-    )) {
+    for (const match of schema.matchAll(/CREATE\s+TABLE\s+`?([a-zA-Z0-9_]+)`?\s*\(([\s\S]*?)\)\s*ENGINE=/gi)) {
         const tableName = match[1];
         const tableBody = match[2];
-        if (!tableName || tableBody === undefined)
-            throw new Error('Unable to read a CREATE TABLE statement from the structural schema');
+        if (!tableName || tableBody === undefined) throw new Error('Unable to read a CREATE TABLE statement from the structural schema');
 
         inventory.tables.push(tableName);
 
@@ -131,36 +118,28 @@ function extractSchemaInventory(schema: string): SchemaInventory {
             inventory.indexes.push(schemaObjectKey(tableName, 'PRIMARY'));
         }
 
-        for (const uniqueKey of tableBody.matchAll(
-            /(?:^|,)\s*UNIQUE\s+(?:KEY|INDEX)\s+`?([a-zA-Z0-9_]+)`?/gim
-        )) {
+        for (const uniqueKey of tableBody.matchAll(/(?:^|,)\s*UNIQUE\s+(?:KEY|INDEX)\s+`?([a-zA-Z0-9_]+)`?/gim)) {
             const name = uniqueKey[1];
-            if (!name)
-                throw new Error(`Unable to read a unique key declared on ${tableName}`);
+            if (!name) throw new Error(`Unable to read a unique key declared on ${tableName}`);
             inventory.constraints.push(schemaObjectKey(tableName, name));
         }
 
         for (const constraint of tableBody.matchAll(/\bCONSTRAINT\s+`?([a-zA-Z0-9_]+)`?/gi)) {
             const name = constraint[1];
-            if (!name)
-                throw new Error(`Unable to read a constraint declared on ${tableName}`);
+            if (!name) throw new Error(`Unable to read a constraint declared on ${tableName}`);
             inventory.constraints.push(schemaObjectKey(tableName, name));
         }
 
-        for (const index of tableBody.matchAll(
-            /(?:^|,)\s*(?:UNIQUE\s+|FULLTEXT\s+)?(?:KEY|INDEX)\s+`?([a-zA-Z0-9_]+)`?/gim
-        )) {
+        for (const index of tableBody.matchAll(/(?:^|,)\s*(?:UNIQUE\s+|FULLTEXT\s+)?(?:KEY|INDEX)\s+`?([a-zA-Z0-9_]+)`?/gim)) {
             const name = index[1];
-            if (!name)
-                throw new Error(`Unable to read an index declared on ${tableName}`);
+            if (!name) throw new Error(`Unable to read an index declared on ${tableName}`);
             inventory.indexes.push(schemaObjectKey(tableName, name));
         }
     }
 
     for (const trigger of schema.matchAll(/CREATE\s+TRIGGER\s+`?([a-zA-Z0-9_]+)`?/gi)) {
         const name = trigger[1];
-        if (!name)
-            throw new Error('Unable to read a trigger declared in the structural schema');
+        if (!name) throw new Error('Unable to read a trigger declared in the structural schema');
         inventory.triggers.push(name.toLowerCase());
     }
 
@@ -173,15 +152,11 @@ function extractSeedTargets(seed: string): string[] {
         .filter((tableName): tableName is string => Boolean(tableName));
 }
 
-async function readTableCounts(
-    connection: mysql.Connection,
-    tableNames: string[]
-): Promise<Record<string, number>> {
+async function readTableCounts(connection: mysql.Connection, tableNames: string[]): Promise<Record<string, number>> {
     const counts: Record<string, number> = {};
 
     for (const tableName of tableNames) {
-        if (!/^[a-zA-Z0-9_]+$/.test(tableName))
-            throw new Error(`Unsafe schema table name: ${tableName}`);
+        if (!/^[a-zA-Z0-9_]+$/.test(tableName)) throw new Error(`Unsafe schema table name: ${tableName}`);
         const [rows] = await connection.query(`SELECT COUNT(*) AS RowCount FROM \`${tableName}\``);
         const row = (rows as Array<{ RowCount: number | string }>)[0];
         counts[tableName.toLowerCase()] = Number(row?.RowCount ?? 0);
@@ -234,9 +209,7 @@ describe(
             });
 
             await connection.query(`DROP DATABASE IF EXISTS \`${databaseName}\``);
-            await connection.query(
-                `CREATE DATABASE \`${databaseName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
-            );
+            await connection.query(`CREATE DATABASE \`${databaseName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
 
             const schemaPath = new URL('../../../database/migrations/1_create_schema.sql', import.meta.url);
             const seedPath = new URL('../../../database/seed.sql', import.meta.url);
@@ -258,11 +231,8 @@ describe(
 
         after(async () => {
             if (connection) {
-                if (pool)
-                    await pool.end();
-                await connection.query(
-                    `DROP DATABASE IF EXISTS \`${requireInitializationTestDatabaseName()}\``
-                );
+                if (pool) await pool.end();
+                await connection.query(`DROP DATABASE IF EXISTS \`${requireInitializationTestDatabaseName()}\``);
                 await connection.end();
             }
         });
@@ -282,22 +252,13 @@ describe(
                 TableCollation: string;
             }>;
 
-            assert.deepEqual(
-                inventory.tables.map((tableName) => tableName.toLowerCase()).sort(),
-                EXPECTED_TABLES
-            );
-            assert.deepEqual(
-                tables.map(({ TableName }) => TableName.toLowerCase()).sort(),
-                EXPECTED_TABLES
-            );
+            assert.deepEqual(inventory.tables.map((tableName) => tableName.toLowerCase()).sort(), EXPECTED_TABLES);
+            assert.deepEqual(tables.map(({ TableName }) => TableName.toLowerCase()).sort(), EXPECTED_TABLES);
             assert.ok(tables.every(({ Engine }) => Engine.toLowerCase() === 'innodb'));
             assert.ok(tables.every(({ TableCollation }) => TableCollation === 'utf8mb4_unicode_ci'));
 
             const emptyCounts = await readTableCounts(connection, inventory.tables);
-            assert.deepEqual(
-                emptyCounts,
-                Object.fromEntries(EXPECTED_TABLES.map((tableName) => [tableName, 0]))
-            );
+            assert.deepEqual(emptyCounts, Object.fromEntries(EXPECTED_TABLES.map((tableName) => [tableName, 0])));
 
             const [constraintRows] = await connection.query(
                 `SELECT TABLE_NAME AS TableName, CONSTRAINT_NAME AS ConstraintName,
@@ -312,9 +273,7 @@ describe(
                 ConstraintName: string;
                 ConstraintType: string;
             }>;
-            const actualConstraints = constraints
-                .map(({ TableName, ConstraintName }) => schemaObjectKey(TableName, ConstraintName))
-                .sort();
+            const actualConstraints = constraints.map(({ TableName, ConstraintName }) => schemaObjectKey(TableName, ConstraintName)).sort();
 
             assert.equal(inventory.constraints.length, EXPECTED_CONSTRAINT_COUNT);
             assert.equal(new Set(inventory.constraints).size, inventory.constraints.length);
@@ -363,10 +322,7 @@ describe(
 
         it('adds the coherent initial data, remains idempotent and is backend-compatible', async () => {
             const seedTargets = extractSeedTargets(seed);
-            assert.deepEqual(
-                [...new Set(seedTargets)].sort(),
-                Object.keys(EXPECTED_SEED_COUNTS).sort()
-            );
+            assert.deepEqual([...new Set(seedTargets)].sort(), Object.keys(EXPECTED_SEED_COUNTS).sort());
             assert.equal(new Set(seedTargets).size, seedTargets.length);
 
             await connection.query(targetDatabase(seed, requireInitializationTestDatabaseName()));
@@ -412,15 +368,17 @@ describe(
                      INNER JOIN Roles AS r ON r.Id = rp.RoleId
                      WHERE r.Code = 'SuperAdmin') AS SuperAdminPermissions`
             );
-            assert.deepEqual(coherenceRows, [{
-                InvalidRoles: 0,
-                InvalidPermissions: 0,
-                InvalidIngredients: 0,
-                InvalidTags: 0,
-                InvalidRolePermissions: 0,
-                InvalidTagGroups: 0,
-                SuperAdminPermissions: Object.values(PERMISSIONS).length
-            }]);
+            assert.deepEqual(coherenceRows, [
+                {
+                    InvalidRoles: 0,
+                    InvalidPermissions: 0,
+                    InvalidIngredients: 0,
+                    InvalidTags: 0,
+                    InvalidRolePermissions: 0,
+                    InvalidTagGroups: 0,
+                    SuperAdminPermissions: Object.values(PERMISSIONS).length
+                }
+            ]);
 
             const categoriesRepository = new CategoryRepositoryMysql(pool);
             const ingredientsRepository = new IngredientRepositoryMysql(pool);
@@ -445,10 +403,7 @@ describe(
             assert.ok(await ingredientsRepository.findById(ingredients[0].id));
             assert.ok(await tagsRepository.findById(tags[0].id));
             assert.ok(await equipmentsRepository.findById(equipments[0].id));
-            assert.deepEqual(
-                await new RbacRepositoryMysql(pool).findPermissionCodesByStaffUserId(999_999),
-                []
-            );
+            assert.deepEqual(await new RbacRepositoryMysql(pool).findPermissionCodesByStaffUserId(999_999), []);
 
             const seedState = await readSeedState(connection);
             await connection.query(targetDatabase(seed, requireInitializationTestDatabaseName()));
@@ -459,20 +414,22 @@ describe(
                 `INSERT INTO Users (Id, Mail, Username, Password, AccountType, Status)
                  VALUES (999001, 'isolated-staff@test.local', 'isolated-staff', 'test-hash', 'staff', 'inactive')`
             );
-            await assert.rejects(() => connection.query(
-                `UPDATE Users SET Status = 'active' WHERE Id = 999001`
-            ));
-            await assert.rejects(() => connection.query(
-                `INSERT INTO Recipes
+            await assert.rejects(() => connection.query(`UPDATE Users SET Status = 'active' WHERE Id = 999001`));
+            await assert.rejects(() =>
+                connection.query(
+                    `INSERT INTO Recipes
                     (Id, UserId, CategoryId, Title, Slug, Description, PrepTimeMinutes, Servings)
                  SELECT 999001, 999001, MIN(Id), 'Forbidden staff recipe', 'forbidden-staff-recipe',
                         'Staff accounts cannot own community recipes', 5, 2
                  FROM RecipeCategories`
-            ));
-            await assert.rejects(() => connection.query(
-                `INSERT INTO RolePermissions (RoleId, PermissionId)
+                )
+            );
+            await assert.rejects(() =>
+                connection.query(
+                    `INSERT INTO RolePermissions (RoleId, PermissionId)
                  SELECT RoleId, PermissionId FROM RolePermissions LIMIT 1`
-            ));
+                )
+            );
         });
     }
 );

@@ -10,12 +10,25 @@ import { env } from '../../src/utils/env.js';
 import { startHttpTestServer } from '../helpers/http-test-server.js';
 import { TestSessionRepository } from '../helpers/auth-session.js';
 
-import type { EmailValidationCreateInput, EmailValidationRecord, EmailValidationRepository } from '../../src/repositories/auth/email-validation.repository.interface.js';
-import type { PasswordResetCreateInput, PasswordResetRecord, PasswordResetRepository } from '../../src/repositories/auth/password-reset.repository.interface.js';
+import type {
+    EmailValidationCreateInput,
+    EmailValidationRecord,
+    EmailValidationRepository
+} from '../../src/repositories/auth/email-validation.repository.interface.js';
+import type {
+    PasswordResetCreateInput,
+    PasswordResetRecord,
+    PasswordResetRepository
+} from '../../src/repositories/auth/password-reset.repository.interface.js';
 import type { UserRepository } from '../../src/repositories/users/user.repository.interface.js';
 import type { CommunityProfile, CreateUserInput, StaffProfile, User, UserWithPassword } from '../../src/repositories/users/user.types.js';
 import type { RecipeRepository } from '../../src/repositories/recipes/recipe.repository.interface.js';
-import type { EmailValidationMailInput, Mailer, PasswordChangedMailInput, PasswordResetMailInput } from '../../src/services/mail/mail.types.js';
+import type {
+    EmailValidationMailInput,
+    Mailer,
+    PasswordChangedMailInput,
+    PasswordResetMailInput
+} from '../../src/services/mail/mail.types.js';
 import type { StaffMfaManager } from '../../src/services/auth/staff-mfa.service.js';
 import type { HttpTestServer } from '../helpers/http-test-server.js';
 
@@ -60,8 +73,7 @@ class AccountUserRepository implements UserRepository {
 
     async findCommunityProfileByUserId(userId: number): Promise<CommunityProfile | null> {
         const user = this.users.get(userId);
-        if (!user || user.accountType !== 'community')
-            return null;
+        if (!user || user.accountType !== 'community') return null;
         return {
             userId,
             status: user.status === 'inactive' || user.status === 'active' || user.status === 'banned' ? user.status : 'inactive',
@@ -75,11 +87,13 @@ class AccountUserRepository implements UserRepository {
 
     async findStaffProfileByUserId(userId: number): Promise<StaffProfile | null> {
         const user = this.users.get(userId);
-        if (!user || user.accountType !== 'staff')
-            return null;
+        if (!user || user.accountType !== 'staff') return null;
         return {
             userId,
-            status: user.status === 'invited' || user.status === 'active' || user.status === 'locked' || user.status === 'disabled' ? user.status : 'invited',
+            status:
+                user.status === 'invited' || user.status === 'active' || user.status === 'locked' || user.status === 'disabled'
+                    ? user.status
+                    : 'invited',
             mfaEnrolledAt: null,
             disabledByStaffUserId: null,
             disabledReason: null,
@@ -99,8 +113,7 @@ class AccountUserRepository implements UserRepository {
 
     async markEmailValidated(userId: number): Promise<boolean> {
         const user = this.users.get(userId);
-        if (!user)
-            return false;
+        if (!user) return false;
 
         this.users.set(userId, { ...user, status: 'active', emailValidatedAt: new Date() });
         return true;
@@ -135,8 +148,7 @@ class AccountUserRepository implements UserRepository {
 
     private requireUser(id: number): UserWithPassword {
         const user = this.users.get(id);
-        if (!user)
-            throw new Error(`User ${id} not found`);
+        if (!user) throw new Error(`User ${id} not found`);
         return user;
     }
 
@@ -161,8 +173,7 @@ class AccountValidationRepository implements EmailValidationRepository {
 
     async invalidateAllForUser(userId: number): Promise<void> {
         for (const [hash, record] of this.records) {
-            if (record.UserId === userId)
-                this.records.set(hash, { ...record, UsedAt: new Date() });
+            if (record.UserId === userId) this.records.set(hash, { ...record, UsedAt: new Date() });
         }
     }
 
@@ -172,8 +183,7 @@ class AccountValidationRepository implements EmailValidationRepository {
 
     async markUsed(id: number): Promise<void> {
         for (const [hash, record] of this.records) {
-            if (record.Id === id)
-                this.records.set(hash, { ...record, UsedAt: new Date() });
+            if (record.Id === id) this.records.set(hash, { ...record, UsedAt: new Date() });
         }
     }
 }
@@ -193,8 +203,7 @@ class AccountResetRepository implements PasswordResetRepository {
 
     async invalidateAllForUser(userId: number): Promise<void> {
         for (const record of this.records.values()) {
-            if (record.UserId === userId)
-                record.used = true;
+            if (record.UserId === userId) record.used = true;
         }
     }
 
@@ -205,8 +214,7 @@ class AccountResetRepository implements PasswordResetRepository {
 
     async markUsed(id: number): Promise<void> {
         for (const record of this.records.values()) {
-            if (record.Id === id)
-                record.used = true;
+            if (record.Id === id) record.used = true;
         }
     }
 }
@@ -261,16 +269,24 @@ describe('account lifecycle E2E', () => {
         const sessions = new TestSessionRepository();
         const passwordResetService = new PasswordResetService(users, resets, sessions, mailer, 'https://front.example');
 
-        server = await startHttpTestServer(createApp({
-            authService: new AuthService(users, emailValidationService, sessions, {} as StaffMfaManager),
-            authSessionRepository: sessions,
-            authUserRepository: users,
-            emailValidationService,
-            passwordResetService,
-            usersService: new UserService(users, {
-                async findPublishedByAuthorId() { return []; }
-            } as unknown as RecipeRepository, sessions)
-        }));
+        server = await startHttpTestServer(
+            createApp({
+                authService: new AuthService(users, emailValidationService, sessions, {} as StaffMfaManager),
+                authSessionRepository: sessions,
+                authUserRepository: users,
+                emailValidationService,
+                passwordResetService,
+                usersService: new UserService(
+                    users,
+                    {
+                        async findPublishedByAuthorId() {
+                            return [];
+                        }
+                    } as unknown as RecipeRepository,
+                    sessions
+                )
+            })
+        );
     });
 
     after(async () => server.close());
@@ -283,7 +299,7 @@ describe('account lifecycle E2E', () => {
             accountType: 'staff'
         });
         assert.equal(register.status, 201);
-        const registeredUser = (await register.json() as { user: User }).user;
+        const registeredUser = ((await register.json()) as { user: User }).user;
         assert.equal(registeredUser.status, 'inactive');
         assert.equal(registeredUser.accountType, 'community');
         assert.equal(mailer.validationMail?.to, 'alice@example.com');
@@ -293,13 +309,13 @@ describe('account lifecycle E2E', () => {
             password: 'InitialPass42!'
         });
         assert.equal(inactiveLogin.status, 401);
-        assert.equal((await inactiveLogin.json() as { error: { code: string } }).error.code, 'EMAIL_NOT_VALIDATED');
+        assert.equal(((await inactiveLogin.json()) as { error: { code: string } }).error.code, 'EMAIL_NOT_VALIDATED');
 
         const validate = await postJson(server.baseUrl, '/api/v1/auth/validate-email', {
             token: tokenFromUrl(mailer.validationMail?.validationUrl)
         });
         assert.equal(validate.status, 200);
-        assert.equal((await validate.json() as { user: User }).user.status, 'active');
+        assert.equal(((await validate.json()) as { user: User }).user.status, 'active');
 
         const login = await postJson(server.baseUrl, '/api/v1/auth/login', {
             mail: 'alice@example.com',
@@ -325,7 +341,7 @@ describe('account lifecycle E2E', () => {
 
         const resetRevokedSession = await fetch(`${server.baseUrl}/api/v1/users/me`, { headers: { cookie: preResetSessionCookie } });
         assert.equal(resetRevokedSession.status, 401);
-        assert.equal((await resetRevokedSession.json() as { error: { code: string } }).error.code, 'AUTH_BAD_TOKEN');
+        assert.equal(((await resetRevokedSession.json()) as { error: { code: string } }).error.code, 'AUTH_BAD_TOKEN');
 
         const oldPassword = await postJson(server.baseUrl, '/api/v1/auth/login', {
             mail: 'alice@example.com',
@@ -353,7 +369,7 @@ describe('account lifecycle E2E', () => {
             body: JSON.stringify({ currentPassword: 'UpdatedPass42!', newUsername: 'alice-renamed' })
         });
         assert.equal(updateUsername.status, 200);
-        assert.equal((await updateUsername.json() as { user: User }).user.username, 'alice-renamed');
+        assert.equal(((await updateUsername.json()) as { user: User }).user.username, 'alice-renamed');
 
         const updateEmail = await fetch(`${server.baseUrl}/api/v1/users/me/email`, {
             method: 'PATCH',
@@ -361,7 +377,7 @@ describe('account lifecycle E2E', () => {
             body: JSON.stringify({ currentPassword: 'UpdatedPass42!', newEmail: 'alice.new@example.com' })
         });
         assert.equal(updateEmail.status, 200);
-        assert.equal((await updateEmail.json() as { user: User }).user.mail, 'alice.new@example.com');
+        assert.equal(((await updateEmail.json()) as { user: User }).user.mail, 'alice.new@example.com');
 
         const updatePassword = await fetch(`${server.baseUrl}/api/v1/users/me/password`, {
             method: 'PATCH',
@@ -375,13 +391,13 @@ describe('account lifecycle E2E', () => {
 
         const revokedOtherSession = await fetch(`${server.baseUrl}/api/v1/users/me`, { headers: { cookie: otherSessionCookie } });
         assert.equal(revokedOtherSession.status, 401);
-        assert.equal((await revokedOtherSession.json() as { error: { code: string } }).error.code, 'AUTH_BAD_TOKEN');
+        assert.equal(((await revokedOtherSession.json()) as { error: { code: string } }).error.code, 'AUTH_BAD_TOKEN');
 
         const finalLogin = await postJson(server.baseUrl, '/api/v1/auth/login', {
             mail: 'alice.new@example.com',
             password: 'FinalPass42!'
         });
         assert.equal(finalLogin.status, 200);
-        assert.equal((await finalLogin.json() as { user: User }).user.username, 'alice-renamed');
+        assert.equal(((await finalLogin.json()) as { user: User }).user.username, 'alice-renamed');
     });
 });

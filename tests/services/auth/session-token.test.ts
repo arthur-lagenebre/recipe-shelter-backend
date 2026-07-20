@@ -38,8 +38,7 @@ function signPayload(payload: Record<string, unknown>, realm: SessionRealm, sess
         expiresIn: '1h'
     };
 
-    if (sessionId)
-        options.jwtid = sessionId;
+    if (sessionId) options.jwtid = sessionId;
 
     return jwt.sign(payload, env.auth.jwtSecret, options);
 }
@@ -60,8 +59,7 @@ describe('session token claims', () => {
             signPayload(validAppPayload, 'app', null)
         ];
 
-        for (const token of invalidTokens)
-            assert.equal(verifySessionToken(token, 'app'), null);
+        for (const token of invalidTokens) assert.equal(verifySessionToken(token, 'app'), null);
     });
 
     it('rejects account types and authentication methods from the wrong realm', () => {
@@ -71,7 +69,6 @@ describe('session token claims', () => {
             [signPayload({ ...validAppPayload, accountType: 'staff', amr: ['pwd'] }, 'admin', 'admin-session'), 'admin']
         ];
 
-        for (const [token, realm] of invalidTokens)
-            assert.equal(verifySessionToken(token, realm), null);
+        for (const [token, realm] of invalidTokens) assert.equal(verifySessionToken(token, realm), null);
     });
 });

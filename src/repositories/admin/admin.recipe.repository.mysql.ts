@@ -2,14 +2,28 @@ import { mapRecipeEquipment, mapRecipeIngredient, mapRecipePending, mapRecipeSte
 import { firstOrNull } from '../../utils/array.js';
 import { mapRecipe } from '../recipes/recipe.mapper.js';
 
-import type { AdminRecipeRepository } from "./admin.recipe.repository.interface.js";
-import type { AdminRecipeAuditState, AdminRecipeAuditStateRow, RecipeAdmin, RecipeAdminRow, RecipeIngredientRow, RecipePending, RecipePendingRow, RecipeStepRow, RecipeTagRow, RecipeEquipmentRow } from './admin.recipe.types.js';
+import type { AdminRecipeRepository } from './admin.recipe.repository.interface.js';
+import type {
+    AdminRecipeAuditState,
+    AdminRecipeAuditStateRow,
+    RecipeAdmin,
+    RecipeAdminRow,
+    RecipeIngredientRow,
+    RecipePending,
+    RecipePendingRow,
+    RecipeStepRow,
+    RecipeTagRow,
+    RecipeEquipmentRow
+} from './admin.recipe.types.js';
 import type { PublicImageUrlBuilder } from '../recipe-images/recipe-image.types.js';
 import type { ResultSetHeader } from 'mysql2';
 import type { Pool, PoolConnection } from 'mysql2/promise';
 
 export class AdminRecipeRepositoryMysql implements AdminRecipeRepository {
-    constructor(private readonly db: Pool, private readonly getPublicImageUrl: PublicImageUrlBuilder = missingPublicImageUrlBuilder) { }
+    constructor(
+        private readonly db: Pool,
+        private readonly getPublicImageUrl: PublicImageUrlBuilder = missingPublicImageUrlBuilder
+    ) {}
 
     async findPendingForAdmin(): Promise<RecipePending[]> {
         const [rows] = await this.db.execute(
@@ -53,8 +67,7 @@ export class AdminRecipeRepositoryMysql implements AdminRecipeRepository {
         );
 
         const row = firstOrNull(rows as RecipeAdminRow[]);
-        if (!row)
-            return null;
+        if (!row) return null;
 
         const recipe = mapRecipe(row, this.getPublicImageUrl);
         const [ingredientRows, stepRows, equipmentRows, tagRows] = await Promise.all([
@@ -88,17 +101,19 @@ export class AdminRecipeRepositoryMysql implements AdminRecipeRepository {
         );
         const row = firstOrNull(rows as AdminRecipeAuditStateRow[]);
 
-        return row ? {
-            id: row.Id,
-            userId: row.UserId,
-            categoryId: row.CategoryId,
-            title: row.Title,
-            slug: row.Slug,
-            status: row.Status,
-            moderatedByUserId: row.ModeratedByUserId,
-            rejectionReason: row.RejectionReason,
-            archiveReason: row.ArchiveReason
-        } : null;
+        return row
+            ? {
+                  id: row.Id,
+                  userId: row.UserId,
+                  categoryId: row.CategoryId,
+                  title: row.Title,
+                  slug: row.Slug,
+                  status: row.Status,
+                  moderatedByUserId: row.ModeratedByUserId,
+                  rejectionReason: row.RejectionReason,
+                  archiveReason: row.ArchiveReason
+              }
+            : null;
     }
 
     async publish(id: number, moderatedByUserId: number, db?: PoolConnection): Promise<boolean> {
@@ -147,8 +162,7 @@ export class AdminRecipeRepositoryMysql implements AdminRecipeRepository {
             [recipeId, auditLogId, recipeId]
         );
 
-        if (result.affectedRows !== 1)
-            throw new Error('Recipe moderation log does not match its administrative audit entry');
+        if (result.affectedRows !== 1) throw new Error('Recipe moderation log does not match its administrative audit entry');
     }
 
     async delete(id: number, db?: PoolConnection): Promise<boolean> {

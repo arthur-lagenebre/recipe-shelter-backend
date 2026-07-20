@@ -215,7 +215,7 @@ le code, la méthode, le chemin, la raison et l'identifiant du compte authentifi
 
 Les écritures du journal d'audit administratif passent exclusivement par
 `AdminAuditService.record`. Les types d'événements et de cibles autorisés sont
-centralisés dans `src/services/admin/admin-audit.events.ts` avec des codes
+centralisés dans `src/services/admin/admin.audit.events.ts` avec des codes
 stables en minuscules. Le service normalise les champs d'investigation, masque
 récursivement les secrets connus et génère un identifiant de corrélation absent.
 La politique d'échec est `fail-closed` : l'écriture est synchrone et obligatoire,

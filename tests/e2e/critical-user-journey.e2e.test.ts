@@ -4,12 +4,12 @@ import { after, before, describe, it } from 'node:test';
 import bcrypt from 'bcrypt';
 
 import { createApp } from '../../src/app.js';
-import { AdminRecipeService } from '../../src/services/admin/admin.recipes.services.js';
+import { AdminRecipeService } from '../../src/services/admin/admin.recipes.service.js';
 import { AuthService } from '../../src/services/auth/auth.service.js';
 import { CommentService } from '../../src/services/comments/comments.service.js';
 import { FavoriteService } from '../../src/services/favorites/favorites.service.js';
 import { RecipeSlugService } from '../../src/services/recipes/recipe-slug.service.js';
-import { RecipeService } from '../../src/services/recipes/recipes.services.js';
+import { RecipeService } from '../../src/services/recipes/recipes.service.js';
 import { PERMISSIONS } from '../../src/security/permissions.js';
 import { createPaginatedResult } from '../../src/utils/pagination.js';
 import { TestAdminAuditRecorder } from '../helpers/admin-audit.js';
@@ -17,12 +17,18 @@ import { startHttpTestServer } from '../helpers/http-test-server.js';
 import { TestSessionRepository } from '../helpers/auth-session.js';
 
 import type { AdminRecipeRepository } from '../../src/repositories/admin/admin.recipe.repository.interface.js';
-import type { CommentRepository } from '../../src/repositories/comments/comments.repository.interface.js';
-import type { Comment, CreateCommentInput, PublicComment, UpdateCommentInput } from '../../src/repositories/comments/comments.types.js';
-import type { FavoriteRepository } from '../../src/repositories/favorites/favorites.repository.interface.js';
-import type { Favorite } from '../../src/repositories/favorites/favorites.types.js';
+import type { CommentRepository } from '../../src/repositories/comment/comment.repository.interface.js';
+import type { Comment, CreateCommentInput, PublicComment, UpdateCommentInput } from '../../src/repositories/comment/comment.types.js';
+import type { FavoriteRepository } from '../../src/repositories/favorite/favorite.repository.interface.js';
+import type { Favorite } from '../../src/repositories/favorite/favorite.types.js';
 import type { RecipeRepository } from '../../src/repositories/recipes/recipe.repository.interface.js';
-import type { Recipe, RecipeInput, RecipeListItem, RecipeSearchFilters, UpdateRecipeInput } from '../../src/repositories/recipes/recipe.types.js';
+import type {
+    Recipe,
+    RecipeInput,
+    RecipeListItem,
+    RecipeSearchFilters,
+    UpdateRecipeInput
+} from '../../src/repositories/recipes/recipe.types.js';
 import type { UserRepository } from '../../src/repositories/users/user.repository.interface.js';
 import type { User, UserWithPassword } from '../../src/repositories/users/user.types.js';
 import type { EmailValidationService } from '../../src/services/auth/email-validation.service.js';
@@ -120,18 +126,20 @@ class CriticalFlowRecipeRepository implements Partial<RecipeRepository> {
             cookTimeMinutes: input.cookTimeMinutes === undefined ? current.cookTimeMinutes : input.cookTimeMinutes,
             servings: input.servings ?? current.servings,
             tagIds: input.tagIds ?? current.tagIds,
-            ingredients: input.ingredients?.map((ingredient, index) => ({
-                ingredientId: ingredient.ingredientId,
-                displayText: ingredient.displayText,
-                quantity: ingredient.quantity ?? null,
-                unit: ingredient.unit ?? null,
-                note: ingredient.note ?? null,
-                sortOrder: ingredient.sortOrder ?? index + 1
-            })) ?? current.ingredients,
-            steps: input.steps?.map((step, index) => ({
-                stepNumber: step.stepNumber ?? index + 1,
-                description: step.description
-            })) ?? current.steps,
+            ingredients:
+                input.ingredients?.map((ingredient, index) => ({
+                    ingredientId: ingredient.ingredientId,
+                    displayText: ingredient.displayText,
+                    quantity: ingredient.quantity ?? null,
+                    unit: ingredient.unit ?? null,
+                    note: ingredient.note ?? null,
+                    sortOrder: ingredient.sortOrder ?? index + 1
+                })) ?? current.ingredients,
+            steps:
+                input.steps?.map((step, index) => ({
+                    stepNumber: step.stepNumber ?? index + 1,
+                    description: step.description
+                })) ?? current.steps,
             equipments: input.equipments ?? current.equipments,
             updatedAt: now
         };
@@ -152,8 +160,7 @@ class CriticalFlowRecipeRepository implements Partial<RecipeRepository> {
 
     async archive(id: number): Promise<boolean> {
         const recipe = this.recipes.get(id);
-        if (!recipe)
-            return false;
+        if (!recipe) return false;
 
         this.recipes.set(id, { ...recipe, status: 'archived', archivedAt: now, updatedAt: now });
         return true;
@@ -175,8 +182,7 @@ class CriticalFlowRecipeRepository implements Partial<RecipeRepository> {
 
     publish(id: number, adminUserId: number): boolean {
         const recipe = this.recipes.get(id);
-        if (!recipe)
-            return false;
+        if (!recipe) return false;
 
         this.recipes.set(id, {
             ...recipe,
@@ -191,8 +197,7 @@ class CriticalFlowRecipeRepository implements Partial<RecipeRepository> {
 
     reject(id: number, adminUserId: number, rejectionReason: string): boolean {
         const recipe = this.recipes.get(id);
-        if (!recipe)
-            return false;
+        if (!recipe) return false;
 
         this.recipes.set(id, {
             ...recipe,
@@ -207,8 +212,7 @@ class CriticalFlowRecipeRepository implements Partial<RecipeRepository> {
 
     private requireRecipe(id: number): Recipe {
         const recipe = this.recipes.get(id);
-        if (!recipe)
-            throw new Error(`Recipe ${id} not found`);
+        if (!recipe) throw new Error(`Recipe ${id} not found`);
 
         return recipe;
     }
@@ -290,8 +294,7 @@ class CriticalFlowCommentRepository implements CommentRepository {
 
     async update(input: UpdateCommentInput): Promise<PublicComment | null> {
         const current = this.comments.get(input.id);
-        if (!current || current.userId !== input.userId)
-            return null;
+        if (!current || current.userId !== input.userId) return null;
 
         const updated = { ...current, rating: input.rating, comment: input.comment, updatedAt: now };
         this.comments.set(updated.id, updated);
@@ -300,8 +303,7 @@ class CriticalFlowCommentRepository implements CommentRepository {
 
     async softDelete(id: number, userId: number): Promise<boolean> {
         const comment = this.comments.get(id);
-        if (!comment || comment.userId !== userId)
-            return false;
+        if (!comment || comment.userId !== userId) return false;
 
         this.comments.set(id, { ...comment, deletedAt: now, deletedByUserId: userId });
         return true;
@@ -312,9 +314,7 @@ class CriticalFlowCommentRepository implements CommentRepository {
     }
 
     async findByRecipeId(recipeId: number): Promise<PublicComment[]> {
-        return [...this.comments.values()]
-            .filter((comment) => comment.recipeId === recipeId)
-            .map((comment) => this.toPublic(comment));
+        return [...this.comments.values()].filter((comment) => comment.recipeId === recipeId).map((comment) => this.toPublic(comment));
     }
 
     private toPublic(comment: Comment): PublicComment {
@@ -356,36 +356,37 @@ describe('critical user journey E2E', () => {
             async findAuditStateById(id: number) {
                 const recipe = await recipeRepository.findById(id);
 
-                return recipe ? {
-                    id: recipe.id,
-                    userId: recipe.userId,
-                    categoryId: recipe.categoryId,
-                    title: recipe.title,
-                    slug: recipe.slug,
-                    status: recipe.status,
-                    moderatedByUserId: recipe.moderatedByUserId,
-                    rejectionReason: recipe.rejectionReason,
-                    archiveReason: null
-                } : null;
+                return recipe
+                    ? {
+                          id: recipe.id,
+                          userId: recipe.userId,
+                          categoryId: recipe.categoryId,
+                          title: recipe.title,
+                          slug: recipe.slug,
+                          status: recipe.status,
+                          moderatedByUserId: recipe.moderatedByUserId,
+                          rejectionReason: recipe.rejectionReason,
+                          archiveReason: null
+                      }
+                    : null;
             },
-            async publish(id: number, adminUserId: number) { return recipes.publish(id, adminUserId); },
-            async reject(id: number, adminUserId: number, reason: string) { return recipes.reject(id, adminUserId, reason); },
-            async createModerationLog() { }
+            async publish(id: number, adminUserId: number) {
+                return recipes.publish(id, adminUserId);
+            },
+            async reject(id: number, adminUserId: number, reason: string) {
+                return recipes.reject(id, adminUserId, reason);
+            },
+            async createModerationLog() {}
         } as unknown as AdminRecipeRepository;
         const sessions = new TestSessionRepository();
-        const authService = new AuthService(
-            users as unknown as UserRepository,
-            {} as EmailValidationService,
-            sessions,
-            {
-                async beginAuthentication() {
-                    return { flowId: 'staff-login-flow', publicKey: { challenge: 'challenge' } as never };
-                },
-                async completeAuthentication() {
-                    return { staffUserId: 1, sessionVersion: 1, credentialId: 'credential-1', verifiedAt: new Date() };
-                }
-            } as unknown as StaffMfaManager
-        );
+        const authService = new AuthService(users as unknown as UserRepository, {} as EmailValidationService, sessions, {
+            async beginAuthentication() {
+                return { flowId: 'staff-login-flow', publicKey: { challenge: 'challenge' } as never };
+            },
+            async completeAuthentication() {
+                return { staffUserId: 1, sessionVersion: 1, credentialId: 'credential-1', verifiedAt: new Date() };
+            }
+        } as unknown as StaffMfaManager);
 
         const app = createApp({
             authService,
@@ -397,10 +398,7 @@ describe('critical user journey E2E', () => {
             authSessionRepository: sessions,
             authUserRepository: users as Pick<UserRepository, 'findById'>,
             recipeService: new RecipeService(recipeRepository, new RecipeSlugService(recipeRepository)),
-            adminRecipeService: new AdminRecipeService(
-                adminRecipeRepository,
-                new TestAdminAuditRecorder()
-            ),
+            adminRecipeService: new AdminRecipeService(adminRecipeRepository, new TestAdminAuditRecorder()),
             favoriteService: new FavoriteService(new CriticalFlowFavoriteRepository(recipes), recipeRepository),
             commentService: new CommentService(new CriticalFlowCommentRepository())
         });
@@ -424,7 +422,7 @@ describe('critical user journey E2E', () => {
             body: JSON.stringify({ mail: 'alice@example.com', password: 'wrong-password' })
         });
         assert.equal(loginResponse.status, 401);
-        assert.equal((await loginResponse.json() as { error: { code: string } }).error.code, 'AUTH_INVALID_CREDENTIALS');
+        assert.equal(((await loginResponse.json()) as { error: { code: string } }).error.code, 'AUTH_INVALID_CREDENTIALS');
     });
 
     it('authenticates a user with an HttpOnly session cookie', async () => {
@@ -442,7 +440,7 @@ describe('critical user journey E2E', () => {
             headers: { cookie: userCookie }
         });
         assert.equal(meResponse.status, 200);
-        assert.equal((await meResponse.json() as { auth: { username: string } }).auth.username, 'alice');
+        assert.equal(((await meResponse.json()) as { auth: { username: string } }).auth.username, 'alice');
     });
 
     it('creates and submits a recipe, then enforces admin moderation', async () => {
@@ -459,7 +457,7 @@ describe('critical user journey E2E', () => {
                 steps: [{ description: 'Cook the pasta and combine.' }]
             })
         });
-        const created = await createResponse.json() as Recipe;
+        const created = (await createResponse.json()) as Recipe;
         assert.equal(createResponse.status, 201);
         assert.equal(created.status, 'draft');
         assert.equal(created.userId, 2);
@@ -474,7 +472,7 @@ describe('critical user journey E2E', () => {
                 servings: 6
             })
         });
-        const updated = await updateResponse.json() as Recipe;
+        const updated = (await updateResponse.json()) as Recipe;
         assert.equal(updateResponse.status, 200);
         assert.equal(updated.title, 'Weeknight tomato pasta');
         assert.equal(updated.servings, 6);
@@ -483,7 +481,7 @@ describe('critical user journey E2E', () => {
             method: 'POST',
             headers: { cookie: userCookie }
         });
-        const submitted = await submitResponse.json() as Recipe;
+        const submitted = (await submitResponse.json()) as Recipe;
         assert.equal(submitResponse.status, 200);
         assert.equal(submitted.status, 'pending');
         assert.equal(submitted.slug, 'weeknight-tomato-pasta');
@@ -493,7 +491,7 @@ describe('critical user journey E2E', () => {
             headers: { cookie: userCookie }
         });
         assert.equal(forbiddenResponse.status, 401);
-        assert.equal((await forbiddenResponse.json() as { error: { code: string } }).error.code, 'AUTH_NO_TOKEN');
+        assert.equal(((await forbiddenResponse.json()) as { error: { code: string } }).error.code, 'AUTH_NO_TOKEN');
 
         const adminLoginOptions = await fetch(`${server.baseUrl}/api/v1/admin/auth/login/options`, {
             method: 'POST',
@@ -508,7 +506,10 @@ describe('critical user journey E2E', () => {
             body: JSON.stringify({
                 flowId: 'staff-login-flow',
                 credential: {
-                    id: 'credential-1', rawId: 'credential-1', type: 'public-key', clientExtensionResults: {},
+                    id: 'credential-1',
+                    rawId: 'credential-1',
+                    type: 'public-key',
+                    clientExtensionResults: {},
                     response: { clientDataJSON: 'data', authenticatorData: 'auth-data', signature: 'signature' }
                 }
             })
@@ -522,7 +523,7 @@ describe('critical user journey E2E', () => {
             body: JSON.stringify({ title: 'Admin edit attempt' })
         });
         assert.equal(adminEditResponse.status, 401);
-        assert.equal((await adminEditResponse.json() as { error: { code: string } }).error.code, 'AUTH_NO_TOKEN');
+        assert.equal(((await adminEditResponse.json()) as { error: { code: string } }).error.code, 'AUTH_NO_TOKEN');
 
         const approveResponse = await fetch(`${server.baseUrl}/api/v1/admin/recipes/${created.id}/approve`, {
             method: 'POST',
@@ -532,7 +533,7 @@ describe('critical user journey E2E', () => {
         assert.deepEqual(await approveResponse.json(), { ok: true });
 
         const publicResponse = await fetch(`${server.baseUrl}/api/v1/recipes?q=tomato`);
-        const publicBody = await publicResponse.json() as { items: RecipeListItem[] };
+        const publicBody = (await publicResponse.json()) as { items: RecipeListItem[] };
         assert.equal(publicResponse.status, 200);
         assert.equal(publicBody.items.length, 1);
         assert.equal(publicBody.items[0]?.slug, 'weeknight-tomato-pasta');
@@ -548,7 +549,7 @@ describe('critical user journey E2E', () => {
         const favoritesResponse = await fetch(`${server.baseUrl}/api/v1/favorites/me`, {
             headers: { cookie: userCookie }
         });
-        const favorites = await favoritesResponse.json() as { items: RecipeListItem[] };
+        const favorites = (await favoritesResponse.json()) as { items: RecipeListItem[] };
         assert.equal(favoritesResponse.status, 200);
         assert.equal(favorites.items[0]?.isFavorite, true);
 
@@ -558,7 +559,7 @@ describe('critical user journey E2E', () => {
             body: JSON.stringify({ rating: 5, comment: 'Reliable and delicious.' })
         });
         assert.equal(commentResponse.status, 201);
-        assert.equal((await commentResponse.json() as PublicComment).author.username, 'alice');
+        assert.equal(((await commentResponse.json()) as PublicComment).author.username, 'alice');
 
         const forbiddenUpdate = await fetch(`${server.baseUrl}/api/v1/comments/1`, {
             method: 'PATCH',
@@ -566,7 +567,7 @@ describe('critical user journey E2E', () => {
             body: JSON.stringify({ rating: 4, comment: 'Admin edit attempt' })
         });
         assert.equal(forbiddenUpdate.status, 401);
-        assert.equal((await forbiddenUpdate.json() as { error: { code: string } }).error.code, 'AUTH_NO_TOKEN');
+        assert.equal(((await forbiddenUpdate.json()) as { error: { code: string } }).error.code, 'AUTH_NO_TOKEN');
 
         const updateResponse = await fetch(`${server.baseUrl}/api/v1/comments/1`, {
             method: 'PATCH',
@@ -574,7 +575,7 @@ describe('critical user journey E2E', () => {
             body: JSON.stringify({ rating: 4, comment: 'Still reliable and delicious.' })
         });
         assert.equal(updateResponse.status, 200);
-        assert.equal((await updateResponse.json() as PublicComment).rating, 4);
+        assert.equal(((await updateResponse.json()) as PublicComment).rating, 4);
 
         const replyResponse = await fetch(`${server.baseUrl}/api/v1/recipes/1/comments`, {
             method: 'POST',
@@ -589,7 +590,7 @@ describe('critical user journey E2E', () => {
             body: JSON.stringify({ parentCommentId: 2, comment: 'This nesting is forbidden.' })
         });
         assert.equal(nestedReply.status, 400);
-        assert.equal((await nestedReply.json() as { error: { code: string } }).error.code, 'COMMENTS_CREATE_NESTED_REPLY');
+        assert.equal(((await nestedReply.json()) as { error: { code: string } }).error.code, 'COMMENTS_CREATE_NESTED_REPLY');
 
         const deleteReply = await fetch(`${server.baseUrl}/api/v1/comments/2`, {
             method: 'DELETE',
@@ -598,7 +599,7 @@ describe('critical user journey E2E', () => {
         assert.equal(deleteReply.status, 200);
 
         const commentsResponse = await fetch(`${server.baseUrl}/api/v1/recipes/1/comments`);
-        const comments = await commentsResponse.json() as PublicComment[];
+        const comments = (await commentsResponse.json()) as PublicComment[];
         assert.equal(commentsResponse.status, 200);
         assert.equal(comments.length, 2);
         assert.equal(comments[0]?.rating, 4);
@@ -611,7 +612,7 @@ describe('critical user journey E2E', () => {
             headers: { cookie: userCookie, 'content-type': 'application/json' },
             body: JSON.stringify({ title: 'Recipe to reject', description: 'Incomplete details' })
         });
-        const recipe = await create.json() as Recipe;
+        const recipe = (await create.json()) as Recipe;
         assert.equal(create.status, 201);
 
         const submit = await fetch(`${server.baseUrl}/api/v1/recipes/me/${recipe.id}/submit`, {

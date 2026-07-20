@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { parseUpdateEmailBody, parseUpdatePasswordBody, parseUpdateUsernameBody, parseUsernameParam } from '../../../src/api/users/users.dto.js';
+import {
+    parseUpdateEmailBody,
+    parseUpdatePasswordBody,
+    parseUpdateUsernameBody,
+    parseUsernameParam
+} from '../../../src/api/users/users.dto.js';
 import { HttpError } from '../../../src/utils/errors.js';
 
 function assertHttpError(error: unknown, code: string, status: number): void {

@@ -7,7 +7,13 @@ import { TestAdminAuditRecorder, testAdminAuditContext } from '../../helpers/adm
 
 import type { AdminUserRepository } from '../../../src/repositories/admin/admin.users.repository.interface.js';
 import type { AdminUserDetails, BannedUser, UserModerationLog } from '../../../src/repositories/admin/admin.users.types.js';
-import type { CommunityProfile, CreateUserInput, StaffProfile, User, UserWithPassword } from '../../../src/repositories/users/user.types.js';
+import type {
+    CommunityProfile,
+    CreateUserInput,
+    StaffProfile,
+    User,
+    UserWithPassword
+} from '../../../src/repositories/users/user.types.js';
 import type { UserRepository } from '../../../src/repositories/users/user.repository.interface.js';
 
 const baseUser: User = {
@@ -227,15 +233,17 @@ describe('AdminUserService', () => {
         assert.equal(adminUsers.findModerationLogsByUserIdInput, 2);
         assert.deepEqual(result, {
             ...baseAdminUser,
-            moderationLogs: [{
-                id: 10,
-                action: 'ban',
-                reason: 'Repeated abuse of the platform rules.',
-                adminId: 1,
-                adminUsername: 'admin',
-                correlationId: testAdminAuditContext.correlationId,
-                createdAt: new Date('2026-05-10T10:00:00.000Z')
-            }]
+            moderationLogs: [
+                {
+                    id: 10,
+                    action: 'ban',
+                    reason: 'Repeated abuse of the platform rules.',
+                    adminId: 1,
+                    adminUsername: 'admin',
+                    correlationId: testAdminAuditContext.correlationId,
+                    createdAt: new Date('2026-05-10T10:00:00.000Z')
+                }
+            ]
         });
         assert.equal('passwordHash' in result, false);
         assert.equal('userId' in result.moderationLogs[0]!, false);
@@ -397,10 +405,7 @@ describe('AdminUserService', () => {
     it('does not audit a moderation repository no-op', async () => {
         adminUsers.banResult = false;
 
-        assert.equal(
-            await service.ban(2, 1, 'Repeated abuse of the platform rules.', testAdminAuditContext),
-            false
-        );
+        assert.equal(await service.ban(2, 1, 'Repeated abuse of the platform rules.', testAdminAuditContext), false);
         assert.equal(audit.inputs.length, 0);
         assert.equal(adminUsers.moderationLogInput, null);
     });

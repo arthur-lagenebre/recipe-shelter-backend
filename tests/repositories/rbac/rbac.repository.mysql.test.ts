@@ -14,11 +14,7 @@ describe('RbacRepositoryMysql', () => {
             async execute(sql: string, params: unknown[]) {
                 executedSql = sql;
                 executedParams = params;
-                return [[
-                    { Code: PERMISSIONS.recipeReview },
-                    { Code: PERMISSIONS.userBan },
-                    { Code: 'unknown.permission' }
-                ]];
+                return [[{ Code: PERMISSIONS.recipeReview }, { Code: PERMISSIONS.userBan }, { Code: 'unknown.permission' }]];
             }
         } as unknown as Pool);
 
