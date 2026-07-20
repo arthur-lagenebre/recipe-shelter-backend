@@ -1,0 +1,62 @@
+# ============================================
+# Admin tags
+# ============================================
+
+@baseUrl = http://localhost:3000/api/v1
+@adminSessionCookie = PASTE_RS_ADMIN_SESSION_COOKIE_HERE
+@tagId = 1
+@targetTagId = 2
+
+### Paginated tag catalog
+GET {{baseUrl}}/admin/tags?page=1&limit=25&status=active&groupId=1&q=vegetarien
+Cookie: rs_admin_session={{adminSessionCookie}}
+
+### Create a canonical tag
+POST {{baseUrl}}/admin/tags
+Content-Type: application/json
+Cookie: rs_admin_session={{adminSessionCookie}}
+
+{
+  "groupId": 2,
+  "name": "Riche en protéines",
+  "description": "Recettes naturellement riches en protéines."
+}
+
+### Update an active tag
+PATCH {{baseUrl}}/admin/tags/{{tagId}}
+Content-Type: application/json
+Cookie: rs_admin_session={{adminSessionCookie}}
+
+{
+  "name": "Très riche en protéines",
+  "slug": "tres-riche-en-proteines",
+  "description": null
+}
+
+### Deprecate a tag
+POST {{baseUrl}}/admin/tags/{{tagId}}/deprecate
+Content-Type: application/json
+Cookie: rs_admin_session={{adminSessionCookie}}
+
+{
+  "reason": "Ce tag n'est plus utilisé dans le catalogue éditorial."
+}
+
+### Restore a deprecated tag
+POST {{baseUrl}}/admin/tags/{{tagId}}/restore
+Content-Type: application/json
+Cookie: rs_admin_session={{adminSessionCookie}}
+
+{
+  "reason": "Ce tag redevient pertinent pour le catalogue éditorial."
+}
+
+### Merge a tag into an active canonical target
+POST {{baseUrl}}/admin/tags/{{tagId}}/merge
+Content-Type: application/json
+Cookie: rs_admin_session={{adminSessionCookie}}
+
+{
+  "targetTagId": {{targetTagId}},
+  "reason": "Ce tag est un doublon du tag canonique sélectionné."
+}

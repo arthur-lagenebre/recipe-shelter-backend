@@ -9,6 +9,7 @@ import { createAdminCommentsRouter } from '../../src/api/admin/admin.comments.ro
 import { adminAuthorizationPolicies } from '../../src/api/admin/admin.authorization.js';
 import { createAdminRecipesRouter } from '../../src/api/admin/admin.recipes.routes.js';
 import { createAdminStaffRouter } from '../../src/api/admin/admin.staff.routes.js';
+import { createAdminTagsRouter } from '../../src/api/admin/admin.tags.routes.js';
 import { createAdminUsersRouter } from '../../src/api/admin/admin.users.routes.js';
 import { createStaffInvitationsRouter } from '../../src/api/admin/staff-invitations.routes.js';
 import { createAdminStaffSessionsRouter } from '../../src/api/admin/staff-sessions.routes.js';
@@ -64,6 +65,12 @@ const ADMIN_POLICIES: AdminPolicy[] = [
     { method: 'DELETE', path: '/api/v1/admin/staff/2/roles/UserAdmin', permission: PERMISSIONS.staffRoleRevoke },
     { method: 'GET', path: '/api/v1/admin/staff/2/sessions', permission: PERMISSIONS.staffRead },
     { method: 'DELETE', path: '/api/v1/admin/staff/2/sessions/00000000-0000-4000-8000-000000000002', permission: PERMISSIONS.staffSessionRevoke },
+    { method: 'GET', path: '/api/v1/admin/tags', permission: PERMISSIONS.tagRead },
+    { method: 'POST', path: '/api/v1/admin/tags', permission: PERMISSIONS.tagCreate },
+    { method: 'PATCH', path: '/api/v1/admin/tags/1', permission: PERMISSIONS.tagUpdate },
+    { method: 'POST', path: '/api/v1/admin/tags/1/deprecate', permission: PERMISSIONS.tagDeprecate },
+    { method: 'POST', path: '/api/v1/admin/tags/1/restore', permission: PERMISSIONS.tagDeprecate },
+    { method: 'POST', path: '/api/v1/admin/tags/1/merge', permission: PERMISSIONS.tagMerge },
     { method: 'GET', path: '/api/v1/health/live', permission: PERMISSIONS.systemHealthRead },
     { method: 'GET', path: '/api/v1/health/ready', permission: PERMISSIONS.systemHealthRead },
     { method: 'GET', path: '/api/v1/health', permission: PERMISSIONS.systemHealthRead }
@@ -166,6 +173,14 @@ describe('administrative endpoint authorization policies', () => {
             revokeOwn: endpointHandler,
             listManaged: endpointHandler,
             revokeManaged: endpointHandler
+        }));
+        adminRouter.use('/tags', createAdminTagsRouter({
+            list: endpointHandler,
+            create: endpointHandler,
+            update: endpointHandler,
+            deprecate: endpointHandler,
+            restore: endpointHandler,
+            merge: endpointHandler
         }));
         const defaultDenyHandler: RequestHandler = (_req, res) => {
             defaultDenyControllerCalls += 1;
@@ -298,6 +313,40 @@ describe('administrative endpoint authorization policies', () => {
             });
 
             assert.equal(response.status, 403, `${policy.method} ${policy.path} must reject other user permissions`);
+            assert.equal(
+                (await response.json() as { error: { code: string } }).error.code,
+                'AUTH_PERMISSION_REQUIRED'
+            );
+            assert.equal(controllerCalls, controllerCallsBeforeRequest);
+        }
+    });
+
+    it('keeps tag catalog permissions isolated by action', async () => {
+        const tagPolicies = [
+            { method: 'GET', path: '/api/v1/admin/tags', permission: PERMISSIONS.tagRead },
+            { method: 'POST', path: '/api/v1/admin/tags', permission: PERMISSIONS.tagCreate },
+            { method: 'PATCH', path: '/api/v1/admin/tags/1', permission: PERMISSIONS.tagUpdate },
+            { method: 'POST', path: '/api/v1/admin/tags/1/deprecate', permission: PERMISSIONS.tagDeprecate },
+            { method: 'POST', path: '/api/v1/admin/tags/1/restore', permission: PERMISSIONS.tagDeprecate },
+            { method: 'POST', path: '/api/v1/admin/tags/1/merge', permission: PERMISSIONS.tagMerge }
+        ] as const;
+        const tagPermissions = [
+            PERMISSIONS.tagRead,
+            PERMISSIONS.tagCreate,
+            PERMISSIONS.tagUpdate,
+            PERMISSIONS.tagDeprecate,
+            PERMISSIONS.tagMerge
+        ];
+
+        for (const policy of tagPolicies) {
+            grantedPermissions = tagPermissions.filter((permission) => permission !== policy.permission);
+            const controllerCallsBeforeRequest = controllerCalls;
+            const response = await fetch(`${server.baseUrl}${policy.path}`, {
+                method: policy.method,
+                headers: { cookie }
+            });
+
+            assert.equal(response.status, 403, `${policy.method} ${policy.path} must reject other tag permissions`);
             assert.equal(
                 (await response.json() as { error: { code: string } }).error.code,
                 'AUTH_PERMISSION_REQUIRED'

@@ -12,6 +12,9 @@ const EXPECTED_ROLE_PERMISSIONS: Record<string, string[]> = {
         PERMISSIONS.catalogManage,
         PERMISSIONS.catalogRead,
         PERMISSIONS.tagCreate,
+        PERMISSIONS.tagDeprecate,
+        PERMISSIONS.tagMerge,
+        PERMISSIONS.tagRead,
         PERMISSIONS.tagUpdate
     ],
     CommentModerator: [

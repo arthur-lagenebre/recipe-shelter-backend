@@ -161,7 +161,7 @@ le backend. Le catalogue initial est le suivant :
 | Commentaires | `comment.review`, `comment.hide`, `comment.restore`, `comments.update`, `comments.delete` |
 | Utilisateurs community | `user.read`, `user.ban`, `user.unban` |
 | Catalogue | `catalog.read`, `catalog.manage` |
-| Tags | `tag.create`, `tag.update` |
+| Tags | `tag.read`, `tag.create`, `tag.update`, `tag.deprecate`, `tag.merge` |
 | Staff | `staff.read`, `staff.create`, `staff.disable`, `staff.enable`, `staff.role.grant`, `staff.role.revoke`, `staff.session.revoke` |
 | Audit | `audit.read` |
 
@@ -189,7 +189,7 @@ La matrice initiale est explicite et insérée de manière idempotente par le se
 | `RecipeModerator` | `recipe.review`, `recipe.publish`, `recipe.reject`, `recipe.archive` |
 | `CommentModerator` | `comment.review`, `comment.hide`, `comment.restore`, `comments.update` |
 | `UserAdmin` | `user.read`, `user.ban`, `user.unban` |
-| `CatalogManager` | `catalog.read`, `catalog.manage`, `tag.create`, `tag.update` |
+| `CatalogManager` | `catalog.read`, `catalog.manage`, `tag.read`, `tag.create`, `tag.update`, `tag.deprecate`, `tag.merge` |
 | `SuperAdmin` | Toutes les permissions listées dans le catalogue, associées explicitement |
 
 Les suppressions définitives de recettes et commentaires, la gestion du staff,
@@ -404,6 +404,12 @@ Exemples :
 - `DELETE /api/v1/admin/staff/:staffUserId/roles/:roleCode`
 - `GET /api/v1/admin/staff/:staffUserId/sessions`
 - `DELETE /api/v1/admin/staff/:staffUserId/sessions/:sessionId`
+- `GET /api/v1/admin/tags`
+- `POST /api/v1/admin/tags`
+- `PATCH /api/v1/admin/tags/:id`
+- `POST /api/v1/admin/tags/:id/deprecate`
+- `POST /api/v1/admin/tags/:id/restore`
+- `POST /api/v1/admin/tags/:id/merge`
 - `GET /api/v1/categories`
 - `GET /api/v1/ingredients`
 - `GET /api/v1/tags`
@@ -463,6 +469,22 @@ que la consultation par identifiant conserve l'état et la cible des anciens tag
   }
 }
 ```
+
+Le catalogue administratif est disponible via `GET /api/v1/admin/tags` avec
+la permission `tag.read`. Il est paginé (`page`, `limit`, 25 éléments par
+défaut, 50 maximum) et accepte les filtres optionnels `status`, `groupId` et
+`q`. La création (`tag.create`) reçoit `groupId`, `name`, ainsi que `slug` et
+`description` optionnels ; si le slug est absent, il est produit à partir du
+nom normalisé. La modification d'un tag actif (`tag.update`) accepte ces mêmes
+champs de façon partielle, avec au moins un champ présent.
+
+La dépréciation et la restauration utilisent `tag.deprecate`; la fusion utilise
+`tag.merge`. Ces trois actions exigent un `reason` de 10 à 1000 caractères, et
+la fusion reçoit également `targetTagId`. Une fusion conserve le tag source
+avec le statut `merged`, déplace et déduplique ses associations aux recettes,
+redirige ses éventuels alias historiques vers la cible et exige une cible
+active. La liste, la création, la modification et chaque transition de cycle de
+vie produisent un événement via l'audit administratif centralisé.
 
 `POST /api/v1/auth/login` est réservé aux comptes community et pose le cookie
 HttpOnly `rs_app_session`, avec l’audience JWT `recipe-shelter-app` et une durée

@@ -23,8 +23,11 @@ export const PERMISSIONS = {
   staffRoleRevoke: 'staff.role.revoke',
   staffSessionRevoke: 'staff.session.revoke',
   auditRead: 'audit.read',
+  tagRead: 'tag.read',
   tagCreate: 'tag.create',
-  tagUpdate: 'tag.update'
+  tagUpdate: 'tag.update',
+  tagDeprecate: 'tag.deprecate',
+  tagMerge: 'tag.merge'
 } as const;
 
 export type PermissionCode = typeof PERMISSIONS[keyof typeof PERMISSIONS];

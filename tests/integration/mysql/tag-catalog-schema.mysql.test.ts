@@ -4,6 +4,7 @@ import { after, before, describe, it } from 'node:test';
 
 import mysql from 'mysql2/promise';
 
+import { AdminTagRepositoryMysql } from '../../../src/repositories/admin/admin.tags.repository.mysql.js';
 import { TagRepositoryMysql } from '../../../src/repositories/tag/tag.repository.mysql.js';
 import { env } from '../../../src/utils/env.js';
 
@@ -299,5 +300,127 @@ describe('tag catalog schema integration', { skip: !mysqlEnabled && 'Set TEST_DB
             () => connection.query(`DELETE FROM Tags WHERE Id = 901`),
             assertTagDeletionRejected
         );
+    });
+
+    it('persists paginated administration writes and merges recipe relationships without deleting tags', async () => {
+        const repository = new AdminTagRepositoryMysql(pool);
+        const db = await pool.getConnection();
+
+        try {
+            await db.beginTransaction();
+
+            assert.equal(await repository.groupExists(1, db), true);
+            const createdResult = await repository.create({
+                groupId: 1,
+                name: 'Administrative fixture',
+                normalizedName: 'administrative fixture',
+                slug: 'administrative-fixture',
+                description: 'Created through the administrative repository'
+            }, db);
+            assert.equal(createdResult.status, 'written');
+            if (createdResult.status !== 'written')
+                throw new Error('Expected the administrative tag fixture to be created');
+
+            assert.deepEqual(await repository.create({
+                groupId: 1,
+                name: 'ADMINISTRATIVE FIXTURE',
+                normalizedName: 'administrative fixture',
+                slug: 'administrative-fixture-copy',
+                description: null
+            }, db), { status: 'normalized_name_taken' });
+            assert.deepEqual(await repository.create({
+                groupId: 1,
+                name: 'Other administrative fixture',
+                normalizedName: 'other administrative fixture',
+                slug: 'administrative-fixture',
+                description: null
+            }, db), { status: 'slug_taken' });
+
+            const updatedResult = await repository.update({
+                id: createdResult.tag.id,
+                groupId: 2,
+                name: 'Administrative updated fixture',
+                normalizedName: 'administrative updated fixture',
+                slug: 'administrative-updated-fixture',
+                description: null
+            }, db);
+            assert.equal(updatedResult.status, 'written');
+            if (updatedResult.status !== 'written')
+                throw new Error('Expected the administrative tag fixture to be updated');
+            assert.equal(updatedResult.tag.group.id, 2);
+
+            const page = await repository.find(
+                { status: 'active', groupId: 2, q: 'updated fixture' },
+                { page: 1, limit: 1, offset: 0 },
+                db
+            );
+            assert.equal(page.items[0]?.id, createdResult.tag.id);
+            assert.equal(page.pagination.page, 1);
+            assert.equal(page.pagination.limit, 1);
+            assert.ok(page.pagination.totalItems >= 1);
+
+            assert.equal(await repository.deprecate(createdResult.tag.id, db), true);
+            assert.equal(await repository.restore(createdResult.tag.id, db), 'restored');
+
+            await db.execute(
+                `INSERT INTO Users (Id, Mail, Username, Password, AccountType, Status, EmailValidatedAt)
+                 VALUES (930, 'tag-admin-fixture@example.test', 'tag-admin-fixture', 'test-password-hash', 'community', 'active', CURRENT_TIMESTAMP)`
+            );
+            await db.execute(
+                `INSERT INTO Recipes (Id, UserId, CategoryId, Title, Slug, Description, PrepTimeMinutes, Servings)
+                 VALUES
+                   (930, 930, 1, 'Tag merge fixture one', 'tag-merge-fixture-one', 'Fixture', 5, 2),
+                   (931, 930, 1, 'Tag merge fixture two', 'tag-merge-fixture-two', 'Fixture', 5, 2)`
+            );
+            await db.execute(
+                `INSERT INTO Tags (Id, GroupId, Name, NormalizedName, Slug) VALUES
+                   (930, 1, 'Merge source fixture', 'merge source fixture', 'merge-source-fixture'),
+                   (931, 1, 'Merge target fixture', 'merge target fixture', 'merge-target-fixture')`
+            );
+            await db.execute(
+                `INSERT INTO Tags (Id, GroupId, Name, NormalizedName, Slug, Status, MergedIntoTagId)
+                 VALUES (932, 1, 'Previous alias fixture', 'previous alias fixture', 'previous-alias-fixture', 'merged', 930)`
+            );
+            await db.execute(
+                `INSERT INTO RecipeTags (RecipeId, TagId) VALUES
+                   (930, 930),
+                   (931, 930),
+                   (931, 931)`
+            );
+
+            const locked = await repository.findByIdsForUpdate([930, 931], db);
+            assert.deepEqual(locked.map((tag) => tag.id), [930, 931]);
+            const merged = await repository.merge(930, 931, db);
+            assert.deepEqual(merged, {
+                merged: true,
+                reassignedRecipeCount: 2,
+                redirectedMergedTagCount: 1
+            });
+
+            const [recipeTags] = await db.query(
+                `SELECT RecipeId, TagId
+                 FROM RecipeTags
+                 WHERE RecipeId IN (930, 931)
+                 ORDER BY RecipeId, TagId`
+            );
+            assert.deepEqual(recipeTags, [
+                { RecipeId: 930, TagId: 931 },
+                { RecipeId: 931, TagId: 931 }
+            ]);
+
+            const [mergedTags] = await db.query(
+                `SELECT Id, Status, MergedIntoTagId
+                 FROM Tags
+                 WHERE Id IN (930, 932)
+                 ORDER BY Id`
+            );
+            assert.deepEqual(mergedTags, [
+                { Id: 930, Status: 'merged', MergedIntoTagId: 931 },
+                { Id: 932, Status: 'merged', MergedIntoTagId: 931 }
+            ]);
+        } finally {
+            await db.rollback();
+            db.release();
+        }
     });
 });

@@ -47,8 +47,11 @@ INSERT INTO Permissions (Id, Code, Description) VALUES
 (22, 'staff.role.revoke', "Retirer un rôle à un compte staff"),
 (23, 'staff.session.revoke', "Révoquer les sessions actives des comptes staff"),
 (24, 'audit.read', "Consulter le journal d'audit administratif"),
-(25, 'tag.create', "Créer un tag canonique"),
-(26, 'tag.update', "Modifier, déprécier ou fusionner un tag")
+(25, 'tag.read', "Consulter le catalogue complet des tags dans l'administration"),
+(26, 'tag.create', "Créer un tag canonique"),
+(27, 'tag.update', "Modifier un tag canonique actif"),
+(28, 'tag.deprecate', "Déprécier ou restaurer un tag"),
+(29, 'tag.merge', "Fusionner un tag dans un tag canonique actif")
 AS new_permissions
 ON DUPLICATE KEY UPDATE
   Code = new_permissions.Code,
@@ -77,8 +80,11 @@ FROM (
   -- CatalogManager: gestion complète des données du catalogue.
   UNION ALL SELECT 'CatalogManager', 'catalog.read'
   UNION ALL SELECT 'CatalogManager', 'catalog.manage'
+  UNION ALL SELECT 'CatalogManager', 'tag.read'
   UNION ALL SELECT 'CatalogManager', 'tag.create'
   UNION ALL SELECT 'CatalogManager', 'tag.update'
+  UNION ALL SELECT 'CatalogManager', 'tag.deprecate'
+  UNION ALL SELECT 'CatalogManager', 'tag.merge'
   -- SuperAdmin: catalogue explicite complet, sans wildcard ni héritage de rôle.
   UNION ALL SELECT 'SuperAdmin', 'system.health.read'
   UNION ALL SELECT 'SuperAdmin', 'user.read'
@@ -104,8 +110,11 @@ FROM (
   UNION ALL SELECT 'SuperAdmin', 'staff.role.revoke'
   UNION ALL SELECT 'SuperAdmin', 'staff.session.revoke'
   UNION ALL SELECT 'SuperAdmin', 'audit.read'
+  UNION ALL SELECT 'SuperAdmin', 'tag.read'
   UNION ALL SELECT 'SuperAdmin', 'tag.create'
   UNION ALL SELECT 'SuperAdmin', 'tag.update'
+  UNION ALL SELECT 'SuperAdmin', 'tag.deprecate'
+  UNION ALL SELECT 'SuperAdmin', 'tag.merge'
 ) AS role_permission_matrix
 INNER JOIN Roles AS roles ON roles.Code = role_permission_matrix.RoleCode
 INNER JOIN Permissions AS permissions ON permissions.Code = role_permission_matrix.PermissionCode

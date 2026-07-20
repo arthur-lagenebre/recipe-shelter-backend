@@ -33,5 +33,11 @@ export const adminAuthorizationPolicies = [
   { method: 'post', path: '/staff/:staffUserId/roles/:roleCode', permission: PERMISSIONS.staffRoleGrant },
   { method: 'delete', path: '/staff/:staffUserId/roles/:roleCode', permission: PERMISSIONS.staffRoleRevoke },
   { method: 'get', path: '/staff/:staffUserId/sessions', permission: PERMISSIONS.staffRead },
-  { method: 'delete', path: '/staff/:staffUserId/sessions/:sessionId', permission: PERMISSIONS.staffSessionRevoke }
+  { method: 'delete', path: '/staff/:staffUserId/sessions/:sessionId', permission: PERMISSIONS.staffSessionRevoke },
+  { method: 'get', path: '/tags', permission: PERMISSIONS.tagRead },
+  { method: 'post', path: '/tags', permission: PERMISSIONS.tagCreate },
+  { method: 'patch', path: '/tags/:id', permission: PERMISSIONS.tagUpdate },
+  { method: 'post', path: '/tags/:id/deprecate', permission: PERMISSIONS.tagDeprecate },
+  { method: 'post', path: '/tags/:id/restore', permission: PERMISSIONS.tagDeprecate },
+  { method: 'post', path: '/tags/:id/merge', permission: PERMISSIONS.tagMerge }
 ] as const satisfies readonly AuthorizationPolicy[];

@@ -47,6 +47,12 @@ describe('administrative audit event catalog', () => {
       'staff.roles.revoke',
       'staff.sessions.list',
       'staff.sessions.revoke',
+      'tags.create',
+      'tags.deprecate',
+      'tags.list',
+      'tags.merge',
+      'tags.restore',
+      'tags.update',
       'users.ban',
       'users.unban'
     ]);

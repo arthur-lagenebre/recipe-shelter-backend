@@ -17,6 +17,12 @@ export const ADMIN_AUDIT_EVENT_TYPES = {
   staffRoleRevoke: 'staff.roles.revoke',
   staffSessionList: 'staff.sessions.list',
   staffSessionRevoke: 'staff.sessions.revoke',
+  tagsCreate: 'tags.create',
+  tagsDeprecate: 'tags.deprecate',
+  tagsList: 'tags.list',
+  tagsMerge: 'tags.merge',
+  tagsRestore: 'tags.restore',
+  tagsUpdate: 'tags.update',
   usersBan: 'users.ban',
   usersUnban: 'users.unban'
 } as const;
@@ -30,7 +36,9 @@ export const ADMIN_AUDIT_TARGET_TYPES = {
   staffCollection: 'staff_collection',
   staffInvitation: 'staff_invitation',
   staffSession: 'staff_session',
-  staffUser: 'staff_user'
+  staffUser: 'staff_user',
+  tag: 'tag',
+  tagCollection: 'tag_collection'
 } as const;
 
 export type AdminAuditTargetType = typeof ADMIN_AUDIT_TARGET_TYPES[keyof typeof ADMIN_AUDIT_TARGET_TYPES];
@@ -54,6 +62,12 @@ export const ADMIN_AUDIT_EVENT_TARGET_TYPES: Readonly<Record<AdminAuditEventType
   [ADMIN_AUDIT_EVENT_TYPES.staffRoleRevoke]: ADMIN_AUDIT_TARGET_TYPES.staffUser,
   [ADMIN_AUDIT_EVENT_TYPES.staffSessionList]: ADMIN_AUDIT_TARGET_TYPES.staffUser,
   [ADMIN_AUDIT_EVENT_TYPES.staffSessionRevoke]: ADMIN_AUDIT_TARGET_TYPES.staffSession,
+  [ADMIN_AUDIT_EVENT_TYPES.tagsCreate]: ADMIN_AUDIT_TARGET_TYPES.tag,
+  [ADMIN_AUDIT_EVENT_TYPES.tagsDeprecate]: ADMIN_AUDIT_TARGET_TYPES.tag,
+  [ADMIN_AUDIT_EVENT_TYPES.tagsList]: ADMIN_AUDIT_TARGET_TYPES.tagCollection,
+  [ADMIN_AUDIT_EVENT_TYPES.tagsMerge]: ADMIN_AUDIT_TARGET_TYPES.tag,
+  [ADMIN_AUDIT_EVENT_TYPES.tagsRestore]: ADMIN_AUDIT_TARGET_TYPES.tag,
+  [ADMIN_AUDIT_EVENT_TYPES.tagsUpdate]: ADMIN_AUDIT_TARGET_TYPES.tag,
   [ADMIN_AUDIT_EVENT_TYPES.usersBan]: ADMIN_AUDIT_TARGET_TYPES.communityUser,
   [ADMIN_AUDIT_EVENT_TYPES.usersUnban]: ADMIN_AUDIT_TARGET_TYPES.communityUser
 };

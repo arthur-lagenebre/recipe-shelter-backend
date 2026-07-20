@@ -66,7 +66,12 @@ const ROLE_PERMISSIONS = {
     ],
     CatalogManager: [
         PERMISSIONS.catalogRead,
-        PERMISSIONS.catalogManage
+        PERMISSIONS.catalogManage,
+        PERMISSIONS.tagRead,
+        PERMISSIONS.tagCreate,
+        PERMISSIONS.tagUpdate,
+        PERMISSIONS.tagDeprecate,
+        PERMISSIONS.tagMerge
     ],
     SuperAdmin: ALL_PERMISSIONS
 } as const satisfies Record<string, readonly PermissionCode[]>;

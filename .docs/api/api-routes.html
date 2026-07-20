@@ -400,11 +400,11 @@
           <span>Domaines de routes montés dans <code>src/app.ts</code></span>
         </div>
         <div class="summary-card">
-          <strong>71</strong>
+          <strong>77</strong>
           <span>Endpoints HTTP actifs</span>
         </div>
         <div class="summary-card">
-          <strong>24</strong>
+          <strong>30</strong>
           <span>Routes admin protégées</span>
         </div>
         <div class="summary-card">
@@ -426,6 +426,7 @@
         <a href="#admin-recipes">Admin recipes</a>
         <a href="#admin-comments">Admin comments</a>
         <a href="#admin-users">Admin users</a>
+        <a href="#admin-tags">Admin tags</a>
         <a href="#admin-staff-invitations">Admin staff invitations</a>
         <a href="#admin-staff-management">Admin staff management</a>
         <a href="#admin-staff-sessions">Admin staff sessions</a>
@@ -1990,6 +1991,91 @@ type UnbanUserRequest = {
 
 type BanUserResponse = OkResponse;
 type UnbanUserResponse = OkResponse;</code></pre>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="admin-tags">
+      <h2 id="admin-tags">Admin tags</h2>
+      <p class="section-intro">Gestion paginée et non destructive du catalogue canonique. Chaque route exige sa permission explicite et produit un audit administratif. La dépréciation et la restauration partagent la permission de cycle de vie <code>tag.deprecate</code>. Les transitions de cycle de vie et la fusion exigent un motif de 10 à 1000 caractères.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Méthode</th>
+              <th>Route</th>
+              <th>Auth</th>
+              <th>Body / Query</th>
+              <th>Réponse</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/admin/tags</code></td>
+              <td><span class="auth admin">Staff + <code>tag.read</code></span></td>
+              <td><code>page</code>, <code>limit</code>, <code>status</code>, <code>groupId</code>, <code>q</code> optionnels. Limite par défaut 25, maximum 50.</td>
+              <td><code>200</code> <code>PaginatedResult&lt;Tag&gt;</code>.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/admin/tags</code></td>
+              <td><span class="auth admin">Staff + <code>tag.create</code></span></td>
+              <td><code>groupId</code> et <code>name</code> requis ; <code>slug</code> et <code>description</code> optionnels.</td>
+              <td><code>201</code> tag actif créé ; <code>409</code> si le nom canonique ou le slug existe.</td>
+            </tr>
+            <tr>
+              <td><span class="method patch">PATCH</span></td>
+              <td><code>/api/v1/admin/tags/:id</code></td>
+              <td><span class="auth admin">Staff + <code>tag.update</code></span></td>
+              <td>Au moins un champ parmi <code>groupId</code>, <code>name</code>, <code>slug</code>, <code>description</code>. Tag actif uniquement.</td>
+              <td><code>200</code> tag modifié.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/admin/tags/:id/deprecate</code></td>
+              <td><span class="auth admin">Staff + <code>tag.deprecate</code></span></td>
+              <td><code>reason</code> requis. Une cible canonique encore référencée ne peut pas être dépréciée.</td>
+              <td><code>200</code> tag <code>deprecated</code>.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/admin/tags/:id/restore</code></td>
+              <td><span class="auth admin">Staff + <code>tag.deprecate</code></span></td>
+              <td><code>reason</code> requis. Tag <code>deprecated</code> uniquement.</td>
+              <td><code>200</code> tag <code>active</code> ; <code>409</code> en cas de collision canonique.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/admin/tags/:id/merge</code></td>
+              <td><span class="auth admin">Staff + <code>tag.merge</code></span></td>
+              <td><code>targetTagId</code> et <code>reason</code> requis. La cible doit être active et différente de la source.</td>
+              <td><code>200</code> source conservée avec le statut <code>merged</code>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="schema-grid">
+        <article class="schema">
+          <h3>Écritures de tag</h3>
+          <pre><code>type CreateAdminTagRequest = {
+  groupId: number;
+  name: string;
+  slug?: string;
+  description?: string | null;
+};
+
+type UpdateAdminTagRequest = Partial&lt;CreateAdminTagRequest&gt;;
+type TagLifecycleRequest = { reason: string };
+type MergeTagRequest = {
+  targetTagId: number;
+  reason: string;
+};</code></pre>
+        </article>
+        <article class="schema">
+          <h3>Fusion non destructive</h3>
+          <p>Les associations <code>RecipeTags</code> de la source sont déplacées vers la cible et dédupliquées. Les alias qui pointaient vers la source sont redirigés vers la cible. Le tag source reste consultable avec <code>status: "merged"</code> et <code>mergedIntoTagId</code>.</p>
         </article>
       </div>
     </section>
