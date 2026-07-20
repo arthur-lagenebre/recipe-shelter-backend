@@ -4,7 +4,12 @@ import { after, before, describe, it } from 'node:test';
 
 import mysql from 'mysql2/promise';
 
+import { CatalogProposalRepositoryMysql } from '../../../src/repositories/catalog/catalog-proposals.repository.mysql.js';
+import { CatalogProposalService } from '../../../src/services/catalog/catalog-proposals.service.js';
 import { env } from '../../../src/utils/env.js';
+import { HttpError } from '../../../src/utils/errors.js';
+
+import type { Pool } from 'mysql2/promise';
 
 const baseTestDatabaseName = process.env.TEST_DB_NAME?.trim() ?? '';
 const mysqlEnabled = Boolean(baseTestDatabaseName);
@@ -199,6 +204,72 @@ describe('catalog proposals schema MySQL integration', { skip: !mysqlEnabled && 
     await connection.query(seed);
     const [afterSecondSeed] = await connection.query('SELECT COUNT(*) AS ProposalCount FROM CatalogProposals');
     assert.deepEqual(afterSecondSeed, seededProposals);
+  });
+
+  it('creates community proposals through the service and MySQL repository with duplicate validation', async () => {
+    const service = new CatalogProposalService(
+      new CatalogProposalRepositoryMysql(connection as unknown as Pool)
+    );
+    const created = await service.createTagProposal({
+      authorUserId,
+      recipeId: authorRecipeId,
+      name: '  API---catalogue suggestion  '
+    });
+
+    assert.deepEqual({
+      authorUserId: created.authorUserId,
+      recipeId: created.recipeId,
+      proposalType: created.proposalType,
+      proposedName: created.proposedName,
+      normalizedName: created.normalizedName,
+      status: created.status
+    }, {
+      authorUserId,
+      recipeId: authorRecipeId,
+      proposalType: 'tag',
+      proposedName: 'API---catalogue suggestion',
+      normalizedName: 'api catalogue suggestion',
+      status: 'pending'
+    });
+    assert.ok(created.createdAt instanceof Date);
+
+    await assert.rejects(
+      () => service.createTagProposal({
+        authorUserId,
+        recipeId: authorRecipeId,
+        name: 'api catalogue SUGGESTION!!!'
+      }),
+      (error: unknown) => assertHttpConflict(error, 'CATALOG_PROPOSALS_ALREADY_PENDING')
+    );
+    await assert.rejects(
+      () => service.createTagProposal({
+        authorUserId,
+        recipeId: authorRecipeId,
+        name: 'Existing proposal tag'
+      }),
+      (error: unknown) => assertHttpConflict(error, 'CATALOG_PROPOSALS_CANONICAL_NAME_EXISTS')
+    );
+
+    await connection.execute(
+      `INSERT INTO IngredientAliases (IngredientId, Name, NormalizedName, LanguageCode)
+       VALUES (?, 'Moon dust', 'moon dust', 'en')`,
+      [activeIngredientId]
+    );
+    await assert.rejects(
+      () => service.createIngredientProposal({
+        authorUserId,
+        recipeId: authorRecipeId,
+        name: 'MOON---DUST!!!'
+      }),
+      (error: unknown) => assertHttpConflict(error, 'CATALOG_PROPOSALS_CANONICAL_NAME_EXISTS')
+    );
+
+    const [canonicalMutations] = await connection.query(
+      `SELECT
+         (SELECT COUNT(*) FROM Tags WHERE NormalizedName = 'api catalogue suggestion') AS TagCount,
+         (SELECT COUNT(*) FROM Ingredients WHERE NormalizedName = 'moon dust') AS IngredientCount`
+    );
+    assert.deepEqual(canonicalMutations, [{ TagCount: 0, IngredientCount: 0 }]);
   });
 
   it('supports every lifecycle outcome without changing or blocking the recipe lifecycle', async () => {
@@ -481,3 +552,10 @@ describe('catalog proposals schema MySQL integration', { skip: !mysqlEnabled && 
     assert.ok(proposal?.ReviewedAt instanceof Date);
   });
 });
+
+function assertHttpConflict(error: unknown, code: string): boolean {
+  assert.ok(error instanceof HttpError);
+  assert.equal(error.statusCode, 409);
+  assert.equal(error.code, code);
+  return true;
+}

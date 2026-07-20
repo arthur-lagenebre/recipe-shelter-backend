@@ -23,6 +23,8 @@ import { createStaffSessionsController } from './api/admin/staff-sessions.contro
 import { createAdminStaffSessionsRouter } from './api/admin/staff-sessions.routes.js';
 import { createAuthController } from './api/auth/auth.controller.js';
 import { createAuthRouter, createStaffAuthRouter, createStaffInvitationActivationRouter } from './api/auth/auth.routes.js';
+import { createCatalogProposalsController } from './api/catalog/catalog-proposals.controller.js';
+import { createCatalogProposalsRouter } from './api/catalog/catalog-proposals.routes.js';
 import { createCategoryController } from './api/category/category.controller.js';
 import { createCategoryRouter } from './api/category/category.routes.js';
 import { createCommentsController } from './api/comments/comments.controller.js';
@@ -61,6 +63,7 @@ import { EmailValidationRepositoryMysql } from './repositories/auth/email-valida
 import { PasswordResetRepositoryMysql } from './repositories/auth/password-reset.repository.mysql.js';
 import { SessionRepositoryMysql } from './repositories/auth/session.repository.mysql.js';
 import { StaffMfaRepositoryMysql } from './repositories/auth/staff-mfa.repository.mysql.js';
+import { CatalogProposalRepositoryMysql } from './repositories/catalog/catalog-proposals.repository.mysql.js';
 import { CategoryRepositoryMysql } from './repositories/category/category.repository.mysql.js';
 import { CommentRepositoryMysql } from './repositories/comments/comments.repository.mysql.js';
 import { EquipmentRepositoryMysql } from './repositories/equipments/equipment.repository.mysql.js';
@@ -86,6 +89,7 @@ import { EmailValidationService } from './services/auth/email-validation.service
 import { PasswordResetService } from './services/auth/password-reset.service.js';
 import { StaffMfaService } from './services/auth/staff-mfa.service.js';
 import { StaffSessionService } from './services/auth/staff-session.service.js';
+import { CatalogProposalService } from './services/catalog/catalog-proposals.service.js';
 import { CategoryService } from './services/category/category.service.js';
 import { CommentService } from './services/comments/comments.service.js';
 import { ContactService } from './services/contact/contact.service.js';
@@ -121,6 +125,7 @@ export type AppDependencies = {
   authSessionRepository: SessionRepository;
   authUserRepository: Pick<UserRepository, 'findById'>;
   categoryService: CategoryService;
+  catalogProposalService: CatalogProposalService;
   commentService: CommentService;
   contactService: ContactService;
   emailValidationService: EmailValidationService;
@@ -152,6 +157,7 @@ function createDefaultDependencies(): AppDependencies {
   const staffInvitationRepository = new StaffInvitationRepositoryMysql(pool);
   const adminAuditActions = new AdminAuditActionRunnerMysql(pool, (db) => new AdminAuditService(new AdminAuditRepositoryMysql(db)));
   const categoryRepository = new CategoryRepositoryMysql(pool);
+  const catalogProposalRepository = new CatalogProposalRepositoryMysql(pool);
   const commentRepository = new CommentRepositoryMysql(pool);
   const equipmentRepository = new EquipmentRepositoryMysql(pool);
   const favoriteRepository = new FavoriteRepositoryMysql(pool, getPublicImageUrl);
@@ -184,6 +190,7 @@ function createDefaultDependencies(): AppDependencies {
     authSessionRepository: sessionRepository,
     authUserRepository: userRepository,
     categoryService: new CategoryService(categoryRepository),
+    catalogProposalService: new CatalogProposalService(catalogProposalRepository),
     commentService: new CommentService(commentRepository),
     contactService: new ContactService(mailer),
     emailValidationService,
@@ -242,6 +249,7 @@ export function createApp(overrides: Partial<AppDependencies> = {}) {
   const staffInvitationsController = createStaffInvitationsController(dependencies.staffInvitationService);
   const staffSessionsController = createStaffSessionsController(dependencies.staffSessionService);
   const categoryController = createCategoryController(dependencies.categoryService);
+  const catalogProposalsController = createCatalogProposalsController(dependencies.catalogProposalService);
   const commentsController = createCommentsController(dependencies.commentService);
   const contactController = createContactController(dependencies.contactService);
   const equipmentsController = createEquipmentsController(dependencies.equipmentService);
@@ -268,6 +276,7 @@ export function createApp(overrides: Partial<AppDependencies> = {}) {
   app.use('/api/v1/auth', createAuthRouter(authController));
   app.use('/api/v1/staff/invitations', createStaffInvitationActivationRouter(authController));
   app.use('/api/v1/categories', createCategoryRouter(categoryController));
+  app.use('/api/v1/catalog', createCatalogProposalsRouter(catalogProposalsController));
   app.use('/api/v1/comments', createCommentsRouter(commentsController));
   app.use('/api/v1/contact', createContactRouter(contactController));
   app.use('/api/v1/equipments', createEquipmentsRouter(equipmentsController));

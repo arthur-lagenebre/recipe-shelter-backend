@@ -425,6 +425,8 @@ Exemples :
 - `GET /api/v1/ingredients`
 - `GET /api/v1/tags`
 - `GET /api/v1/equipments`
+- `POST /api/v1/catalog/tag-proposals` (session community active requise)
+- `POST /api/v1/catalog/ingredient-proposals` (session community active requise)
 - `PUT /api/v1/recipes/:recipeId/cover-image` (session community active requise, `multipart/form-data`)
 - `DELETE /api/v1/recipes/:recipeId/cover-image` (session community active requise)
 
@@ -560,8 +562,8 @@ défaut et le schéma protège également les écritures directes : un tag réf�
 par une recette doit être déprécié ou fusionné. Sa ligne historique est ainsi
 conservée ; la dépréciation maintient aussi ses associations existantes.
 
-Le schéma contient également le modèle dormant `CatalogProposals` pour les
-suggestions de tags et d'ingrédients liées à une recette. Une proposition
+Le schéma contient le modèle `CatalogProposals` pour les suggestions de tags et
+d'ingrédients liées à une recette. Une proposition
 conserve son auteur, son libellé normalisé et commence obligatoirement avec le
 statut `pending`. Une revue staff unique la clôt en `accepted`, `rejected` ou
 `merged`, avec un motif et un horodatage. Les statuts `accepted` et `merged`
@@ -571,11 +573,23 @@ référence aucune entité du catalogue. L'identité et la décision deviennent
 immuables et la suppression physique est interdite afin de conserver tout
 l'historique.
 
-Ce modèle n'est encore exposé par aucune route. Insérer ou accepter une
-proposition ne crée pas automatiquement d'entité canonique, ne l'associe pas à
-la recette et ne conditionne aucun changement de statut de cette recette. Les
-futures actions de revue devront réaliser explicitement leur mutation métier et
-leur audit administratif centralisé dans une même transaction.
+`POST /api/v1/catalog/tag-proposals` et
+`POST /api/v1/catalog/ingredient-proposals` reçoivent chacun un body
+`{ "recipeId": number, "name": string }` et renvoient la proposition créée avec
+le statut `pending` en `201`. Seul l'auteur community actif de la recette peut
+proposer. Le nom est limité à 255 caractères et normalisé selon le type de
+catalogue. Un nom déjà porté par une entrée canonique active (ou par un alias
+d'ingrédient actif) reçoit `409 CATALOG_PROPOSALS_CANONICAL_NAME_EXISTS`; une
+proposition normalisée équivalente déjà en attente pour la même recette et le
+même type reçoit `409 CATALOG_PROPOSALS_ALREADY_PENDING`. Une recette absente ou
+n'appartenant pas au compte reçoit `404 CATALOG_PROPOSALS_RECIPE_NOT_FOUND`.
+Chaque route est limitée à 10 tentatives par heure et par adresse IP.
+
+Insérer une proposition ne crée pas automatiquement d'entité canonique, ne
+l'associe pas à la recette et ne conditionne aucun changement de statut de cette
+recette. Les futures actions de revue devront réaliser explicitement leur
+mutation métier et leur audit administratif centralisé dans une même
+transaction.
 
 `POST /api/v1/auth/login` est réservé aux comptes community et pose le cookie
 HttpOnly `rs_app_session`, avec l’audience JWT `recipe-shelter-app` et une durée

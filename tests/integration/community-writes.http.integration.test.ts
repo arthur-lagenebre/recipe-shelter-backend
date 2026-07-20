@@ -4,6 +4,7 @@ import { after, before, describe, it } from 'node:test';
 import cookieParser from 'cookie-parser';
 import express from 'express';
 
+import { createCatalogProposalsRouter } from '../../src/api/catalog/catalog-proposals.routes.js';
 import { createCommentsRouter, createRecipeCommentsRouter } from '../../src/api/comments/comments.routes.js';
 import { createFavoritesRouter } from '../../src/api/favorites/favorites.routes.js';
 import { createRecipesRouter } from '../../src/api/recipes/recipes.routes.js';
@@ -47,6 +48,8 @@ const communityWriteEndpoints = [
     { name: 'update personal recipe', method: 'PATCH', path: '/api/v1/recipes/me/42' },
     { name: 'submit recipe proposal', method: 'POST', path: '/api/v1/recipes/me/42/submit' },
     { name: 'archive personal recipe', method: 'POST', path: '/api/v1/recipes/me/42/archive' },
+    { name: 'create tag proposal', method: 'POST', path: '/api/v1/catalog/tag-proposals' },
+    { name: 'create ingredient proposal', method: 'POST', path: '/api/v1/catalog/ingredient-proposals' },
     { name: 'create comment', method: 'POST', path: '/api/v1/recipes/42/comments' },
     { name: 'update comment', method: 'PATCH', path: '/api/v1/comments/7' },
     { name: 'delete comment', method: 'DELETE', path: '/api/v1/comments/7' },
@@ -85,6 +88,10 @@ describe('community write HTTP boundary', () => {
             deleteComment: unexpectedControllerCall,
             getRecipeComments: unexpectedControllerCall
         };
+        const catalogProposalsController = {
+            createTagProposal: unexpectedControllerCall,
+            createIngredientProposal: unexpectedControllerCall
+        };
         const favoritesController = {
             createFavorite: unexpectedControllerCall,
             deleteFavorite: unexpectedControllerCall,
@@ -111,6 +118,7 @@ describe('community write HTTP boundary', () => {
         const app = express();
         app.use(cookieParser());
         app.use(express.json());
+        app.use('/api/v1/catalog', createCatalogProposalsRouter(catalogProposalsController));
         app.use('/api/v1/comments', createCommentsRouter(commentsController));
         app.use('/api/v1/favorites', createFavoritesRouter(favoritesController));
         app.use('/api/v1/recipes/:recipeId/comments', createRecipeCommentsRouter(commentsController));

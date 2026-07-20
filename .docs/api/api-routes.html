@@ -385,8 +385,8 @@
       <div class="meta">
         <span class="pill">Base URL: <code>http://localhost:3000</code></span>
         <span class="pill">Préfixe API: <code>/api/v1</code></span>
-        <span class="pill">Mise à jour: 2026-07-17</span>
-        <span class="pill">Routes documentées: 71</span>
+        <span class="pill">Mise à jour: 2026-07-20</span>
+        <span class="pill">Routes documentées: 73</span>
       </div>
     </div>
   </header>
@@ -396,11 +396,11 @@
       <h2 id="overview">Vue d’ensemble</h2>
       <div class="summary-grid">
         <div class="summary-card">
-          <strong>16</strong>
+          <strong>17</strong>
           <span>Domaines de routes montés dans <code>src/app.ts</code></span>
         </div>
         <div class="summary-card">
-          <strong>77</strong>
+          <strong>79</strong>
           <span>Endpoints HTTP actifs</span>
         </div>
         <div class="summary-card">
@@ -421,6 +421,7 @@
         <a href="#comments">Comments</a>
         <a href="#favorites">Favorites</a>
         <a href="#reference-data">Données de référence</a>
+        <a href="#catalog-proposals">Propositions catalogue</a>
         <a href="#contact">Contact</a>
         <a href="#health">Health</a>
         <a href="#admin-recipes">Admin recipes</a>
@@ -1477,6 +1478,71 @@ type TagGroup = {
   slug: string;
   sortOrder: number;
 };</code></pre>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="catalog-proposals">
+      <h2 id="catalog-proposals">Propositions catalogue</h2>
+      <p class="section-intro">Suggestions de tags et d'ingrédients liées à une recette appartenant au compte community actif. Chaque route est limitée à 10 tentatives par heure et par adresse IP. Une proposition reste en attente de revue et ne crée ni entité canonique, ni association à la recette.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Méthode</th>
+              <th>Route</th>
+              <th>Auth</th>
+              <th>Body / Query</th>
+              <th>Réponse</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/catalog/tag-proposals</code></td>
+              <td><span class="auth">Community active</span></td>
+              <td><code>{ "recipeId": number, "name": string }</code>. Nom non vide, 255 caractères maximum.</td>
+              <td><code>201</code> proposition <code>pending</code>.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/catalog/ingredient-proposals</code></td>
+              <td><span class="auth">Community active</span></td>
+              <td><code>{ "recipeId": number, "name": string }</code>. Nom non vide, 255 caractères maximum.</td>
+              <td><code>201</code> proposition <code>pending</code>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="schema-grid">
+        <article class="schema">
+          <h3>CatalogProposal</h3>
+          <p>Le nom est normalisé selon le catalogue ciblé. Les champs de revue sont toujours vides à la création.</p>
+          <pre><code>type CreateCatalogProposalRequest = {
+  recipeId: number;
+  name: string;
+};
+
+type CatalogProposal = {
+  id: number;
+  authorUserId: number;
+  recipeId: number;
+  proposalType: "tag" | "ingredient";
+  proposedName: string;
+  normalizedName: string;
+  status: "pending";
+  matchedTagId: null;
+  matchedIngredientId: null;
+  reviewedByStaffUserId: null;
+  reviewReason: null;
+  createdAt: ISODateString;
+  reviewedAt: null;
+};</code></pre>
+        </article>
+        <article class="schema">
+          <h3>Conflits et propriété</h3>
+          <p><code>404 CATALOG_PROPOSALS_RECIPE_NOT_FOUND</code> masque aussi une recette appartenant à un autre compte. <code>409 CATALOG_PROPOSALS_CANONICAL_NAME_EXISTS</code> refuse un nom canonique ou un alias d'ingrédient actif déjà connu. <code>409 CATALOG_PROPOSALS_ALREADY_PENDING</code> refuse le même nom normalisé déjà en attente pour la recette et le type. Le dépassement de débit renvoie <code>429 RATE_LIMIT</code>.</p>
         </article>
       </div>
     </section>
