@@ -85,6 +85,10 @@ describe('admin tags DTO validation', () => {
       (error) => assertHttpError(error, 'ADMIN_TAGS_MERGE_BAD_TARGET_ID')
     );
     assert.throws(
+      () => parseMergeAdminTagBody([]),
+      (error) => assertHttpError(error, 'ADMIN_TAGS_MERGE_BAD_BODY')
+    );
+    assert.throws(
       () => parseMergeAdminTagBody({ targetTagId: 2 }),
       (error) => assertHttpError(error, 'ADMIN_TAGS_MERGE_REASON_REQUIRED')
     );

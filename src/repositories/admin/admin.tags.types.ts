@@ -27,6 +27,10 @@ export type AdminTagRestoreResult = 'restored' | 'normalized_name_taken' | 'not_
 
 export type AdminTagMergeResult = {
   merged: boolean;
-  reassignedRecipeCount: number;
+  sourceRecipeCountBefore: number;
+  targetRecipeCountBefore: number;
+  targetRecipeCountAfter: number;
+  transferredRecipeCount: number;
+  deduplicatedRecipeCount: number;
   redirectedMergedTagCount: number;
 };

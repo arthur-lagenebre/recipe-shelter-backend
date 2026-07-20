@@ -483,8 +483,12 @@ La dépréciation et la restauration utilisent `tag.deprecate`; la fusion utilis
 la fusion reçoit également `targetTagId`. Une fusion conserve le tag source
 avec le statut `merged`, déplace et déduplique ses associations aux recettes,
 redirige ses éventuels alias historiques vers la cible et exige une cible
-active. La liste, la création, la modification et chaque transition de cycle de
-vie produisent un événement via l'audit administratif centralisé.
+active. Le transfert, la redirection et l'audit sont validés dans une même
+transaction ; la base interdit ensuite toute nouvelle association de recette
+vers un tag non actif. L'audit conserve les états source/cible avant et après,
+les volumes d'associations et les nombres de transferts, déduplications et alias
+redirigés. La liste, la création, la modification et chaque transition de cycle
+de vie produisent un événement via l'audit administratif centralisé.
 
 `POST /api/v1/auth/login` est réservé aux comptes community et pose le cookie
 HttpOnly `rs_app_session`, avec l’audience JWT `recipe-shelter-app` et une durée

@@ -955,21 +955,25 @@ CREATE TRIGGER tags_merge_integrity_BI
 BEFORE INSERT ON Tags
 FOR EACH ROW
 BEGIN
+  DECLARE canonical_tag_status VARCHAR(16) DEFAULT NULL;
+
   IF NEW.MergedIntoTagId IS NOT NULL AND NEW.MergedIntoTagId = NEW.Id THEN
     SIGNAL SQLSTATE '45000'
       SET MYSQL_ERRNO = 1644,
           MESSAGE_TEXT = 'A tag cannot be merged into itself';
   END IF;
-  IF NEW.MergedIntoTagId IS NOT NULL
-     AND NOT EXISTS (
-       SELECT 1
-       FROM Tags AS canonical_tag
-       WHERE canonical_tag.Id = NEW.MergedIntoTagId
-         AND canonical_tag.Status = 'active'
-     ) THEN
-    SIGNAL SQLSTATE '45000'
-      SET MYSQL_ERRNO = 1644,
-          MESSAGE_TEXT = 'A merged tag must reference an active canonical tag';
+  IF NEW.MergedIntoTagId IS NOT NULL THEN
+    SELECT Status
+    INTO canonical_tag_status
+    FROM Tags
+    WHERE Id = NEW.MergedIntoTagId
+    FOR SHARE;
+
+    IF canonical_tag_status IS NULL OR canonical_tag_status <> 'active' THEN
+      SIGNAL SQLSTATE '45000'
+        SET MYSQL_ERRNO = 1644,
+            MESSAGE_TEXT = 'A merged tag must reference an active canonical tag';
+    END IF;
   END IF;
 END;
 
@@ -977,21 +981,25 @@ CREATE TRIGGER tags_merge_integrity_BU
 BEFORE UPDATE ON Tags
 FOR EACH ROW
 BEGIN
+  DECLARE canonical_tag_status VARCHAR(16) DEFAULT NULL;
+
   IF NEW.MergedIntoTagId IS NOT NULL AND NEW.MergedIntoTagId = NEW.Id THEN
     SIGNAL SQLSTATE '45000'
       SET MYSQL_ERRNO = 1644,
           MESSAGE_TEXT = 'A tag cannot be merged into itself';
   END IF;
-  IF NEW.MergedIntoTagId IS NOT NULL
-     AND NOT EXISTS (
-       SELECT 1
-       FROM Tags AS canonical_tag
-       WHERE canonical_tag.Id = NEW.MergedIntoTagId
-         AND canonical_tag.Status = 'active'
-     ) THEN
-    SIGNAL SQLSTATE '45000'
-      SET MYSQL_ERRNO = 1644,
-          MESSAGE_TEXT = 'A merged tag must reference an active canonical tag';
+  IF NEW.MergedIntoTagId IS NOT NULL THEN
+    SELECT Status
+    INTO canonical_tag_status
+    FROM Tags
+    WHERE Id = NEW.MergedIntoTagId
+    FOR SHARE;
+
+    IF canonical_tag_status IS NULL OR canonical_tag_status <> 'active' THEN
+      SIGNAL SQLSTATE '45000'
+        SET MYSQL_ERRNO = 1644,
+            MESSAGE_TEXT = 'A merged tag must reference an active canonical tag';
+    END IF;
   END IF;
   IF NEW.Status <> 'active'
      AND EXISTS (
@@ -1059,6 +1067,42 @@ CREATE TABLE RecipeTags (
     ON UPDATE CASCADE
     ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TRIGGER recipe_tags_active_tag_BI
+BEFORE INSERT ON RecipeTags
+FOR EACH ROW
+BEGIN
+  DECLARE referenced_tag_status VARCHAR(16) DEFAULT NULL;
+
+  SELECT Status
+  INTO referenced_tag_status
+  FROM Tags
+  WHERE Id = NEW.TagId
+  FOR SHARE;
+
+  IF referenced_tag_status IS NULL OR referenced_tag_status <> 'active' THEN
+    SIGNAL SQLSTATE '45000'
+      SET MYSQL_ERRNO = 1644,
+          MESSAGE_TEXT = 'Recipes can only reference active canonical tags';
+  END IF;
+END;
+
+CREATE TRIGGER tags_merged_recipe_associations_BU
+BEFORE UPDATE ON Tags
+FOR EACH ROW
+BEGIN
+  IF OLD.Status <> 'merged'
+     AND NEW.Status = 'merged'
+     AND EXISTS (
+       SELECT 1
+       FROM RecipeTags
+       WHERE TagId = NEW.Id
+     ) THEN
+    SIGNAL SQLSTATE '45000'
+      SET MYSQL_ERRNO = 1644,
+          MESSAGE_TEXT = 'A tag must have no recipe associations before being merged';
+  END IF;
+END;
 
 CREATE TABLE RecipeEquipments (
   RecipeId BIGINT UNSIGNED NOT NULL,

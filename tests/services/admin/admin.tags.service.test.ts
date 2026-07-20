@@ -25,7 +25,11 @@ class FakeAdminTagRepository implements AdminTagRepository {
   nextId = 10;
   mergeCounts: AdminTagMergeResult = {
     merged: true,
-    reassignedRecipeCount: 3,
+    sourceRecipeCountBefore: 3,
+    targetRecipeCountBefore: 2,
+    targetRecipeCountAfter: 4,
+    transferredRecipeCount: 2,
+    deduplicatedRecipeCount: 1,
     redirectedMergedTagCount: 1
   };
 
@@ -278,6 +282,8 @@ describe('AdminTagService', () => {
   });
 
   it('merges into an active canonical target and records relationship counts', async () => {
+    repository.tags.get(4)!.mergedIntoTagId = 2;
+    const targetBefore = cloneTag(repository.tags.get(1)!);
     const merged = await service.merge(2, {
       targetTagId: 1,
       reason: 'Doublon du tag canonique.'
@@ -285,25 +291,92 @@ describe('AdminTagService', () => {
 
     assert.equal(merged.status, 'merged');
     assert.equal(merged.mergedIntoTagId, 1);
-    assert.deepEqual(audit.inputs.map((input) => ({
-      eventType: input.eventType,
-      reason: input.reason,
-      targetId: input.targetId,
-      reassignedRecipeCount: input.afterValues?.reassignedRecipeCount,
-      redirectedMergedTagCount: input.afterValues?.redirectedMergedTagCount
-    })), [{
+    assert.equal(repository.tags.get(4)?.mergedIntoTagId, 1);
+    assert.deepEqual(repository.tags.get(1), targetBefore);
+    assert.deepEqual({
+      eventType: audit.inputs[0]?.eventType,
+      reason: audit.inputs[0]?.reason,
+      targetId: audit.inputs[0]?.targetId,
+      beforeValues: audit.inputs[0]?.beforeValues,
+      afterValues: audit.inputs[0]?.afterValues
+    }, {
       eventType: 'tags.merge',
       reason: 'Doublon du tag canonique.',
       targetId: 2,
-      reassignedRecipeCount: 3,
-      redirectedMergedTagCount: 1
-    }]);
+      beforeValues: {
+        source: snapshotTagForTest(createTag(2, 'Express', 'express', 'express')),
+        target: snapshotTagForTest(targetBefore),
+        recipeAssociations: {
+          sourceCount: 3,
+          targetCount: 2,
+          sharedCount: 1
+        },
+        aliasesPointingToSourceCount: 1
+      },
+      afterValues: {
+        source: snapshotTagForTest(merged),
+        target: snapshotTagForTest(targetBefore),
+        recipeAssociations: {
+          sourceCount: 0,
+          targetCount: 4
+        },
+        aliasesPointingToSourceCount: 0,
+        transfer: {
+          transferredRecipeCount: 2,
+          deduplicatedRecipeCount: 1,
+          redirectedMergedTagCount: 1
+        }
+      }
+    });
   });
 
-  it('rejects self-merges, missing targets and non-active targets without audit', async () => {
+  it('merges a deprecated source with no relationships and audits zero-value snapshots', async () => {
+    repository.mergeCounts = {
+      merged: true,
+      sourceRecipeCountBefore: 0,
+      targetRecipeCountBefore: 0,
+      targetRecipeCountAfter: 0,
+      transferredRecipeCount: 0,
+      deduplicatedRecipeCount: 0,
+      redirectedMergedTagCount: 0
+    };
+
+    const merged = await service.merge(3, {
+      targetTagId: 2,
+      reason: 'Ancien tag remplacé sans association.'
+    }, actorUserId, testAdminAuditContext);
+
+    assert.equal(merged.status, 'merged');
+    assert.equal(merged.mergedIntoTagId, 2);
+    assert.equal(audit.inputs[0]?.beforeValues?.aliasesPointingToSourceCount, 0);
+    assert.deepEqual(audit.inputs[0]?.beforeValues?.recipeAssociations, {
+      sourceCount: 0,
+      targetCount: 0,
+      sharedCount: 0
+    });
+    assert.deepEqual(audit.inputs[0]?.afterValues?.transfer, {
+      transferredRecipeCount: 0,
+      deduplicatedRecipeCount: 0,
+      redirectedMergedTagCount: 0
+    });
+  });
+
+  it('rejects self-merges, missing targets, invalid statuses and concurrent changes without audit', async () => {
+    await assert.rejects(
+      () => service.merge(1, null as never, actorUserId, testAdminAuditContext),
+      (error) => assertHttpError(error, 400, 'ADMIN_TAGS_MERGE_BAD_BODY')
+    );
+    await assert.rejects(
+      () => service.merge(1, { targetTagId: 0, reason: 'Identifiant de cible invalide.' }, actorUserId, testAdminAuditContext),
+      (error) => assertHttpError(error, 400, 'ADMIN_TAGS_MERGE_BAD_TARGET_ID')
+    );
     await assert.rejects(
       () => service.merge(1, { targetTagId: 1, reason: 'Fusion impossible sur soi.' }, actorUserId, testAdminAuditContext),
       (error) => assertHttpError(error, 400, 'ADMIN_TAGS_MERGE_SELF')
+    );
+    await assert.rejects(
+      () => service.merge(999, { targetTagId: 1, reason: 'Source absente du catalogue.' }, actorUserId, testAdminAuditContext),
+      (error) => assertHttpError(error, 404, 'ADMIN_TAGS_NOT_FOUND')
     );
     await assert.rejects(
       () => service.merge(1, { targetTagId: 999, reason: 'Cible absente du catalogue.' }, actorUserId, testAdminAuditContext),
@@ -312,6 +385,16 @@ describe('AdminTagService', () => {
     await assert.rejects(
       () => service.merge(1, { targetTagId: 3, reason: 'Cible dépréciée interdite.' }, actorUserId, testAdminAuditContext),
       (error) => assertHttpError(error, 409, 'ADMIN_TAGS_MERGE_INVALID_TARGET_STATUS')
+    );
+    await assert.rejects(
+      () => service.merge(4, { targetTagId: 2, reason: 'Source déjà fusionnée.' }, actorUserId, testAdminAuditContext),
+      (error) => assertHttpError(error, 409, 'ADMIN_TAGS_MERGE_INVALID_SOURCE_STATUS')
+    );
+
+    repository.mergeCounts.merged = false;
+    await assert.rejects(
+      () => service.merge(2, { targetTagId: 1, reason: 'Conflit concurrent simulé.' }, actorUserId, testAdminAuditContext),
+      (error) => assertHttpError(error, 409, 'ADMIN_TAGS_STATUS_CONFLICT')
     );
     assert.equal(audit.inputs.length, 0);
   });
@@ -347,6 +430,20 @@ function cloneTag(tag: Tag): Tag {
     createdAt: new Date(tag.createdAt),
     updatedAt: new Date(tag.updatedAt),
     group: { ...tag.group }
+  };
+}
+
+function snapshotTagForTest(tag: Tag) {
+  return {
+    groupId: tag.group.id,
+    name: tag.name,
+    normalizedName: tag.normalizedName,
+    slug: tag.slug,
+    description: tag.description,
+    status: tag.status,
+    mergedIntoTagId: tag.mergedIntoTagId,
+    createdAt: tag.createdAt.toISOString(),
+    updatedAt: tag.updatedAt.toISOString()
   };
 }
 

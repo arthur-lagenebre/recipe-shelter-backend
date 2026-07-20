@@ -222,11 +222,29 @@ export class AdminTagService {
         targetType: ADMIN_AUDIT_TARGET_TYPES.tag,
         targetId: sourceTagId,
         reason: cleanReason,
-        beforeValues: snapshotTag(source),
+        beforeValues: {
+          source: snapshotTag(source),
+          target: snapshotTag(target),
+          recipeAssociations: {
+            sourceCount: result.sourceRecipeCountBefore,
+            targetCount: result.targetRecipeCountBefore,
+            sharedCount: result.deduplicatedRecipeCount
+          },
+          aliasesPointingToSourceCount: result.redirectedMergedTagCount
+        },
         afterValues: {
-          ...snapshotTag(after),
-          reassignedRecipeCount: result.reassignedRecipeCount,
-          redirectedMergedTagCount: result.redirectedMergedTagCount
+          source: snapshotTag(after),
+          target: snapshotTag(target),
+          recipeAssociations: {
+            sourceCount: 0,
+            targetCount: result.targetRecipeCountAfter
+          },
+          aliasesPointingToSourceCount: 0,
+          transfer: {
+            transferredRecipeCount: result.transferredRecipeCount,
+            deduplicatedRecipeCount: result.deduplicatedRecipeCount,
+            redirectedMergedTagCount: result.redirectedMergedTagCount
+          }
         },
         ...context
       });

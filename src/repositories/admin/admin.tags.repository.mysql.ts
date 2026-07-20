@@ -9,6 +9,10 @@ import type { Tag, TagRow } from '../tag/tag.types.js';
 import type { Pool, PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 
 type CountRow = RowDataPacket & { Count: number | string };
+type RecipeTagAssociationRow = RowDataPacket & {
+  RecipeId: number | string;
+  TagId: number | string;
+};
 
 type TagWhere = {
   clause: string;
@@ -166,18 +170,54 @@ export class AdminTagRepositoryMysql implements AdminTagRepository {
   }
 
   async merge(sourceTagId: number, targetTagId: number, db: PoolConnection): Promise<AdminTagMergeResult> {
-    await db.execute<ResultSetHeader>(
-      `INSERT IGNORE INTO RecipeTags (RecipeId, TagId)
-       SELECT RecipeId, ?
+    const [associationRows] = await db.execute<RecipeTagAssociationRow[]>(
+      `SELECT RecipeId, TagId
        FROM RecipeTags
-       WHERE TagId = ?`,
-      [targetTagId, sourceTagId]
+       WHERE TagId IN (?, ?)
+       ORDER BY TagId ASC, RecipeId ASC
+       FOR UPDATE`,
+      [sourceTagId, targetTagId]
+    );
+    const sourceRecipeIds = new Set(
+      associationRows
+        .filter((row) => Number(row.TagId) === sourceTagId)
+        .map((row) => Number(row.RecipeId))
+    );
+    const targetRecipeIds = new Set(
+      associationRows
+        .filter((row) => Number(row.TagId) === targetTagId)
+        .map((row) => Number(row.RecipeId))
+    );
+    const deduplicatedRecipeCount = [...sourceRecipeIds]
+      .filter((recipeId) => targetRecipeIds.has(recipeId))
+      .length;
+    const expectedTransferredRecipeCount = sourceRecipeIds.size - deduplicatedRecipeCount;
+
+    const [transferResult] = await db.execute<ResultSetHeader>(
+      `INSERT INTO RecipeTags (RecipeId, TagId)
+       SELECT source.RecipeId, ?
+       FROM RecipeTags AS source
+       WHERE source.TagId = ?
+         AND NOT EXISTS (
+           SELECT 1
+           FROM RecipeTags AS target
+           WHERE target.RecipeId = source.RecipeId
+             AND target.TagId = ?
+         )`,
+      [targetTagId, sourceTagId, targetTagId]
     );
     const [recipeResult] = await db.execute<ResultSetHeader>(
       `DELETE FROM RecipeTags
        WHERE TagId = ?`,
       [sourceTagId]
     );
+
+    if (
+      transferResult.affectedRows !== expectedTransferredRecipeCount
+      || recipeResult.affectedRows !== sourceRecipeIds.size
+    )
+      throw new Error('Tag recipe associations changed during merge');
+
     const [aliasesResult] = await db.execute<ResultSetHeader>(
       `UPDATE Tags
        SET MergedIntoTagId = ?
@@ -193,7 +233,11 @@ export class AdminTagRepositoryMysql implements AdminTagRepository {
 
     return {
       merged: tagResult.affectedRows > 0,
-      reassignedRecipeCount: recipeResult.affectedRows,
+      sourceRecipeCountBefore: sourceRecipeIds.size,
+      targetRecipeCountBefore: targetRecipeIds.size,
+      targetRecipeCountAfter: targetRecipeIds.size + transferResult.affectedRows,
+      transferredRecipeCount: transferResult.affectedRows,
+      deduplicatedRecipeCount,
       redirectedMergedTagCount: aliasesResult.affectedRows
     };
   }

@@ -2075,7 +2075,7 @@ type MergeTagRequest = {
         </article>
         <article class="schema">
           <h3>Fusion non destructive</h3>
-          <p>Les associations <code>RecipeTags</code> de la source sont déplacées vers la cible et dédupliquées. Les alias qui pointaient vers la source sont redirigés vers la cible. Le tag source reste consultable avec <code>status: "merged"</code> et <code>mergedIntoTagId</code>.</p>
+          <p>Les associations <code>RecipeTags</code> de la source sont verrouillées, déplacées vers la cible et dédupliquées. Les alias qui pointaient vers la source sont redirigés vers la cible. Le transfert et l'audit avant/après partagent une transaction unique ; l'audit détaille les volumes transférés et dédupliqués. Le tag source reste consultable avec <code>status: "merged"</code> et <code>mergedIntoTagId</code>, tandis que la cible reste active et inchangée.</p>
         </article>
       </div>
     </section>
