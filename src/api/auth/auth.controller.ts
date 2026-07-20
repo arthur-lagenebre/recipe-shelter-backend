@@ -1,4 +1,5 @@
 import { parseLoginBody, parseRegisterBody, parseResendValidationEmailBody, parseResetPasswordBody, parseStaffInvitationActivationBody, parseStaffLoginVerificationBody, parseStaffMfaEnrollmentOptionsBody, parseValidateEmailBody } from './auth.dto.js';
+import { unauthorized } from '../../utils/errors.js';
 import { clearSessionCookie, getSessionToken, setSessionCookie } from '../../utils/session-cookie.js';
 import { asyncHandler } from '../http/async-handler.js';
 
@@ -58,11 +59,7 @@ export function createAuthController(authService: AuthService, passwordResetServ
   });
 
   const me: Handler = (req, res) => {
-    if (!req.auth) {
-      res.status(401).json({ error: { message: 'Unauthorized', code: 'AUTH_UNAUTHORIZED' } });
-
-      return;
-    }
+    if (!req.auth) throw unauthorized('Unauthorized', 'AUTH_UNAUTHORIZED');
 
     res.status(200).json({ auth: req.auth });
   };
@@ -95,30 +92,12 @@ export function createAuthController(authService: AuthService, passwordResetServ
     res.status(200).json({ ok: true, message: 'If an account exists for this email, a password reset link has been sent.' });
   });
 
-  const resetPassword: Handler = asyncHandler(async (req, res, next) => {
+  const resetPassword: Handler = asyncHandler(async (req, res) => {
     const input = parseResetPasswordBody(req.body);
 
-    try {
-      await passwordResetService.resetPassword(input.token, input.password);
+    await passwordResetService.resetPassword(input.token, input.password);
 
-      res.status(200).json({ ok: true, message: 'Password has been reset successfully.' });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Password reset failed';
-
-      if (message === 'Invalid or expired reset token') {
-        res.status(400).json({ error: { message, code: 'AUTH_RESET_PASSWORD_BAD_TOKEN' } });
-
-        return;
-      }
-
-      if (message === 'Password is required' || message === 'Password must be at least 8 characters' || message === 'Password must be at most 128 characters') {
-        res.status(400).json({ error: { message, code: 'AUTH_RESET_PASSWORD_BAD_PASSWORD' } });
-
-        return;
-      }
-
-      next(err);
-    }
+    res.status(200).json({ ok: true, message: 'Password has been reset successfully.' });
   });
 
   const validateEmail: Handler = asyncHandler(async (req, res) => {

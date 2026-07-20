@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 
 import { validatePassword } from './password-policy.js';
 import { env } from '../../utils/env.js';
+import { badRequest } from '../../utils/errors.js';
 import { generateResetToken, hashResetToken } from '../../utils/security/password-reset-token.js';
 
 import type { PasswordResetRepository } from '../../repositories/auth/password-reset.repository.interface.js';
@@ -50,17 +51,17 @@ export class PasswordResetService {
         const normalizedToken = token.trim();
 
         if (!normalizedToken)
-            throw new Error('Reset token is required');
+            throw badRequest('Reset token is required', 'AUTH_RESET_PASSWORD_BAD_TOKEN');
 
         const passwordError = validatePassword(newPassword);
         if (passwordError)
-            throw new Error(passwordError);
+            throw badRequest(passwordError, 'AUTH_RESET_PASSWORD_BAD_PASSWORD');
 
         const tokenHash = hashResetToken(normalizedToken);
         const reset = await this.resets.findValidByTokenHash(tokenHash);
 
         if (!reset)
-            throw new Error('Invalid or expired reset token');
+            throw badRequest('Invalid or expired reset token', 'AUTH_RESET_PASSWORD_BAD_TOKEN');
 
         const passwordHash = await bcrypt.hash(newPassword, env.auth.bcryptCost);
 

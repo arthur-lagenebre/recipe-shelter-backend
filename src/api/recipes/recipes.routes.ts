@@ -31,8 +31,8 @@ export function createRecipesRouter(controller: RecipesController) {
   router.get('/recent', optionalCommunityAuth, controller.getRecentRecipes);
   router.put('/:recipeId/cover-image', requireCommunityAuth, CommunityOnly, uploadRecipeImage, controller.replaceCoverImage);
   router.delete('/:recipeId/cover-image', requireCommunityAuth, CommunityOnly, controller.deleteCoverImage);
-  router.get('/:slug', optionalCommunityAuth, controller.getRecipeBySlug)
-  router.get('/me/:id', requireCommunityAuth, controller.getRecipe)
+  router.get('/:slug', optionalCommunityAuth, controller.getRecipeBySlug);
+  router.get('/me/:id', requireCommunityAuth, controller.getRecipe);
   router.patch('/me/:id', requireCommunityAuth, CommunityOnly, controller.updateRecipe);
   router.post('/me/:id/submit', requireCommunityAuth, CommunityOnly, controller.submitRecipe);
   router.post('/me/:id/archive', requireCommunityAuth, CommunityOnly, controller.archiveRecipe);

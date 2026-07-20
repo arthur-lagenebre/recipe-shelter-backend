@@ -16,7 +16,7 @@ export function createFavoritesRouter(controller: FavoritesController) {
 
     router.post('/:recipeId', requireCommunityAuth, CommunityOnly, controller.createFavorite);
     router.delete('/:recipeId', requireCommunityAuth, CommunityOnly, controller.deleteFavorite);
-    router.get('/me', requireCommunityAuth, controller.getFavoriteRecipes)
+    router.get('/me', requireCommunityAuth, controller.getFavoriteRecipes);
 
     return router;
 }

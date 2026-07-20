@@ -1,29 +1,11 @@
 import { notFound } from '../../utils/errors.js';
+import { normalizeDisplayName } from '../../utils/string.js';
 
 import type { TagRepository } from '../../repositories/tag/tag.repository.interface.js';
 import type { Tag } from '../../repositories/tag/tag.types.js';
 
-const tagNameTransliterations: ReadonlyArray<readonly [RegExp, string]> = [
-    [/æ/g, 'ae'],
-    [/œ/g, 'oe'],
-    [/ß/g, 'ss'],
-    [/ø/g, 'o'],
-    [/[ðđ]/g, 'd'],
-    [/ł/g, 'l']
-];
-
 export function normalizeTagName(name: string): string {
-    let normalizedName = name
-        .normalize('NFKD')
-        .toLowerCase()
-        .replace(/\p{M}+/gu, '');
-
-    for (const [characters, replacement] of tagNameTransliterations)
-        normalizedName = normalizedName.replace(characters, replacement);
-
-    return normalizedName
-        .replace(/[^a-z0-9]+/g, ' ')
-        .trim();
+    return normalizeDisplayName(name);
 }
 
 export class TagService {

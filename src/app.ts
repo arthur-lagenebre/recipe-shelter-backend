@@ -32,7 +32,7 @@ import { createCategoryRouter } from './api/category/category.routes.js';
 import { createCommentsController } from './api/comments/comments.controller.js';
 import { createCommentsRouter, createRecipeCommentsRouter } from './api/comments/comments.routes.js';
 import { createContactController } from './api/contact/contact.controller.js';
-import { createContactRouter } from './api/contact/contact.router.js';
+import { createContactRouter } from './api/contact/contact.routes.js';
 import { createEquipmentsController } from './api/equipments/equipments.controller.js';
 import { createEquipmentsRouter } from './api/equipments/equipments.routes.js';
 import { createFavoritesController } from './api/favorites/favorites.controller.js';
@@ -44,7 +44,7 @@ import { createIngredientsRouter } from './api/ingredients/ingredients.routes.js
 import { createRecipesController } from './api/recipes/recipes.controller.js';
 import { createRecipesRouter } from './api/recipes/recipes.routes.js';
 import { createTagsController } from './api/tag/tags.controller.js';
-import { createTagssRouter } from './api/tag/tags.routes.js';
+import { createTagsRouter } from './api/tag/tags.routes.js';
 import { createUsersController } from './api/users/users.controller.js';
 import { createUsersRouter } from './api/users/users.routes.js';
 import { pool } from './db/pool.js';
@@ -292,7 +292,7 @@ export function createApp(overrides: Partial<AppDependencies> = {}) {
   app.use('/api/v1/ingredients', createIngredientsRouter(ingredientsController));
   app.use('/api/v1/recipes/:recipeId/comments', createRecipeCommentsRouter(commentsController));
   app.use('/api/v1/recipes', createRecipesRouter(recipesController));
-  app.use('/api/v1/tags', createTagssRouter(tagController));
+  app.use('/api/v1/tags', createTagsRouter(tagController));
   app.use('/api/v1/users', createUsersRouter(usersController));
 
   app.use(notFound);

@@ -4,7 +4,7 @@ import { describe, it } from 'node:test';
 import express from 'express';
 
 import { createContactController } from '../../src/api/contact/contact.controller.js';
-import { createContactRouter } from '../../src/api/contact/contact.router.js';
+import { createContactRouter } from '../../src/api/contact/contact.routes.js';
 import { errorHandler } from '../../src/middlewares/error-handler.js';
 import { ContactService } from '../../src/services/contact/contact.service.js';
 import { startHttpTestServer } from '../helpers/http-test-server.js';

@@ -7,7 +7,7 @@ type TagsController = {
     getTag: RequestHandler;
 };
 
-export function createTagssRouter(controller: TagsController) {
+export function createTagsRouter(controller: TagsController) {
     const router = Router();
 
     router.get('/', controller.getTags);
