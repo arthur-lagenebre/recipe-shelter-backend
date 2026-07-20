@@ -431,9 +431,13 @@ L'upload de couverture attend exactement un fichier dans le champ `image` et acc
 }
 ```
 
-Les tags sont rattachés à un groupe. Ils possèdent un nom normalisé unique, une
-description optionnelle, un statut `active`, `deprecated` ou `merged`, ainsi que
-les dates de création et de dernière modification. Un tag fusionné référence le
+Les tags sont rattachés à un groupe. Leur nom normalisé est produit en ignorant
+la casse et les accents, puis en remplaçant toute suite d'espaces ou de
+ponctuation par un espace simple. Cette identité est unique parmi les tags
+actifs : une variante ne peut donc pas créer un second tag canonique, tandis
+qu'un tag déprécié ou fusionné conserve son libellé historique. Ils possèdent
+une description optionnelle, un statut `active`, `deprecated` ou `merged`, ainsi
+que les dates de création et de dernière modification. Un tag fusionné référence le
 tag canonique via `mergedIntoTagId`; les autres statuts exposent `null`. Les
 réponses `GET /api/v1/tags` et `GET /api/v1/tags/:id` incluent également l'objet
 `group`. Le schéma refuse les suppressions physiques : un tag obsolète doit être

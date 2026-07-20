@@ -1427,7 +1427,7 @@ type DeleteFavoriteResponse = OkResponse;</code></pre>
       <div class="schema-grid">
         <article class="schema">
           <h3>Reference data</h3>
-          <p>Objets renvoyés par les routes catégories, équipements, ingrédients et tags. Les tags incluent leur groupe.</p>
+          <p>Objets renvoyés par les routes catégories, équipements, ingrédients et tags. Les tags incluent leur groupe. Leur <code>normalizedName</code> ignore la casse, les accents et les suites d'espaces ou de ponctuation ; cette identité est unique parmi les tags actifs.</p>
           <pre><code>type Category = {
   id: number;
   name: string;

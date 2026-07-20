@@ -895,7 +895,7 @@ CREATE TABLE Tags (
   Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   GroupId BIGINT UNSIGNED NOT NULL,
   Name VARCHAR(255) NOT NULL,
-  NormalizedName VARCHAR(255) CHARACTER SET ascii COLLATE ascii_general_ci NOT NULL,
+  NormalizedName VARCHAR(255) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   Slug VARCHAR(255) CHARACTER SET ascii COLLATE ascii_general_ci NOT NULL,
   Description VARCHAR(1000) NULL,
   Status ENUM('active', 'deprecated', 'merged') NOT NULL DEFAULT 'active',
@@ -903,7 +903,14 @@ CREATE TABLE Tags (
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (Id),
-  UNIQUE KEY tags_normalized_name_UK (NormalizedName),
+  UNIQUE KEY tags_active_normalized_name_UK ((
+    CAST(
+      CASE
+        WHEN Status = 'active' THEN TRIM(REGEXP_REPLACE(LOWER(Name), '[^[:alnum:]]+', ' '))
+        ELSE NULL
+      END AS CHAR(255) CHARACTER SET utf8mb4
+    ) COLLATE utf8mb4_0900_ai_ci
+  )),
   UNIQUE KEY tags_slug_UK (Slug),
   KEY idx_tags_group_status_name (GroupId, Status, Name),
   KEY idx_tags_status_name (Status, Name),
@@ -915,7 +922,8 @@ CREATE TABLE Tags (
       CHAR_LENGTH(NormalizedName) = CHAR_LENGTH(TRIM(NormalizedName))
       AND CHAR_LENGTH(TRIM(NormalizedName)) > 0
       AND BINARY NormalizedName = BINARY LOWER(NormalizedName)
-      AND NormalizedName REGEXP '^[a-z0-9]+([ ''-][a-z0-9]+)*$'
+      AND NormalizedName REGEXP '^[a-z0-9]+( [a-z0-9]+)*$'
+      AND CONVERT(NormalizedName USING utf8mb4) COLLATE utf8mb4_0900_ai_ci = TRIM(REGEXP_REPLACE(LOWER(Name), '[^[:alnum:]]+', ' ')) COLLATE utf8mb4_0900_ai_ci
     ),
   CONSTRAINT tags_slug_CK
     CHECK (

@@ -46,6 +46,19 @@ function assertTagDeletionRejected(error: unknown): boolean {
     return true;
 }
 
+function assertActiveNormalizedDuplicateRejected(error: unknown): boolean {
+    assert.ok(error instanceof Error);
+
+    const mysqlError = error as Error & {
+        errno?: number;
+        sqlMessage?: string;
+    };
+
+    assert.equal(mysqlError.errno, 1062);
+    assert.match(mysqlError.sqlMessage ?? '', /tags_active_normalized_name_UK/);
+    return true;
+}
+
 describe('tag catalog schema integration', { skip: !mysqlEnabled && 'Set TEST_DB_NAME to run isolated MySQL tests' }, () => {
     let connection: mysql.Connection;
     let pool: mysql.Pool;
@@ -131,7 +144,7 @@ describe('tag catalog schema integration', { skip: !mysqlEnabled && 'Set TEST_DB
                 'idx_tags_merged_into_tag_id',
                 'idx_tags_status_name',
                 'PRIMARY',
-                'tags_normalized_name_UK',
+                'tags_active_normalized_name_UK',
                 'tags_slug_UK'
             ]
         );
@@ -161,6 +174,59 @@ describe('tag catalog schema integration', { skip: !mysqlEnabled && 'Set TEST_DB
         });
         assert.ok(vegetarian.createdAt instanceof Date);
         assert.ok(vegetarian.updatedAt instanceof Date);
+    });
+
+    it('rejects equivalent active names while preserving deprecated and merged variants', async () => {
+        await connection.query(
+            `INSERT INTO Tags (Id, GroupId, Name, NormalizedName, Slug, Description)
+             VALUES (910, 1, 'Crème brûlée', 'creme brulee', 'normalization-canonical', 'Canonical fixture')`
+        );
+
+        const activeVariants = [
+            { name: 'CRÈME BRÛLÉE', slug: 'normalization-case' },
+            { name: 'Creme brulee', slug: 'normalization-accents' },
+            { name: 'Crème   brûlée', slug: 'normalization-spaces' },
+            { name: 'Crème---brûlée!!!', slug: 'normalization-punctuation' }
+        ];
+
+        for (const { name, slug } of activeVariants) {
+            await assert.rejects(
+                () => connection.query(
+                    `INSERT INTO Tags (GroupId, Name, NormalizedName, Slug)
+                     VALUES (1, ?, 'creme brulee', ?)`,
+                    [name, slug]
+                ),
+                assertActiveNormalizedDuplicateRejected
+            );
+        }
+
+        await assert.rejects(() => connection.query(
+            `INSERT INTO Tags (GroupId, Name, NormalizedName, Slug, Status)
+             VALUES (1, 'Crème brûlée', 'unrelated value', 'normalization-mismatch', 'deprecated')`
+        ));
+
+        await connection.query(
+            `INSERT INTO Tags (Id, GroupId, Name, NormalizedName, Slug, Status) VALUES
+               (911, 1, 'Creme---brulee', 'creme brulee', 'normalization-deprecated', 'deprecated');
+             INSERT INTO Tags (Id, GroupId, Name, NormalizedName, Slug, Status, MergedIntoTagId)
+             VALUES (912, 1, 'CRÈME BRÛLÉE', 'creme brulee', 'normalization-merged', 'merged', 910)`
+        );
+
+        await assert.rejects(
+            () => connection.query(`UPDATE Tags SET Status = 'active' WHERE Id = 911`),
+            assertActiveNormalizedDuplicateRejected
+        );
+
+        const [historicalVariants] = await connection.query(
+            `SELECT Id, Status, MergedIntoTagId
+             FROM Tags
+             WHERE Id IN (911, 912)
+             ORDER BY Id`
+        );
+        assert.deepEqual(historicalVariants, [
+            { Id: 911, Status: 'deprecated', MergedIntoTagId: null },
+            { Id: 912, Status: 'merged', MergedIntoTagId: 910 }
+        ]);
     });
 
     it('enforces canonical identity, lifecycle coherence, merge references and non-destructive retention', async () => {
@@ -215,7 +281,7 @@ describe('tag catalog schema integration', { skip: !mysqlEnabled && 'Set TEST_DB
         ));
         await assert.rejects(() => connection.query(
             `INSERT INTO Tags (GroupId, Name, NormalizedName, Slug)
-             VALUES (1, 'Duplicate normalized name', 'CANONICAL FIXTURE', 'another-canonical-fixture')`
+             VALUES (1, 'Mismatched normalized name', 'another value', 'mismatched-normalized-name')`
         ));
         await assert.rejects(() => connection.query(
             `INSERT INTO Tags (GroupId, Name, NormalizedName, Slug)
