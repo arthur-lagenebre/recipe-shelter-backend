@@ -783,7 +783,7 @@ Exécute le parcours E2E critique : connexion, session, création et soumission 
 npm run test:mysql
 ```
 
-Exécute les tests des dépôts avec une vraie base MySQL isolée. Définissez auparavant `TEST_DB_NAME` avec un nom différent de `DB_NAME` et contenant `test`. La base dédiée est créée au début de la suite puis supprimée à la fin.
+Exécute les intégrations avec une vraie base MySQL isolée : schéma final puis seed central, dépôts critiques, matrice d'accès HTTP issue des rôles seedés et cycle de vie staff complet. Définissez auparavant `TEST_DB_NAME` avec un nom différent de `DB_NAME` et contenant `test`. Chaque base dédiée est créée au début de sa suite puis supprimée à la fin.
 
 ```bash
 npm run lint
