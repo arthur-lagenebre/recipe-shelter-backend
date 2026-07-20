@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { mapCommunityProfile, mapStaffProfile, mapUser, mapUserWithPassword } from '../../../src/repositories/users/user.mappers.js';
+import { mapCommunityProfile, mapStaffProfile, mapUser, mapUserWithPassword } from '../../../src/repositories/users/user.mapper.js';
 
 import type { CommunityProfileRow, StaffProfileRow, UserRow, UserWithPasswordRow } from '../../../src/repositories/users/user.types.js';
 

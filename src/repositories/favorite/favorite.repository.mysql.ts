@@ -1,10 +1,10 @@
-import { mapFavorite } from './favorites.mapper.js';
+import { mapFavorite } from './favorite.mapper.js';
 import { firstOrNull } from '../../utils/array.js';
 import { createPaginatedResult, formatLimitOffsetClause } from '../../utils/pagination.js';
 import { mapRecipeListItem } from '../recipes/recipe.mapper.js';
 
-import type { FavoriteRepository } from "./favorites.repository.interface.js";
-import type { Favorite, FavoriteRow } from './favorites.types.js';
+import type { FavoriteRepository } from "./favorite.repository.interface.js";
+import type { Favorite, FavoriteRow } from './favorite.types.js';
 import type { PaginatedResult, PaginationOptions } from '../../utils/pagination.js';
 import type { PublicImageUrlBuilder } from '../recipe-images/recipe-image.types.js';
 import type { RecipeListItem, RecipeListItemRow } from '../recipes/recipe.types.js';

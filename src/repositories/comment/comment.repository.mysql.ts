@@ -1,9 +1,9 @@
 
-import { mapComment, mapPublicComment, mapPublicComments } from './comments.mapper.js';
+import { mapComment, mapPublicComment, mapPublicComments } from './comment.mapper.js';
 import { firstOrNull } from '../../utils/array.js';
 
-import type { CommentRepository } from "./comments.repository.interface.js";
-import type { Comment, CommentRow, CreateCommentInput, PublicComment, PublicCommentRow, UpdateCommentInput } from "./comments.types.js";
+import type { CommentRepository } from "./comment.repository.interface.js";
+import type { Comment, CommentRow, CreateCommentInput, PublicComment, PublicCommentRow, UpdateCommentInput } from "./comment.types.js";
 import type { ResultSetHeader } from 'mysql2';
 import type { Pool } from 'mysql2/promise';
 

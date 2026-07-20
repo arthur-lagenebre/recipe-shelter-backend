@@ -2,7 +2,7 @@ import { getAdminAuditRequestContext } from './admin.audit.context.js';
 import { parseAdminCommentIdParam, parseAdminUpdateCommentBody, parseHideCommentBody } from './admin.comments.dto.js';
 import { asyncHandler } from '../http/async-handler.js';
 
-import type { AdminCommentService } from '../../services/admin/admin.comments.services.js';
+import type { AdminCommentService } from '../../services/admin/admin.comments.service.js';
 
 export function createAdminCommentsController(adminCommentService: AdminCommentService) {
     return {

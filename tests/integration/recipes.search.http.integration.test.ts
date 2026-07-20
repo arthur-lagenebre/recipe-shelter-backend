@@ -12,7 +12,7 @@ import { createPaginatedResult } from '../../src/utils/pagination.js';
 import { startHttpTestServer } from '../helpers/http-test-server.js';
 
 import type { RecipeSearchFilters } from '../../src/repositories/recipes/recipe.types.js';
-import type { RecipeService } from '../../src/services/recipes/recipes.services.js';
+import type { RecipeService } from '../../src/services/recipes/recipes.service.js';
 import type { PaginationOptions } from '../../src/utils/pagination.js';
 import type { HttpTestServer } from '../helpers/http-test-server.js';
 

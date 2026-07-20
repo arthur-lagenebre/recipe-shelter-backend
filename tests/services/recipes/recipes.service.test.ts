@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { beforeEach, describe, it } from 'node:test';
 
-import { RecipeService } from '../../../src/services/recipes/recipes.services.js';
+import { RecipeService } from '../../../src/services/recipes/recipes.service.js';
 import { PERMISSIONS } from '../../../src/security/permissions.js';
 import { HttpError } from '../../../src/utils/errors.js';
 

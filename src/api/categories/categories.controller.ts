@@ -1,7 +1,7 @@
-import { parseCategoryIdParam } from './category.dto.js';
+import { parseCategoryIdParam } from './categories.dto.js';
 import { asyncHandler } from '../http/async-handler.js';
 
-import type { CategoryService } from '../../services/category/category.service.js';
+import type { CategoryService } from '../../services/categories/categories.service.js';
 
 export function createCategoryController(categoryService: CategoryService) {
     return {

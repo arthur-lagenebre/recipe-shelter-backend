@@ -1,4 +1,4 @@
-import { mapCommunityProfile, mapStaffProfile, mapUser, mapUserWithPassword } from './user.mappers.js';
+import { mapCommunityProfile, mapStaffProfile, mapUser, mapUserWithPassword } from './user.mapper.js';
 import { assertAccountType, assertCommunityStatus, assertStaffStatus } from './user.types.js';
 import { firstOrNull } from '../../utils/array.js';
 

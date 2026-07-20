@@ -1,4 +1,4 @@
-import type { Comment, CreateCommentInput, PublicComment, UpdateCommentInput } from "./comments.types.js";
+import type { Comment, CreateCommentInput, PublicComment, UpdateCommentInput } from "./comment.types.js";
 
 export interface CommentRepository {
     create(input: CreateCommentInput): Promise<PublicComment>;

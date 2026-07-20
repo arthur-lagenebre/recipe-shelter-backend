@@ -4,8 +4,8 @@ import { beforeEach, describe, it } from 'node:test';
 import { FavoriteService } from '../../../src/services/favorites/favorites.service.js';
 import { HttpError } from '../../../src/utils/errors.js';
 
-import type { FavoriteRepository } from '../../../src/repositories/favorites/favorites.repository.interface.js';
-import type { Favorite } from '../../../src/repositories/favorites/favorites.types.js';
+import type { FavoriteRepository } from '../../../src/repositories/favorite/favorite.repository.interface.js';
+import type { Favorite } from '../../../src/repositories/favorite/favorite.types.js';
 import type { RecipeRepository } from '../../../src/repositories/recipes/recipe.repository.interface.js';
 import type { Recipe, RecipeDetail, RecipeListItem, RecipeSummary } from '../../../src/repositories/recipes/recipe.types.js';
 import type { PaginatedResult, PaginationOptions } from '../../../src/utils/pagination.js';

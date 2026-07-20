@@ -1,7 +1,7 @@
 import { parseTagIdParam } from './tags.dto.js';
 import { asyncHandler } from '../http/async-handler.js';
 
-import type { TagService } from '../../services/tag/tags.service.js';
+import type { TagService } from '../../services/tags/tags.service.js';
 
 export function createTagsController(tagService: TagService) {
     return {

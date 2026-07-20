@@ -1,7 +1,7 @@
 import { badRequest, forbidden, internalError, notFound } from '../../utils/errors.js';
 
-import type { CommentRepository } from '../../repositories/comments/comments.repository.interface.js';
-import type { CreateCommentInput, PublicComment, UpdateCommentInput } from '../../repositories/comments/comments.types.js';
+import type { CommentRepository } from '../../repositories/comment/comment.repository.interface.js';
+import type { CreateCommentInput, PublicComment, UpdateCommentInput } from '../../repositories/comment/comment.types.js';
 
 export class CommentService {
     constructor(private readonly commentRepository: CommentRepository) { }

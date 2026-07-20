@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { mapTag } from '../../../src/repositories/tag/tag.mappers.js';
+import { mapTag } from '../../../src/repositories/tag/tag.mapper.js';
 
 import type { TagRow } from '../../../src/repositories/tag/tag.types.js';
 

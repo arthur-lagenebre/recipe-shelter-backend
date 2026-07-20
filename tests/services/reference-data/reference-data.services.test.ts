@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { CategoryService } from '../../../src/services/category/category.service.js';
+import { CategoryService } from '../../../src/services/categories/categories.service.js';
 import { EquipmentService } from '../../../src/services/equipments/equipments.service.js';
 import { IngredientService } from '../../../src/services/ingredients/ingredients.service.js';
-import { TagService } from '../../../src/services/tag/tags.service.js';
+import { TagService } from '../../../src/services/tags/tags.service.js';
 import { HttpError } from '../../../src/utils/errors.js';
 
 import type { CategoryRepository } from '../../../src/repositories/category/category.repository.interface.js';

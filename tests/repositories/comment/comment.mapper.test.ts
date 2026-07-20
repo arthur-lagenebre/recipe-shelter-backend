@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { mapComment, mapPublicComment, mapPublicComments } from '../../../src/repositories/comments/comments.mapper.js';
+import { mapComment, mapPublicComment, mapPublicComments } from '../../../src/repositories/comment/comment.mapper.js';
 
-import type { CommentRow, PublicCommentRow } from '../../../src/repositories/comments/comments.types.js';
+import type { CommentRow, PublicCommentRow } from '../../../src/repositories/comment/comment.types.js';
 
 const publicCommentRow = {
     Id: 1,

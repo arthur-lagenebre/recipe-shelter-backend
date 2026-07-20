@@ -1,4 +1,4 @@
-import { mapTag } from './tag.mappers.js';
+import { mapTag } from './tag.mapper.js';
 import { firstOrNull } from '../../utils/array.js';
 
 import type { TagRepository } from './tag.repository.interface.js';

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { normalizeTagName } from '../../../src/services/tag/tags.service.js';
+import { normalizeTagName } from '../../../src/services/tags/tags.service.js';
 
 describe('normalizeTagName', () => {
     it('normalizes case, accents, spaces and punctuation to one canonical value', () => {

@@ -1,6 +1,6 @@
 import { ADMIN_AUDIT_EVENT_TYPES, ADMIN_AUDIT_TARGET_TYPES } from './admin.audit.events.js';
 import { badRequest, conflict, notFound } from '../../utils/errors.js';
-import { normalizeTagName } from '../tag/tags.service.js';
+import { normalizeTagName } from '../tags/tags.service.js';
 
 import type { AdminAuditActionRunner } from './admin.audit-action.runner.js';
 import type { AdminAuditRequestContext } from './admin.audit.service.js';

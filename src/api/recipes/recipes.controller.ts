@@ -4,7 +4,7 @@ import { parsePaginationQuery } from '../../utils/pagination.js';
 import { asyncHandler } from '../http/async-handler.js';
 
 import type { RecipeImageService } from '../../services/recipes/recipe-image.service.js';
-import type { RecipeService } from '../../services/recipes/recipes.services.js';
+import type { RecipeService } from '../../services/recipes/recipes.service.js';
 
 export function createRecipesController(recipeService: RecipeService, recipeImageService: RecipeImageService) {
     return {

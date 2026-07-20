@@ -1,6 +1,6 @@
 import { firstOrNull } from '../../utils/array.js';
 import { createPaginatedResult, formatLimitOffsetClause } from '../../utils/pagination.js';
-import { mapTag } from '../tag/tag.mappers.js';
+import { mapTag } from '../tag/tag.mapper.js';
 
 import type { AdminTagRepository } from './admin.tags.repository.interface.js';
 import type { AdminTagListFilters, AdminTagMergeResult, AdminTagRestoreResult, AdminTagUpdateInput, AdminTagWriteInput, AdminTagWriteResult } from './admin.tags.types.js';

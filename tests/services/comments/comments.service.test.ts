@@ -4,8 +4,8 @@ import { beforeEach, describe, it } from 'node:test';
 import { CommentService } from '../../../src/services/comments/comments.service.js';
 import { HttpError } from '../../../src/utils/errors.js';
 
-import type { CommentRepository } from '../../../src/repositories/comments/comments.repository.interface.js';
-import type { Comment, CreateCommentInput, PublicComment, UpdateCommentInput } from '../../../src/repositories/comments/comments.types.js';
+import type { CommentRepository } from '../../../src/repositories/comment/comment.repository.interface.js';
+import type { Comment, CreateCommentInput, PublicComment, UpdateCommentInput } from '../../../src/repositories/comment/comment.types.js';
 
 const baseComment: Comment = {
     id: 1,

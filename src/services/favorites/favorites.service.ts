@@ -1,7 +1,7 @@
 import { forbidden, internalError, notFound } from '../../utils/errors.js';
 
-import type { FavoriteRepository } from '../../repositories/favorites/favorites.repository.interface.js';
-import type { Favorite } from '../../repositories/favorites/favorites.types.js';
+import type { FavoriteRepository } from '../../repositories/favorite/favorite.repository.interface.js';
+import type { Favorite } from '../../repositories/favorite/favorite.types.js';
 import type { RecipeRepository } from '../../repositories/recipes/recipe.repository.interface.js';
 import type { RecipeListItem } from '../../repositories/recipes/recipe.types.js';
 import type { PaginatedResult, PaginationOptions } from '../../utils/pagination.js';

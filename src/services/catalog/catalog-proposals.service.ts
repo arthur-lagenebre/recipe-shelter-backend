@@ -1,6 +1,6 @@
 import { badRequest, conflict, notFound } from '../../utils/errors.js';
 import { normalizeIngredientName } from '../ingredients/ingredients.service.js';
-import { normalizeTagName } from '../tag/tags.service.js';
+import { normalizeTagName } from '../tags/tags.service.js';
 
 import type { CatalogProposalRepository } from '../../repositories/catalog/catalog-proposals.repository.interface.js';
 import type { CatalogProposal, CatalogProposalType } from '../../repositories/catalog/catalog-proposals.types.js';

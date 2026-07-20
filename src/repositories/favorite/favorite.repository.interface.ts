@@ -1,4 +1,4 @@
-import type { Favorite } from "./favorites.types.js";
+import type { Favorite } from "./favorite.types.js";
 import type { PaginatedResult, PaginationOptions } from "../../utils/pagination.js";
 import type { RecipeListItem } from "../recipes/recipe.types.js";
 

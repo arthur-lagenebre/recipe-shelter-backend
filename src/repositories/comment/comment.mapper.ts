@@ -1,4 +1,4 @@
-import type { Comment, CommentRow, PublicComment, PublicCommentRow } from "./comments.types.js";
+import type { Comment, CommentRow, PublicComment, PublicCommentRow } from "./comment.types.js";
 
 const DELETED_COMMENT_TEXT = 'Commentaire supprimé par son auteur.';
 const MODERATED_COMMENT_TEXT = 'Ce commentaire a été masqué par la modération.';

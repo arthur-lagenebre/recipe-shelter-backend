@@ -1,4 +1,4 @@
-import type { Favorite, FavoriteRow } from './favorites.types.js';
+import type { Favorite, FavoriteRow } from './favorite.types.js';
 
 export function mapFavorite(row: FavoriteRow): Favorite {
     return {

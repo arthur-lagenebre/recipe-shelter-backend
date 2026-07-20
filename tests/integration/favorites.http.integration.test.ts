@@ -14,8 +14,8 @@ import { createPaginatedResult } from '../../src/utils/pagination.js';
 import { TestSessionRepository } from '../helpers/auth-session.js';
 import { startHttpTestServer } from '../helpers/http-test-server.js';
 
-import type { FavoriteRepository } from '../../src/repositories/favorites/favorites.repository.interface.js';
-import type { Favorite } from '../../src/repositories/favorites/favorites.types.js';
+import type { FavoriteRepository } from '../../src/repositories/favorite/favorite.repository.interface.js';
+import type { Favorite } from '../../src/repositories/favorite/favorite.types.js';
 import type { RecipeRepository } from '../../src/repositories/recipes/recipe.repository.interface.js';
 import type { Recipe, RecipeListItem } from '../../src/repositories/recipes/recipe.types.js';
 import type { User } from '../../src/repositories/users/user.types.js';

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { beforeEach, describe, it } from 'node:test';
 
-import { AdminCommentService } from '../../../src/services/admin/admin.comments.services.js';
+import { AdminCommentService } from '../../../src/services/admin/admin.comments.service.js';
 import { HttpError } from '../../../src/utils/errors.js';
 import { TestAdminAuditRecorder, testAdminAuditContext } from '../../helpers/admin-audit.js';
 
