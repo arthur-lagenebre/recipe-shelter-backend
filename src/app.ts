@@ -5,6 +5,8 @@ import express from 'express';
 import { createAdminAuditLogsController } from './api/admin/admin-audit-logs.controller.js';
 import { createAdminAuditLogsRouter } from './api/admin/admin-audit-logs.routes.js';
 import { adminAuthorizationPolicies } from './api/admin/admin.authorization.js';
+import { createAdminCatalogProposalsController } from './api/admin/admin.catalog-proposals.controller.js';
+import { createAdminCatalogProposalsRouter } from './api/admin/admin.catalog-proposals.routes.js';
 import { createAdminCommentsController } from './api/admin/admin.comments.controller.js';
 import { createAdminCommentsRouter } from './api/admin/admin.comments.routes.js';
 import { createAdminIngredientsController } from './api/admin/admin.ingredients.controller.js';
@@ -77,6 +79,7 @@ import { UserRepositoryMysql } from './repositories/users/user.repository.mysql.
 import { AdminAuditActionRunnerMysql } from './services/admin/admin-audit-action.runner.js';
 import { AdminAuditQueryService } from './services/admin/admin-audit-query.service.js';
 import { AdminAuditService } from './services/admin/admin-audit.service.js';
+import { AdminCatalogProposalService } from './services/admin/admin.catalog-proposals.service.js';
 import { AdminCommentService } from './services/admin/admin.comments.services.js';
 import { AdminIngredientService } from './services/admin/admin.ingredients.service.js';
 import { AdminRecipeService } from './services/admin/admin.recipes.services.js';
@@ -114,6 +117,7 @@ import type { ImageStorage } from './storage/image-storage.interface.js';
 
 export type AppDependencies = {
   adminAuditQueryService: AdminAuditQueryService;
+  adminCatalogProposalService: AdminCatalogProposalService;
   adminCommentService: AdminCommentService;
   adminIngredientService: AdminIngredientService;
   adminRecipeService: AdminRecipeService;
@@ -179,6 +183,12 @@ function createDefaultDependencies(): AppDependencies {
 
   return {
     adminAuditQueryService: new AdminAuditQueryService(adminAuditQueryRepository),
+    adminCatalogProposalService: new AdminCatalogProposalService(
+      catalogProposalRepository,
+      adminTagRepository,
+      adminIngredientRepository,
+      adminAuditActions
+    ),
     adminCommentService: new AdminCommentService(adminCommentRepository, adminAuditActions),
     adminIngredientService: new AdminIngredientService(adminIngredientRepository, adminAuditActions),
     adminRecipeService: new AdminRecipeService(adminRecipeRepository, adminAuditActions, recipeImageService),
@@ -239,6 +249,7 @@ export function createApp(overrides: Partial<AppDependencies> = {}) {
   configureAuthSessionRepository(dependencies.authSessionRepository);
 
   const adminAuditLogsController = createAdminAuditLogsController(dependencies.adminAuditQueryService);
+  const adminCatalogProposalsController = createAdminCatalogProposalsController(dependencies.adminCatalogProposalService);
   const adminCommentsController = createAdminCommentsController(dependencies.adminCommentService);
   const adminIngredientsController = createAdminIngredientsController(dependencies.adminIngredientService);
   const adminRecipesController = createAdminRecipesController(dependencies.adminRecipeService);
@@ -263,6 +274,7 @@ export function createApp(overrides: Partial<AppDependencies> = {}) {
   adminRouter.use('/auth', createStaffAuthRouter(authController, staffSessionsController));
   adminRouter.use(requireStaffAuth, EnforceAuthorizationPolicies(adminAuthorizationPolicies));
   adminRouter.use('/audit-logs', createAdminAuditLogsRouter(adminAuditLogsController));
+  adminRouter.use('/catalog-proposals', createAdminCatalogProposalsRouter(adminCatalogProposalsController));
   adminRouter.use('/comments', createAdminCommentsRouter(adminCommentsController));
   adminRouter.use('/ingredients', createAdminIngredientsRouter(adminIngredientsController));
   adminRouter.use('/recipes', createAdminRecipesRouter(adminRecipesController));

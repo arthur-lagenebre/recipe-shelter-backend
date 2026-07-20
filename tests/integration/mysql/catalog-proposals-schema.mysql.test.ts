@@ -4,7 +4,13 @@ import { after, before, describe, it } from 'node:test';
 
 import mysql from 'mysql2/promise';
 
+import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin-audit.repository.mysql.js';
+import { AdminIngredientRepositoryMysql } from '../../../src/repositories/admin/admin.ingredients.repository.mysql.js';
+import { AdminTagRepositoryMysql } from '../../../src/repositories/admin/admin.tags.repository.mysql.js';
 import { CatalogProposalRepositoryMysql } from '../../../src/repositories/catalog/catalog-proposals.repository.mysql.js';
+import { AdminAuditActionRunnerMysql } from '../../../src/services/admin/admin-audit-action.runner.js';
+import { AdminAuditService } from '../../../src/services/admin/admin-audit.service.js';
+import { AdminCatalogProposalService } from '../../../src/services/admin/admin.catalog-proposals.service.js';
 import { CatalogProposalService } from '../../../src/services/catalog/catalog-proposals.service.js';
 import { env } from '../../../src/utils/env.js';
 import { HttpError } from '../../../src/utils/errors.js';
@@ -61,6 +67,7 @@ function assertMysqlSignal(message: string): (error: unknown) => boolean {
 
 describe('catalog proposals schema MySQL integration', { skip: !mysqlEnabled && 'Set TEST_DB_NAME to run isolated MySQL tests' }, () => {
   let connection: mysql.Connection;
+  let pool: mysql.Pool;
   let seed: string;
 
   before(async () => {
@@ -117,10 +124,20 @@ describe('catalog proposals schema MySQL integration', { skip: !mysqlEnabled && 
         deprecatedIngredientId
       ]
     );
+
+    pool = mysql.createPool({
+      host: env.db.host,
+      port: env.db.port,
+      user: env.db.user,
+      password: env.db.password,
+      database: databaseName
+    });
   });
 
   after(async () => {
     if (connection) {
+      if (pool)
+        await pool.end();
       await connection.query(`DROP DATABASE IF EXISTS \`${requireCatalogProposalsTestDatabaseName()}\``);
       await connection.end();
     }
@@ -380,6 +397,119 @@ describe('catalog proposals schema MySQL integration', { skip: !mysqlEnabled && 
 
     const [recipe] = await connection.query('SELECT Status FROM Recipes WHERE Id = ?', [authorRecipeId]);
     assert.deepEqual(recipe, [{ Status: 'pending' }]);
+  });
+
+  it('processes the staff queue with canonical, association, alias and rejection audits in atomic transactions', async () => {
+    const insertProposal = async (proposalType: 'tag' | 'ingredient', proposedName: string, normalizedName: string) => {
+      const [result] = await connection.execute<mysql.ResultSetHeader>(
+        `INSERT INTO CatalogProposals
+           (AuthorUserId, RecipeId, ProposalType, ProposedName, NormalizedName)
+         VALUES (?, ?, ?, ?, ?)`,
+        [authorUserId, authorRecipeId, proposalType, proposedName, normalizedName]
+      );
+      return result.insertId;
+    };
+    const proposalIds = {
+      acceptedTag: await insertProposal('tag', 'Staff accepted tag', 'staff accepted tag'),
+      acceptedIngredient: await insertProposal('ingredient', 'Staff accepted ingredient', 'staff accepted ingredient'),
+      associatedTag: await insertProposal('tag', 'Existing tag synonym', 'existing tag synonym'),
+      aliasedIngredient: await insertProposal('ingredient', 'Ingredient moon synonym', 'ingredient moon synonym'),
+      rejected: await insertProposal('ingredient', 'Rejected staff ingredient', 'rejected staff ingredient')
+    };
+    const proposalRepository = new CatalogProposalRepositoryMysql(pool);
+    const auditActions = new AdminAuditActionRunnerMysql(
+      pool,
+      (db) => new AdminAuditService(new AdminAuditRepositoryMysql(db))
+    );
+    const service = new AdminCatalogProposalService(
+      proposalRepository,
+      new AdminTagRepositoryMysql(pool),
+      new AdminIngredientRepositoryMysql(pool),
+      auditActions
+    );
+    const context = { ipAddress: '192.0.2.86', userAgent: 'Catalog proposal MySQL test' };
+
+    const queue = await service.list(
+      { status: 'pending' },
+      { page: 1, limit: 50, offset: 0 },
+      reviewerUserId,
+      context
+    );
+    assert.ok(queue.items.some(({ id }) => id === proposalIds.acceptedTag));
+
+    const acceptedTag = await service.acceptTag(proposalIds.acceptedTag, {
+      groupId: 8_600,
+      reason: 'Tag validé depuis la proposition staff.'
+    }, reviewerUserId, context);
+    const acceptedIngredient = await service.acceptIngredient(proposalIds.acceptedIngredient, {
+      reason: 'Ingrédient validé depuis la proposition staff.'
+    }, reviewerUserId, context);
+    await service.associateTag(proposalIds.associatedTag, {
+      targetTagId: activeTagId,
+      reason: 'Ce libellé correspond au tag actif existant.'
+    }, reviewerUserId, context);
+    await service.convertIngredientToAlias(proposalIds.aliasedIngredient, {
+      targetIngredientId: activeIngredientId,
+      languageCode: 'fr',
+      reason: 'Ce libellé devient un alias français utile.'
+    }, reviewerUserId, context);
+    await service.reject(
+      proposalIds.rejected,
+      'Cette suggestion ne convient pas au catalogue.',
+      reviewerUserId,
+      context
+    );
+
+    const [reviews] = await connection.query(
+      `SELECT Id, Status, MatchedTagId, MatchedIngredientId, ReviewedByStaffUserId
+       FROM CatalogProposals
+       WHERE Id IN (?, ?, ?, ?, ?)
+       ORDER BY Id`,
+      Object.values(proposalIds)
+    );
+    assert.deepEqual(reviews, [
+      { Id: proposalIds.acceptedTag, Status: 'accepted', MatchedTagId: acceptedTag.matchedTagId, MatchedIngredientId: null, ReviewedByStaffUserId: reviewerUserId },
+      { Id: proposalIds.acceptedIngredient, Status: 'accepted', MatchedTagId: null, MatchedIngredientId: acceptedIngredient.matchedIngredientId, ReviewedByStaffUserId: reviewerUserId },
+      { Id: proposalIds.associatedTag, Status: 'merged', MatchedTagId: activeTagId, MatchedIngredientId: null, ReviewedByStaffUserId: reviewerUserId },
+      { Id: proposalIds.aliasedIngredient, Status: 'merged', MatchedTagId: null, MatchedIngredientId: activeIngredientId, ReviewedByStaffUserId: reviewerUserId },
+      { Id: proposalIds.rejected, Status: 'rejected', MatchedTagId: null, MatchedIngredientId: null, ReviewedByStaffUserId: reviewerUserId }
+    ]);
+    assert.ok(Number(acceptedTag.matchedTagId) > 0);
+    assert.ok(Number(acceptedIngredient.matchedIngredientId) > 0);
+
+    const [catalogWrites] = await connection.query(
+      `SELECT
+         (SELECT COUNT(*) FROM Tags WHERE NormalizedName = 'staff accepted tag' AND Status = 'active') AS TagCount,
+         (SELECT COUNT(*) FROM Ingredients WHERE NormalizedName = 'staff accepted ingredient' AND Status = 'active') AS IngredientCount,
+         (SELECT COUNT(*) FROM IngredientAliases
+          WHERE IngredientId = ? AND NormalizedName = 'ingredient moon synonym' AND LanguageCode = 'fr') AS AliasCount,
+         (SELECT COUNT(*) FROM RecipeTags WHERE RecipeId = ? AND TagId = ?) AS AssociatedRecipeTagCount,
+         (SELECT COUNT(*) FROM RecipeIngredients WHERE RecipeId = ? AND IngredientId = ?) AS AssociatedRecipeIngredientCount`,
+      [activeIngredientId, authorRecipeId, activeTagId, authorRecipeId, activeIngredientId]
+    );
+    assert.deepEqual(catalogWrites, [{
+      TagCount: 1,
+      IngredientCount: 1,
+      AliasCount: 1,
+      AssociatedRecipeTagCount: 0,
+      AssociatedRecipeIngredientCount: 0
+    }]);
+
+    const [auditCounts] = await connection.query(
+      `SELECT Action, COUNT(*) AS EventCount
+       FROM AdminAuditLogs
+       WHERE ActorUserId = ? AND Action LIKE 'catalog.proposals.%'
+       GROUP BY Action
+       ORDER BY Action`,
+      [reviewerUserId]
+    );
+    assert.deepEqual(auditCounts, [
+      { Action: 'catalog.proposals.accept', EventCount: 2 },
+      { Action: 'catalog.proposals.alias', EventCount: 1 },
+      { Action: 'catalog.proposals.associate', EventCount: 1 },
+      { Action: 'catalog.proposals.list', EventCount: 1 },
+      { Action: 'catalog.proposals.reject', EventCount: 1 }
+    ]);
   });
 
   it('rejects invalid identities, duplicate pending suggestions and mismatched recipe authors', async () => {

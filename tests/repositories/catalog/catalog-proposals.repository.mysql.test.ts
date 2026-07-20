@@ -5,7 +5,7 @@ import { mapCatalogProposal } from '../../../src/repositories/catalog/catalog-pr
 import { CatalogProposalRepositoryMysql } from '../../../src/repositories/catalog/catalog-proposals.repository.mysql.js';
 
 import type { CatalogProposalRow } from '../../../src/repositories/catalog/catalog-proposals.types.js';
-import type { Pool } from 'mysql2/promise';
+import type { Pool, PoolConnection } from 'mysql2/promise';
 
 const createdAt = new Date('2026-07-20T12:00:00.000Z');
 const proposalRow = {
@@ -169,5 +169,91 @@ describe('CatalogProposalRepositoryMysql', () => {
     } as CatalogProposalRow);
     assert.equal(reviewedIngredient.matchedTagId, null);
     assert.equal(reviewedIngredient.matchedIngredientId, 13);
+  });
+
+  it('lists the filtered staff queue with stable pagination', async () => {
+    const statements: Statement[] = [];
+    const repository = new CatalogProposalRepositoryMysql(createPool(statements, [
+      [[{ Count: '1' }], []],
+      [[proposalRow], []]
+    ]));
+    const result = await repository.find({
+      status: 'pending',
+      proposalType: 'tag',
+      recipeId: 42,
+      authorUserId: 7,
+      q: 'cuisine'
+    }, { page: 2, limit: 10, offset: 10 });
+
+    assert.deepEqual(result.items, [mapCatalogProposal(proposalRow)]);
+    assert.deepEqual(result.pagination, {
+      page: 2,
+      limit: 10,
+      totalItems: 1,
+      totalPages: 1,
+      hasNextPage: false,
+      hasPreviousPage: true
+    });
+    assert.match(statements[0]?.sql ?? '', /cp\.Status = \?/);
+    assert.match(statements[1]?.sql ?? '', /ORDER BY cp\.CreatedAt ASC, cp\.Id ASC/);
+    assert.match(statements[1]?.sql ?? '', /LIMIT 10 OFFSET 10/);
+    assert.deepEqual(statements[0]?.params, ['pending', 'tag', 42, 7, 'cuisine', 'cuisine']);
+    assert.deepEqual(statements[1]?.params, statements[0]?.params);
+  });
+
+  it('locks and atomically reviews a pending proposal', async () => {
+    const statements: Statement[] = [];
+    const reviewedRow = {
+      ...proposalRow,
+      Status: 'merged',
+      MatchedTagId: 12,
+      ReviewedByStaffUserId: 91,
+      ReviewReason: 'Correspond au tag canonique existant.',
+      ReviewedAt: new Date('2026-07-20T13:00:00.000Z')
+    } as CatalogProposalRow;
+    const pool = createPool(statements, [
+      [[proposalRow], []],
+      [{ affectedRows: 1 }, []],
+      [[reviewedRow], []]
+    ]);
+    const repository = new CatalogProposalRepositoryMysql(pool);
+    const connection = pool as unknown as PoolConnection;
+
+    assert.deepEqual(await repository.findByIdForUpdate(91, connection), mapCatalogProposal(proposalRow));
+    assert.deepEqual(await repository.review({
+      proposalId: 91,
+      status: 'merged',
+      matchedTagId: 12,
+      matchedIngredientId: null,
+      reviewedByStaffUserId: 91,
+      reviewReason: 'Correspond au tag canonique existant.'
+    }, connection), mapCatalogProposal(reviewedRow));
+
+    assert.match(statements[0]?.sql ?? '', /FOR UPDATE/);
+    assert.match(statements[1]?.sql ?? '', /WHERE Id = \? AND Status = 'pending'/);
+    assert.deepEqual(statements[1]?.params, [
+      'merged',
+      12,
+      null,
+      91,
+      'Correspond au tag canonique existant.',
+      91
+    ]);
+  });
+
+  it('reports a concurrent review without reloading the proposal', async () => {
+    const statements: Statement[] = [];
+    const pool = createPool(statements, [[{ affectedRows: 0 }, []]]);
+    const repository = new CatalogProposalRepositoryMysql(pool);
+
+    assert.equal(await repository.review({
+      proposalId: 91,
+      status: 'rejected',
+      matchedTagId: null,
+      matchedIngredientId: null,
+      reviewedByStaffUserId: 91,
+      reviewReason: 'Proposition refusée après examen.'
+    }, pool as unknown as PoolConnection), null);
+    assert.equal(statements.length, 1);
   });
 });

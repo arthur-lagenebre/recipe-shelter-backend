@@ -4,6 +4,13 @@ import type { AuthorizationPolicy } from '../../middlewares/authorization.js';
 
 export const adminAuthorizationPolicies = [
   { method: 'get', path: '/audit-logs', permission: PERMISSIONS.auditRead },
+  { method: 'get', path: '/catalog-proposals', permission: PERMISSIONS.catalogManage },
+  { method: 'post', path: '/catalog-proposals/tags/:id/accept', permission: PERMISSIONS.catalogManage },
+  { method: 'post', path: '/catalog-proposals/ingredients/:id/accept', permission: PERMISSIONS.catalogManage },
+  { method: 'post', path: '/catalog-proposals/:id/reject', permission: PERMISSIONS.catalogManage },
+  { method: 'post', path: '/catalog-proposals/tags/:id/associate', permission: PERMISSIONS.catalogManage },
+  { method: 'post', path: '/catalog-proposals/ingredients/:id/associate', permission: PERMISSIONS.catalogManage },
+  { method: 'post', path: '/catalog-proposals/ingredients/:id/alias', permission: PERMISSIONS.catalogManage },
   { method: 'get', path: '/comments/moderated', permission: PERMISSIONS.commentReview },
   { method: 'get', path: '/comments/moderated/count', permission: PERMISSIONS.commentReview },
   { method: 'get', path: '/comments/soft-deleted', permission: PERMISSIONS.commentReview },

@@ -1515,6 +1515,73 @@ type TagGroup = {
         </table>
       </div>
 
+      <h3>Traitement staff</h3>
+      <p class="section-intro">Toutes les routes ci-dessous exigent une session staff active, <code>catalog.manage</code> et produisent un audit administratif. Chaque décision de revue exige un motif de 10 à 1000 caractères et l'audit partage sa transaction. L'acceptation exige en plus la permission de création du catalogue concerné ; la conversion en alias exige <code>ingredient.alias.manage</code>. Le nom canonique ou l'alias créé provient exclusivement du libellé immuable de la proposition.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Méthode</th>
+              <th>Route</th>
+              <th>Auth</th>
+              <th>Body / Query</th>
+              <th>Réponse</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/admin/catalog-proposals</code></td>
+              <td><span class="auth">catalog.manage</span></td>
+              <td><code>page</code>, <code>limit</code>, <code>status</code> (défaut <code>pending</code>), <code>proposalType</code>, <code>recipeId</code>, <code>authorUserId</code>, <code>q</code>.</td>
+              <td><code>200</code> file paginée.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/admin/catalog-proposals/tags/:id/accept</code></td>
+              <td><span class="auth">catalog.manage + tag.create</span></td>
+              <td><code>{ "groupId": number, "slug"?: string, "description"?: string | null, "reason": string }</code>.</td>
+              <td><code>201</code> proposition <code>accepted</code> liée au tag créé.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/admin/catalog-proposals/ingredients/:id/accept</code></td>
+              <td><span class="auth">catalog.manage + ingredient.create</span></td>
+              <td><code>{ "slug"?: string, "reason": string }</code>.</td>
+              <td><code>201</code> proposition <code>accepted</code> liée à l'ingrédient créé.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/admin/catalog-proposals/:id/reject</code></td>
+              <td><span class="auth">catalog.manage</span></td>
+              <td><code>{ "reason": string }</code>.</td>
+              <td><code>200</code> proposition <code>rejected</code>.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/admin/catalog-proposals/tags/:id/associate</code></td>
+              <td><span class="auth">catalog.manage</span></td>
+              <td><code>{ "targetTagId": number, "reason": string }</code>.</td>
+              <td><code>200</code> proposition <code>merged</code> liée à un tag actif.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/admin/catalog-proposals/ingredients/:id/associate</code></td>
+              <td><span class="auth">catalog.manage</span></td>
+              <td><code>{ "targetIngredientId": number, "reason": string }</code>.</td>
+              <td><code>200</code> proposition <code>merged</code> liée à un ingrédient actif.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/admin/catalog-proposals/ingredients/:id/alias</code></td>
+              <td><span class="auth">catalog.manage + ingredient.alias.manage</span></td>
+              <td><code>{ "targetIngredientId": number, "languageCode": string, "reason": string }</code>.</td>
+              <td><code>201</code> alias créé et proposition <code>merged</code>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
       <div class="schema-grid">
         <article class="schema">
           <h3>CatalogProposal</h3>
@@ -1531,13 +1598,13 @@ type CatalogProposal = {
   proposalType: "tag" | "ingredient";
   proposedName: string;
   normalizedName: string;
-  status: "pending";
-  matchedTagId: null;
-  matchedIngredientId: null;
-  reviewedByStaffUserId: null;
-  reviewReason: null;
+  status: "pending" | "accepted" | "rejected" | "merged";
+  matchedTagId: number | null;
+  matchedIngredientId: number | null;
+  reviewedByStaffUserId: number | null;
+  reviewReason: string | null;
   createdAt: ISODateString;
-  reviewedAt: null;
+  reviewedAt: ISODateString | null;
 };</code></pre>
         </article>
         <article class="schema">

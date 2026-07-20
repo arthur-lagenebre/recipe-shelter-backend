@@ -1,16 +1,33 @@
 import { mapCatalogProposal } from './catalog-proposals.mapper.js';
 import { firstOrNull } from '../../utils/array.js';
+import { createPaginatedResult, formatLimitOffsetClause } from '../../utils/pagination.js';
 
-import type { CatalogProposalRepository } from './catalog-proposals.repository.interface.js';
-import type { CatalogProposalRow, CatalogProposalType, CatalogProposalWriteResult, CreateCatalogProposalInput } from './catalog-proposals.types.js';
+import type { AdminCatalogProposalRepository, CatalogProposalRepository } from './catalog-proposals.repository.interface.js';
+import type { CatalogProposal, CatalogProposalListFilters, CatalogProposalRow, CatalogProposalType, CatalogProposalWriteResult, CreateCatalogProposalInput, ReviewCatalogProposalInput } from './catalog-proposals.types.js';
+import type { PaginatedResult, PaginationOptions } from '../../utils/pagination.js';
 import type { ResultSetHeader, RowDataPacket } from 'mysql2';
-import type { Pool } from 'mysql2/promise';
+import type { Pool, PoolConnection } from 'mysql2/promise';
 
 type ExistsRow = RowDataPacket & {
   Exists: number;
 };
 
-export class CatalogProposalRepositoryMysql implements CatalogProposalRepository {
+type CountRow = RowDataPacket & {
+  Count: number | string;
+};
+
+type ProposalWhere = {
+  clause: string;
+  params: Array<number | string>;
+};
+
+const CATALOG_PROPOSAL_SELECT = `cp.Id, cp.AuthorUserId, cp.RecipeId, cp.ProposalType,
+                                 cp.ProposedName, cp.NormalizedName, cp.Status,
+                                 cp.MatchedTagId, cp.MatchedIngredientId,
+                                 cp.ReviewedByStaffUserId, cp.ReviewReason,
+                                 cp.CreatedAt, cp.ReviewedAt`;
+
+export class CatalogProposalRepositoryMysql implements CatalogProposalRepository, AdminCatalogProposalRepository {
   constructor(private readonly db: Pool) { }
 
   async recipeExistsForAuthor(recipeId: number, authorUserId: number): Promise<boolean> {
@@ -26,9 +43,10 @@ export class CatalogProposalRepositoryMysql implements CatalogProposalRepository
     return Boolean(firstOrNull(rows)?.Exists);
   }
 
-  async activeCatalogNameExists(proposalType: CatalogProposalType, normalizedName: string): Promise<boolean> {
+  async activeCatalogNameExists(proposalType: CatalogProposalType, normalizedName: string, db?: PoolConnection): Promise<boolean> {
+    const executor = db ?? this.db;
     const [rows] = proposalType === 'tag'
-      ? await this.db.execute<ExistsRow[]>(
+      ? await executor.execute<ExistsRow[]>(
         `SELECT EXISTS(
            SELECT 1
            FROM Tags
@@ -36,7 +54,7 @@ export class CatalogProposalRepositoryMysql implements CatalogProposalRepository
          ) AS \`Exists\``,
         [normalizedName]
       )
-      : await this.db.execute<ExistsRow[]>(
+      : await executor.execute<ExistsRow[]>(
         `SELECT (
            EXISTS(
              SELECT 1
@@ -81,18 +99,97 @@ export class CatalogProposalRepositoryMysql implements CatalogProposalRepository
     return { status: 'created', proposal };
   }
 
-  private async findById(id: number) {
-    const [rows] = await this.db.execute<CatalogProposalRow[]>(
-      `SELECT Id, AuthorUserId, RecipeId, ProposalType, ProposedName, NormalizedName, Status,
-              MatchedTagId, MatchedIngredientId, ReviewedByStaffUserId, ReviewReason, CreatedAt, ReviewedAt
-       FROM CatalogProposals
-       WHERE Id = ?`,
+  async find(filters: CatalogProposalListFilters, pagination: PaginationOptions, db?: PoolConnection): Promise<PaginatedResult<CatalogProposal>> {
+    const executor = db ?? this.db;
+    const where = buildWhere(filters);
+    const [countRows] = await executor.execute<CountRow[]>(
+      `SELECT COUNT(*) AS Count
+       FROM CatalogProposals AS cp
+       WHERE ${where.clause}`,
+      where.params
+    );
+    const [rows] = await executor.execute<CatalogProposalRow[]>(
+      `SELECT ${CATALOG_PROPOSAL_SELECT}
+       FROM CatalogProposals AS cp
+       WHERE ${where.clause}
+       ORDER BY cp.CreatedAt ASC, cp.Id ASC
+       ${formatLimitOffsetClause(pagination)}`,
+      where.params
+    );
+
+    return createPaginatedResult(
+      rows.map(mapCatalogProposal),
+      Number(firstOrNull(countRows)?.Count ?? 0),
+      pagination
+    );
+  }
+
+  async findByIdForUpdate(proposalId: number, db: PoolConnection): Promise<CatalogProposal | null> {
+    return this.findById(proposalId, db, true);
+  }
+
+  async review(input: ReviewCatalogProposalInput, db: PoolConnection): Promise<CatalogProposal | null> {
+    const [result] = await db.execute<ResultSetHeader>(
+      `UPDATE CatalogProposals
+       SET Status = ?, MatchedTagId = ?, MatchedIngredientId = ?,
+           ReviewedByStaffUserId = ?, ReviewReason = ?, ReviewedAt = CURRENT_TIMESTAMP(6)
+       WHERE Id = ? AND Status = 'pending'`,
+      [
+        input.status,
+        input.matchedTagId,
+        input.matchedIngredientId,
+        input.reviewedByStaffUserId,
+        input.reviewReason,
+        input.proposalId
+      ]
+    );
+
+    if (result.affectedRows === 0)
+      return null;
+
+    return this.findById(input.proposalId, db);
+  }
+
+  private async findById(id: number, db: Pool | PoolConnection = this.db, forUpdate = false) {
+    const [rows] = await db.execute<CatalogProposalRow[]>(
+      `SELECT ${CATALOG_PROPOSAL_SELECT}
+       FROM CatalogProposals AS cp
+       WHERE cp.Id = ?
+       ${forUpdate ? 'FOR UPDATE' : ''}`,
       [id]
     );
     const row = firstOrNull(rows);
 
     return row ? mapCatalogProposal(row) : null;
   }
+}
+
+function buildWhere(filters: CatalogProposalListFilters): ProposalWhere {
+  const clauses = ['1 = 1'];
+  const params: Array<number | string> = [];
+
+  if (filters.status !== undefined) {
+    clauses.push('cp.Status = ?');
+    params.push(filters.status);
+  }
+  if (filters.proposalType !== undefined) {
+    clauses.push('cp.ProposalType = ?');
+    params.push(filters.proposalType);
+  }
+  if (filters.recipeId !== undefined) {
+    clauses.push('cp.RecipeId = ?');
+    params.push(filters.recipeId);
+  }
+  if (filters.authorUserId !== undefined) {
+    clauses.push('cp.AuthorUserId = ?');
+    params.push(filters.authorUserId);
+  }
+  if (filters.q !== undefined) {
+    clauses.push('(INSTR(cp.ProposedName, ?) > 0 OR INSTR(cp.NormalizedName, ?) > 0)');
+    params.push(filters.q, filters.q);
+  }
+
+  return { clause: clauses.join(' AND '), params };
 }
 
 function isPendingDuplicate(error: unknown): boolean {

@@ -1,4 +1,9 @@
 export const ADMIN_AUDIT_EVENT_TYPES = {
+  catalogProposalsAccept: 'catalog.proposals.accept',
+  catalogProposalsAlias: 'catalog.proposals.alias',
+  catalogProposalsAssociate: 'catalog.proposals.associate',
+  catalogProposalsList: 'catalog.proposals.list',
+  catalogProposalsReject: 'catalog.proposals.reject',
   commentsDelete: 'comments.delete',
   commentsHide: 'comments.hide',
   commentsRestore: 'comments.restore',
@@ -40,6 +45,8 @@ export const ADMIN_AUDIT_EVENT_TYPES = {
 export type AdminAuditEventType = typeof ADMIN_AUDIT_EVENT_TYPES[keyof typeof ADMIN_AUDIT_EVENT_TYPES];
 
 export const ADMIN_AUDIT_TARGET_TYPES = {
+  catalogProposal: 'catalog_proposal',
+  catalogProposalCollection: 'catalog_proposal_collection',
   comment: 'comment',
   communityUser: 'community_user',
   ingredient: 'ingredient',
@@ -57,6 +64,11 @@ export const ADMIN_AUDIT_TARGET_TYPES = {
 export type AdminAuditTargetType = typeof ADMIN_AUDIT_TARGET_TYPES[keyof typeof ADMIN_AUDIT_TARGET_TYPES];
 
 export const ADMIN_AUDIT_EVENT_TARGET_TYPES: Readonly<Record<AdminAuditEventType, AdminAuditTargetType>> = {
+  [ADMIN_AUDIT_EVENT_TYPES.catalogProposalsAccept]: ADMIN_AUDIT_TARGET_TYPES.catalogProposal,
+  [ADMIN_AUDIT_EVENT_TYPES.catalogProposalsAlias]: ADMIN_AUDIT_TARGET_TYPES.catalogProposal,
+  [ADMIN_AUDIT_EVENT_TYPES.catalogProposalsAssociate]: ADMIN_AUDIT_TARGET_TYPES.catalogProposal,
+  [ADMIN_AUDIT_EVENT_TYPES.catalogProposalsList]: ADMIN_AUDIT_TARGET_TYPES.catalogProposalCollection,
+  [ADMIN_AUDIT_EVENT_TYPES.catalogProposalsReject]: ADMIN_AUDIT_TARGET_TYPES.catalogProposal,
   [ADMIN_AUDIT_EVENT_TYPES.commentsDelete]: ADMIN_AUDIT_TARGET_TYPES.comment,
   [ADMIN_AUDIT_EVENT_TYPES.commentsHide]: ADMIN_AUDIT_TARGET_TYPES.comment,
   [ADMIN_AUDIT_EVENT_TYPES.commentsRestore]: ADMIN_AUDIT_TARGET_TYPES.comment,

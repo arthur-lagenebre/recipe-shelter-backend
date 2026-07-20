@@ -8,6 +8,7 @@ import { createAdminAuditLogsRouter } from '../../src/api/admin/admin-audit-logs
 import { createAdminCommentsRouter } from '../../src/api/admin/admin.comments.routes.js';
 import { createAdminIngredientsRouter } from '../../src/api/admin/admin.ingredients.routes.js';
 import { adminAuthorizationPolicies } from '../../src/api/admin/admin.authorization.js';
+import { createAdminCatalogProposalsRouter } from '../../src/api/admin/admin.catalog-proposals.routes.js';
 import { createAdminRecipesRouter } from '../../src/api/admin/admin.recipes.routes.js';
 import { createAdminStaffRouter } from '../../src/api/admin/admin.staff.routes.js';
 import { createAdminTagsRouter } from '../../src/api/admin/admin.tags.routes.js';
@@ -32,10 +33,18 @@ type AdminPolicy = {
     method: 'DELETE' | 'GET' | 'PATCH' | 'POST';
     path: string;
     permission: PermissionCode;
+    additionalPermissions?: PermissionCode[];
 };
 
 const ADMIN_POLICIES: AdminPolicy[] = [
     { method: 'GET', path: '/api/v1/admin/audit-logs', permission: PERMISSIONS.auditRead },
+    { method: 'GET', path: '/api/v1/admin/catalog-proposals', permission: PERMISSIONS.catalogManage },
+    { method: 'POST', path: '/api/v1/admin/catalog-proposals/tags/1/accept', permission: PERMISSIONS.catalogManage, additionalPermissions: [PERMISSIONS.tagCreate] },
+    { method: 'POST', path: '/api/v1/admin/catalog-proposals/ingredients/1/accept', permission: PERMISSIONS.catalogManage, additionalPermissions: [PERMISSIONS.ingredientCreate] },
+    { method: 'POST', path: '/api/v1/admin/catalog-proposals/1/reject', permission: PERMISSIONS.catalogManage },
+    { method: 'POST', path: '/api/v1/admin/catalog-proposals/tags/1/associate', permission: PERMISSIONS.catalogManage },
+    { method: 'POST', path: '/api/v1/admin/catalog-proposals/ingredients/1/associate', permission: PERMISSIONS.catalogManage },
+    { method: 'POST', path: '/api/v1/admin/catalog-proposals/ingredients/1/alias', permission: PERMISSIONS.catalogManage, additionalPermissions: [PERMISSIONS.ingredientAliasManage] },
     { method: 'GET', path: '/api/v1/admin/comments/moderated', permission: PERMISSIONS.commentReview },
     { method: 'GET', path: '/api/v1/admin/comments/moderated/count', permission: PERMISSIONS.commentReview },
     { method: 'GET', path: '/api/v1/admin/comments/soft-deleted', permission: PERMISSIONS.commentReview },
@@ -141,6 +150,15 @@ describe('administrative endpoint authorization policies', () => {
             }
         ]));
         adminRouter.use('/audit-logs', createAdminAuditLogsRouter({ list: endpointHandler }));
+        adminRouter.use('/catalog-proposals', createAdminCatalogProposalsRouter({
+            list: endpointHandler,
+            acceptTag: endpointHandler,
+            acceptIngredient: endpointHandler,
+            reject: endpointHandler,
+            associateTag: endpointHandler,
+            associateIngredient: endpointHandler,
+            convertIngredientToAlias: endpointHandler
+        }));
         adminRouter.use('/comments', createAdminCommentsRouter({
             listModeratedComments: endpointHandler,
             countModeratedComments: endpointHandler,
@@ -229,7 +247,7 @@ describe('administrative endpoint authorization policies', () => {
 
     it('requires authentication and the exact declared permission on every administrative endpoint', async () => {
         for (const policy of ADMIN_POLICIES) {
-            grantedPermissions = [policy.permission];
+            grantedPermissions = [policy.permission, ...(policy.additionalPermissions ?? [])];
             const callsBeforeAllowedRequest = controllerCalls;
             const allowed = await fetch(`${server.baseUrl}${policy.path}`, {
                 method: policy.method,
@@ -260,6 +278,41 @@ describe('administrative endpoint authorization policies', () => {
                 'AUTH_NO_TOKEN'
             );
             assert.equal(controllerCalls, callsBeforeAllowedRequest + 1);
+        }
+    });
+
+    it('requires catalog management plus the permission for each catalogue creation', async () => {
+        const creationPolicies = [
+            {
+                path: '/api/v1/admin/catalog-proposals/tags/1/accept',
+                specificPermission: PERMISSIONS.tagCreate
+            },
+            {
+                path: '/api/v1/admin/catalog-proposals/ingredients/1/accept',
+                specificPermission: PERMISSIONS.ingredientCreate
+            },
+            {
+                path: '/api/v1/admin/catalog-proposals/ingredients/1/alias',
+                specificPermission: PERMISSIONS.ingredientAliasManage
+            }
+        ] as const;
+
+        for (const { path, specificPermission } of creationPolicies) {
+            for (const permissions of [[PERMISSIONS.catalogManage], [specificPermission]]) {
+                grantedPermissions = permissions;
+                const controllerCallsBeforeRequest = controllerCalls;
+                const response = await fetch(`${server.baseUrl}${path}`, {
+                    method: 'POST',
+                    headers: { cookie }
+                });
+
+                assert.equal(response.status, 403, `${path} must require both permissions`);
+                assert.equal(
+                    (await response.json() as { error: { code: string } }).error.code,
+                    'AUTH_PERMISSION_REQUIRED'
+                );
+                assert.equal(controllerCalls, controllerCallsBeforeRequest);
+            }
         }
     });
 

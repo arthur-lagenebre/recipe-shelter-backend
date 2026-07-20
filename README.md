@@ -162,6 +162,7 @@ le backend. Le catalogue initial est le suivant :
 | Utilisateurs community | `user.read`, `user.ban`, `user.unban` |
 | Catalogue | `catalog.read`, `catalog.manage` |
 | Tags | `tag.read`, `tag.create`, `tag.update`, `tag.deprecate`, `tag.merge` |
+| Ingrédients | `ingredient.read`, `ingredient.create`, `ingredient.update`, `ingredient.deprecate`, `ingredient.merge`, `ingredient.alias.manage` |
 | Staff | `staff.read`, `staff.create`, `staff.disable`, `staff.enable`, `staff.role.grant`, `staff.role.revoke`, `staff.session.revoke` |
 | Audit | `audit.read` |
 
@@ -189,7 +190,7 @@ La matrice initiale est explicite et insérée de manière idempotente par le se
 | `RecipeModerator` | `recipe.review`, `recipe.publish`, `recipe.reject`, `recipe.archive` |
 | `CommentModerator` | `comment.review`, `comment.hide`, `comment.restore`, `comments.update` |
 | `UserAdmin` | `user.read`, `user.ban`, `user.unban` |
-| `CatalogManager` | `catalog.read`, `catalog.manage`, `tag.read`, `tag.create`, `tag.update`, `tag.deprecate`, `tag.merge` |
+| `CatalogManager` | `catalog.read`, `catalog.manage`, toutes les permissions `tag.*` et `ingredient.*` listées ci-dessus |
 | `SuperAdmin` | Toutes les permissions listées dans le catalogue, associées explicitement |
 
 Les suppressions définitives de recettes et commentaires, la gestion du staff,
@@ -405,6 +406,13 @@ Exemples :
 - `DELETE /api/v1/admin/staff/:staffUserId/roles/:roleCode`
 - `GET /api/v1/admin/staff/:staffUserId/sessions`
 - `DELETE /api/v1/admin/staff/:staffUserId/sessions/:sessionId`
+- `GET /api/v1/admin/catalog-proposals`
+- `POST /api/v1/admin/catalog-proposals/tags/:id/accept`
+- `POST /api/v1/admin/catalog-proposals/ingredients/:id/accept`
+- `POST /api/v1/admin/catalog-proposals/:id/reject`
+- `POST /api/v1/admin/catalog-proposals/tags/:id/associate`
+- `POST /api/v1/admin/catalog-proposals/ingredients/:id/associate`
+- `POST /api/v1/admin/catalog-proposals/ingredients/:id/alias`
 - `GET /api/v1/admin/tags`
 - `POST /api/v1/admin/tags`
 - `PATCH /api/v1/admin/tags/:id`
@@ -587,9 +595,26 @@ Chaque route est limitée à 10 tentatives par heure et par adresse IP.
 
 Insérer une proposition ne crée pas automatiquement d'entité canonique, ne
 l'associe pas à la recette et ne conditionne aucun changement de statut de cette
-recette. Les futures actions de revue devront réaliser explicitement leur
-mutation métier et leur audit administratif centralisé dans une même
-transaction.
+recette.
+
+La file staff est exposée par `GET /api/v1/admin/catalog-proposals`. Elle exige
+`catalog.manage`, est paginée et cible les propositions `pending` par défaut ;
+les filtres `status`, `proposalType`, `recipeId`, `authorUserId` et `q` permettent
+de consulter la file et son historique. Chaque lecture produit l'audit
+`catalog.proposals.list`.
+
+Les actions de revue clôturent une proposition une seule fois et exigent toutes
+`catalog.manage` ainsi qu'un `reason` de 10 à 1000 caractères. L'acceptation
+typée crée un tag (`tag.create`, avec `groupId`, `slug` et `description`
+optionnels) ou un ingrédient (`ingredient.create`, avec `slug` optionnel) à
+partir du seul libellé immuable proposé : aucun nom canonique libre n'est accepté
+dans le body. L'association relie la proposition à un tag ou ingrédient actif
+existant. La conversion en alias exige `ingredient.alias.manage`, une cible
+ingrédient active et un `languageCode`. Le refus ne référence aucune cible.
+Acceptation et création d'entité, association ou création d'alias, décision de
+revue et audit administratif sont réalisés dans une même transaction. Ces
+traitements n'ajoutent aucune association à la recette et ne modifient jamais
+son cycle de vie.
 
 `POST /api/v1/auth/login` est réservé aux comptes community et pose le cookie
 HttpOnly `rs_app_session`, avec l’audience JWT `recipe-shelter-app` et une durée

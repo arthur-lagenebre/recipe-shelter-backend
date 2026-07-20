@@ -30,6 +30,23 @@ export type CreateCatalogProposalInput = {
   normalizedName: string;
 };
 
+export type CatalogProposalListFilters = {
+  status?: CatalogProposalStatus;
+  proposalType?: CatalogProposalType;
+  recipeId?: number;
+  authorUserId?: number;
+  q?: string;
+};
+
+export type ReviewCatalogProposalInput = {
+  proposalId: number;
+  status: Exclude<CatalogProposalStatus, 'pending'>;
+  matchedTagId: number | null;
+  matchedIngredientId: number | null;
+  reviewedByStaffUserId: number;
+  reviewReason: string;
+};
+
 export type CatalogProposalWriteResult =
   | { status: 'created'; proposal: CatalogProposal }
   | { status: 'pending_duplicate' };

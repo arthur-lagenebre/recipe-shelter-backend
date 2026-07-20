@@ -29,6 +29,11 @@ describe('administrative audit event catalog', () => {
     const eventTypes = Object.values(ADMIN_AUDIT_EVENT_TYPES);
 
     assert.deepEqual(eventTypes, [
+      'catalog.proposals.accept',
+      'catalog.proposals.alias',
+      'catalog.proposals.associate',
+      'catalog.proposals.list',
+      'catalog.proposals.reject',
       'comments.delete',
       'comments.hide',
       'comments.restore',
