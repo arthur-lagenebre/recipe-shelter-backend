@@ -139,14 +139,14 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
                 (105, 10), (105, 11),
                 (106, 10);
 
-            INSERT INTO RecipeIngredients (RecipeId, IngredientId, Quantity, SortOrder) VALUES
-                (100, 10, 1, 1), (100, 11, 1, 2),
-                (101, 10, 1, 1), (101, 11, 1, 2), (101, 12, 1, 3),
-                (102, 10, 1, 1), (102, 11, 1, 2), (102, 13, 1, 3),
-                (103, 10, 1, 1),
-                (104, 10, 1, 1), (104, 11, 1, 2),
-                (105, 10, 1, 1), (105, 11, 1, 2),
-                (106, 10, 1, 1), (106, 10, 2, 2);
+            INSERT INTO RecipeIngredients (RecipeId, IngredientId, DisplayText, Quantity, SortOrder) VALUES
+                (100, 10, 'base finement émincée', 1, 1), (100, 11, 'élément requis', 1, 2),
+                (101, 10, 'base', 1, 1), (101, 11, 'requis', 1, 2), (101, 12, 'élément bloquant', 1, 3),
+                (102, 10, 'base', 1, 1), (102, 11, 'requis', 1, 2), (102, 13, 'autre élément bloquant', 1, 3),
+                (103, 10, 'base', 1, 1),
+                (104, 10, 'base', 1, 1), (104, 11, 'requis', 1, 2),
+                (105, 10, 'base', 1, 1), (105, 11, 'requis', 1, 2),
+                (106, 10, 'première base', 1, 1), (106, 10, 'seconde base', 2, 2);
         `);
     });
 
@@ -279,16 +279,29 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
             servings: 2,
             tagIds: [1],
             ingredients: [
-                { ingredientId: 1, quantity: 200, unit: 'g', note: null, sortOrder: 1 },
-                { ingredientId: 10, note: 'to taste', sortOrder: 2 }
+                { ingredientId: 1, displayText: 'pâtes fraîches maison', quantity: 200, unit: 'g', note: null, sortOrder: 1 },
+                { ingredientId: 10, displayText: 'base aromatique au goût', note: 'to taste', sortOrder: 2 }
             ],
             steps: [{ stepNumber: 1, description: 'Cook the pasta.' }],
             equipments: [{ equipmentId: 1 }]
         });
         assert.equal(recipe.ingredients[0]?.quantity, 200);
+        assert.equal(recipe.ingredients[0]?.displayText, 'pâtes fraîches maison');
         assert.equal(recipe.ingredients[1]?.quantity, null);
         assert.deepEqual(recipe.tagIds, [1]);
         assert.deepEqual(recipe.equipments, [{ equipmentId: 1 }]);
+
+        const updatedRecipe = await recipes.updateDraft({
+            id: recipe.id,
+            userId: author.id,
+            title: recipe.title,
+            slug: recipe.slug,
+            ingredients: [
+                { ingredientId: 1, displayText: 'pâtes fraîches maison, finement coupées', quantity: 200, unit: 'g', note: null, sortOrder: 1 },
+                { ingredientId: 10, displayText: 'base aromatique au goût', note: 'to taste', sortOrder: 2 }
+            ]
+        });
+        assert.equal(updatedRecipe.ingredients[0]?.displayText, 'pâtes fraîches maison, finement coupées');
 
         const submitted = await recipes.submit(recipe.id, 'quick-pasta');
         assert.equal(submitted.status, 'pending');
@@ -296,6 +309,7 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
         const rejectedRecipe = await adminRecipes.findByIdForAdmin(recipe.id);
         assert.equal(rejectedRecipe?.status, 'rejected');
         assert.equal(rejectedRecipe?.rejectionReason, 'Missing editorial details.');
+        assert.equal(rejectedRecipe?.ingredients[0]?.displayText, 'pâtes fraîches maison, finement coupées');
         assert.equal((await recipes.submit(recipe.id, 'quick-pasta')).status, 'pending');
         assert.equal(await adminRecipes.publish(recipe.id, 1), true);
 
@@ -303,6 +317,7 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
         assert.equal(published.items[0]?.slug, 'quick-pasta');
         const detail = await recipes.findPublishedBySlug(author.id, 'quick-pasta');
         assert.equal(detail?.ingredients[0]?.name, 'Pasta');
+        assert.equal(detail?.ingredients[0]?.displayText, 'pâtes fraîches maison, finement coupées');
         assert.equal(detail?.steps[0]?.description, 'Cook the pasta.');
 
         const favorite = await favorites.create(2, recipe.id);
@@ -368,7 +383,7 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
             userId: author.id,
             title: 'Rollback recipe',
             slug: 'rollback-recipe',
-            ingredients: [{ ingredientId: 999_999, quantity: 1 }]
+            ingredients: [{ ingredientId: 999_999, displayText: 'ingrédient inconnu', quantity: 1 }]
         }));
         assert.equal(await recipes.existsBySlug('rollback-recipe'), false);
     });

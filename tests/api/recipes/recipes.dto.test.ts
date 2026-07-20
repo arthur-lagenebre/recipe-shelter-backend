@@ -21,7 +21,7 @@ describe('recipes.dto', () => {
             cookTimeMinutes: 35,
             servings: 6,
             tagIds: [1, 2],
-            ingredients: [{ ingredientId: 7, quantity: 2, unit: ' pcs ', note: '  golden  ', sortOrder: 3 }],
+            ingredients: [{ ingredientId: 7, displayText: '  pommes Golden en quartiers  ', quantity: 2, unit: ' pcs ', note: '  golden  ', sortOrder: 3 }],
             steps: [{ description: '  Couper les pommes.  ' }],
             equipments: [{ equipmentId: 4 }]
         });
@@ -35,7 +35,7 @@ describe('recipes.dto', () => {
             cookTimeMinutes: 35,
             servings: 6,
             tagIds: [1, 2],
-            ingredients: [{ ingredientId: 7, quantity: 2, unit: 'pcs', note: 'golden', sortOrder: 3 }],
+            ingredients: [{ ingredientId: 7, displayText: 'pommes Golden en quartiers', quantity: 2, unit: 'pcs', note: 'golden', sortOrder: 3 }],
             steps: [{ stepNumber: undefined, description: 'Couper les pommes.' }],
             equipments: [{ equipmentId: 4 }]
         });
@@ -114,6 +114,18 @@ describe('recipes.dto', () => {
                 return true;
             }
         );
+    });
+
+    it('requires a non-blank, bounded author display text for each ingredient', () => {
+        for (const displayText of [undefined, '   ', 'a'.repeat(256)]) {
+            assert.throws(
+                () => parseCreateRecipeBody({ title: 'Valid title', ingredients: [{ ingredientId: 7, displayText }] }),
+                (error) => {
+                    assertHttpError(error, 'RECIPES_CREATE_BAD_INGREDIENT_DISPLAY_TEXT', 400);
+                    return true;
+                }
+            );
+        }
     });
 
     it('parses and validates recipe id and slug params', () => {
@@ -196,20 +208,20 @@ describe('recipes.dto', () => {
             parseCreateRecipeBody({
                 title: 'Thé maison',
                 ingredients: [
-                    { ingredientId: 7 },
-                    { ingredientId: 8, quantity: null }
+                    { ingredientId: 7, displayText: 'thé vert en vrac' },
+                    { ingredientId: 8, displayText: 'eau filtrée', quantity: null }
                 ]
             }).ingredients,
             [
-                { ingredientId: 7, quantity: undefined, unit: undefined, note: undefined, sortOrder: undefined },
-                { ingredientId: 8, quantity: null, unit: undefined, note: undefined, sortOrder: undefined }
+                { ingredientId: 7, displayText: 'thé vert en vrac', quantity: undefined, unit: undefined, note: undefined, sortOrder: undefined },
+                { ingredientId: 8, displayText: 'eau filtrée', quantity: null, unit: undefined, note: undefined, sortOrder: undefined }
             ]
         );
     });
 
     it('rejects a non-numeric ingredient quantity', () => {
         assert.throws(
-            () => parseCreateRecipeBody({ title: 'Thé maison', ingredients: [{ ingredientId: 7, quantity: 'two' }] }),
+            () => parseCreateRecipeBody({ title: 'Thé maison', ingredients: [{ ingredientId: 7, displayText: 'thé vert', quantity: 'two' }] }),
             (error) => {
                 assertHttpError(error, 'RECIPES_CREATE_BAD_INGREDIENT_QUANTITY', 400);
                 return true;

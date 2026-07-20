@@ -4,6 +4,7 @@ import type { RowDataPacket } from 'mysql2';
 
 export type RecipeIngredientInput = {
     ingredientId: number;
+    displayText: string;
     quantity?: number | null;
     unit?: string | null;
     note?: string | null;
@@ -51,6 +52,7 @@ export type UpdateRecipeInput = RecipeInput & {
 
 export type RecipeIngredient = {
     ingredientId: number;
+    displayText: string;
     quantity: number | null;
     unit: string | null;
     note: string | null;
@@ -139,6 +141,7 @@ export type RecipeDetailIngredient = {
     id: number;
     name: string;
     slug: string;
+    displayText: string;
     quantity: number | null;
     unit: string | null;
     note: string | null;
@@ -206,6 +209,7 @@ export type RecipeDetailCommentStatsRow = RowDataPacket & {
 
 export type RecipeIngredientRow = RowDataPacket & {
     IngredientId: number;
+    DisplayText: string;
     Quantity: number | string | null;
     Unit: string | null;
     Note: string | null;
@@ -245,9 +249,10 @@ export type RecipeDetailRow = RecipeListItemRow & {
 };
 
 export type RecipeDetailIngredientRow = RowDataPacket & {
-    Id: number;
+    IngredientId: number;
     Name: string;
     Slug: string;
+    DisplayText: string;
     Quantity: number | string | null;
     Unit: string | null;
     Note: string | null;

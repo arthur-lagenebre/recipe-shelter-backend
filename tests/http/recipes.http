@@ -162,12 +162,14 @@ Cookie: rs_app_session={{sessionCookie}}
   "ingredients": [
     {
       "ingredientId": 18,
+      "displayText": "farine tamisee",
       "quantity": 200,
       "unit": "g",
       "note": "Tamisee"
     },
     {
       "ingredientId": 103,
+      "displayText": "oeufs entiers",
       "quantity": 3,
       "unit": "piece"
     }
@@ -241,6 +243,7 @@ Cookie: rs_app_session={{sessionCookie}}
   "ingredients": [
     {
       "ingredientId": 18,
+      "displayText": "farine tamisee",
       "quantity": 250,
       "unit": "g"
     }

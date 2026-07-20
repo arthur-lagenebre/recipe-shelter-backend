@@ -136,8 +136,8 @@ describe('RecipeService', () => {
             description: '  Good  ',
             tagIds: [1, 1, 2],
             ingredients: [
-                { ingredientId: 7, quantity: 2, unit: '  ', note: '  note  ' },
-                { ingredientId: 8 }
+                { ingredientId: 7, displayText: '  pommes Golden en quartiers  ', quantity: 2, unit: '  ', note: '  note  ' },
+                { ingredientId: 8, displayText: 'farine T55' }
             ],
             steps: [{ description: '  Bake  ' }],
             equipments: [{ equipmentId: 4 }]
@@ -155,8 +155,8 @@ describe('RecipeService', () => {
             servings: 1,
             tagIds: [1, 2],
             ingredients: [
-                { ingredientId: 7, quantity: 2, unit: null, note: 'note', sortOrder: 1 },
-                { ingredientId: 8, quantity: null, unit: null, note: null, sortOrder: 2 }
+                { ingredientId: 7, displayText: 'pommes Golden en quartiers', quantity: 2, unit: null, note: 'note', sortOrder: 1 },
+                { ingredientId: 8, displayText: 'farine T55', quantity: null, unit: null, note: null, sortOrder: 2 }
             ],
             steps: [{ stepNumber: 1, description: 'Bake' }],
             equipments: [{ equipmentId: 4 }]
@@ -166,7 +166,7 @@ describe('RecipeService', () => {
     it('allows owners to update drafts with normalized partial collections', async () => {
         await service.updateDraft(10, auth, {
             title: '  New cake  ',
-            ingredients: [{ ingredientId: 8, quantity: 1, unit: 'g', note: '  fine  ', sortOrder: 4 }],
+            ingredients: [{ ingredientId: 8, displayText: '  farine complète  ', quantity: 1, unit: 'g', note: '  fine  ', sortOrder: 4 }],
             tagIds: [3, 3]
         });
 
@@ -182,7 +182,7 @@ describe('RecipeService', () => {
             cookTimeMinutes: undefined,
             servings: undefined,
             tagIds: [3],
-            ingredients: [{ ingredientId: 8, quantity: 1, unit: 'g', note: 'fine', sortOrder: 4 }],
+            ingredients: [{ ingredientId: 8, displayText: 'farine complète', quantity: 1, unit: 'g', note: 'fine', sortOrder: 4 }],
             steps: undefined,
             equipments: undefined
         });

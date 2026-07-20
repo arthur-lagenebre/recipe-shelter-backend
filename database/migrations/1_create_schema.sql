@@ -1217,6 +1217,7 @@ CREATE TABLE RecipeIngredients (
   Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   RecipeId BIGINT UNSIGNED NOT NULL,
   IngredientId BIGINT UNSIGNED NOT NULL,
+  DisplayText VARCHAR(255) NOT NULL,
   Quantity DECIMAL(10,3) NULL,
   Unit VARCHAR(64) NULL,
   Note VARCHAR(255) NULL,
@@ -1224,6 +1225,11 @@ CREATE TABLE RecipeIngredients (
   PRIMARY KEY (Id),
   KEY idx_recipe_ingredients_recipe_sort (RecipeId, SortOrder),
   KEY idx_recipe_ingredients_ingredient_id (IngredientId),
+  CONSTRAINT recipe_ingredients_display_text_CK
+    CHECK (
+      CHAR_LENGTH(DisplayText) = CHAR_LENGTH(TRIM(DisplayText))
+      AND CHAR_LENGTH(DisplayText) > 0
+    ),
   CONSTRAINT recipe_ingredients_recipe_FK
     FOREIGN KEY (RecipeId) REFERENCES Recipes(Id)
     ON UPDATE CASCADE
@@ -1233,6 +1239,61 @@ CREATE TABLE RecipeIngredients (
     ON UPDATE CASCADE
     ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TRIGGER recipe_ingredients_active_ingredient_BI
+BEFORE INSERT ON RecipeIngredients
+FOR EACH ROW
+BEGIN
+  DECLARE referenced_ingredient_status VARCHAR(16) DEFAULT NULL;
+
+  SELECT Status
+  INTO referenced_ingredient_status
+  FROM Ingredients
+  WHERE Id = NEW.IngredientId
+  FOR SHARE;
+
+  IF referenced_ingredient_status IS NULL OR referenced_ingredient_status <> 'active' THEN
+    SIGNAL SQLSTATE '45000'
+      SET MYSQL_ERRNO = 1644,
+          MESSAGE_TEXT = 'Recipes can only reference active canonical ingredients';
+  END IF;
+END;
+
+CREATE TRIGGER recipe_ingredients_active_ingredient_BU
+BEFORE UPDATE ON RecipeIngredients
+FOR EACH ROW
+BEGIN
+  DECLARE referenced_ingredient_status VARCHAR(16) DEFAULT NULL;
+
+  SELECT Status
+  INTO referenced_ingredient_status
+  FROM Ingredients
+  WHERE Id = NEW.IngredientId
+  FOR SHARE;
+
+  IF referenced_ingredient_status IS NULL OR referenced_ingredient_status <> 'active' THEN
+    SIGNAL SQLSTATE '45000'
+      SET MYSQL_ERRNO = 1644,
+          MESSAGE_TEXT = 'Recipes can only reference active canonical ingredients';
+  END IF;
+END;
+
+CREATE TRIGGER ingredients_merged_recipe_associations_BU
+BEFORE UPDATE ON Ingredients
+FOR EACH ROW
+BEGIN
+  IF OLD.Status <> 'merged'
+     AND NEW.Status = 'merged'
+     AND EXISTS (
+       SELECT 1
+       FROM RecipeIngredients
+       WHERE IngredientId = NEW.Id
+     ) THEN
+    SIGNAL SQLSTATE '45000'
+      SET MYSQL_ERRNO = 1644,
+          MESSAGE_TEXT = 'An ingredient must have no recipe associations before being merged';
+  END IF;
+END;
 
 CREATE TABLE RecipeTags (
   RecipeId BIGINT UNSIGNED NOT NULL,

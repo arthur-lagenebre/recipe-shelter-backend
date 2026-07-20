@@ -516,7 +516,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"title\": \"Cake marbre maison\",\n  \"categoryId\": 2,\n  \"description\": \"Version brouillon pour test HTTP\",\n  \"coverImageUrl\": null,\n  \"prepTimeMinutes\": 15,\n  \"restTimeMinutes\": null,\n  \"cookTimeMinutes\": 45,\n  \"servings\": 6,\n  \"tagIds\": [1, 2],\n  \"ingredients\": [\n    {\n      \"ingredientId\": 18,\n      \"quantity\": 200,\n      \"unit\": \"g\",\n      \"note\": \"Tamisee\"\n    },\n    {\n      \"ingredientId\": 103,\n      \"quantity\": 3,\n      \"unit\": \"piece\"\n    }\n  ],\n  \"steps\": [\n    {\n      \"description\": \"Prechauffer le four a 180 degres.\"\n    },\n    {\n      \"description\": \"Melanger les ingredients puis verser dans un moule.\"\n    }\n  ],\n  \"equipments\": [\n    {\n      \"equipmentId\": 1\n    },\n    {\n      \"equipmentId\": 2\n    }\n  ]\n}"
+          "raw": "{\n  \"title\": \"Cake marbre maison\",\n  \"categoryId\": 2,\n  \"description\": \"Version brouillon pour test HTTP\",\n  \"coverImageUrl\": null,\n  \"prepTimeMinutes\": 15,\n  \"restTimeMinutes\": null,\n  \"cookTimeMinutes\": 45,\n  \"servings\": 6,\n  \"tagIds\": [1, 2],\n  \"ingredients\": [\n    {\n      \"ingredientId\": 18,\n      \"displayText\": \"farine tamisee\",\n      \"quantity\": 200,\n      \"unit\": \"g\",\n      \"note\": \"Tamisee\"\n    },\n    {\n      \"ingredientId\": 103,\n      \"displayText\": \"oeufs entiers\",\n      \"quantity\": 3,\n      \"unit\": \"piece\"\n    }\n  ],\n  \"steps\": [\n    {\n      \"description\": \"Prechauffer le four a 180 degres.\"\n    },\n    {\n      \"description\": \"Melanger les ingredients puis verser dans un moule.\"\n    }\n  ],\n  \"equipments\": [\n    {\n      \"equipmentId\": 1\n    },\n    {\n      \"equipmentId\": 2\n    }\n  ]\n}"
         }
       },
       "event": [
@@ -708,7 +708,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"title\": \"Cake marbre maison v2\",\n  \"description\": \"Version mise a jour pour test HTTP\",\n  \"ingredients\": [\n    {\n      \"ingredientId\": 18,\n      \"quantity\": 250,\n      \"unit\": \"g\"\n    }\n  ],\n  \"steps\": [\n    {\n      \"description\": \"Prechauffer le four.\"\n    },\n    {\n      \"description\": \"Cuire pendant 45 minutes.\"\n    }\n  ],\n  \"equipments\": [\n    {\n      \"equipmentId\": 1\n    }\n  ]\n}"
+          "raw": "{\n  \"title\": \"Cake marbre maison v2\",\n  \"description\": \"Version mise a jour pour test HTTP\",\n  \"ingredients\": [\n    {\n      \"ingredientId\": 18,\n      \"displayText\": \"farine tamisee\",\n      \"quantity\": 250,\n      \"unit\": \"g\"\n    }\n  ],\n  \"steps\": [\n    {\n      \"description\": \"Prechauffer le four.\"\n    },\n    {\n      \"description\": \"Cuire pendant 45 minutes.\"\n    }\n  ],\n  \"equipments\": [\n    {\n      \"equipmentId\": 1\n    }\n  ]\n}"
         }
       }
     },

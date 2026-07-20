@@ -25,6 +25,7 @@ export type RecipeSearchQuery = RecipeSearchFilters;
 
 const DEFAULT_RECIPE_FEED_LIMIT = 12;
 const MAX_RECIPE_FEED_LIMIT = 20;
+const MAX_RECIPE_INGREDIENT_DISPLAY_TEXT_LENGTH = 255;
 
 function parseIngredient(item: unknown, index: number): RecipeIngredientInput {
     if (!isRecord(item))
@@ -33,9 +34,14 @@ function parseIngredient(item: unknown, index: number): RecipeIngredientInput {
     const unit = getOptionalNullableString(item.unit, 'Ingredient unit must be a string or null', 'RECIPES_CREATE_BAD_INGREDIENT_UNIT');
     const note = getOptionalString(item.note, 'Ingredient note must be a string', 'RECIPES_CREATE_BAD_INGREDIENT_NOTE');
     const sortOrder = getOptionalNumber(item.sortOrder, 'Ingredient sortOrder must be a number', 'RECIPES_CREATE_BAD_INGREDIENT_SORT_ORDER');
+    const displayText = getRequiredString(item.displayText, 'Ingredient displayText is required', 'RECIPES_CREATE_BAD_INGREDIENT_DISPLAY_TEXT');
+
+    if (Array.from(displayText).length > MAX_RECIPE_INGREDIENT_DISPLAY_TEXT_LENGTH)
+        throw badRequest('Ingredient displayText must not exceed 255 characters', 'RECIPES_CREATE_BAD_INGREDIENT_DISPLAY_TEXT');
 
     return {
         ingredientId: getRequiredNumber(item.ingredientId, 'IngredientId must be a number', 'RECIPES_CREATE_BAD_INGREDIENT_ID'),
+        displayText,
         quantity: getOptionalNullableNumber(item.quantity, 'Ingredient quantity must be a number or null', 'RECIPES_CREATE_BAD_INGREDIENT_QUANTITY'),
         unit,
         note,

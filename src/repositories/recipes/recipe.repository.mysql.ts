@@ -436,9 +436,9 @@ export class RecipeRepositoryMysql implements RecipeRepository {
             return;
 
         await connection.query(
-            `INSERT INTO RecipeIngredients (RecipeId, IngredientId, Quantity, Unit, Note, SortOrder)
+            `INSERT INTO RecipeIngredients (RecipeId, IngredientId, DisplayText, Quantity, Unit, Note, SortOrder)
              VALUES ?`,
-            [input.ingredients.map((ingredient) => [recipeId, ingredient.ingredientId, ingredient.quantity ?? null, ingredient.unit, ingredient.note ?? null, ingredient.sortOrder ?? 1])]
+            [input.ingredients.map((ingredient) => [recipeId, ingredient.ingredientId, ingredient.displayText, ingredient.quantity ?? null, ingredient.unit, ingredient.note ?? null, ingredient.sortOrder ?? 1])]
         );
     }
 
@@ -486,9 +486,9 @@ export class RecipeRepositoryMysql implements RecipeRepository {
             return;
 
         await connection.query(
-            `INSERT INTO RecipeIngredients (RecipeId, IngredientId, Quantity, Unit, Note, SortOrder)
+            `INSERT INTO RecipeIngredients (RecipeId, IngredientId, DisplayText, Quantity, Unit, Note, SortOrder)
              VALUES ?`,
-            [input.ingredients.map((ingredient) => [recipeId, ingredient.ingredientId, ingredient.quantity ?? null, ingredient.unit, ingredient.note ?? null, ingredient.sortOrder ?? 1])]
+            [input.ingredients.map((ingredient) => [recipeId, ingredient.ingredientId, ingredient.displayText, ingredient.quantity ?? null, ingredient.unit, ingredient.note ?? null, ingredient.sortOrder ?? 1])]
         );
     }
 
@@ -545,9 +545,10 @@ export class RecipeRepositoryMysql implements RecipeRepository {
 
     private async findIngredientsByRecipeId(recipeId: number): Promise<RecipeIngredientRow[]> {
         const [rows] = await this.db.execute(
-            `SELECT IngredientId, Quantity, Unit, Note, SortOrder
+            `SELECT IngredientId, DisplayText, Quantity, Unit, Note, SortOrder
              FROM RecipeIngredients
-             WHERE RecipeId = ?`,
+             WHERE RecipeId = ?
+             ORDER BY SortOrder, Id`,
             [recipeId]
         );
 
@@ -589,10 +590,11 @@ export class RecipeRepositoryMysql implements RecipeRepository {
 
     private async findDetailIngredientsByRecipeId(recipeId: number): Promise<RecipeDetailIngredientRow[]> {
         const [rows] = await this.db.execute(
-            `SELECT i.Id, i.Name, i.Slug, ri.Quantity, ri.Unit, ri.Note, ri.SortOrder
+            `SELECT i.Id AS IngredientId, i.Name, i.Slug, ri.DisplayText, ri.Quantity, ri.Unit, ri.Note, ri.SortOrder
              FROM RecipeIngredients AS ri
              INNER JOIN Ingredients AS i ON i.Id = ri.IngredientId
-             WHERE ri.RecipeId =  ?`,
+             WHERE ri.RecipeId = ?
+             ORDER BY ri.SortOrder, ri.Id`,
             [recipeId]
         );
 

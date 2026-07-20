@@ -91,6 +91,7 @@ class CriticalFlowRecipeRepository implements Partial<RecipeRepository> {
             tagIds: input.tagIds ?? [],
             ingredients: (input.ingredients ?? []).map((ingredient, index) => ({
                 ingredientId: ingredient.ingredientId,
+                displayText: ingredient.displayText,
                 quantity: ingredient.quantity ?? null,
                 unit: ingredient.unit ?? null,
                 note: ingredient.note ?? null,
@@ -121,6 +122,7 @@ class CriticalFlowRecipeRepository implements Partial<RecipeRepository> {
             tagIds: input.tagIds ?? current.tagIds,
             ingredients: input.ingredients?.map((ingredient, index) => ({
                 ingredientId: ingredient.ingredientId,
+                displayText: ingredient.displayText,
                 quantity: ingredient.quantity ?? null,
                 unit: ingredient.unit ?? null,
                 note: ingredient.note ?? null,
@@ -453,7 +455,7 @@ describe('critical user journey E2E', () => {
                 prepTimeMinutes: 10,
                 cookTimeMinutes: 20,
                 servings: 4,
-                ingredients: [{ ingredientId: 3, quantity: 250, unit: 'g' }],
+                ingredients: [{ ingredientId: 3, displayText: 'spaghetti semi-complets', quantity: 250, unit: 'g' }],
                 steps: [{ description: 'Cook the pasta and combine.' }]
             })
         });
@@ -461,6 +463,7 @@ describe('critical user journey E2E', () => {
         assert.equal(createResponse.status, 201);
         assert.equal(created.status, 'draft');
         assert.equal(created.userId, 2);
+        assert.equal(created.ingredients[0]?.displayText, 'spaghetti semi-complets');
 
         const updateResponse = await fetch(`${server.baseUrl}/api/v1/recipes/me/${created.id}`, {
             method: 'PATCH',

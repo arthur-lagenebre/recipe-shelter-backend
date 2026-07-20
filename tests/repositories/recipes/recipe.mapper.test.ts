@@ -105,8 +105,9 @@ describe('recipe.mapper', () => {
     });
 
     it('maps recipe nested edit rows', () => {
-        assert.deepEqual(mapRecipeIngredient({ IngredientId: 7, Quantity: '2.5', Unit: 'kg', Note: null, SortOrder: 1 } as RecipeIngredientRow), {
+        assert.deepEqual(mapRecipeIngredient({ IngredientId: 7, DisplayText: 'farine T55 tamisée', Quantity: '2.5', Unit: 'kg', Note: null, SortOrder: 1 } as RecipeIngredientRow), {
             ingredientId: 7,
+            displayText: 'farine T55 tamisée',
             quantity: 2.5,
             unit: 'kg',
             note: null,
@@ -117,8 +118,8 @@ describe('recipe.mapper', () => {
     });
 
     it('preserves an absent ingredient quantity as null', () => {
-        assert.equal(mapRecipeIngredient({ IngredientId: 7, Quantity: null, Unit: null, Note: null, SortOrder: 1 } as RecipeIngredientRow).quantity, null);
-        assert.equal(mapRecipeDetailIngredient({ Id: 7, IngredientId: 7, Name: 'Eau', Slug: 'eau', Quantity: null, Unit: null, Note: null, SortOrder: 1 } as RecipeDetailIngredientRow).quantity, null);
+        assert.equal(mapRecipeIngredient({ IngredientId: 7, DisplayText: 'eau', Quantity: null, Unit: null, Note: null, SortOrder: 1 } as RecipeIngredientRow).quantity, null);
+        assert.equal(mapRecipeDetailIngredient({ IngredientId: 7, Name: 'Eau', Slug: 'eau', DisplayText: 'eau filtrée', Quantity: null, Unit: null, Note: null, SortOrder: 1 } as RecipeDetailIngredientRow).quantity, null);
     });
 
     it('keeps recipe list items unchanged', () => {
@@ -164,10 +165,11 @@ describe('recipe.mapper', () => {
     });
 
     it('maps recipe detail nested rows', () => {
-        assert.deepEqual(mapRecipeDetailIngredient({ Id: 7, IngredientId: 7, Name: 'Farine', Slug: 'farine', Quantity: '250', Unit: 'g', Note: 'T55', SortOrder: 1 } as RecipeDetailIngredientRow), {
+        assert.deepEqual(mapRecipeDetailIngredient({ IngredientId: 7, Name: 'Farine', Slug: 'farine', DisplayText: 'farine de blé T55', Quantity: '250', Unit: 'g', Note: 'T55', SortOrder: 1 } as RecipeDetailIngredientRow), {
             id: 7,
             name: 'Farine',
             slug: 'farine',
+            displayText: 'farine de blé T55',
             quantity: 250,
             unit: 'g',
             note: 'T55',

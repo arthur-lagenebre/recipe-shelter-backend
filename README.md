@@ -467,7 +467,12 @@ BCP 47 en minuscules. Un même nom normalisé ne peut apparaître qu'une fois pa
 langue. Chaque alias référence obligatoirement un ingrédient actif ; le schéma
 empêche aussi de déprécier ou fusionner cette cible tant que ses alias n'ont pas
 été réaffectés. Les libellés propres aux recettes restent distincts de ce
-catalogue afin de pouvoir conserver la rédaction de leur auteur.
+catalogue afin de pouvoir conserver la rédaction de leur auteur. Chaque ligne
+de `RecipeIngredients` associe ainsi un `IngredientId` canonique actif, utilisé
+par les filtres de recherche, à un `DisplayText` libre et obligatoire, utilisé
+pour le rendu. La quantité, l'unité, la note et l'ordre restent portés par cette
+ligne ; les lectures propriétaire, publique et administrative exposent le
+`displayText` sans le remplacer par le nom du catalogue.
 
 Les tags sont rattachés à un groupe. Leur nom normalisé est produit en ignorant
 la casse et les accents, puis en remplaçant toute suite d'espaces ou de

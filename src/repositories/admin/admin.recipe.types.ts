@@ -54,6 +54,7 @@ export type AdminRecipeAuditState = {
 export type AdminRecipeIngredient = {
     id: number;
     name: string;
+    displayText: string;
     quantity: number | null;
     unit: string | null;
     note: string | null;
@@ -78,6 +79,7 @@ export type AdminRecipeEquipment = {
 export type RecipeIngredientRow = RowDataPacket & {
     Id: number;
     Name: string;
+    DisplayText: string;
     Quantity: number | string | null;
     Unit: string | null;
     Note: string | null;

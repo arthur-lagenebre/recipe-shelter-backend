@@ -1010,6 +1010,7 @@ type UpdateRecipeBody = RecipeBody;</code></pre>
           <p>Sous-objets acceptés dans <code>RecipeBody</code>.</p>
           <pre><code>type RecipeIngredientInput = {
   ingredientId: number;
+  displayText: string; // rédaction de l'auteur, 1..255 caractères après trim
   quantity?: number | null;
   unit?: string | null;
   note?: string | null;
@@ -1080,6 +1081,7 @@ type RecipeFeedQuery = {
           <p>Sous-objets présents dans <code>Recipe</code>.</p>
           <pre><code>type RecipeIngredient = {
   ingredientId: number;
+  displayText: string;
   quantity: number | null;
   unit: string | null;
   note: string | null;
@@ -1161,6 +1163,7 @@ type RecentRecipesResponse = RecipeListItem[];</code></pre>
   id: number;
   name: string;
   slug: string;
+  displayText: string; // libellé à utiliser pour le rendu
   quantity: number | null;
   unit: string | null;
   note: string | null;
@@ -1705,6 +1708,7 @@ type PendingRecipesCountResponse = {
           <pre><code>type AdminRecipeIngredient = {
   id: number;
   name: string;
+  displayText: string;
   quantity: number | null;
   unit: string | null;
   note: string | null;

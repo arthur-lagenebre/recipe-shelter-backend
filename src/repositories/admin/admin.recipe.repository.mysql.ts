@@ -163,10 +163,11 @@ export class AdminRecipeRepositoryMysql implements AdminRecipeRepository {
 
     private async findIngredientsByRecipeId(recipeId: number): Promise<RecipeIngredientRow[]> {
         const [rows] = await this.db.execute(
-            `SELECT i.Id, i.Name, ri.Quantity, ri.Unit, ri.Note, ri.SortOrder
+            `SELECT i.Id, i.Name, ri.DisplayText, ri.Quantity, ri.Unit, ri.Note, ri.SortOrder
              FROM RecipeIngredients AS ri
              INNER JOIN Ingredients AS i ON ri.IngredientId = i.Id
-             WHERE RecipeId = ?`,
+             WHERE RecipeId = ?
+             ORDER BY ri.SortOrder, ri.Id`,
             [recipeId]
         );
 

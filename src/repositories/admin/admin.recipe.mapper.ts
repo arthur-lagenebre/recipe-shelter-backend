@@ -16,6 +16,7 @@ export function mapRecipeIngredient(row: RecipeIngredientRow): AdminRecipeIngred
     return {
         id: row.Id,
         name: row.Name,
+        displayText: row.DisplayText,
         quantity: row.Quantity === null ? null : Number(row.Quantity),
         unit: row.Unit,
         note: row.Note,

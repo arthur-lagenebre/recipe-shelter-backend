@@ -138,6 +138,7 @@ async function normalizeCreateRecipeInput(userId: number, input: RecipeContentIn
         tagIds: normalizeTagIds(input.tagIds),
         ingredients: input.ingredients?.map((ingredient, index) => ({
             ingredientId: ingredient.ingredientId,
+            displayText: ingredient.displayText.trim(),
             quantity: ingredient.quantity ?? null,
             unit: normalizeNullableUnit(ingredient.unit),
             note: ingredient.note?.trim() ?? null,
@@ -168,6 +169,7 @@ function normalizeUpdateRecipeInput(recipe: Recipe, input: RecipeContentInput): 
         tagIds: input.tagIds === undefined ? undefined : normalizeTagIds(input.tagIds),
         ingredients: input.ingredients?.map((ingredient, index) => ({
             ingredientId: ingredient.ingredientId,
+            displayText: ingredient.displayText.trim(),
             quantity: ingredient.quantity ?? null,
             unit: normalizeNullableUnit(ingredient.unit),
             note: ingredient.note?.trim() ?? null,
