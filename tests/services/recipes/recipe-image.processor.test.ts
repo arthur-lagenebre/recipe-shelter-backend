@@ -14,7 +14,9 @@ async function image(format: 'jpeg' | 'png' | 'webp', width: number, height: num
             channels: 3,
             background: { r: 190, g: 80, b: 45 }
         }
-    })[format]().toBuffer();
+    })
+        [format]()
+        .toBuffer();
 }
 
 function assertHttpError(error: unknown, code: string): boolean {
@@ -31,7 +33,14 @@ describe('RecipeImageProcessor', () => {
             const result = await processor.process(await image(format, 2000, 1000));
 
             assert.deepEqual(
-                [result.large.width, result.large.height, result.medium.width, result.medium.height, result.thumbnail.width, result.thumbnail.height],
+                [
+                    result.large.width,
+                    result.large.height,
+                    result.medium.width,
+                    result.medium.height,
+                    result.thumbnail.width,
+                    result.thumbnail.height
+                ],
                 [1600, 800, 800, 400, 400, 200]
             );
 
@@ -46,14 +55,16 @@ describe('RecipeImageProcessor', () => {
     it('does not enlarge small images', async () => {
         const result = await processor.process(await image('png', 120, 60));
 
-        for (const variant of [result.large, result.medium, result.thumbnail])
-            assert.deepEqual([variant.width, variant.height], [120, 60]);
+        for (const variant of [result.large, result.medium, result.thumbnail]) assert.deepEqual([variant.width, variant.height], [120, 60]);
     });
 
     it('applies EXIF orientation before resizing', async () => {
         const oriented = await sharp({
             create: { width: 40, height: 20, channels: 3, background: 'red' }
-        }).jpeg().withMetadata({ orientation: 6 }).toBuffer();
+        })
+            .jpeg()
+            .withMetadata({ orientation: 6 })
+            .toBuffer();
 
         const result = await processor.process(oriented);
 

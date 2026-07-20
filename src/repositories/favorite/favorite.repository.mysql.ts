@@ -3,7 +3,7 @@ import { firstOrNull } from '../../utils/array.js';
 import { createPaginatedResult, formatLimitOffsetClause } from '../../utils/pagination.js';
 import { mapRecipeListItem } from '../recipes/recipe.mapper.js';
 
-import type { FavoriteRepository } from "./favorite.repository.interface.js";
+import type { FavoriteRepository } from './favorite.repository.interface.js';
 import type { Favorite, FavoriteRow } from './favorite.types.js';
 import type { PaginatedResult, PaginationOptions } from '../../utils/pagination.js';
 import type { PublicImageUrlBuilder } from '../recipe-images/recipe-image.types.js';
@@ -16,7 +16,10 @@ type CountRow = {
 };
 
 export class FavoriteRepositoryMysql implements FavoriteRepository {
-    constructor(private readonly db: Pool, private readonly getPublicImageUrl: PublicImageUrlBuilder = missingPublicImageUrlBuilder) { }
+    constructor(
+        private readonly db: Pool,
+        private readonly getPublicImageUrl: PublicImageUrlBuilder = missingPublicImageUrlBuilder
+    ) {}
 
     async create(userId: number, recipeId: number): Promise<Favorite> {
         await this.db.execute(
@@ -27,8 +30,7 @@ export class FavoriteRepositoryMysql implements FavoriteRepository {
 
         const created = await this.findById(userId, recipeId);
 
-        if (!created)
-            throw new Error('User created but cannot be reloaded');
+        if (!created) throw new Error('User created but cannot be reloaded');
 
         return created;
     }
@@ -86,7 +88,11 @@ export class FavoriteRepositoryMysql implements FavoriteRepository {
             [userId]
         );
 
-        return createPaginatedResult((rows as RecipeListItemRow[]).map((row) => mapRecipeListItem(row, this.getPublicImageUrl)), this.mapCount(countRows), pagination);
+        return createPaginatedResult(
+            (rows as RecipeListItemRow[]).map((row) => mapRecipeListItem(row, this.getPublicImageUrl)),
+            this.mapCount(countRows),
+            pagination
+        );
     }
 
     private mapCount(rows: unknown): number {

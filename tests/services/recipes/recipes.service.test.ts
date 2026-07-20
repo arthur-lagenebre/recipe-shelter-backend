@@ -7,7 +7,15 @@ import { HttpError } from '../../../src/utils/errors.js';
 
 import type { AuthContext } from '../../../src/api/auth/auth.types.js';
 import type { RecipeRepository } from '../../../src/repositories/recipes/recipe.repository.interface.js';
-import type { Recipe, RecipeDetail, RecipeInput, RecipeListItem, RecipeSearchFilters, RecipeSummary, UpdateRecipeInput } from '../../../src/repositories/recipes/recipe.types.js';
+import type {
+    Recipe,
+    RecipeDetail,
+    RecipeInput,
+    RecipeListItem,
+    RecipeSearchFilters,
+    RecipeSummary,
+    UpdateRecipeInput
+} from '../../../src/repositories/recipes/recipe.types.js';
 import type { PaginatedResult, PaginationOptions } from '../../../src/utils/pagination.js';
 
 const baseRecipe: Recipe = {
@@ -38,7 +46,13 @@ const baseRecipe: Recipe = {
 };
 
 const auth: AuthContext = { userId: 2, username: 'owner', accountType: 'community', status: 'active', permissions: [] };
-const adminAuth: AuthContext = { userId: 1, username: 'admin', accountType: 'staff', status: 'active', permissions: [PERMISSIONS.recipeReview] };
+const adminAuth: AuthContext = {
+    userId: 1,
+    username: 'admin',
+    accountType: 'staff',
+    status: 'active',
+    permissions: [PERMISSIONS.recipeReview]
+};
 const pagination: PaginationOptions = { page: 1, limit: 12, offset: 0 };
 
 class FakeRecipeRepository implements RecipeRepository {
@@ -81,7 +95,11 @@ class FakeRecipeRepository implements RecipeRepository {
         return { items: [], pagination: { page: 1, limit: 12, totalItems: 0, totalPages: 0, hasNextPage: false, hasPreviousPage: false } };
     }
 
-    async searchPublished(userId: number | null, filters: RecipeSearchFilters, page: PaginationOptions): Promise<PaginatedResult<RecipeListItem>> {
+    async searchPublished(
+        userId: number | null,
+        filters: RecipeSearchFilters,
+        page: PaginationOptions
+    ): Promise<PaginatedResult<RecipeListItem>> {
         this.publishedFilters = { userId, filters, pagination: page };
         return { items: [], pagination: { page: 1, limit: 12, totalItems: 0, totalPages: 0, hasNextPage: false, hasPreviousPage: false } };
     }
@@ -155,8 +173,24 @@ describe('RecipeService', () => {
             servings: 1,
             tagIds: [1, 2],
             ingredients: [
-                { ingredientId: 7, displayText: 'pommes Golden en quartiers', normalizedName: 'pommes golden en quartiers', quantity: 2, unit: null, note: 'note', sortOrder: 1 },
-                { ingredientId: 8, displayText: 'farine T55', normalizedName: 'farine t55', quantity: null, unit: null, note: null, sortOrder: 2 }
+                {
+                    ingredientId: 7,
+                    displayText: 'pommes Golden en quartiers',
+                    normalizedName: 'pommes golden en quartiers',
+                    quantity: 2,
+                    unit: null,
+                    note: 'note',
+                    sortOrder: 1
+                },
+                {
+                    ingredientId: 8,
+                    displayText: 'farine T55',
+                    normalizedName: 'farine t55',
+                    quantity: null,
+                    unit: null,
+                    note: null,
+                    sortOrder: 2
+                }
             ],
             steps: [{ stepNumber: 1, description: 'Bake' }],
             equipments: [{ equipmentId: 4 }]
@@ -169,15 +203,17 @@ describe('RecipeService', () => {
             ingredients: [{ displayText: '  Poudre-de-Lune  ' }]
         });
 
-        assert.deepEqual(repository.createdInput?.ingredients, [{
-            ingredientId: null,
-            displayText: 'Poudre-de-Lune',
-            normalizedName: 'poudre de lune',
-            quantity: null,
-            unit: null,
-            note: null,
-            sortOrder: 1
-        }]);
+        assert.deepEqual(repository.createdInput?.ingredients, [
+            {
+                ingredientId: null,
+                displayText: 'Poudre-de-Lune',
+                normalizedName: 'poudre de lune',
+                quantity: null,
+                unit: null,
+                note: null,
+                sortOrder: 1
+            }
+        ]);
     });
 
     it('rejects a free-text ingredient that cannot produce a catalogue name', async () => {
@@ -207,7 +243,17 @@ describe('RecipeService', () => {
             cookTimeMinutes: undefined,
             servings: undefined,
             tagIds: [3],
-            ingredients: [{ ingredientId: 8, displayText: 'farine complète', normalizedName: 'farine complete', quantity: 1, unit: 'g', note: 'fine', sortOrder: 4 }],
+            ingredients: [
+                {
+                    ingredientId: 8,
+                    displayText: 'farine complète',
+                    normalizedName: 'farine complete',
+                    quantity: 1,
+                    unit: 'g',
+                    note: 'fine',
+                    sortOrder: 4
+                }
+            ],
             steps: undefined,
             equipments: undefined
         });
@@ -215,15 +261,24 @@ describe('RecipeService', () => {
 
     it('enforces view and edit permissions', async () => {
         repository.recipe = null;
-        await assert.rejects(() => service.get(10, auth), (error) => assertHttpError(error, 'RECIPES_NOT_FOUND', 404));
+        await assert.rejects(
+            () => service.get(10, auth),
+            (error) => assertHttpError(error, 'RECIPES_NOT_FOUND', 404)
+        );
 
         repository.recipe = { ...baseRecipe, userId: 99, status: 'draft' };
-        await assert.rejects(() => service.get(10, auth), (error) => assertHttpError(error, 'RECIPES_ACCESS_DENIED', 403));
+        await assert.rejects(
+            () => service.get(10, auth),
+            (error) => assertHttpError(error, 'RECIPES_ACCESS_DENIED', 403)
+        );
 
         assert.deepEqual(await service.get(10, adminAuth), repository.recipe);
 
         repository.recipe = { ...baseRecipe, userId: 2, status: 'published' };
-        await assert.rejects(() => service.updateDraft(10, auth, { title: 'New title' }), (error) => assertHttpError(error, 'RECIPES_EDIT_FORBIDDEN', 403));
+        await assert.rejects(
+            () => service.updateDraft(10, auth, { title: 'New title' }),
+            (error) => assertHttpError(error, 'RECIPES_EDIT_FORBIDDEN', 403)
+        );
     });
 
     it('submits drafts with a public slug', async () => {
@@ -238,10 +293,16 @@ describe('RecipeService', () => {
         assert.equal(repository.archivedId, 10);
 
         repository.recipe = { ...baseRecipe, userId: 99, status: 'published' };
-        await assert.rejects(() => service.archive(10, auth), (error) => assertHttpError(error, 'RECIPES_ACCESS_DENIED', 403));
+        await assert.rejects(
+            () => service.archive(10, auth),
+            (error) => assertHttpError(error, 'RECIPES_ACCESS_DENIED', 403)
+        );
 
         repository.recipe = { ...baseRecipe, status: 'draft' };
-        await assert.rejects(() => service.archive(10, auth), (error) => assertHttpError(error, 'RECIPES_ARCHIVE_FORBIDDEN', 403));
+        await assert.rejects(
+            () => service.archive(10, auth),
+            (error) => assertHttpError(error, 'RECIPES_ARCHIVE_FORBIDDEN', 403)
+        );
     });
 
     it('delegates published searches', async () => {

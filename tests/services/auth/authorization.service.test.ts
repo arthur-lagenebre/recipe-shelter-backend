@@ -47,23 +47,9 @@ function createStaffAuth(
 }
 
 const ROLE_PERMISSIONS = {
-    RecipeModerator: [
-        PERMISSIONS.recipeReview,
-        PERMISSIONS.recipePublish,
-        PERMISSIONS.recipeReject,
-        PERMISSIONS.recipeArchive
-    ],
-    CommentModerator: [
-        PERMISSIONS.commentReview,
-        PERMISSIONS.commentHide,
-        PERMISSIONS.commentRestore,
-        PERMISSIONS.commentsUpdate
-    ],
-    UserAdmin: [
-        PERMISSIONS.userRead,
-        PERMISSIONS.userBan,
-        PERMISSIONS.userUnban
-    ],
+    RecipeModerator: [PERMISSIONS.recipeReview, PERMISSIONS.recipePublish, PERMISSIONS.recipeReject, PERMISSIONS.recipeArchive],
+    CommentModerator: [PERMISSIONS.commentReview, PERMISSIONS.commentHide, PERMISSIONS.commentRestore, PERMISSIONS.commentsUpdate],
+    UserAdmin: [PERMISSIONS.userRead, PERMISSIONS.userBan, PERMISSIONS.userUnban],
     CatalogManager: [
         PERMISSIONS.catalogRead,
         PERMISSIONS.catalogManage,
@@ -146,12 +132,8 @@ describe('authorization service', () => {
         it('enforces the complete access matrix for every account and role', () => {
             for (const matrixCase of ACCESS_MATRIX) {
                 const expectedPermissions = new Set(matrixCase.allowedPermissions);
-                const allowedPermissions = ALL_PERMISSIONS.filter((permission) =>
-                    hasPermission(matrixCase.auth, permission)
-                );
-                const deniedPermissions = ALL_PERMISSIONS.filter((permission) =>
-                    !hasPermission(matrixCase.auth, permission)
-                );
+                const allowedPermissions = ALL_PERMISSIONS.filter((permission) => hasPermission(matrixCase.auth, permission));
+                const deniedPermissions = ALL_PERMISSIONS.filter((permission) => !hasPermission(matrixCase.auth, permission));
 
                 assert.deepEqual(
                     allowedPermissions,

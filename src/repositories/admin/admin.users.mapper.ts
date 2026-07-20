@@ -1,4 +1,11 @@
-import type { AdminUserDetails, AdminUserDetailsRow, BannedUser, BannedUserRow, UserModerationLog, UserModerationLogRow } from './admin.users.types.js';
+import type {
+    AdminUserDetails,
+    AdminUserDetailsRow,
+    BannedUser,
+    BannedUserRow,
+    UserModerationLog,
+    UserModerationLogRow
+} from './admin.users.types.js';
 
 export function mapBannedUser(row: BannedUserRow): BannedUser {
     return {
@@ -37,8 +44,7 @@ export function mapUserModerationLog(row: UserModerationLogRow): UserModerationL
         createdAt: row.CreatedAt
     };
 
-    if (row.AdminUsername)
-        log.adminUsername = row.AdminUsername;
+    if (row.AdminUsername) log.adminUsername = row.AdminUsername;
 
     return log;
 }

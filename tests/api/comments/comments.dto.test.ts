@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { parseCommentIdParam, parseCreateCommentBody, parseRecipeIdParam, parseUpdateCommentBody } from '../../../src/api/comments/comments.dto.js';
+import {
+    parseCommentIdParam,
+    parseCreateCommentBody,
+    parseRecipeIdParam,
+    parseUpdateCommentBody
+} from '../../../src/api/comments/comments.dto.js';
 import { HttpError } from '../../../src/utils/errors.js';
 
 function assertHttpError(error: unknown, code: string, status: number): void {
@@ -39,11 +44,12 @@ describe('comments.dto', () => {
 
     it('rejects a reply with a rating', () => {
         assert.throws(
-            () => parseCreateCommentBody({
-                parentCommentId: 12,
-                rating: 4,
-                comment: 'Thanks, still rating this'
-            }),
+            () =>
+                parseCreateCommentBody({
+                    parentCommentId: 12,
+                    rating: 4,
+                    comment: 'Thanks, still rating this'
+                }),
             (error) => {
                 assertHttpError(error, 'COMMENTS_CREATE_REPLY_WITH_RATING', 400);
 
@@ -53,7 +59,8 @@ describe('comments.dto', () => {
     });
 
     it('rejects an invalid rating', () => {
-        assert.throws(() => parseCreateCommentBody({ rating: 6, comment: 'Too much' }),
+        assert.throws(
+            () => parseCreateCommentBody({ rating: 6, comment: 'Too much' }),
             (error) => {
                 assertHttpError(error, 'COMMENTS_CREATE_BAD_RATING', 400);
 
@@ -63,7 +70,8 @@ describe('comments.dto', () => {
     });
 
     it('rejects invalid create bodies and parent ids', () => {
-        assert.throws(() => parseCreateCommentBody(null),
+        assert.throws(
+            () => parseCreateCommentBody(null),
             (error) => {
                 assertHttpError(error, 'COMMENTS_CREATE_BAD_BODY', 400);
 
@@ -71,7 +79,8 @@ describe('comments.dto', () => {
             }
         );
 
-        assert.throws(() => parseCreateCommentBody({ parentCommentId: 0, comment: 'Thanks' }),
+        assert.throws(
+            () => parseCreateCommentBody({ parentCommentId: 0, comment: 'Thanks' }),
             (error) => {
                 assertHttpError(error, 'COMMENTS_CREATE_BAD_PARENT_COMMENT_ID', 400);
 
@@ -81,7 +90,8 @@ describe('comments.dto', () => {
     });
 
     it('rejects a comment longer than 2000 characters', () => {
-        assert.throws(() => parseCreateCommentBody({ comment: 'a'.repeat(2001) }),
+        assert.throws(
+            () => parseCreateCommentBody({ comment: 'a'.repeat(2001) }),
             (error) => {
                 assertHttpError(error, 'COMMENTS_CREATE_MISSING_COMMENT', 400);
 
@@ -89,7 +99,8 @@ describe('comments.dto', () => {
             }
         );
 
-        assert.throws(() => parseUpdateCommentBody({ comment: 'a'.repeat(2001) }),
+        assert.throws(
+            () => parseUpdateCommentBody({ comment: 'a'.repeat(2001) }),
             (error) => {
                 assertHttpError(error, 'COMMENTS_UPDATE_MISSING_COMMENT', 400);
 

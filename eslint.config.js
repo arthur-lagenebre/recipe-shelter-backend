@@ -1,4 +1,5 @@
 import js from '@eslint/js';
+import eslintConfigPrettier from 'eslint-config-prettier';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 import importPlugin from 'eslint-plugin-import';
@@ -20,7 +21,7 @@ export default [
             parserOptions: {
                 project: './tsconfig.json',
                 sourceType: 'module'
-            },
+            }
         },
         plugins: {
             import: importPlugin
@@ -30,8 +31,8 @@ export default [
                 'error',
                 {
                     prefer: 'type-imports',
-                    fixStyle: 'inline-type-imports',
-                },
+                    fixStyle: 'inline-type-imports'
+                }
             ],
 
             '@typescript-eslint/no-unused-vars': [
@@ -39,27 +40,23 @@ export default [
                 {
                     argsIgnorePattern: '^_',
                     varsIgnorePattern: '^_',
-                    caughtErrorsIgnorePattern: '^_',
-                },
+                    caughtErrorsIgnorePattern: '^_'
+                }
             ],
 
             'import/order': [
                 'error',
                 {
-                    groups: [
-                        'builtin',
-                        'external',
-                        'internal',
-                        ['parent', 'sibling', 'index'],
-                        'type',
-                    ],
+                    groups: ['builtin', 'external', 'internal', ['parent', 'sibling', 'index'], 'type'],
                     'newlines-between': 'always',
                     alphabetize: {
                         order: 'asc',
-                        caseInsensitive: true,
-                    },
-                },
-            ],
+                        caseInsensitive: true
+                    }
+                }
+            ]
         }
-    }
+    },
+
+    eslintConfigPrettier
 ];

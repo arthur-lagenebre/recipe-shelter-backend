@@ -5,13 +5,7 @@ import { normalizeIngredientName } from '../../../src/services/ingredients/ingre
 
 describe('normalizeIngredientName', () => {
     it('normalizes case, accents, spaces and punctuation to one canonical value', () => {
-        const variants = [
-            'Crème fraîche',
-            'CRÈME FRAÎCHE',
-            'Creme fraiche',
-            '  Crème   fraîche  ',
-            'Crème---fraîche!!!'
-        ];
+        const variants = ['Crème fraîche', 'CRÈME FRAÎCHE', 'Creme fraiche', '  Crème   fraîche  ', 'Crème---fraîche!!!'];
 
         assert.deepEqual(variants.map(normalizeIngredientName), Array(variants.length).fill('creme fraiche'));
     });

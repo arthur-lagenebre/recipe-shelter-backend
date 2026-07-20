@@ -29,11 +29,12 @@ describe('contact.dto', () => {
 
     it('rejects missing fields', () => {
         assert.throws(
-            () => parseContactMessageBody({
-                name: 'John Doe',
-                email: 'john@example.com',
-                subject: 'Question'
-            }),
+            () =>
+                parseContactMessageBody({
+                    name: 'John Doe',
+                    email: 'john@example.com',
+                    subject: 'Question'
+                }),
             (error) => {
                 assertHttpError(error, 'CONTACT_MISSING_FIELDS', 400);
 
@@ -44,12 +45,13 @@ describe('contact.dto', () => {
 
     it('rejects invalid email addresses', () => {
         assert.throws(
-            () => parseContactMessageBody({
-                name: 'John Doe',
-                email: 'john',
-                subject: 'Question',
-                message: 'Bonjour, je voudrais en savoir plus.'
-            }),
+            () =>
+                parseContactMessageBody({
+                    name: 'John Doe',
+                    email: 'john',
+                    subject: 'Question',
+                    message: 'Bonjour, je voudrais en savoir plus.'
+                }),
             (error) => {
                 assertHttpError(error, 'CONTACT_INVALID_EMAIL', 400);
 
@@ -60,12 +62,13 @@ describe('contact.dto', () => {
 
     it('rejects messages that are too short', () => {
         assert.throws(
-            () => parseContactMessageBody({
-                name: 'John Doe',
-                email: 'john@example.com',
-                subject: 'Question',
-                message: 'Bonjour'
-            }),
+            () =>
+                parseContactMessageBody({
+                    name: 'John Doe',
+                    email: 'john@example.com',
+                    subject: 'Question',
+                    message: 'Bonjour'
+                }),
             (error) => {
                 assertHttpError(error, 'CONTACT_MESSAGE_TOO_SHORT', 400);
 
@@ -76,12 +79,13 @@ describe('contact.dto', () => {
 
     it('rejects fields that are too long', () => {
         assert.throws(
-            () => parseContactMessageBody({
-                name: 'J'.repeat(101),
-                email: 'john@example.com',
-                subject: 'Question',
-                message: 'Bonjour, je voudrais en savoir plus.'
-            }),
+            () =>
+                parseContactMessageBody({
+                    name: 'J'.repeat(101),
+                    email: 'john@example.com',
+                    subject: 'Question',
+                    message: 'Bonjour, je voudrais en savoir plus.'
+                }),
             (error) => {
                 assertHttpError(error, 'CONTACT_NAME_TOO_LONG', 400);
 
@@ -90,12 +94,13 @@ describe('contact.dto', () => {
         );
 
         assert.throws(
-            () => parseContactMessageBody({
-                name: 'John Doe',
-                email: 'john@example.com',
-                subject: 'Q'.repeat(151),
-                message: 'Bonjour, je voudrais en savoir plus.'
-            }),
+            () =>
+                parseContactMessageBody({
+                    name: 'John Doe',
+                    email: 'john@example.com',
+                    subject: 'Q'.repeat(151),
+                    message: 'Bonjour, je voudrais en savoir plus.'
+                }),
             (error) => {
                 assertHttpError(error, 'CONTACT_SUBJECT_TOO_LONG', 400);
 

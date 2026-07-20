@@ -1,11 +1,11 @@
 import type { RecipeRepository } from '../../repositories/recipes/recipe.repository.interface.js';
 
 export class RecipeSlugService {
-    constructor(private readonly recipes: RecipeRepository) { }
+    constructor(private readonly recipes: RecipeRepository) {}
 
     async createDraftSlug(userId: number): Promise<string> {
         const rand = Math.random().toString(36).slice(2, 8);
-        
+
         return `draft_${userId}_${Date.now()}_${rand}`;
     }
 

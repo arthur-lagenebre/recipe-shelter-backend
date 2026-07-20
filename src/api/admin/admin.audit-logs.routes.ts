@@ -7,13 +7,13 @@ import { PERMISSIONS } from '../../security/permissions.js';
 import type { RequestHandler } from 'express';
 
 type AdminAuditLogsController = {
-  list: RequestHandler;
+    list: RequestHandler;
 };
 
 export function createAdminAuditLogsRouter(controller: AdminAuditLogsController) {
-  const router = Router();
+    const router = Router();
 
-  router.get('/', requireStaffAuth, RequirePermission(PERMISSIONS.auditRead), controller.list);
+    router.get('/', requireStaffAuth, RequirePermission(PERMISSIONS.auditRead), controller.list);
 
-  return router;
+    return router;
 }

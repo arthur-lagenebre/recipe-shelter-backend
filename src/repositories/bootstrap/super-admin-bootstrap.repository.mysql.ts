@@ -1,6 +1,11 @@
 import { firstOrNull } from '../../utils/array.js';
 
-import type { BeforeFirstSuperAdminCommit, CreateFirstSuperAdminInput, CreateFirstSuperAdminResult, SuperAdminBootstrapRepository } from './super-admin-bootstrap.repository.interface.js';
+import type {
+    BeforeFirstSuperAdminCommit,
+    CreateFirstSuperAdminInput,
+    CreateFirstSuperAdminResult,
+    SuperAdminBootstrapRepository
+} from './super-admin-bootstrap.repository.interface.js';
 import type { Pool, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 
 const SUPER_ADMIN_ROLE_CODE = 'SuperAdmin';
@@ -20,7 +25,7 @@ type ExistingIdentityRow = RowDataPacket & {
 };
 
 export class SuperAdminBootstrapRepositoryMysql implements SuperAdminBootstrapRepository {
-    constructor(private readonly db: Pool) { }
+    constructor(private readonly db: Pool) {}
 
     async createFirst(input: CreateFirstSuperAdminInput, beforeCommit: BeforeFirstSuperAdminCommit): Promise<CreateFirstSuperAdminResult> {
         const conn = await this.db.getConnection();
@@ -111,8 +116,7 @@ export class SuperAdminBootstrapRepositoryMysql implements SuperAdminBootstrapRe
             await conn.rollback();
 
             const duplicateStatus = getDuplicateIdentityStatus(error);
-            if (duplicateStatus)
-                return { status: duplicateStatus };
+            if (duplicateStatus) return { status: duplicateStatus };
 
             throw error;
         } finally {
@@ -122,15 +126,12 @@ export class SuperAdminBootstrapRepositoryMysql implements SuperAdminBootstrapRe
 }
 
 function getDuplicateIdentityStatus(error: unknown): 'email_taken' | 'username_taken' | null {
-    if (!error || typeof error !== 'object' || !('code' in error) || error.code !== 'ER_DUP_ENTRY')
-        return null;
+    if (!error || typeof error !== 'object' || !('code' in error) || error.code !== 'ER_DUP_ENTRY') return null;
 
     const message = 'message' in error ? String(error.message) : '';
 
-    if (message.includes('users_mail_UK'))
-        return 'email_taken';
-    if (message.includes('users_username_UK'))
-        return 'username_taken';
+    if (message.includes('users_mail_UK')) return 'email_taken';
+    if (message.includes('users_username_UK')) return 'username_taken';
 
     return null;
 }

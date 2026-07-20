@@ -7,7 +7,11 @@ import express from 'express';
 import { createHealthController } from '../../src/api/health/health.controller.js';
 import { createHealthRouter } from '../../src/api/health/health.routes.js';
 import { errorHandler } from '../../src/middlewares/error-handler.js';
-import { configureAuthRbacRepository, configureAuthSessionRepository, configureAuthUserRepository } from '../../src/middlewares/require-auth.js';
+import {
+    configureAuthRbacRepository,
+    configureAuthSessionRepository,
+    configureAuthUserRepository
+} from '../../src/middlewares/require-auth.js';
 import { PERMISSIONS } from '../../src/security/permissions.js';
 import { startHttpTestServer } from '../helpers/http-test-server.js';
 import { TestSessionRepository } from '../helpers/auth-session.js';
@@ -36,10 +40,14 @@ describe('health HTTP integration', () => {
 
     before(async () => {
         configureAuthUserRepository({
-            async findById(id) { return id === admin.id ? admin : null; }
+            async findById(id) {
+                return id === admin.id ? admin : null;
+            }
         });
         configureAuthRbacRepository({
-            async findPermissionCodesByStaffUserId() { return [PERMISSIONS.systemHealthRead]; }
+            async findPermissionCodesByStaffUserId() {
+                return [PERMISSIONS.systemHealthRead];
+            }
         });
         const sessions = new TestSessionRepository();
         configureAuthSessionRepository(sessions);

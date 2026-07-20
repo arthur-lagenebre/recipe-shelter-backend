@@ -5,21 +5,21 @@ import { optionalCommunityAuth, requireCommunityAuth } from '../../middlewares/r
 import type { RequestHandler } from 'express';
 
 type UsersController = {
-  me: RequestHandler;
-  getUser: RequestHandler;
-  updateEmail: RequestHandler;
-  updatePassword: RequestHandler;
-  updateUsername: RequestHandler;
+    me: RequestHandler;
+    getUser: RequestHandler;
+    updateEmail: RequestHandler;
+    updatePassword: RequestHandler;
+    updateUsername: RequestHandler;
 };
 
 export function createUsersRouter(controller: UsersController) {
-  const router = Router();
+    const router = Router();
 
-  router.get('/me', requireCommunityAuth, controller.me);
-  router.get('/:username', optionalCommunityAuth, controller.getUser);
-  router.patch('/me/email', requireCommunityAuth, controller.updateEmail);
-  router.patch('/me/password', requireCommunityAuth, controller.updatePassword);
-  router.patch('/me/username', requireCommunityAuth, controller.updateUsername);
+    router.get('/me', requireCommunityAuth, controller.me);
+    router.get('/:username', optionalCommunityAuth, controller.getUser);
+    router.patch('/me/email', requireCommunityAuth, controller.updateEmail);
+    router.patch('/me/password', requireCommunityAuth, controller.updatePassword);
+    router.patch('/me/username', requireCommunityAuth, controller.updateUsername);
 
-  return router;
+    return router;
 }

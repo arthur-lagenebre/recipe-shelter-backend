@@ -8,7 +8,13 @@ export function createCommentsController(commentService: CommentService) {
         createComment: asyncHandler(async (req, res) => {
             const recipeId = parseRecipeIdParam(req.params.recipeId);
             const body = parseCreateCommentBody(req.body);
-            const comment = await commentService.createComment({ recipeId, userId: req.auth!.userId, parentCommentId: body.parentCommentId, rating: body.rating, comment: body.comment });
+            const comment = await commentService.createComment({
+                recipeId,
+                userId: req.auth!.userId,
+                parentCommentId: body.parentCommentId,
+                rating: body.rating,
+                comment: body.comment
+            });
 
             res.status(201).json(comment);
         }),
@@ -16,7 +22,12 @@ export function createCommentsController(commentService: CommentService) {
         updateComment: asyncHandler(async (req, res) => {
             const commentId = parseCommentIdParam(req.params.id);
             const body = parseUpdateCommentBody(req.body);
-            const comment = await commentService.updateComment({ id: commentId, userId: req.auth!.userId, rating: body.rating, comment: body.comment });
+            const comment = await commentService.updateComment({
+                id: commentId,
+                userId: req.auth!.userId,
+                rating: body.rating,
+                comment: body.comment
+            });
 
             res.status(200).json(comment);
         }),

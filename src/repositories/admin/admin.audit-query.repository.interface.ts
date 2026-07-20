@@ -3,5 +3,5 @@ import type { PaginatedResult, PaginationOptions } from '../../utils/pagination.
 
 /** Read-only investigation boundary, deliberately separate from append-only audit writes. */
 export interface AdminAuditQueryRepository {
-  find(filters: AdminAuditLogFilters, pagination: PaginationOptions): Promise<PaginatedResult<AdminAuditLog>>;
+    find(filters: AdminAuditLogFilters, pagination: PaginationOptions): Promise<PaginatedResult<AdminAuditLog>>;
 }

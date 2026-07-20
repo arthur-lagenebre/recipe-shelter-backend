@@ -1,4 +1,11 @@
-import { parseCreateRecipeBody, parseRecipeFeedLimitQuery, parseRecipeSlugParam, parseRecipeIdParam, parseRecipeSearchQuery, parseUpdateRecipeBody } from './recipes.dto.js';
+import {
+    parseCreateRecipeBody,
+    parseRecipeFeedLimitQuery,
+    parseRecipeSlugParam,
+    parseRecipeIdParam,
+    parseRecipeSearchQuery,
+    parseUpdateRecipeBody
+} from './recipes.dto.js';
 import { unauthorized } from '../../utils/errors.js';
 import { parsePaginationQuery } from '../../utils/pagination.js';
 import { asyncHandler } from '../http/async-handler.js';
@@ -62,7 +69,6 @@ export function createRecipesController(recipeService: RecipeService, recipeImag
             res.status(200).json(result);
         }),
 
-
         getRecipe: asyncHandler(async (req, res) => {
             if (!req.auth) throw unauthorized('Unauthorized', 'AUTH_UNAUTHORIZED');
 
@@ -121,7 +127,6 @@ export function createRecipesController(recipeService: RecipeService, recipeImag
             await recipeImageService.delete(recipeId, req.auth);
 
             res.status(204).send();
-        }),
-
+        })
     };
 }

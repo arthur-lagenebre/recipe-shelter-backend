@@ -26,12 +26,9 @@ const testDatabaseName = process.env.TEST_DB_NAME?.trim() ?? '';
 const mysqlEnabled = Boolean(testDatabaseName);
 
 function requireSafeTestDatabaseName(): string {
-    if (!/^[a-zA-Z0-9_]+$/.test(testDatabaseName))
-        throw new Error('TEST_DB_NAME must contain only letters, numbers and underscores');
-    if (!testDatabaseName.toLowerCase().includes('test'))
-        throw new Error('TEST_DB_NAME must contain "test"');
-    if (testDatabaseName === env.db.name)
-        throw new Error('TEST_DB_NAME must be different from DB_NAME');
+    if (!/^[a-zA-Z0-9_]+$/.test(testDatabaseName)) throw new Error('TEST_DB_NAME must contain only letters, numbers and underscores');
+    if (!testDatabaseName.toLowerCase().includes('test')) throw new Error('TEST_DB_NAME must contain "test"');
+    if (testDatabaseName === env.db.name) throw new Error('TEST_DB_NAME must be different from DB_NAME');
     return testDatabaseName;
 }
 
@@ -50,13 +47,10 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
         });
 
         await adminConnection.query(`DROP DATABASE IF EXISTS \`${databaseName}\``);
-        await adminConnection.query(
-            `CREATE DATABASE \`${databaseName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
-        );
+        await adminConnection.query(`CREATE DATABASE \`${databaseName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
 
         const schemaPath = new URL('../../../database/migrations/1_create_schema.sql', import.meta.url);
-        const schema = (await readFile(schemaPath, 'utf8'))
-            .replace(/USE\s+recipe_shelter\s*;/i, `USE \`${databaseName}\`;`);
+        const schema = (await readFile(schemaPath, 'utf8')).replace(/USE\s+recipe_shelter\s*;/i, `USE \`${databaseName}\`;`);
         await adminConnection.query(schema);
 
         await adminConnection.query(`
@@ -151,8 +145,7 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
     });
 
     after(async () => {
-        if (pool)
-            await pool.end();
+        if (pool) await pool.end();
         if (adminConnection) {
             await adminConnection.query(`DROP DATABASE IF EXISTS \`${requireSafeTestDatabaseName()}\``);
             await adminConnection.end();
@@ -168,25 +161,25 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
         const adminUsers = new AdminUserRepositoryMysql(pool);
         const adminRecipes = new AdminRecipeRepositoryMysql(pool);
         const adminComments = new AdminCommentRepositoryMysql(pool);
-        const auditActions = new AdminAuditActionRunnerMysql(
-            pool,
-            (db) => new AdminAuditService(new AdminAuditRepositoryMysql(db))
-        );
+        const auditActions = new AdminAuditActionRunnerMysql(pool, (db) => new AdminAuditService(new AdminAuditRepositoryMysql(db)));
         const adminUserService = new AdminUserService(users, adminUsers, auditActions);
         const adminRecipeService = new AdminRecipeService(adminRecipes, auditActions);
         const adminCommentService = new AdminCommentService(adminComments, auditActions);
 
         const [accountTypeColumns] = await pool.query(`SHOW COLUMNS FROM Users WHERE Field = 'AccountType'`);
         const accountTypeColumn = (accountTypeColumns as Array<{ Type: string; Null: string; Default: string }>)[0];
-        assert.deepEqual(accountTypeColumn && {
-            type: accountTypeColumn.Type,
-            nullable: accountTypeColumn.Null,
-            defaultValue: accountTypeColumn.Default
-        }, {
-            type: "enum('community','staff')",
-            nullable: 'NO',
-            defaultValue: 'community'
-        });
+        assert.deepEqual(
+            accountTypeColumn && {
+                type: accountTypeColumn.Type,
+                nullable: accountTypeColumn.Null,
+                defaultValue: accountTypeColumn.Default
+            },
+            {
+                type: "enum('community','staff')",
+                nullable: 'NO',
+                defaultValue: 'community'
+            }
+        );
         const [staffStatusColumns] = await pool.query(`SHOW COLUMNS FROM StaffProfiles WHERE Field = 'Status'`);
         assert.equal((staffStatusColumns as Array<{ Type: string }>)[0]?.Type, "enum('invited','active','locked','disabled')");
         assert.equal((await users.findById(1))?.accountType, 'staff');
@@ -200,8 +193,8 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
         assert.equal(await users.findStaffProfileByUserId(2), null);
         assert.equal((await users.findCommunityProfileByUserId(2))?.status, 'active');
 
-        await assert.rejects(
-            () => pool.query(`INSERT INTO CommunityProfiles (UserId, AccountType, Status) VALUES (1, 'community', 'active')`)
+        await assert.rejects(() =>
+            pool.query(`INSERT INTO CommunityProfiles (UserId, AccountType, Status) VALUES (1, 'community', 'active')`)
         );
         assert.equal(await users.findCommunityProfileByUserId(1), null);
 
@@ -230,10 +223,7 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
         assert.equal((await users.findStaffProfileByUserId(staff.id))?.status, 'invited');
         assert.deepEqual(await rbac.findPermissionCodesByStaffUserId(staff.id), []);
 
-        await pool.query(
-            `INSERT INTO StaffRoles (StaffUserId, RoleId) VALUES (?, 1), (?, 2)`,
-            [staff.id, staff.id]
-        );
+        await pool.query(`INSERT INTO StaffRoles (StaffUserId, RoleId) VALUES (?, 1), (?, 2)`, [staff.id, staff.id]);
         assert.deepEqual(await rbac.findPermissionCodesByStaffUserId(staff.id), [
             'recipe.archive',
             'recipe.publish',
@@ -248,9 +238,9 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
         await assert.rejects(() => pool.query(`INSERT INTO StaffRoles (StaffUserId, RoleId) VALUES (?, 999999)`, [staff.id]));
         await assert.rejects(() => pool.query(`INSERT INTO RolePermissions (RoleId, PermissionId) VALUES (1, 1)`));
         await assert.rejects(() => pool.query(`INSERT INTO RolePermissions (RoleId, PermissionId) VALUES (1, 999999)`));
-        await assert.rejects(() => pool.query(
-            `INSERT INTO Roles (Code, Name, Description) VALUES ('SUPERADMIN', 'Other administrator', 'Duplicate')`
-        ));
+        await assert.rejects(() =>
+            pool.query(`INSERT INTO Roles (Code, Name, Description) VALUES ('SUPERADMIN', 'Other administrator', 'Duplicate')`)
+        );
         await assert.rejects(() => pool.query(`INSERT INTO Permissions (Code, Description) VALUES ('USER.READ', 'Duplicate')`));
         const author = await users.create({
             mail: 'author@test.local',
@@ -297,7 +287,14 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
             title: recipe.title,
             slug: recipe.slug,
             ingredients: [
-                { ingredientId: 1, displayText: 'pâtes fraîches maison, finement coupées', quantity: 200, unit: 'g', note: null, sortOrder: 1 },
+                {
+                    ingredientId: 1,
+                    displayText: 'pâtes fraîches maison, finement coupées',
+                    quantity: 200,
+                    unit: 'g',
+                    note: null,
+                    sortOrder: 1
+                },
                 { ingredientId: 10, displayText: 'base aromatique au goût', note: 'to taste', sortOrder: 2 }
             ]
         });
@@ -379,12 +376,14 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
             { Action: 'recipes.archive', Reason: 'Editorial policy violation.' }
         ]);
 
-        await assert.rejects(() => recipes.create({
-            userId: author.id,
-            title: 'Rollback recipe',
-            slug: 'rollback-recipe',
-            ingredients: [{ ingredientId: 999_999, displayText: 'ingrédient inconnu', quantity: 1 }]
-        }));
+        await assert.rejects(() =>
+            recipes.create({
+                userId: author.id,
+                title: 'Rollback recipe',
+                slug: 'rollback-recipe',
+                ingredients: [{ ingredientId: 999_999, displayText: 'ingrédient inconnu', quantity: 1 }]
+            })
+        );
         assert.equal(await recipes.existsBySlug('rollback-recipe'), false);
     });
 
@@ -394,69 +393,105 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
         const fixtureQuery = { q: 'filterfixture' };
         const ids = (result: Awaited<ReturnType<RecipeRepositoryMysql['searchPublished']>>) => result.items.map((item) => item.id);
 
-        const inclusions = await recipes.searchPublished(null, {
-            ...fixtureQuery,
-            tagIds: [10, 11],
-            ingredientIds: [10, 11]
-        }, pagination);
+        const inclusions = await recipes.searchPublished(
+            null,
+            {
+                ...fixtureQuery,
+                tagIds: [10, 11],
+                ingredientIds: [10, 11]
+            },
+            pagination
+        );
         assert.deepEqual(ids(inclusions), [100, 101, 102, 104]);
         assert.equal(inclusions.pagination.totalItems, 4);
         assert.ok(!ids(inclusions).includes(105), 'draft recipes must not be returned');
 
-        const excludedByTag = await recipes.searchPublished(null, {
-            ...fixtureQuery,
-            excludedTagIds: [12]
-        }, pagination);
+        const excludedByTag = await recipes.searchPublished(
+            null,
+            {
+                ...fixtureQuery,
+                excludedTagIds: [12]
+            },
+            pagination
+        );
         assert.deepEqual(ids(excludedByTag), [100, 102, 103, 104, 106]);
 
-        const excludedByIngredient = await recipes.searchPublished(null, {
-            ...fixtureQuery,
-            excludedIngredientIds: [12]
-        }, pagination);
+        const excludedByIngredient = await recipes.searchPublished(
+            null,
+            {
+                ...fixtureQuery,
+                excludedIngredientIds: [12]
+            },
+            pagination
+        );
         assert.deepEqual(ids(excludedByIngredient), [100, 102, 103, 104, 106]);
 
-        const includedAndExcluded = await recipes.searchPublished(null, {
-            ...fixtureQuery,
-            tagIds: [10, 11],
-            excludedTagIds: [12],
-            ingredientIds: [10, 11],
-            excludedIngredientIds: [12]
-        }, pagination);
+        const includedAndExcluded = await recipes.searchPublished(
+            null,
+            {
+                ...fixtureQuery,
+                tagIds: [10, 11],
+                excludedTagIds: [12],
+                ingredientIds: [10, 11],
+                excludedIngredientIds: [12]
+            },
+            pagination
+        );
         assert.deepEqual(ids(includedAndExcluded), [100, 102, 104]);
 
-        const severalExclusions = await recipes.searchPublished(null, {
-            ...fixtureQuery,
-            excludedTagIds: [12, 999_999]
-        }, pagination);
+        const severalExclusions = await recipes.searchPublished(
+            null,
+            {
+                ...fixtureQuery,
+                excludedTagIds: [12, 999_999]
+            },
+            pagination
+        );
         assert.deepEqual(ids(severalExclusions), [100, 102, 103, 104, 106]);
 
-        const unknownExclusion = await recipes.searchPublished(null, {
-            ...fixtureQuery,
-            excludedTagIds: [999_999],
-            excludedIngredientIds: [999_999]
-        }, pagination);
+        const unknownExclusion = await recipes.searchPublished(
+            null,
+            {
+                ...fixtureQuery,
+                excludedTagIds: [999_999],
+                excludedIngredientIds: [999_999]
+            },
+            pagination
+        );
         assert.deepEqual(ids(unknownExclusion), [100, 101, 102, 103, 104, 106]);
 
-        const unknownInclusion = await recipes.searchPublished(null, {
-            ...fixtureQuery,
-            tagIds: [999_999]
-        }, pagination);
+        const unknownInclusion = await recipes.searchPublished(
+            null,
+            {
+                ...fixtureQuery,
+                tagIds: [999_999]
+            },
+            pagination
+        );
         assert.deepEqual(ids(unknownInclusion), []);
         assert.equal(unknownInclusion.pagination.totalItems, 0);
 
-        const combinedFilters = await recipes.searchPublished(null, {
-            ...fixtureQuery,
-            categoryId: 2,
-            excludedTagIds: [12],
-            maxTotalTimeMinutes: 25
-        }, pagination);
+        const combinedFilters = await recipes.searchPublished(
+            null,
+            {
+                ...fixtureQuery,
+                categoryId: 2,
+                excludedTagIds: [12],
+                maxTotalTimeMinutes: 25
+            },
+            pagination
+        );
         assert.deepEqual(ids(combinedFilters), [100]);
 
-        const exactPage = await recipes.searchPublished(null, {
-            ...fixtureQuery,
-            tagIds: [10],
-            excludedTagIds: [12]
-        }, { page: 1, limit: 2, offset: 0 });
+        const exactPage = await recipes.searchPublished(
+            null,
+            {
+                ...fixtureQuery,
+                tagIds: [10],
+                excludedTagIds: [12]
+            },
+            { page: 1, limit: 2, offset: 0 }
+        );
         assert.deepEqual(ids(exactPage), [100, 102]);
         assert.deepEqual(exactPage.pagination, {
             page: 1,
@@ -467,10 +502,14 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
             hasPreviousPage: false
         });
 
-        const duplicateIngredientRows = await recipes.searchPublished(null, {
-            ...fixtureQuery,
-            ingredientIds: [10]
-        }, pagination);
+        const duplicateIngredientRows = await recipes.searchPublished(
+            null,
+            {
+                ...fixtureQuery,
+                ingredientIds: [10]
+            },
+            pagination
+        );
         assert.equal(duplicateIngredientRows.items.length, 6);
         assert.equal(new Set(ids(duplicateIngredientRows)).size, duplicateIngredientRows.items.length);
         assert.equal(duplicateIngredientRows.pagination.totalItems, 6);

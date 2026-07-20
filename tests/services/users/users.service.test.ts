@@ -227,27 +227,42 @@ describe('UserService', () => {
     it('rejects invalid email updates', async () => {
         users.userWithPassword = { ...baseUser, passwordHash: await bcrypt.hash('current-password', 4) };
 
-        await assert.rejects(() => service.updateEmail(2, '', 'current-password'), (error) => {
-            assertHttpError(error, 'USERS_UPDATE_EMAIL_MISSING_EMAIL', 400);
-            return true;
-        });
-        await assert.rejects(() => service.updateEmail(2, 'invalid', 'current-password'), (error) => {
-            assertHttpError(error, 'USERS_UPDATE_EMAIL_INVALID_EMAIL', 400);
-            return true;
-        });
-        await assert.rejects(() => service.updateEmail(2, 'new@example.com', 'wrong'), (error) => {
-            assertHttpError(error, 'USERS_UPDATE_EMAIL_BAD_PASSWORD', 401);
-            return true;
-        });
-        await assert.rejects(() => service.updateEmail(2, baseUser.mail, 'current-password'), (error) => {
-            assertHttpError(error, 'USERS_UPDATE_EMAIL_SAME_EMAIL', 400);
-            return true;
-        });
+        await assert.rejects(
+            () => service.updateEmail(2, '', 'current-password'),
+            (error) => {
+                assertHttpError(error, 'USERS_UPDATE_EMAIL_MISSING_EMAIL', 400);
+                return true;
+            }
+        );
+        await assert.rejects(
+            () => service.updateEmail(2, 'invalid', 'current-password'),
+            (error) => {
+                assertHttpError(error, 'USERS_UPDATE_EMAIL_INVALID_EMAIL', 400);
+                return true;
+            }
+        );
+        await assert.rejects(
+            () => service.updateEmail(2, 'new@example.com', 'wrong'),
+            (error) => {
+                assertHttpError(error, 'USERS_UPDATE_EMAIL_BAD_PASSWORD', 401);
+                return true;
+            }
+        );
+        await assert.rejects(
+            () => service.updateEmail(2, baseUser.mail, 'current-password'),
+            (error) => {
+                assertHttpError(error, 'USERS_UPDATE_EMAIL_SAME_EMAIL', 400);
+                return true;
+            }
+        );
         users.userByEmail = { ...baseUser, id: 99, mail: 'taken@example.com' };
-        await assert.rejects(() => service.updateEmail(2, 'taken@example.com', 'current-password'), (error) => {
-            assertHttpError(error, 'USERS_UPDATE_EMAIL_ALREADY_USED', 409);
-            return true;
-        });
+        await assert.rejects(
+            () => service.updateEmail(2, 'taken@example.com', 'current-password'),
+            (error) => {
+                assertHttpError(error, 'USERS_UPDATE_EMAIL_ALREADY_USED', 409);
+                return true;
+            }
+        );
     });
 
     it('updates passwords after validating the current password and policy', async () => {
@@ -257,11 +272,13 @@ describe('UserService', () => {
 
         assert.equal(users.updatedPassword?.userId, 2);
         assert.equal(await bcrypt.compare('new-password', users.updatedPassword?.passwordHash ?? ''), true);
-        assert.deepEqual(sessions.revocations, [{
-            userId: 2,
-            revocationType: 'password_changed',
-            exceptSessionId: 'current-session-id'
-        }]);
+        assert.deepEqual(sessions.revocations, [
+            {
+                userId: 2,
+                revocationType: 'password_changed',
+                exceptSessionId: 'current-session-id'
+            }
+        ]);
     });
 
     it('updates the password and revokes every active session when no current session id is available', async () => {
@@ -276,18 +293,27 @@ describe('UserService', () => {
     it('rejects invalid password updates', async () => {
         users.userWithPassword = { ...baseUser, passwordHash: await bcrypt.hash('current-password', 4) };
 
-        await assert.rejects(() => service.updatePassword(2, 'wrong', 'new-password', null), (error) => {
-            assertHttpError(error, 'USERS_UPDATE_PASSWORD_BAD_CURRENT', 401);
-            return true;
-        });
-        await assert.rejects(() => service.updatePassword(2, 'current-password', 'current-password', null), (error) => {
-            assertHttpError(error, 'USERS_UPDATE_PASSWORD_SAME_PASSWORD', 400);
-            return true;
-        });
-        await assert.rejects(() => service.updatePassword(2, 'current-password', 'short', null), (error) => {
-            assertHttpError(error, 'USERS_UPDATE_PASSWORD_WEAK_PASSWORD', 400);
-            return true;
-        });
+        await assert.rejects(
+            () => service.updatePassword(2, 'wrong', 'new-password', null),
+            (error) => {
+                assertHttpError(error, 'USERS_UPDATE_PASSWORD_BAD_CURRENT', 401);
+                return true;
+            }
+        );
+        await assert.rejects(
+            () => service.updatePassword(2, 'current-password', 'current-password', null),
+            (error) => {
+                assertHttpError(error, 'USERS_UPDATE_PASSWORD_SAME_PASSWORD', 400);
+                return true;
+            }
+        );
+        await assert.rejects(
+            () => service.updatePassword(2, 'current-password', 'short', null),
+            (error) => {
+                assertHttpError(error, 'USERS_UPDATE_PASSWORD_WEAK_PASSWORD', 400);
+                return true;
+            }
+        );
         assert.deepEqual(sessions.revocations, []);
     });
 
@@ -303,26 +329,41 @@ describe('UserService', () => {
     it('rejects invalid username updates', async () => {
         users.userWithPassword = { ...baseUser, passwordHash: await bcrypt.hash('current-password', 4) };
 
-        await assert.rejects(() => service.updateUsername(2, 'current-password', ' '), (error) => {
-            assertHttpError(error, 'USERS_UPDATE_USERNAME_MISSING_USERNAME', 400);
-            return true;
-        });
-        await assert.rejects(() => service.updateUsername(2, 'current-password', 'ab'), (error) => {
-            assertHttpError(error, 'USERS_UPDATE_USERNAME_WEAK_USERNAME', 400);
-            return true;
-        });
-        await assert.rejects(() => service.updateUsername(2, 'wrong', 'newname'), (error) => {
-            assertHttpError(error, 'USERS_UPDATE_USERNAME_BAD_PASSWORD', 401);
-            return true;
-        });
-        await assert.rejects(() => service.updateUsername(2, 'current-password', baseUser.username), (error) => {
-            assertHttpError(error, 'USERS_UPDATE_USERNAME_SAME_USERNAME', 400);
-            return true;
-        });
+        await assert.rejects(
+            () => service.updateUsername(2, 'current-password', ' '),
+            (error) => {
+                assertHttpError(error, 'USERS_UPDATE_USERNAME_MISSING_USERNAME', 400);
+                return true;
+            }
+        );
+        await assert.rejects(
+            () => service.updateUsername(2, 'current-password', 'ab'),
+            (error) => {
+                assertHttpError(error, 'USERS_UPDATE_USERNAME_WEAK_USERNAME', 400);
+                return true;
+            }
+        );
+        await assert.rejects(
+            () => service.updateUsername(2, 'wrong', 'newname'),
+            (error) => {
+                assertHttpError(error, 'USERS_UPDATE_USERNAME_BAD_PASSWORD', 401);
+                return true;
+            }
+        );
+        await assert.rejects(
+            () => service.updateUsername(2, 'current-password', baseUser.username),
+            (error) => {
+                assertHttpError(error, 'USERS_UPDATE_USERNAME_SAME_USERNAME', 400);
+                return true;
+            }
+        );
         users.user = { ...baseUser, id: 99, username: 'taken' };
-        await assert.rejects(() => service.updateUsername(2, 'current-password', 'taken'), (error) => {
-            assertHttpError(error, 'USERS_UPDATE_USERNAME_ALREADY_USED', 409);
-            return true;
-        });
+        await assert.rejects(
+            () => service.updateUsername(2, 'current-password', 'taken'),
+            (error) => {
+                assertHttpError(error, 'USERS_UPDATE_USERNAME_ALREADY_USED', 409);
+                return true;
+            }
+        );
     });
 });

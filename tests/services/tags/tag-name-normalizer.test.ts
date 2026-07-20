@@ -5,13 +5,7 @@ import { normalizeTagName } from '../../../src/services/tags/tags.service.js';
 
 describe('normalizeTagName', () => {
     it('normalizes case, accents, spaces and punctuation to one canonical value', () => {
-        const variants = [
-            'Crème brûlée',
-            'CRÈME BRÛLÉE',
-            'Creme brulee',
-            '  Crème   brûlée  ',
-            'Crème---brûlée!!!'
-        ];
+        const variants = ['Crème brûlée', 'CRÈME BRÛLÉE', 'Creme brulee', '  Crème   brûlée  ', 'Crème---brûlée!!!'];
 
         assert.deepEqual(variants.map(normalizeTagName), Array(variants.length).fill('creme brulee'));
     });

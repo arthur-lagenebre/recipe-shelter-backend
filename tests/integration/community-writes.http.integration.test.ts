@@ -10,7 +10,11 @@ import { createFavoritesRouter } from '../../src/api/favorites/favorites.routes.
 import { createRecipesRouter } from '../../src/api/recipes/recipes.routes.js';
 import { errorHandler } from '../../src/middlewares/error-handler.js';
 import { notFound } from '../../src/middlewares/not-found.js';
-import { configureAuthRbacRepository, configureAuthSessionRepository, configureAuthUserRepository } from '../../src/middlewares/require-auth.js';
+import {
+    configureAuthRbacRepository,
+    configureAuthSessionRepository,
+    configureAuthUserRepository
+} from '../../src/middlewares/require-auth.js';
 import { PERMISSIONS } from '../../src/security/permissions.js';
 import { TestSessionRepository } from '../helpers/auth-session.js';
 import { startHttpTestServer } from '../helpers/http-test-server.js';
@@ -100,15 +104,15 @@ describe('community write HTTP boundary', () => {
 
         configureAuthUserRepository({
             async findById(id) {
-                if (id === staff.id)
-                    return staff;
-                if (id === communityUser.id)
-                    return communityUser;
+                if (id === staff.id) return staff;
+                if (id === communityUser.id) return communityUser;
                 return null;
             }
         });
         configureAuthRbacRepository({
-            async findPermissionCodesByStaffUserId() { return Object.values(PERMISSIONS); }
+            async findPermissionCodesByStaffUserId() {
+                return Object.values(PERMISSIONS);
+            }
         });
         const sessions = new TestSessionRepository();
         configureAuthSessionRepository(sessions);
@@ -135,7 +139,7 @@ describe('community write HTTP boundary', () => {
         const response = await fetch(`${server.baseUrl}/api/v1/recipes`, { method: 'POST' });
 
         assert.equal(response.status, 401);
-        assert.equal((await response.json() as { error: { code: string } }).error.code, 'AUTH_NO_TOKEN');
+        assert.equal(((await response.json()) as { error: { code: string } }).error.code, 'AUTH_NO_TOKEN');
         assert.equal(controllerCalls, 0);
     });
 
@@ -147,12 +151,16 @@ describe('community write HTTP boundary', () => {
             });
 
             assert.equal(response.status, 401, endpoint.name);
-            assert.deepEqual(await response.json(), {
-                error: {
-                    message: 'Missing session cookie',
-                    code: 'AUTH_NO_TOKEN'
-                }
-            }, endpoint.name);
+            assert.deepEqual(
+                await response.json(),
+                {
+                    error: {
+                        message: 'Missing session cookie',
+                        code: 'AUTH_NO_TOKEN'
+                    }
+                },
+                endpoint.name
+            );
         }
 
         assert.equal(controllerCalls, 0);

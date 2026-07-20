@@ -103,7 +103,13 @@ describe('PasswordResetService', () => {
         resets = new FakeResets();
         sessions = new FakeSessions();
         mailer = new FakeMailer();
-        service = new PasswordResetService(users, resets, sessions as unknown as SessionRepository, mailer as unknown as Mailer, 'https://front.example');
+        service = new PasswordResetService(
+            users,
+            resets,
+            sessions as unknown as SessionRepository,
+            mailer as unknown as Mailer,
+            'https://front.example'
+        );
     });
 
     it('ignores blank and unknown reset requests', async () => {

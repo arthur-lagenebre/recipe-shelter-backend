@@ -88,8 +88,7 @@ class FakeAdminCommentRepository implements AdminCommentRepository {
     async update(input: AdminUpdateCommentInput): Promise<AdminComment | null> {
         this.updatedInput = input;
 
-        if (!this.comment)
-            return null;
+        if (!this.comment) return null;
 
         return { ...this.comment, ...input };
     }
@@ -335,11 +334,16 @@ describe('AdminCommentService', () => {
         repository.comment = null;
 
         await assert.rejects(
-            () => service.update({
-                id: 1,
-                rating: 4,
-                comment: 'Missing'
-            }, 99, testAdminAuditContext),
+            () =>
+                service.update(
+                    {
+                        id: 1,
+                        rating: 4,
+                        comment: 'Missing'
+                    },
+                    99,
+                    testAdminAuditContext
+                ),
             (error) => {
                 assertHttpError(error, 'COMMENTS_NOT_FOUND', 404);
 

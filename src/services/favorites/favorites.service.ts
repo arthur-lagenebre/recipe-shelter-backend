@@ -7,21 +7,21 @@ import type { RecipeListItem } from '../../repositories/recipes/recipe.types.js'
 import type { PaginatedResult, PaginationOptions } from '../../utils/pagination.js';
 
 export class FavoriteService {
-    constructor(private readonly favoriteRepository: FavoriteRepository, private readonly recipeRepository: RecipeRepository) { }
+    constructor(
+        private readonly favoriteRepository: FavoriteRepository,
+        private readonly recipeRepository: RecipeRepository
+    ) {}
 
     async createFavorite(userId: number, recipeId: number): Promise<Favorite> {
         const recipe = await this.recipeRepository.findById(recipeId);
 
-        if (!recipe)
-            throw notFound('Recipe not found', 'RECIPES_NOT_FOUND');
+        if (!recipe) throw notFound('Recipe not found', 'RECIPES_NOT_FOUND');
 
-        if (recipe.status !== 'published' && recipe.userId !== userId)
-            throw forbidden('Recipe access denied', 'RECIPES_ACCESS_DENIED');
+        if (recipe.status !== 'published' && recipe.userId !== userId) throw forbidden('Recipe access denied', 'RECIPES_ACCESS_DENIED');
 
         const favorite = await this.favoriteRepository.create(userId, recipeId);
 
-        if (!favorite)
-            throw internalError('Favorite cannot be created', 'FAVORITE_CANNOT_BE_CREATED');
+        if (!favorite) throw internalError('Favorite cannot be created', 'FAVORITE_CANNOT_BE_CREATED');
 
         return favorite;
     }
@@ -29,8 +29,7 @@ export class FavoriteService {
     async deleteFavorite(userId: number, recipeId: number): Promise<boolean> {
         const isDeleted = await this.favoriteRepository.delete(userId, recipeId);
 
-        if (!isDeleted)
-            throw internalError('Favorite cannot be deleted', 'FAVORITE_CANNOT_BE_DELETED');
+        if (!isDeleted) throw internalError('Favorite cannot be deleted', 'FAVORITE_CANNOT_BE_DELETED');
 
         return isDeleted;
     }

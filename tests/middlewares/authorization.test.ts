@@ -51,10 +51,7 @@ describe('authorization middlewares', () => {
 
         it('denies absent, inactive community, and staff contexts', () => {
             assertForbidden(runGuard(CommunityOnly), 'AUTH_COMMUNITY_ACCOUNT_REQUIRED');
-            assertForbidden(
-                runGuard(CommunityOnly, { ...communityAuth, status: 'inactive' }),
-                'AUTH_COMMUNITY_ACCOUNT_REQUIRED'
-            );
+            assertForbidden(runGuard(CommunityOnly, { ...communityAuth, status: 'inactive' }), 'AUTH_COMMUNITY_ACCOUNT_REQUIRED');
             assertForbidden(runGuard(CommunityOnly, staffAuth), 'AUTH_COMMUNITY_ACCOUNT_REQUIRED');
         });
     });
@@ -66,10 +63,7 @@ describe('authorization middlewares', () => {
 
         it('denies absent, inactive staff, and community contexts', () => {
             assertForbidden(runGuard(StaffOnly), 'AUTH_STAFF_ACCOUNT_REQUIRED');
-            assertForbidden(
-                runGuard(StaffOnly, { ...staffAuth, status: 'disabled' }),
-                'AUTH_STAFF_ACCOUNT_REQUIRED'
-            );
+            assertForbidden(runGuard(StaffOnly, { ...staffAuth, status: 'disabled' }), 'AUTH_STAFF_ACCOUNT_REQUIRED');
             assertForbidden(runGuard(StaffOnly, communityAuth), 'AUTH_STAFF_ACCOUNT_REQUIRED');
         });
     });
@@ -83,18 +77,9 @@ describe('authorization middlewares', () => {
 
         it('denies absent, inactive, forged community, and underprivileged staff contexts', () => {
             assertForbidden(runGuard(middleware), 'AUTH_PERMISSION_REQUIRED');
-            assertForbidden(
-                runGuard(middleware, { ...staffAuth, status: 'locked' }),
-                'AUTH_PERMISSION_REQUIRED'
-            );
-            assertForbidden(
-                runGuard(middleware, { ...communityAuth, permissions: [PERMISSIONS.userBan] }),
-                'AUTH_PERMISSION_REQUIRED'
-            );
-            assertForbidden(
-                runGuard(middleware, { ...staffAuth, permissions: [PERMISSIONS.userRead] }),
-                'AUTH_PERMISSION_REQUIRED'
-            );
+            assertForbidden(runGuard(middleware, { ...staffAuth, status: 'locked' }), 'AUTH_PERMISSION_REQUIRED');
+            assertForbidden(runGuard(middleware, { ...communityAuth, permissions: [PERMISSIONS.userBan] }), 'AUTH_PERMISSION_REQUIRED');
+            assertForbidden(runGuard(middleware, { ...staffAuth, permissions: [PERMISSIONS.userRead] }), 'AUTH_PERMISSION_REQUIRED');
         });
     });
 });

@@ -6,7 +6,7 @@ import type { Tag, TagRow } from './tag.types.js';
 import type { Pool } from 'mysql2/promise';
 
 export class TagRepositoryMysql implements TagRepository {
-    constructor(private readonly db: Pool) { }
+    constructor(private readonly db: Pool) {}
 
     async findAll(): Promise<Tag[]> {
         const [rows] = await this.db.execute(
@@ -16,7 +16,8 @@ export class TagRepositoryMysql implements TagRepository {
              FROM Tags AS t
              INNER JOIN TagGroups AS tg ON tg.Id = t.GroupId
              WHERE t.Status = 'active'
-             ORDER BY tg.SortOrder ASC, t.Name ASC`);
+             ORDER BY tg.SortOrder ASC, t.Name ASC`
+        );
 
         return (rows as TagRow[]).map(mapTag);
     }

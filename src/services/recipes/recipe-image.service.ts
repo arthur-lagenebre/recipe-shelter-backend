@@ -18,13 +18,23 @@ export type RecipeImageUpload = {
 };
 
 export class RecipeImageService {
-    constructor( private readonly recipeRepository: RecipeRepository, private readonly recipeImageRepository: RecipeImageRepository, private readonly processor: RecipeImageProcessor, private readonly storage: ImageStorage, private readonly createImageId: () => string = randomUUID) { }
+    constructor(
+        private readonly recipeRepository: RecipeRepository,
+        private readonly recipeImageRepository: RecipeImageRepository,
+        private readonly processor: RecipeImageProcessor,
+        private readonly storage: ImageStorage,
+        private readonly createImageId: () => string = randomUUID
+    ) {}
 
-    async replace(recipeId: number, auth: AuthContext, upload: RecipeImageUpload | undefined, altTextInput: unknown): Promise<RecipeCoverImageDto> {
+    async replace(
+        recipeId: number,
+        auth: AuthContext,
+        upload: RecipeImageUpload | undefined,
+        altTextInput: unknown
+    ): Promise<RecipeCoverImageDto> {
         await this.requireEditableRecipe(recipeId, auth);
 
-        if (!upload)
-            throw badRequest('An image file is required', 'IMAGE_REQUIRED');
+        if (!upload) throw badRequest('An image file is required', 'IMAGE_REQUIRED');
 
         const altText = normalizeAltText(altTextInput);
         const processed = await this.processor.process(upload.buffer);
@@ -40,13 +50,11 @@ export class RecipeImageService {
             const previous = await this.recipeImageRepository.replace(input);
             committed = true;
 
-            if (previous)
-                await this.deleteObjects(this.storageKeys(previous), 'replaced recipe image');
+            if (previous) await this.deleteObjects(this.storageKeys(previous), 'replaced recipe image');
 
             return mapRecipeImageDto({ ...input, createdAt: new Date(), updatedAt: new Date() }, (key) => this.storage.getPublicUrl(key));
         } catch (error) {
-            if (!committed)
-                await this.deleteObjects(uploadedKeys, 'failed recipe image upload');
+            if (!committed) await this.deleteObjects(uploadedKeys, 'failed recipe image upload');
 
             throw error;
         }
@@ -57,8 +65,7 @@ export class RecipeImageService {
 
         const deleted = await this.recipeImageRepository.deleteByRecipeId(recipeId);
 
-        if (!deleted)
-            throw notFound('Recipe image not found', 'RECIPE_IMAGE_NOT_FOUND');
+        if (!deleted) throw notFound('Recipe image not found', 'RECIPE_IMAGE_NOT_FOUND');
 
         await this.deleteObjects(this.storageKeys(deleted), 'deleted recipe image');
     }
@@ -74,11 +81,9 @@ export class RecipeImageService {
     private async requireEditableRecipe(recipeId: number, auth: AuthContext): Promise<void> {
         const recipe = await this.recipeRepository.findById(recipeId);
 
-        if (!recipe)
-            throw notFound('Recipe not found', 'RECIPE_NOT_FOUND');
+        if (!recipe) throw notFound('Recipe not found', 'RECIPE_NOT_FOUND');
 
-        if (!canEditRecipe(recipe, auth))
-            throw forbidden('Recipe image cannot be updated', 'RECIPE_IMAGE_UPDATE_FORBIDDEN');
+        if (!canEditRecipe(recipe, auth)) throw forbidden('Recipe image cannot be updated', 'RECIPE_IMAGE_UPDATE_FORBIDDEN');
     }
 
     private createSaveInput(recipeId: number, processed: ProcessedRecipeImage, altText: string | null): SaveRecipeImageInput {
@@ -120,22 +125,17 @@ export class RecipeImageService {
 }
 
 export function normalizeAltText(value: unknown): string | null {
-    if (value === undefined || value === null)
-        return null;
+    if (value === undefined || value === null) return null;
 
-    if (typeof value !== 'string')
-        throw badRequest('Alt text must be a string', 'IMAGE_ALT_TEXT_INVALID');
+    if (typeof value !== 'string') throw badRequest('Alt text must be a string', 'IMAGE_ALT_TEXT_INVALID');
 
     const altText = value.trim();
 
-    if (!altText)
-        return null;
+    if (!altText) return null;
 
-    if (altText.length > 255)
-        throw badRequest('Alt text must not exceed 255 characters', 'IMAGE_ALT_TEXT_TOO_LONG');
+    if (altText.length > 255) throw badRequest('Alt text must not exceed 255 characters', 'IMAGE_ALT_TEXT_TOO_LONG');
 
-    if (/<[^>]*>/.test(altText))
-        throw badRequest('Alt text must not contain HTML', 'IMAGE_ALT_TEXT_INVALID');
+    if (/<[^>]*>/.test(altText)) throw badRequest('Alt text must not contain HTML', 'IMAGE_ALT_TEXT_INVALID');
 
     return altText;
 }

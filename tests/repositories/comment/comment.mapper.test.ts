@@ -52,8 +52,16 @@ describe('comments.mapper', () => {
     });
 
     it('masks deleted and moderated public comments', () => {
-        const deleted = mapPublicComment({ ...publicCommentRow, DeletedAt: new Date('2026-05-10T10:00:00.000Z'), Comment: 'Original' } as PublicCommentRow);
-        const moderated = mapPublicComment({ ...publicCommentRow, ModeratedAt: new Date('2026-05-10T10:00:00.000Z'), Comment: 'Original' } as PublicCommentRow);
+        const deleted = mapPublicComment({
+            ...publicCommentRow,
+            DeletedAt: new Date('2026-05-10T10:00:00.000Z'),
+            Comment: 'Original'
+        } as PublicCommentRow);
+        const moderated = mapPublicComment({
+            ...publicCommentRow,
+            ModeratedAt: new Date('2026-05-10T10:00:00.000Z'),
+            Comment: 'Original'
+        } as PublicCommentRow);
 
         assert.match(deleted.comment, /supprim/);
         assert.match(moderated.comment, /masqu/);

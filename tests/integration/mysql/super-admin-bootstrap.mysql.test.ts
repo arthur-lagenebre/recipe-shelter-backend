@@ -17,16 +17,12 @@ const baseTestDatabaseName = process.env.TEST_DB_NAME?.trim() ?? '';
 const mysqlEnabled = Boolean(baseTestDatabaseName);
 
 function requireBootstrapTestDatabaseName(): string {
-    if (!/^[a-zA-Z0-9_]+$/.test(baseTestDatabaseName))
-        throw new Error('TEST_DB_NAME must contain only letters, numbers and underscores');
-    if (!baseTestDatabaseName.toLowerCase().includes('test'))
-        throw new Error('TEST_DB_NAME must contain "test"');
-    if (baseTestDatabaseName === env.db.name)
-        throw new Error('TEST_DB_NAME must be different from DB_NAME');
+    if (!/^[a-zA-Z0-9_]+$/.test(baseTestDatabaseName)) throw new Error('TEST_DB_NAME must contain only letters, numbers and underscores');
+    if (!baseTestDatabaseName.toLowerCase().includes('test')) throw new Error('TEST_DB_NAME must contain "test"');
+    if (baseTestDatabaseName === env.db.name) throw new Error('TEST_DB_NAME must be different from DB_NAME');
 
     const databaseName = `${baseTestDatabaseName}_bootstrap`;
-    if (databaseName.length > 64)
-        throw new Error('TEST_DB_NAME is too long for the bootstrap integration database suffix');
+    if (databaseName.length > 64) throw new Error('TEST_DB_NAME is too long for the bootstrap integration database suffix');
     return databaseName;
 }
 
@@ -58,9 +54,7 @@ describe('SuperAdmin bootstrap MySQL integration', { skip: !mysqlEnabled && 'Set
         });
 
         await adminConnection.query(`DROP DATABASE IF EXISTS \`${databaseName}\``);
-        await adminConnection.query(
-            `CREATE DATABASE \`${databaseName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
-        );
+        await adminConnection.query(`CREATE DATABASE \`${databaseName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
 
         const schemaPath = new URL('../../../database/migrations/1_create_schema.sql', import.meta.url);
         const seedPath = new URL('../../../database/seed.sql', import.meta.url);
@@ -82,8 +76,7 @@ describe('SuperAdmin bootstrap MySQL integration', { skip: !mysqlEnabled && 'Set
     });
 
     after(async () => {
-        if (pool)
-            await pool.end();
+        if (pool) await pool.end();
         if (adminConnection) {
             await adminConnection.query(`DROP DATABASE IF EXISTS \`${requireBootstrapTestDatabaseName()}\``);
             await adminConnection.end();
@@ -113,10 +106,11 @@ describe('SuperAdmin bootstrap MySQL integration', { skip: !mysqlEnabled && 'Set
             { invitationTtlMinutes: 30, generateToken: () => 'failed-delivery-token' }
         );
         await assert.rejects(
-            () => failedDeliveryService.bootstrap({
-                mail: 'failed-delivery@test.local',
-                username: 'failed-delivery'
-            }),
+            () =>
+                failedDeliveryService.bootstrap({
+                    mail: 'failed-delivery@test.local',
+                    username: 'failed-delivery'
+                }),
             /SMTP unavailable/
         );
         const [persistedAfterDeliveryFailure] = await pool.query(
@@ -178,16 +172,18 @@ describe('SuperAdmin bootstrap MySQL integration', { skip: !mysqlEnabled && 'Set
              WHERE r.Code = 'SuperAdmin'`
         );
         assert.equal((createdAccounts as unknown[]).length, 1);
-        const createdAccount = (createdAccounts as Array<{
-            Id: number;
-            Mail: string;
-            Username: string;
-            Password: string | null;
-            AccountType: string;
-            EmailValidatedAt: Date | null;
-            Status: string;
-            RoleCode: string;
-        }>)[0];
+        const createdAccount = (
+            createdAccounts as Array<{
+                Id: number;
+                Mail: string;
+                Username: string;
+                Password: string | null;
+                AccountType: string;
+                EmailValidatedAt: Date | null;
+                Status: string;
+                RoleCode: string;
+            }>
+        )[0];
         assert.ok(createdAccount);
         assert.equal(createdAccount.Mail, deliveredMessage.to);
         assert.equal(createdAccount.Username, deliveredMessage.username);
@@ -207,14 +203,16 @@ describe('SuperAdmin bootstrap MySQL integration', { skip: !mysqlEnabled && 'Set
              WHERE StaffUserId = ?`,
             [createdAccount.Id]
         );
-        const invitation = (invitationRows as Array<{
-            StaffUserId: number;
-            TokenHash: string;
-            ExpiresAt: Date;
-            UsedAt: Date | null;
-            RequiresMfa: number;
-            RemainingTtlSeconds: number;
-        }>)[0];
+        const invitation = (
+            invitationRows as Array<{
+                StaffUserId: number;
+                TokenHash: string;
+                ExpiresAt: Date;
+                UsedAt: Date | null;
+                RequiresMfa: number;
+                RemainingTtlSeconds: number;
+            }>
+        )[0];
         assert.ok(invitation);
         assert.equal(invitation.StaffUserId, createdAccount.Id);
         assert.equal(invitation.TokenHash, hashStaffInvitationToken(deliveredToken));
@@ -223,8 +221,8 @@ describe('SuperAdmin bootstrap MySQL integration', { skip: !mysqlEnabled && 'Set
         assert.equal(invitation.RequiresMfa, 1);
         assert.ok(invitation.RemainingTtlSeconds > 25 * 60 && invitation.RemainingTtlSeconds <= 30 * 60);
 
-        await assert.rejects(
-            () => pool.query(`UPDATE StaffInvitations SET RequiresMfa = FALSE WHERE StaffUserId = ?`, [createdAccount.Id])
+        await assert.rejects(() =>
+            pool.query(`UPDATE StaffInvitations SET RequiresMfa = FALSE WHERE StaffUserId = ?`, [createdAccount.Id])
         );
 
         await adminConnection.query(seed);
@@ -237,12 +235,14 @@ describe('SuperAdmin bootstrap MySQL integration', { skip: !mysqlEnabled && 'Set
              WHERE u.Id = ?`,
             [createdAccount.Id]
         );
-        assert.deepEqual(replayedAccountRows, [{
-            Password: null,
-            Status: 'invited',
-            RoleCount: 1,
-            InvitationCount: 1
-        }]);
+        assert.deepEqual(replayedAccountRows, [
+            {
+                Password: null,
+                Status: 'invited',
+                RoleCount: 1,
+                InvitationCount: 1
+            }
+        ]);
 
         const [stillInvitedRows] = await pool.query(`SELECT Status FROM StaffProfiles WHERE UserId = ?`, [createdAccount.Id]);
         assert.deepEqual(stillInvitedRows, [{ Status: 'invited' }]);
@@ -258,10 +258,11 @@ describe('SuperAdmin bootstrap MySQL integration', { skip: !mysqlEnabled && 'Set
         await pool.query(`UPDATE Users SET Password = 'password-hash', Status = 'active' WHERE Id = ?`, [createdAccount.Id]);
         await pool.query(`UPDATE StaffInvitations SET UsedAt = CURRENT_TIMESTAMP WHERE StaffUserId = ?`, [createdAccount.Id]);
         await assert.rejects(
-            () => firstService.bootstrap({
-                mail: 'second-active@test.local',
-                username: 'second-active-admin'
-            }),
+            () =>
+                firstService.bootstrap({
+                    mail: 'second-active@test.local',
+                    username: 'second-active-admin'
+                }),
             (error) => {
                 assert.ok(error instanceof HttpError);
                 assert.equal(error.code, 'SUPER_ADMIN_ALREADY_EXISTS');
@@ -290,10 +291,11 @@ describe('SuperAdmin bootstrap MySQL integration', { skip: !mysqlEnabled && 'Set
             [createdAccount.Id, createdAccount.Id]
         );
         await assert.rejects(
-            () => firstService.bootstrap({
-                mail: 'replacement@test.local',
-                username: 'replacement-admin'
-            }),
+            () =>
+                firstService.bootstrap({
+                    mail: 'replacement@test.local',
+                    username: 'replacement-admin'
+                }),
             (error) => {
                 assert.ok(error instanceof HttpError);
                 assert.equal(error.code, 'BOOTSTRAP_SUPER_ADMIN_ALREADY_COMPLETED');

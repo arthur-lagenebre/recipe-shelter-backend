@@ -26,7 +26,7 @@ export function createAdminRecipesController(adminRecipeService: AdminRecipeServ
 
         approveRecipe: asyncHandler(async (req, res) => {
             const recipeId = parseRecipeIdParam(req.params.id);
-            
+
             const result = await adminRecipeService.approve(recipeId, req.auth!.userId, getAdminAuditRequestContext(req));
 
             res.status(200).json({ ok: result });

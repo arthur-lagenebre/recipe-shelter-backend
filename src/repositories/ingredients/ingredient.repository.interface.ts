@@ -1,4 +1,4 @@
-import type { Ingredient } from "./ingredient.types.js";
+import type { Ingredient } from './ingredient.types.js';
 
 export interface IngredientRepository {
     findAll(): Promise<Ingredient[]>;

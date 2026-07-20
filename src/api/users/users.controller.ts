@@ -41,8 +41,7 @@ export function createUsersController(userService: UserService) {
             try {
                 const session = token ? verifySessionToken(token, 'app') : null;
 
-                if (session?.userId === req.auth.userId)
-                    currentSessionId = session.sessionId;
+                if (session?.userId === req.auth.userId) currentSessionId = session.sessionId;
             } catch {
                 currentSessionId = null;
             }

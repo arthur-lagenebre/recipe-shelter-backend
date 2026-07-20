@@ -23,24 +23,10 @@ const EXPECTED_ROLE_PERMISSIONS: Record<string, string[]> = {
         PERMISSIONS.tagRead,
         PERMISSIONS.tagUpdate
     ],
-    CommentModerator: [
-        PERMISSIONS.commentHide,
-        PERMISSIONS.commentRestore,
-        PERMISSIONS.commentReview,
-        PERMISSIONS.commentsUpdate
-    ],
-    RecipeModerator: [
-        PERMISSIONS.recipeArchive,
-        PERMISSIONS.recipePublish,
-        PERMISSIONS.recipeReject,
-        PERMISSIONS.recipeReview
-    ],
+    CommentModerator: [PERMISSIONS.commentHide, PERMISSIONS.commentRestore, PERMISSIONS.commentReview, PERMISSIONS.commentsUpdate],
+    RecipeModerator: [PERMISSIONS.recipeArchive, PERMISSIONS.recipePublish, PERMISSIONS.recipeReject, PERMISSIONS.recipeReview],
     SuperAdmin: [...Object.values(PERMISSIONS)].sort(),
-    UserAdmin: [
-        PERMISSIONS.userBan,
-        PERMISSIONS.userRead,
-        PERMISSIONS.userUnban
-    ]
+    UserAdmin: [PERMISSIONS.userBan, PERMISSIONS.userRead, PERMISSIONS.userUnban]
 };
 
 describe('RBAC seed catalog', () => {
@@ -49,8 +35,10 @@ describe('RBAC seed catalog', () => {
         const permissionInsert = seed.match(/INSERT INTO Permissions[\s\S]+?(?=AS new_permissions)/)?.[0];
 
         assert.ok(permissionInsert, 'The central seed must insert the permission catalog');
-        const seededPermissions = [...permissionInsert.matchAll(/\(\d+,\s*'([^']+)',\s*"([^"\r\n]+)"\)/g)]
-            .map((match) => ({ code: match[1], description: match[2] }));
+        const seededPermissions = [...permissionInsert.matchAll(/\(\d+,\s*'([^']+)',\s*"([^"\r\n]+)"\)/g)].map((match) => ({
+            code: match[1],
+            description: match[2]
+        }));
         const seededCodes = seededPermissions.map(({ code }) => code);
         const applicationCodes = Object.values(PERMISSIONS);
 
@@ -58,10 +46,19 @@ describe('RBAC seed catalog', () => {
         assert.ok(seededPermissions.every(({ description }) => description.trim().length > 0));
         assert.equal(new Set(applicationCodes).size, applicationCodes.length);
         assert.ok(applicationCodes.every((code) => /^[a-z]+(?:\.[a-z]+)+$/.test(code)));
-        assert.deepEqual(
-            [...new Set(applicationCodes.map((code) => code.split('.')[0]))].sort(),
-            ['audit', 'catalog', 'comment', 'comments', 'ingredient', 'recipe', 'recipes', 'staff', 'system', 'tag', 'user']
-        );
+        assert.deepEqual([...new Set(applicationCodes.map((code) => code.split('.')[0]))].sort(), [
+            'audit',
+            'catalog',
+            'comment',
+            'comments',
+            'ingredient',
+            'recipe',
+            'recipes',
+            'staff',
+            'system',
+            'tag',
+            'user'
+        ]);
         assert.ok(applicationCodes.every((code) => isPermissionCode(code)));
         assert.equal(isPermissionCode('unknown.permission'), false);
         assert.equal(isPermissionCode(null), false);
@@ -78,17 +75,17 @@ describe('RBAC seed catalog', () => {
 
         assert.ok(rolePermissionInsert, 'The central seed must insert the role-permission matrix');
 
-        const associations = [...rolePermissionInsert.matchAll(
-            /(?:SELECT|UNION ALL SELECT)\s+'([^']+)'(?:\s+AS RoleCode)?\s*,\s*'([^']+)'(?:\s+AS PermissionCode)?/g
-        )].map((match) => ({ roleCode: match[1], permissionCode: match[2] }));
+        const associations = [
+            ...rolePermissionInsert.matchAll(
+                /(?:SELECT|UNION ALL SELECT)\s+'([^']+)'(?:\s+AS RoleCode)?\s*,\s*'([^']+)'(?:\s+AS PermissionCode)?/g
+            )
+        ].map((match) => ({ roleCode: match[1], permissionCode: match[2] }));
         const associationKeys = associations.map(({ roleCode, permissionCode }) => `${roleCode}:${permissionCode}`);
         const knownPermissionCodes = new Set<string>(Object.values(PERMISSIONS));
         const permissionsByRole: Record<string, string[]> = {};
 
-        for (const { roleCode, permissionCode } of associations)
-            (permissionsByRole[roleCode] ??= []).push(permissionCode);
-        for (const permissionCodes of Object.values(permissionsByRole))
-            permissionCodes.sort();
+        for (const { roleCode, permissionCode } of associations) (permissionsByRole[roleCode] ??= []).push(permissionCode);
+        for (const permissionCodes of Object.values(permissionsByRole)) permissionCodes.sort();
 
         assert.deepEqual(permissionsByRole, EXPECTED_ROLE_PERMISSIONS);
         assert.equal(new Set(associationKeys).size, associationKeys.length);

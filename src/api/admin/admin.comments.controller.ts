@@ -55,7 +55,11 @@ export function createAdminCommentsController(adminCommentService: AdminCommentS
         updateComment: asyncHandler(async (req, res) => {
             const commentId = parseAdminCommentIdParam(req.params.id);
             const body = parseAdminUpdateCommentBody(req.body);
-            const comment = await adminCommentService.update({ id: commentId, rating: body.rating, comment: body.comment }, req.auth!.userId, getAdminAuditRequestContext(req));
+            const comment = await adminCommentService.update(
+                { id: commentId, rating: body.rating, comment: body.comment },
+                req.auth!.userId,
+                getAdminAuditRequestContext(req)
+            );
 
             res.status(200).json(comment);
         }),

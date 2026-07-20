@@ -40,10 +40,11 @@ describe('admin.comments.dto', () => {
 
     it('rejects an invalid rating', () => {
         assert.throws(
-            () => parseAdminUpdateCommentBody({
-                rating: 6,
-                comment: 'Note invalide'
-            }),
+            () =>
+                parseAdminUpdateCommentBody({
+                    rating: 6,
+                    comment: 'Note invalide'
+                }),
             (error) => {
                 assertHttpError(error, 'ADMIN_COMMENTS_UPDATE_BAD_RATING', 400);
 
@@ -54,9 +55,10 @@ describe('admin.comments.dto', () => {
 
     it('rejects a missing comment', () => {
         assert.throws(
-            () => parseAdminUpdateCommentBody({
-                rating: 4
-            }),
+            () =>
+                parseAdminUpdateCommentBody({
+                    rating: 4
+                }),
             (error) => {
                 assertHttpError(error, 'ADMIN_COMMENTS_UPDATE_MISSING_COMMENT', 400);
 

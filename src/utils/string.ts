@@ -17,10 +17,7 @@ export function normalizeDisplayName(name: string): string {
         .toLowerCase()
         .replace(/\p{M}+/gu, '');
 
-    for (const [characters, replacement] of displayNameTransliterations)
-        normalizedName = normalizedName.replace(characters, replacement);
+    for (const [characters, replacement] of displayNameTransliterations) normalizedName = normalizedName.replace(characters, replacement);
 
-    return normalizedName
-        .replace(/[^a-z0-9]+/g, ' ')
-        .trim();
+    return normalizedName.replace(/[^a-z0-9]+/g, ' ').trim();
 }

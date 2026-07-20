@@ -3,7 +3,20 @@ import { assertAccountType, assertCommunityStatus, assertStaffStatus } from './u
 import { firstOrNull } from '../../utils/array.js';
 
 import type { UserRepository } from './user.repository.interface.js';
-import type { CommunityProfile, CommunityProfileRow, CommunityStatus, CreateUserInput, ExistsRow, StaffProfile, StaffProfileRow, StaffStatus, User, UserRow, UserWithPassword, UserWithPasswordRow } from './user.types.js';
+import type {
+    CommunityProfile,
+    CommunityProfileRow,
+    CommunityStatus,
+    CreateUserInput,
+    ExistsRow,
+    StaffProfile,
+    StaffProfileRow,
+    StaffStatus,
+    User,
+    UserRow,
+    UserWithPassword,
+    UserWithPasswordRow
+} from './user.types.js';
 import type { ResultSetHeader } from 'mysql2';
 import type { Pool, PoolConnection } from 'mysql2/promise';
 
@@ -18,7 +31,7 @@ const USER_PROFILE_JOINS = `LEFT JOIN CommunityProfiles AS cp ON cp.UserId = u.I
                             LEFT JOIN StaffProfiles AS sp ON sp.UserId = u.Id`;
 
 export class UserRepositoryMysql implements UserRepository {
-    constructor(private readonly db: Pool) { }
+    constructor(private readonly db: Pool) {}
 
     async findById(id: number, db?: PoolConnection): Promise<User | null> {
         const [rows] = await (db ?? this.db).execute(
@@ -187,8 +200,7 @@ export class UserRepositoryMysql implements UserRepository {
 
         const created = await this.findById(insertId);
 
-        if (!created)
-            throw new Error('User created but cannot be reloaded');
+        if (!created) throw new Error('User created but cannot be reloaded');
 
         return created;
     }
@@ -252,10 +264,8 @@ function getProfileStatus(input: CreateUserInput): CommunityStatus | StaffStatus
 
     const status = input.status ?? 'invited';
     assertStaffStatus(status);
-    if (status === 'active')
-        throw new TypeError('Staff accounts must be activated through MFA enrollment');
-    if (status === 'disabled')
-        throw new TypeError('Staff accounts must be disabled through staff lifecycle management');
+    if (status === 'active') throw new TypeError('Staff accounts must be activated through MFA enrollment');
+    if (status === 'disabled') throw new TypeError('Staff accounts must be disabled through staff lifecycle management');
     return status;
 }
 
@@ -266,9 +276,7 @@ function getLegacyStatus(accountType: CreateUserInput['accountType'], status: Co
     }
 
     assertStaffStatus(status);
-    if (status === 'invited')
-        return 'inactive';
-    if (status === 'active')
-        return 'active';
+    if (status === 'invited') return 'inactive';
+    if (status === 'active') return 'active';
     return 'banned';
 }

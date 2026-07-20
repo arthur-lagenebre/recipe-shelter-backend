@@ -8,22 +8,13 @@ export type CreateCatalogProposalBody = Pick<CreateCatalogProposalCommand, 'reci
 const PROPOSAL_NAME_MAX_LENGTH = 255;
 
 export function parseCreateCatalogProposalBody(body: unknown): CreateCatalogProposalBody {
-  if (!isRecord(body) || Array.isArray(body))
-    throw badRequest('Invalid catalog proposal body', 'CATALOG_PROPOSALS_BAD_BODY');
+    if (!isRecord(body) || Array.isArray(body)) throw badRequest('Invalid catalog proposal body', 'CATALOG_PROPOSALS_BAD_BODY');
 
-  const recipeId = getRequiredPositiveInteger(
-    body.recipeId,
-    'Recipe id must be a positive integer',
-    'CATALOG_PROPOSALS_BAD_RECIPE_ID'
-  );
-  const name = getRequiredString(
-    body.name,
-    'Proposal name is required',
-    'CATALOG_PROPOSALS_NAME_REQUIRED'
-  );
+    const recipeId = getRequiredPositiveInteger(body.recipeId, 'Recipe id must be a positive integer', 'CATALOG_PROPOSALS_BAD_RECIPE_ID');
+    const name = getRequiredString(body.name, 'Proposal name is required', 'CATALOG_PROPOSALS_NAME_REQUIRED');
 
-  if (name.length > PROPOSAL_NAME_MAX_LENGTH)
-    throw badRequest(`Proposal name must be at most ${PROPOSAL_NAME_MAX_LENGTH} characters`, 'CATALOG_PROPOSALS_NAME_TOO_LONG');
+    if (name.length > PROPOSAL_NAME_MAX_LENGTH)
+        throw badRequest(`Proposal name must be at most ${PROPOSAL_NAME_MAX_LENGTH} characters`, 'CATALOG_PROPOSALS_NAME_TOO_LONG');
 
-  return { recipeId, name };
+    return { recipeId, name };
 }

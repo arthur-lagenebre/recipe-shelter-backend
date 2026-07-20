@@ -24,17 +24,21 @@ type UserRepository = {
 const PASSWORD_RESET_TTL_MINUTES = 30;
 
 export class PasswordResetService {
-    constructor(private readonly users: UserRepository, private readonly resets: PasswordResetRepository, private readonly sessions: SessionRepository, private readonly mailer: Mailer, private readonly appBaseUrl: string) { }
+    constructor(
+        private readonly users: UserRepository,
+        private readonly resets: PasswordResetRepository,
+        private readonly sessions: SessionRepository,
+        private readonly mailer: Mailer,
+        private readonly appBaseUrl: string
+    ) {}
 
     async requestReset(mail: string): Promise<void> {
         const normalizedMail = mail.trim().toLowerCase();
-        if (!normalizedMail)
-            return;
+        if (!normalizedMail) return;
 
         const user = await this.users.findByEmail(normalizedMail);
 
-        if (!user)
-            return;
+        if (!user) return;
 
         await this.resets.invalidateAllForUser(user.id);
 
@@ -50,18 +54,15 @@ export class PasswordResetService {
     async resetPassword(token: string, newPassword: string): Promise<void> {
         const normalizedToken = token.trim();
 
-        if (!normalizedToken)
-            throw badRequest('Reset token is required', 'AUTH_RESET_PASSWORD_BAD_TOKEN');
+        if (!normalizedToken) throw badRequest('Reset token is required', 'AUTH_RESET_PASSWORD_BAD_TOKEN');
 
         const passwordError = validatePassword(newPassword);
-        if (passwordError)
-            throw badRequest(passwordError, 'AUTH_RESET_PASSWORD_BAD_PASSWORD');
+        if (passwordError) throw badRequest(passwordError, 'AUTH_RESET_PASSWORD_BAD_PASSWORD');
 
         const tokenHash = hashResetToken(normalizedToken);
         const reset = await this.resets.findValidByTokenHash(tokenHash);
 
-        if (!reset)
-            throw badRequest('Invalid or expired reset token', 'AUTH_RESET_PASSWORD_BAD_TOKEN');
+        if (!reset) throw badRequest('Invalid or expired reset token', 'AUTH_RESET_PASSWORD_BAD_TOKEN');
 
         const passwordHash = await bcrypt.hash(newPassword, env.auth.bcryptCost);
 
@@ -70,7 +71,6 @@ export class PasswordResetService {
         await this.resets.markUsed(reset.Id);
 
         const user = await this.users.findById(reset.UserId);
-        if (user)
-            await this.mailer.sendPasswordChangedEmail({ to: user.mail, username: user.username });
+        if (user) await this.mailer.sendPasswordChangedEmail({ to: user.mail, username: user.username });
     }
 }

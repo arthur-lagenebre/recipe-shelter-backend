@@ -1,14 +1,13 @@
-
 import { mapComment, mapPublicComment, mapPublicComments } from './comment.mapper.js';
 import { firstOrNull } from '../../utils/array.js';
 
-import type { CommentRepository } from "./comment.repository.interface.js";
-import type { Comment, CommentRow, CreateCommentInput, PublicComment, PublicCommentRow, UpdateCommentInput } from "./comment.types.js";
+import type { CommentRepository } from './comment.repository.interface.js';
+import type { Comment, CommentRow, CreateCommentInput, PublicComment, PublicCommentRow, UpdateCommentInput } from './comment.types.js';
 import type { ResultSetHeader } from 'mysql2';
 import type { Pool } from 'mysql2/promise';
 
 export class CommentRepositoryMysql implements CommentRepository {
-    constructor(private readonly db: Pool) { }
+    constructor(private readonly db: Pool) {}
 
     async create(input: CreateCommentInput): Promise<PublicComment> {
         const [result] = await this.db.execute(
@@ -20,8 +19,7 @@ export class CommentRepositoryMysql implements CommentRepository {
         const insertId = Number((result as { insertId: number }).insertId);
         const created = await this.findPublicById(insertId);
 
-        if (!created)
-            throw new Error('Comment created but cannot be reloaded');
+        if (!created) throw new Error('Comment created but cannot be reloaded');
 
         return created;
     }
@@ -34,13 +32,11 @@ export class CommentRepositoryMysql implements CommentRepository {
             [input.comment, input.rating ?? null, input.id, input.userId]
         );
 
-        if (result.affectedRows === 0)
-            return null;
+        if (result.affectedRows === 0) return null;
 
         const updated = await this.findPublicById(input.id);
 
-        if (!updated)
-            throw new Error('Comment updated but cannot be reloaded');
+        if (!updated) throw new Error('Comment updated but cannot be reloaded');
 
         return updated;
     }
@@ -93,5 +89,4 @@ export class CommentRepositoryMysql implements CommentRepository {
         const row = firstOrNull(rows as PublicCommentRow[]);
         return row ? mapPublicComment(row) : null;
     }
-
 }

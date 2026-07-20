@@ -54,32 +54,30 @@ async function runHandler(handler: RequestHandler, req: unknown, res: TestRespon
 
     await new Promise((resolve) => setImmediate(resolve));
 
-    if (nextError)
-        throw nextError;
+    if (nextError) throw nextError;
 }
 
 describe('users.controller', () => {
     it('passes the current app session id to the password update service', async () => {
         let receivedSessionId: string | null | undefined;
         const controller = createUsersController({
-            async updatePassword(
-                _userId: number,
-                _currentPassword: string,
-                _newPassword: string,
-                currentSessionId: string | null
-            ) {
+            async updatePassword(_userId: number, _currentPassword: string, _newPassword: string, currentSessionId: string | null) {
                 receivedSessionId = currentSessionId;
             }
         } as UserService);
         const res = createResponse();
 
-        await runHandler(controller.updatePassword, {
-            auth: { userId: 2, accountType: 'community', status: 'active' },
-            body: { currentPassword: 'CurrentPass42!', newPassword: 'NewPass42!' },
-            cookies: {
-                [appSessionCookieName]: signSessionToken(user, 'app', 'current-session-id')
-            }
-        }, res);
+        await runHandler(
+            controller.updatePassword,
+            {
+                auth: { userId: 2, accountType: 'community', status: 'active' },
+                body: { currentPassword: 'CurrentPass42!', newPassword: 'NewPass42!' },
+                cookies: {
+                    [appSessionCookieName]: signSessionToken(user, 'app', 'current-session-id')
+                }
+            },
+            res
+        );
 
         assert.equal(receivedSessionId, 'current-session-id');
         assert.equal(res.statusCode, 200);
@@ -88,12 +86,7 @@ describe('users.controller', () => {
     it('does not block a password update when the app session cookie is absent or invalid', async () => {
         const receivedSessionIds: Array<string | null> = [];
         const controller = createUsersController({
-            async updatePassword(
-                _userId: number,
-                _currentPassword: string,
-                _newPassword: string,
-                currentSessionId: string | null
-            ) {
+            async updatePassword(_userId: number, _currentPassword: string, _newPassword: string, currentSessionId: string | null) {
                 receivedSessionIds.push(currentSessionId);
             }
         } as UserService);
@@ -103,10 +96,14 @@ describe('users.controller', () => {
         };
 
         await runHandler(controller.updatePassword, { ...request, cookies: {} }, createResponse());
-        await runHandler(controller.updatePassword, {
-            ...request,
-            cookies: { [appSessionCookieName]: 'invalid-token' }
-        }, createResponse());
+        await runHandler(
+            controller.updatePassword,
+            {
+                ...request,
+                cookies: { [appSessionCookieName]: 'invalid-token' }
+            },
+            createResponse()
+        );
 
         assert.deepEqual(receivedSessionIds, [null, null]);
     });

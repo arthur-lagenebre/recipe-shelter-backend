@@ -21,21 +21,27 @@ describe('S3ImageStorage', () => {
                 return {};
             }
         };
-        const storage = new S3ImageStorage({
-            endpoint: 'https://private-account.r2.cloudflarestorage.com',
-            region: 'auto',
-            bucket: 'recipe-shelter',
-            accessKeyId: 'secret-id',
-            secretAccessKey: 'secret-key',
-            publicBaseUrl: 'https://images.example.test'
-        }, client as never);
+        const storage = new S3ImageStorage(
+            {
+                endpoint: 'https://private-account.r2.cloudflarestorage.com',
+                region: 'auto',
+                bucket: 'recipe-shelter',
+                accessKeyId: 'secret-id',
+                secretAccessKey: 'secret-key',
+                publicBaseUrl: 'https://images.example.test'
+            },
+            client as never
+        );
 
         const key = 'recipes/10/image-id/large.webp';
         await storage.put({ key, body: Buffer.from('webp'), contentType: 'image/webp' });
         assert.equal(await storage.exists(key), true);
         await storage.delete(key);
 
-        assert.deepEqual(commands.map((command) => command.constructor.name), ['PutObjectCommand', 'HeadObjectCommand', 'DeleteObjectCommand']);
+        assert.deepEqual(
+            commands.map((command) => command.constructor.name),
+            ['PutObjectCommand', 'HeadObjectCommand', 'DeleteObjectCommand']
+        );
         assert.deepEqual(commands[0]?.input, {
             Bucket: 'recipe-shelter',
             Key: key,
@@ -58,10 +64,7 @@ describe('S3ImageStorage', () => {
     });
 
     it('recognizes every supported S3 not-found response shape', async () => {
-        for (const error of [
-            { name: 'NoSuchKey' },
-            { name: 'UnknownError', $metadata: { httpStatusCode: 404 } }
-        ]) {
+        for (const error of [{ name: 'NoSuchKey' }, { name: 'UnknownError', $metadata: { httpStatusCode: 404 } }]) {
             const client = {
                 async send() {
                     throw error;

@@ -167,7 +167,7 @@ describe('FavoriteService', () => {
         service = new FavoriteService(repository, recipeRepository);
     });
 
-    it('creates a favorite for another user\'s published recipe', async () => {
+    it("creates a favorite for another user's published recipe", async () => {
         recipeRepository.recipe = { ...storedRecipe, userId: 8, status: 'published' };
 
         assert.deepEqual(await service.createFavorite(7, 12), favorite);
@@ -175,7 +175,7 @@ describe('FavoriteService', () => {
         assert.deepEqual(repository.createInput, { userId: 7, recipeId: 12 });
     });
 
-    it('creates a favorite for the authenticated user\'s own draft recipe', async () => {
+    it("creates a favorite for the authenticated user's own draft recipe", async () => {
         assert.deepEqual(await service.createFavorite(7, 12), favorite);
         assert.deepEqual(repository.createInput, { userId: 7, recipeId: 12 });
     });

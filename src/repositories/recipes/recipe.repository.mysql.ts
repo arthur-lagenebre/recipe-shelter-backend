@@ -1,9 +1,44 @@
-import { mapRecipe, mapRecipeDetail, mapRecipeDetailComments, mapRecipeDetailIngredient, mapRecipeDetailStep, mapRecipeDetailTag, mapRecipeDetailEquipment, mapRecipeIngredient, mapRecipeListItem, mapRecipeStep, mapRecipeSummary, mapRecipeEquipment } from './recipe.mapper.js';
+import {
+    mapRecipe,
+    mapRecipeDetail,
+    mapRecipeDetailComments,
+    mapRecipeDetailIngredient,
+    mapRecipeDetailStep,
+    mapRecipeDetailTag,
+    mapRecipeDetailEquipment,
+    mapRecipeIngredient,
+    mapRecipeListItem,
+    mapRecipeStep,
+    mapRecipeSummary,
+    mapRecipeEquipment
+} from './recipe.mapper.js';
 import { firstOrNull } from '../../utils/array.js';
 import { createPaginatedResult, formatLimitOffsetClause } from '../../utils/pagination.js';
 
-import type { RecipeRepository } from "./recipe.repository.interface.js";
-import type { Recipe, RecipeDetail, RecipeDetailCommentRow, RecipeDetailCommentStatsRow, RecipeDetailIngredientRow, RecipeDetailRow, RecipeDetailStepRow, RecipeDetailTagRow, RecipeDetailEquipmentRow, RecipeIngredientRow, RecipeIngredientWriteInput, RecipeInput, RecipeListItem, RecipeListItemRow, RecipeRow, RecipeStepRow, RecipeSummary, RecipeTagRow, RecipeEquipmentRow, RecipeSearchFilters, UpdateRecipeInput } from "./recipe.types.js";
+import type { RecipeRepository } from './recipe.repository.interface.js';
+import type {
+    Recipe,
+    RecipeDetail,
+    RecipeDetailCommentRow,
+    RecipeDetailCommentStatsRow,
+    RecipeDetailIngredientRow,
+    RecipeDetailRow,
+    RecipeDetailStepRow,
+    RecipeDetailTagRow,
+    RecipeDetailEquipmentRow,
+    RecipeIngredientRow,
+    RecipeIngredientWriteInput,
+    RecipeInput,
+    RecipeListItem,
+    RecipeListItemRow,
+    RecipeRow,
+    RecipeStepRow,
+    RecipeSummary,
+    RecipeTagRow,
+    RecipeEquipmentRow,
+    RecipeSearchFilters,
+    UpdateRecipeInput
+} from './recipe.types.js';
 import type { PaginatedResult, PaginationOptions } from '../../utils/pagination.js';
 import type { PublicImageUrlBuilder } from '../recipe-images/recipe-image.types.js';
 import type { ResultSetHeader, RowDataPacket } from 'mysql2';
@@ -36,7 +71,10 @@ const missingPublicImageUrlBuilder: PublicImageUrlBuilder = () => {
 };
 
 export class RecipeRepositoryMysql implements RecipeRepository {
-    constructor(private readonly db: Pool, private readonly getPublicImageUrl: PublicImageUrlBuilder = missingPublicImageUrlBuilder) { }
+    constructor(
+        private readonly db: Pool,
+        private readonly getPublicImageUrl: PublicImageUrlBuilder = missingPublicImageUrlBuilder
+    ) {}
 
     async create(input: RecipeInput): Promise<Recipe> {
         const connection = await this.db.getConnection();
@@ -47,7 +85,18 @@ export class RecipeRepositoryMysql implements RecipeRepository {
             const [result] = await connection.execute<ResultSetHeader>(
                 `INSERT INTO Recipes (UserId, CategoryId, Title, Slug, Description, PrepTimeMinutes, RestTimeMinutes, CookTimeMinutes, Servings, Status)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                [input.userId, input.categoryId ?? null, input.title, input.slug, input.description ?? '', input.prepTimeMinutes ?? 0, input.restTimeMinutes ?? null, input.cookTimeMinutes ?? null, input.servings ?? 1, 'draft']
+                [
+                    input.userId,
+                    input.categoryId ?? null,
+                    input.title,
+                    input.slug,
+                    input.description ?? '',
+                    input.prepTimeMinutes ?? 0,
+                    input.restTimeMinutes ?? null,
+                    input.cookTimeMinutes ?? null,
+                    input.servings ?? 1,
+                    'draft'
+                ]
             );
 
             const recipeId = Number(result.insertId);
@@ -61,8 +110,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
 
             const createdRecipe = await this.findById(recipeId);
 
-            if (!createdRecipe)
-                throw new Error('Recipe created but cannot be reloaded');
+            if (!createdRecipe) throw new Error('Recipe created but cannot be reloaded');
 
             return createdRecipe;
         } catch (error) {
@@ -126,24 +174,19 @@ export class RecipeRepositoryMysql implements RecipeRepository {
                 );
             }
 
-            if (input.ingredients !== undefined)
-                await this.replaceIngredients(connection, input.id, input);
+            if (input.ingredients !== undefined) await this.replaceIngredients(connection, input.id, input);
 
-            if (input.steps !== undefined)
-                await this.replaceSteps(connection, input.id, input);
+            if (input.steps !== undefined) await this.replaceSteps(connection, input.id, input);
 
-            if (input.equipments !== undefined)
-                await this.replaceEquipments(connection, input.id, input);
+            if (input.equipments !== undefined) await this.replaceEquipments(connection, input.id, input);
 
-            if (input.tagIds !== undefined)
-                await this.replaceTags(connection, input.id, input);
+            if (input.tagIds !== undefined) await this.replaceTags(connection, input.id, input);
 
             await connection.commit();
 
             const recipe = await this.findById(input.id);
 
-            if (!recipe)
-                throw new Error('Recipe updated but cannot be reloaded');
+            if (!recipe) throw new Error('Recipe updated but cannot be reloaded');
 
             return recipe;
         } catch (error) {
@@ -164,8 +207,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
 
         const recipe = await this.findById(id);
 
-        if (!recipe)
-            throw new Error('Recipe submitted but cannot be reloaded');
+        if (!recipe) throw new Error('Recipe submitted but cannot be reloaded');
 
         return recipe;
     }
@@ -225,14 +267,22 @@ export class RecipeRepositoryMysql implements RecipeRepository {
             [userId]
         );
 
-        return createPaginatedResult((rows as RecipeRow[]).map((row) => mapRecipeSummary(row, this.getPublicImageUrl)), this.mapCount(countRows), pagination);
+        return createPaginatedResult(
+            (rows as RecipeRow[]).map((row) => mapRecipeSummary(row, this.getPublicImageUrl)),
+            this.mapCount(countRows),
+            pagination
+        );
     }
 
     async findPublished(userId: number | null, pagination: PaginationOptions): Promise<PaginatedResult<RecipeListItem>> {
         return this.searchPublished(userId, {}, pagination);
     }
 
-    async searchPublished(userId: number | null, filters: RecipeSearchFilters, pagination: PaginationOptions): Promise<PaginatedResult<RecipeListItem>> {
+    async searchPublished(
+        userId: number | null,
+        filters: RecipeSearchFilters,
+        pagination: PaginationOptions
+    ): Promise<PaginatedResult<RecipeListItem>> {
         const where = this.buildPublishedWhere(filters);
         const limitOffsetClause = formatLimitOffsetClause(pagination);
 
@@ -257,7 +307,11 @@ export class RecipeRepositoryMysql implements RecipeRepository {
             [userId, userId, ...where.params]
         );
 
-        return createPaginatedResult((rows as RecipeListItemRow[]).map((row) => mapRecipeListItem(row, this.getPublicImageUrl)), this.mapCount(countRows), pagination);
+        return createPaginatedResult(
+            (rows as RecipeListItemRow[]).map((row) => mapRecipeListItem(row, this.getPublicImageUrl)),
+            this.mapCount(countRows),
+            pagination
+        );
     }
 
     async findPublishedByAuthorId(viewerUserId: number | null, authorUserId: number): Promise<RecipeListItem[]> {
@@ -311,8 +365,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
         );
 
         const row = firstOrNull(rows as RecipeDetailRow[]);
-        if (!row)
-            return null;
+        if (!row) return null;
 
         const recipe = mapRecipeDetail(row, this.getPublicImageUrl);
         const [ingredientRows, stepRows, equipmentRows, tagRows, commentRows, commentStats] = await Promise.all([
@@ -417,8 +470,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
         const [rows] = await this.db.execute(sql, params);
 
         const row = firstOrNull(rows as RecipeRow[]);
-        if (!row)
-            return null;
+        if (!row) return null;
 
         const recipe = mapRecipe(row, this.getPublicImageUrl);
         const [ingredientRows, stepRows, equipmentRows, tagIds] = await Promise.all([
@@ -437,23 +489,31 @@ export class RecipeRepositoryMysql implements RecipeRepository {
     }
 
     private async insertIngredients(connection: PoolConnection, recipeId: number, input: RecipeInput): Promise<void> {
-        if (!input.ingredients?.length)
-            return;
+        if (!input.ingredients?.length) return;
 
         const ingredients = await this.resolveIngredientIds(connection, input.ingredients);
 
         await connection.query(
             `INSERT INTO RecipeIngredients (RecipeId, IngredientId, DisplayText, Quantity, Unit, Note, SortOrder)
              VALUES ?`,
-            [ingredients.map((ingredient) => [recipeId, ingredient.ingredientId, ingredient.displayText, ingredient.quantity ?? null, ingredient.unit, ingredient.note ?? null, ingredient.sortOrder ?? 1])]
+            [
+                ingredients.map((ingredient) => [
+                    recipeId,
+                    ingredient.ingredientId,
+                    ingredient.displayText,
+                    ingredient.quantity ?? null,
+                    ingredient.unit,
+                    ingredient.note ?? null,
+                    ingredient.sortOrder ?? 1
+                ])
+            ]
         );
 
         await this.insertUnknownIngredientProposals(connection, recipeId, input.userId, ingredients);
     }
 
     private async insertSteps(connection: PoolConnection, recipeId: number, input: RecipeInput): Promise<void> {
-        if (!input.steps?.length)
-            return;
+        if (!input.steps?.length) return;
 
         await connection.query(
             `INSERT INTO RecipeSteps (RecipeId, StepNumber, Description)
@@ -463,8 +523,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
     }
 
     private async insertEquipments(connection: PoolConnection, recipeId: number, input: RecipeInput): Promise<void> {
-        if (!input.equipments?.length)
-            return;
+        if (!input.equipments?.length) return;
 
         await connection.query(
             `INSERT INTO RecipeEquipments (RecipeId, EquipmentId)
@@ -474,8 +533,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
     }
 
     private async insertTags(connection: PoolConnection, recipeId: number, input: RecipeInput): Promise<void> {
-        if (!input.tagIds?.length)
-            return;
+        if (!input.tagIds?.length) return;
 
         await connection.query(
             `INSERT INTO RecipeTags (RecipeId, TagId)
@@ -491,31 +549,44 @@ export class RecipeRepositoryMysql implements RecipeRepository {
             [recipeId]
         );
 
-        if (!input.ingredients?.length)
-            return;
+        if (!input.ingredients?.length) return;
 
         const ingredients = await this.resolveIngredientIds(connection, input.ingredients);
 
         await connection.query(
             `INSERT INTO RecipeIngredients (RecipeId, IngredientId, DisplayText, Quantity, Unit, Note, SortOrder)
              VALUES ?`,
-            [ingredients.map((ingredient) => [recipeId, ingredient.ingredientId, ingredient.displayText, ingredient.quantity ?? null, ingredient.unit, ingredient.note ?? null, ingredient.sortOrder ?? 1])]
+            [
+                ingredients.map((ingredient) => [
+                    recipeId,
+                    ingredient.ingredientId,
+                    ingredient.displayText,
+                    ingredient.quantity ?? null,
+                    ingredient.unit,
+                    ingredient.note ?? null,
+                    ingredient.sortOrder ?? 1
+                ])
+            ]
         );
 
         await this.insertUnknownIngredientProposals(connection, recipeId, input.userId, ingredients);
     }
 
-    private async resolveIngredientIds(connection: PoolConnection, ingredients: RecipeIngredientWriteInput[]): Promise<RecipeIngredientWriteInput[]> {
-        const normalizedNames = [...new Set(
-            ingredients
-                .filter(({ ingredientId }) => ingredientId === null)
-                .map(({ normalizedName }) => normalizedName)
-                .filter((normalizedName): normalizedName is string => Boolean(normalizedName))
-        )];
+    private async resolveIngredientIds(
+        connection: PoolConnection,
+        ingredients: RecipeIngredientWriteInput[]
+    ): Promise<RecipeIngredientWriteInput[]> {
+        const normalizedNames = [
+            ...new Set(
+                ingredients
+                    .filter(({ ingredientId }) => ingredientId === null)
+                    .map(({ normalizedName }) => normalizedName)
+                    .filter((normalizedName): normalizedName is string => Boolean(normalizedName))
+            )
+        ];
         if (ingredients.some(({ ingredientId, normalizedName }) => ingredientId === null && !normalizedName))
             throw new Error('Unknown recipe ingredients require a normalized name');
-        if (!normalizedNames.length)
-            return ingredients;
+        if (!normalizedNames.length) return ingredients;
 
         const placeholders = normalizedNames.map(() => '?').join(', ');
         const [rows] = await connection.execute<IngredientMatchRow[]>(
@@ -538,13 +609,14 @@ export class RecipeRepositoryMysql implements RecipeRepository {
         const ingredientIdsByName = new Map<string, number>();
 
         for (const row of rows) {
-            if (!ingredientIdsByName.has(row.NormalizedName))
-                ingredientIdsByName.set(row.NormalizedName, Number(row.IngredientId));
+            if (!ingredientIdsByName.has(row.NormalizedName)) ingredientIdsByName.set(row.NormalizedName, Number(row.IngredientId));
         }
 
-        return ingredients.map((ingredient) => ingredient.ingredientId !== null
-            ? ingredient
-            : { ...ingredient, ingredientId: ingredientIdsByName.get(ingredient.normalizedName!) ?? null });
+        return ingredients.map((ingredient) =>
+            ingredient.ingredientId !== null
+                ? ingredient
+                : { ...ingredient, ingredientId: ingredientIdsByName.get(ingredient.normalizedName!) ?? null }
+        );
     }
 
     private async insertUnknownIngredientProposals(
@@ -560,21 +632,22 @@ export class RecipeRepositoryMysql implements RecipeRepository {
                 proposalsByNormalizedName.set(ingredient.normalizedName!, ingredient);
         }
 
-        if (!proposalsByNormalizedName.size)
-            return;
+        if (!proposalsByNormalizedName.size) return;
 
         await connection.query(
             `INSERT INTO CatalogProposals
                (AuthorUserId, RecipeId, ProposalType, ProposedName, NormalizedName)
              VALUES ?
              ON DUPLICATE KEY UPDATE Id = CatalogProposals.Id`,
-            [[...proposalsByNormalizedName.values()].map((ingredient) => [
-                authorUserId,
-                recipeId,
-                'ingredient',
-                ingredient.displayText,
-                ingredient.normalizedName!
-            ])]
+            [
+                [...proposalsByNormalizedName.values()].map((ingredient) => [
+                    authorUserId,
+                    recipeId,
+                    'ingredient',
+                    ingredient.displayText,
+                    ingredient.normalizedName!
+                ])
+            ]
         );
     }
 
@@ -585,8 +658,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
             [recipeId]
         );
 
-        if (!input.steps?.length)
-            return;
+        if (!input.steps?.length) return;
 
         await connection.query(
             `INSERT INTO RecipeSteps (RecipeId, StepNumber, Description)
@@ -602,8 +674,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
             [recipeId]
         );
 
-        if (!input.equipments?.length)
-            return;
+        if (!input.equipments?.length) return;
 
         await connection.query(
             `INSERT INTO RecipeEquipments (RecipeId, EquipmentId)
@@ -619,8 +690,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
             [recipeId]
         );
 
-        if (!input.tagIds?.length)
-            return;
+        if (!input.tagIds?.length) return;
 
         await connection.query(
             `INSERT INTO RecipeTags (RecipeId, TagId)
@@ -746,8 +816,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
         );
 
         const row = firstOrNull(rows as RecipeDetailCommentStatsRow[]);
-        if (!row)
-            return { CommentsCount: 0, AverageRating: null, RatingsCount: 0 } as RecipeDetailCommentStatsRow;
+        if (!row) return { CommentsCount: 0, AverageRating: null, RatingsCount: 0 } as RecipeDetailCommentStatsRow;
 
         return row;
     }

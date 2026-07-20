@@ -9,13 +9,12 @@ export function normalizeIngredientName(name: string): string {
 }
 
 export class IngredientService {
-    constructor(private readonly ingredientRepository: IngredientRepository) { }
+    constructor(private readonly ingredientRepository: IngredientRepository) {}
 
     async getIngredients(): Promise<Ingredient[]> {
         const ingredients = await this.ingredientRepository.findAll();
 
-        if (!ingredients)
-            throw notFound('Ingredients not found', 'INGREDIENTS_NOT_FOUND');
+        if (!ingredients) throw notFound('Ingredients not found', 'INGREDIENTS_NOT_FOUND');
 
         return ingredients;
     }
@@ -23,8 +22,7 @@ export class IngredientService {
     async getIngredient(ingredientId: number): Promise<Ingredient> {
         const ingredient = await this.ingredientRepository.findById(ingredientId);
 
-        if (!ingredient)
-            throw notFound('Ingredient not found', 'INGREDIENT_NOT_FOUND');
+        if (!ingredient) throw notFound('Ingredient not found', 'INGREDIENT_NOT_FOUND');
 
         return ingredient;
     }

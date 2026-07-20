@@ -11,7 +11,7 @@ export interface PasswordResetRow {
 }
 
 export class PasswordResetRepositoryMysql implements PasswordResetRepository {
-    constructor(private readonly db: Pool) { }
+    constructor(private readonly db: Pool) {}
 
     async create(input: PasswordResetCreateInput): Promise<void> {
         await this.db.execute(

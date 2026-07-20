@@ -7,13 +7,13 @@ import { PERMISSIONS } from '../../security/permissions.js';
 import type { RequestHandler } from 'express';
 
 export type StaffInvitationsController = {
-  create: RequestHandler;
+    create: RequestHandler;
 };
 
 export function createStaffInvitationsRouter(controller: StaffInvitationsController) {
-  const router = Router();
+    const router = Router();
 
-  router.post('/', requireStaffAuth, RequirePermission(PERMISSIONS.staffCreate), requireRecentStaffAuthentication, controller.create);
+    router.post('/', requireStaffAuth, RequirePermission(PERMISSIONS.staffCreate), requireRecentStaffAuthentication, controller.create);
 
-  return router;
+    return router;
 }

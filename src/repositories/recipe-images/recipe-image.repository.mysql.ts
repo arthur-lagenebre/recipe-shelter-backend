@@ -9,7 +9,7 @@ const RECIPE_IMAGE_COLUMNS = `Id, RecipeId, LargeStorageKey, MediumStorageKey, T
     OriginalWidth, OriginalHeight, LargeWidth, LargeHeight, LargeSizeBytes, AltText, CreatedAt, UpdatedAt`;
 
 export class RecipeImageRepositoryMysql implements RecipeImageRepository {
-    constructor(private readonly db: Pool) { }
+    constructor(private readonly db: Pool) {}
 
     async findByRecipeId(recipeId: number): Promise<RecipeImage | null> {
         const [rows] = await this.db.execute(
@@ -44,7 +44,19 @@ export class RecipeImageRepositoryMysql implements RecipeImageRepository {
                     AltText = new_image.AltText,
                     CreatedAt = CURRENT_TIMESTAMP,
                     UpdatedAt = CURRENT_TIMESTAMP`,
-                [input.id, input.recipeId, input.largeStorageKey, input.mediumStorageKey, input.thumbnailStorageKey, input.originalWidth, input.originalHeight, input.largeWidth, input.largeHeight, input.largeSizeBytes, input.altText]
+                [
+                    input.id,
+                    input.recipeId,
+                    input.largeStorageKey,
+                    input.mediumStorageKey,
+                    input.thumbnailStorageKey,
+                    input.originalWidth,
+                    input.originalHeight,
+                    input.largeWidth,
+                    input.largeHeight,
+                    input.largeSizeBytes,
+                    input.altText
+                ]
             );
 
             return previous;

@@ -112,7 +112,7 @@ export type RecipeSummary = {
     updatedAt: Date;
     publishedAt: Date | null;
     rejectionReason: string | null;
-}
+};
 
 export interface RecipeListItem {
     id: number;
@@ -184,27 +184,28 @@ export type RecipeDetailComment = {
     children: RecipeDetailComment[];
 };
 
-export type RecipeRow = RowDataPacket & RecipeImageJoinedRow & {
-    Id: number;
-    UserId: number;
-    CategoryId: number | null;
-    Title: string;
-    Slug: string;
-    Description: string;
-    PrepTimeMinutes: number;
-    RestTimeMinutes: number | null;
-    CookTimeMinutes: number | null;
-    Servings: number;
-    Status: string;
-    CreatedAt: Date;
-    SubmittedAt: Date | null;
-    ModeratedAt: Date | null;
-    ModeratedByUserId: number | null;
-    PublishedAt: Date | null;
-    ArchivedAt: Date | null;
-    RejectionReason: string | null;
-    UpdatedAt: Date;
-};
+export type RecipeRow = RowDataPacket &
+    RecipeImageJoinedRow & {
+        Id: number;
+        UserId: number;
+        CategoryId: number | null;
+        Title: string;
+        Slug: string;
+        Description: string;
+        PrepTimeMinutes: number;
+        RestTimeMinutes: number | null;
+        CookTimeMinutes: number | null;
+        Servings: number;
+        Status: string;
+        CreatedAt: Date;
+        SubmittedAt: Date | null;
+        ModeratedAt: Date | null;
+        ModeratedByUserId: number | null;
+        PublishedAt: Date | null;
+        ArchivedAt: Date | null;
+        RejectionReason: string | null;
+        UpdatedAt: Date;
+    };
 
 export type RecipeDetailCommentStatsRow = RowDataPacket & {
     CommentsCount: number | string;
@@ -234,20 +235,21 @@ export type RecipeTagRow = RowDataPacket & {
     TagId: number;
 };
 
-export type RecipeListItemRow = RowDataPacket & RecipeImageJoinedRow & {
-    Id: number;
-    Title: string;
-    Slug: string;
-    Description: string;
-    Category: string | null;
-    PrepTimeMinutes: number;
-    RestTimeMinutes: number | null;
-    CookTimeMinutes: number | null;
-    Servings: number;
-    AuthorUsername: string;
-    PublishedAt: Date;
-    IsFavorite: boolean | number;
-};
+export type RecipeListItemRow = RowDataPacket &
+    RecipeImageJoinedRow & {
+        Id: number;
+        Title: string;
+        Slug: string;
+        Description: string;
+        Category: string | null;
+        PrepTimeMinutes: number;
+        RestTimeMinutes: number | null;
+        CookTimeMinutes: number | null;
+        Servings: number;
+        AuthorUsername: string;
+        PublishedAt: Date;
+        IsFavorite: boolean | number;
+    };
 
 export type RecipeDetailRow = RecipeListItemRow & {
     AuthorId: number;

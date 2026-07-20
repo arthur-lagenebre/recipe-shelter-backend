@@ -1,7 +1,16 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { parseLoginBody, parseRegisterBody, parseResendValidationEmailBody, parseResetPasswordBody, parseStaffInvitationActivationBody, parseStaffLoginVerificationBody, parseStaffMfaEnrollmentOptionsBody, parseValidateEmailBody } from '../../../src/api/auth/auth.dto.js';
+import {
+    parseLoginBody,
+    parseRegisterBody,
+    parseResendValidationEmailBody,
+    parseResetPasswordBody,
+    parseStaffInvitationActivationBody,
+    parseStaffLoginVerificationBody,
+    parseStaffMfaEnrollmentOptionsBody,
+    parseValidateEmailBody
+} from '../../../src/api/auth/auth.dto.js';
 import { HttpError } from '../../../src/utils/errors.js';
 
 function assertHttpError(error: unknown, code: string, status: number): void {
@@ -86,17 +95,29 @@ describe('auth.dto', () => {
 
     it('parses WebAuthn staff login and enrollment payloads', () => {
         const authenticationCredential = {
-            id: 'credential-1', rawId: 'credential-1', type: 'public-key', clientExtensionResults: {},
+            id: 'credential-1',
+            rawId: 'credential-1',
+            type: 'public-key',
+            clientExtensionResults: {},
             response: { clientDataJSON: 'data', authenticatorData: 'auth-data', signature: 'signature' }
         };
         const registrationCredential = {
-            id: 'credential-1', rawId: 'credential-1', type: 'public-key', clientExtensionResults: {},
+            id: 'credential-1',
+            rawId: 'credential-1',
+            type: 'public-key',
+            clientExtensionResults: {},
             response: { clientDataJSON: 'data', attestationObject: 'attestation' }
         };
 
-        assert.deepEqual(parseStaffLoginVerificationBody({ flowId: ' flow-1 ', credential: authenticationCredential }), { flowId: 'flow-1', credential: authenticationCredential });
+        assert.deepEqual(parseStaffLoginVerificationBody({ flowId: ' flow-1 ', credential: authenticationCredential }), {
+            flowId: 'flow-1',
+            credential: authenticationCredential
+        });
         assert.deepEqual(parseStaffMfaEnrollmentOptionsBody({ invitationToken: ' token ' }), { invitationToken: 'token' });
-        assert.deepEqual(parseStaffInvitationActivationBody(' token ', { flowId: 'flow-1', password: 'Recipe42?', credential: registrationCredential }), { flowId: 'flow-1', invitationToken: 'token', password: 'Recipe42?', credential: registrationCredential });
+        assert.deepEqual(
+            parseStaffInvitationActivationBody(' token ', { flowId: 'flow-1', password: 'Recipe42?', credential: registrationCredential }),
+            { flowId: 'flow-1', invitationToken: 'token', password: 'Recipe42?', credential: registrationCredential }
+        );
     });
 
     it('rejects missing flows and malformed WebAuthn responses', () => {
@@ -169,9 +190,10 @@ describe('auth.dto', () => {
 
     it('rejects a reset password body without a token', () => {
         assert.throws(
-            () => parseResetPasswordBody({
-                password: 'Recipe42?'
-            }),
+            () =>
+                parseResetPasswordBody({
+                    password: 'Recipe42?'
+                }),
             (error) => {
                 assertHttpError(error, 'AUTH_RESET_PASSWORD_MISSING_TOKEN', 400);
 

@@ -1,9 +1,35 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { mapRecipe, mapRecipeDetail, mapRecipeDetailComment, mapRecipeDetailComments, mapRecipeDetailEquipment, mapRecipeDetailIngredient, mapRecipeDetailStep, mapRecipeDetailTag, mapRecipeEquipment, mapRecipeIngredient, mapRecipeListItem, mapRecipeStep, mapRecipeSummary } from '../../../src/repositories/recipes/recipe.mapper.js';
+import {
+    mapRecipe,
+    mapRecipeDetail,
+    mapRecipeDetailComment,
+    mapRecipeDetailComments,
+    mapRecipeDetailEquipment,
+    mapRecipeDetailIngredient,
+    mapRecipeDetailStep,
+    mapRecipeDetailTag,
+    mapRecipeEquipment,
+    mapRecipeIngredient,
+    mapRecipeListItem,
+    mapRecipeStep,
+    mapRecipeSummary
+} from '../../../src/repositories/recipes/recipe.mapper.js';
 
-import type { RecipeDetailCommentRow, RecipeDetailEquipmentRow, RecipeDetailIngredientRow, RecipeDetailRow, RecipeDetailStepRow, RecipeDetailTagRow, RecipeEquipmentRow, RecipeIngredientRow, RecipeListItemRow, RecipeRow, RecipeStepRow } from '../../../src/repositories/recipes/recipe.types.js';
+import type {
+    RecipeDetailCommentRow,
+    RecipeDetailEquipmentRow,
+    RecipeDetailIngredientRow,
+    RecipeDetailRow,
+    RecipeDetailStepRow,
+    RecipeDetailTagRow,
+    RecipeEquipmentRow,
+    RecipeIngredientRow,
+    RecipeListItemRow,
+    RecipeRow,
+    RecipeStepRow
+} from '../../../src/repositories/recipes/recipe.types.js';
 
 const listRow = {
     Id: 1,
@@ -105,58 +131,96 @@ describe('recipe.mapper', () => {
     });
 
     it('maps recipe nested edit rows', () => {
-        assert.deepEqual(mapRecipeIngredient({ IngredientId: 7, DisplayText: 'farine T55 tamisée', Quantity: '2.5', Unit: 'kg', Note: null, SortOrder: 1 } as RecipeIngredientRow), {
-            ingredientId: 7,
-            displayText: 'farine T55 tamisée',
-            quantity: 2.5,
-            unit: 'kg',
-            note: null,
-            sortOrder: 1
-        });
+        assert.deepEqual(
+            mapRecipeIngredient({
+                IngredientId: 7,
+                DisplayText: 'farine T55 tamisée',
+                Quantity: '2.5',
+                Unit: 'kg',
+                Note: null,
+                SortOrder: 1
+            } as RecipeIngredientRow),
+            {
+                ingredientId: 7,
+                displayText: 'farine T55 tamisée',
+                quantity: 2.5,
+                unit: 'kg',
+                note: null,
+                sortOrder: 1
+            }
+        );
         assert.deepEqual(mapRecipeStep({ StepNumber: 2, Description: 'Bake' } as RecipeStepRow), { stepNumber: 2, description: 'Bake' });
         assert.deepEqual(mapRecipeEquipment({ EquipmentId: 4 } as RecipeEquipmentRow), { equipmentId: 4 });
     });
 
     it('preserves an absent ingredient quantity as null', () => {
-        assert.equal(mapRecipeIngredient({ IngredientId: 7, DisplayText: 'eau', Quantity: null, Unit: null, Note: null, SortOrder: 1 } as RecipeIngredientRow).quantity, null);
-        assert.equal(mapRecipeDetailIngredient({ IngredientId: 7, Name: 'Eau', Slug: 'eau', DisplayText: 'eau filtrée', Quantity: null, Unit: null, Note: null, SortOrder: 1 } as RecipeDetailIngredientRow).quantity, null);
+        assert.equal(
+            mapRecipeIngredient({
+                IngredientId: 7,
+                DisplayText: 'eau',
+                Quantity: null,
+                Unit: null,
+                Note: null,
+                SortOrder: 1
+            } as RecipeIngredientRow).quantity,
+            null
+        );
+        assert.equal(
+            mapRecipeDetailIngredient({
+                IngredientId: 7,
+                Name: 'Eau',
+                Slug: 'eau',
+                DisplayText: 'eau filtrée',
+                Quantity: null,
+                Unit: null,
+                Note: null,
+                SortOrder: 1
+            } as RecipeDetailIngredientRow).quantity,
+            null
+        );
     });
 
     it('keeps unknown ingredients visible without canonical fields', () => {
-        assert.deepEqual(mapRecipeIngredient({
-            IngredientId: null,
-            DisplayText: 'Poudre de lune',
-            Quantity: 1,
-            Unit: 'pincée',
-            Note: null,
-            SortOrder: 2
-        } as RecipeIngredientRow), {
-            ingredientId: null,
-            displayText: 'Poudre de lune',
-            quantity: 1,
-            unit: 'pincée',
-            note: null,
-            sortOrder: 2
-        });
-        assert.deepEqual(mapRecipeDetailIngredient({
-            IngredientId: null,
-            Name: null,
-            Slug: null,
-            DisplayText: 'Poudre de lune',
-            Quantity: null,
-            Unit: null,
-            Note: null,
-            SortOrder: 2
-        } as RecipeDetailIngredientRow), {
-            id: null,
-            name: null,
-            slug: null,
-            displayText: 'Poudre de lune',
-            quantity: null,
-            unit: null,
-            note: null,
-            sortOrder: 2
-        });
+        assert.deepEqual(
+            mapRecipeIngredient({
+                IngredientId: null,
+                DisplayText: 'Poudre de lune',
+                Quantity: 1,
+                Unit: 'pincée',
+                Note: null,
+                SortOrder: 2
+            } as RecipeIngredientRow),
+            {
+                ingredientId: null,
+                displayText: 'Poudre de lune',
+                quantity: 1,
+                unit: 'pincée',
+                note: null,
+                sortOrder: 2
+            }
+        );
+        assert.deepEqual(
+            mapRecipeDetailIngredient({
+                IngredientId: null,
+                Name: null,
+                Slug: null,
+                DisplayText: 'Poudre de lune',
+                Quantity: null,
+                Unit: null,
+                Note: null,
+                SortOrder: 2
+            } as RecipeDetailIngredientRow),
+            {
+                id: null,
+                name: null,
+                slug: null,
+                displayText: 'Poudre de lune',
+                quantity: null,
+                unit: null,
+                note: null,
+                sortOrder: 2
+            }
+        );
     });
 
     it('keeps recipe list items unchanged', () => {
@@ -177,16 +241,19 @@ describe('recipe.mapper', () => {
     });
 
     it('maps public image URLs without exposing storage keys or the removed URL field', () => {
-        const result = mapRecipeListItem({
-            ...listRow,
-            CoverImageId: 'image-id',
-            CoverImageLargeStorageKey: 'recipes/1/image-id/large.webp',
-            CoverImageMediumStorageKey: 'recipes/1/image-id/medium.webp',
-            CoverImageThumbnailStorageKey: 'recipes/1/image-id/thumbnail.webp',
-            CoverImageWidth: 1200,
-            CoverImageHeight: 800,
-            CoverImageAltText: 'Cake'
-        }, (key) => `https://images.example.test/${key}`);
+        const result = mapRecipeListItem(
+            {
+                ...listRow,
+                CoverImageId: 'image-id',
+                CoverImageLargeStorageKey: 'recipes/1/image-id/large.webp',
+                CoverImageMediumStorageKey: 'recipes/1/image-id/medium.webp',
+                CoverImageThumbnailStorageKey: 'recipes/1/image-id/thumbnail.webp',
+                CoverImageWidth: 1200,
+                CoverImageHeight: 800,
+                CoverImageAltText: 'Cake'
+            },
+            (key) => `https://images.example.test/${key}`
+        );
 
         assert.deepEqual(result.coverImage, {
             id: 'image-id',
@@ -202,19 +269,42 @@ describe('recipe.mapper', () => {
     });
 
     it('maps recipe detail nested rows', () => {
-        assert.deepEqual(mapRecipeDetailIngredient({ IngredientId: 7, Name: 'Farine', Slug: 'farine', DisplayText: 'farine de blé T55', Quantity: '250', Unit: 'g', Note: 'T55', SortOrder: 1 } as RecipeDetailIngredientRow), {
-            id: 7,
-            name: 'Farine',
-            slug: 'farine',
-            displayText: 'farine de blé T55',
-            quantity: 250,
-            unit: 'g',
-            note: 'T55',
-            sortOrder: 1
+        assert.deepEqual(
+            mapRecipeDetailIngredient({
+                IngredientId: 7,
+                Name: 'Farine',
+                Slug: 'farine',
+                DisplayText: 'farine de blé T55',
+                Quantity: '250',
+                Unit: 'g',
+                Note: 'T55',
+                SortOrder: 1
+            } as RecipeDetailIngredientRow),
+            {
+                id: 7,
+                name: 'Farine',
+                slug: 'farine',
+                displayText: 'farine de blé T55',
+                quantity: 250,
+                unit: 'g',
+                note: 'T55',
+                sortOrder: 1
+            }
+        );
+        assert.deepEqual(mapRecipeDetailStep({ StepNumber: 1, Description: 'Melanger' } as RecipeDetailStepRow), {
+            stepNumber: 1,
+            description: 'Melanger'
         });
-        assert.deepEqual(mapRecipeDetailStep({ StepNumber: 1, Description: 'Melanger' } as RecipeDetailStepRow), { stepNumber: 1, description: 'Melanger' });
-        assert.deepEqual(mapRecipeDetailEquipment({ Id: 3, Name: 'Four', Slug: 'four' } as RecipeDetailEquipmentRow), { id: 3, name: 'Four', slug: 'four' });
-        assert.deepEqual(mapRecipeDetailTag({ Id: 5, Name: 'Dessert', Slug: 'dessert' } as RecipeDetailTagRow), { id: 5, name: 'Dessert', slug: 'dessert' });
+        assert.deepEqual(mapRecipeDetailEquipment({ Id: 3, Name: 'Four', Slug: 'four' } as RecipeDetailEquipmentRow), {
+            id: 3,
+            name: 'Four',
+            slug: 'four'
+        });
+        assert.deepEqual(mapRecipeDetailTag({ Id: 5, Name: 'Dessert', Slug: 'dessert' } as RecipeDetailTagRow), {
+            id: 5,
+            name: 'Dessert',
+            slug: 'dessert'
+        });
     });
 
     it('maps recipe detail comments with a nested author only', () => {

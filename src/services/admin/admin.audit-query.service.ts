@@ -3,9 +3,9 @@ import type { AdminAuditLog, AdminAuditLogFilters } from '../../repositories/adm
 import type { PaginatedResult, PaginationOptions } from '../../utils/pagination.js';
 
 export class AdminAuditQueryService {
-  constructor(private readonly auditLogs: AdminAuditQueryRepository) { }
+    constructor(private readonly auditLogs: AdminAuditQueryRepository) {}
 
-  async list(filters: AdminAuditLogFilters, pagination: PaginationOptions): Promise<PaginatedResult<AdminAuditLog>> {
-    return this.auditLogs.find(filters, pagination);
-  }
+    async list(filters: AdminAuditLogFilters, pagination: PaginationOptions): Promise<PaginatedResult<AdminAuditLog>> {
+        return this.auditLogs.find(filters, pagination);
+    }
 }

@@ -1,60 +1,65 @@
 {
-  "name": "recipe-shelter-backend",
-  "version": "1.0.0",
-  "type": "module",
-  "main": "dist/server.js",
-  "lint-staged": {
-    "src/**/*.ts": [
-      "eslint --fix"
-    ]
-  },
-  "scripts": {
-    "dev": "tsx watch src/server.ts",
-    "build": "tsc",
-    "test": "node --import tsx --test \"tests/**/*.test.ts\"",
-    "test:typecheck": "tsc -p tests/tsconfig.json",
-    "test:coverage": "node --import tsx --experimental-test-coverage --test-coverage-lines=80 --test-coverage-branches=90 --test-coverage-functions=70 --test \"tests/**/*.test.ts\"",
-    "test:integration": "node --import tsx --test \"tests/integration/**/*.test.ts\"",
-    "test:mysql": "node --import tsx --test \"tests/integration/mysql/**/*.test.ts\"",
-    "test:e2e": "node --import tsx --test \"tests/e2e/**/*.test.ts\"",
-    "start": "node dist/server.js",
-    "bootstrap:superadmin": "node dist/cli/bootstrap-super-admin.js",
-    "db:reset": "mysql -u root -p < database/reset.sql",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "prepare": "husky"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.39.4",
-    "@types/bcrypt": "^6.0.0",
-    "@types/cookie-parser": "^1.4.10",
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.6",
-    "@types/jsonwebtoken": "^9.0.10",
-    "@types/multer": "^2.2.0",
-    "@types/node": "^25.6.2",
-    "@types/nodemailer": "^8.0.0",
-    "eslint": "^9.39.4",
-    "eslint-plugin-import": "^2.32.0",
-    "globals": "^17.4.0",
-    "husky": "^9.1.7",
-    "lint-staged": "^16.4.0",
-    "tsx": "^4.21.0",
-    "typescript": "^5.9.3",
-    "typescript-eslint": "^8.57.1"
-  },
-  "dependencies": {
-    "@aws-sdk/client-s3": "^3.1085.0",
-    "@simplewebauthn/server": "^13.3.2",
-    "bcrypt": "^6.0.0",
-    "cookie-parser": "^1.4.7",
-    "cors": "^2.8.6",
-    "dotenv": "^17.3.1",
-    "express": "^5.2.1",
-    "jsonwebtoken": "^9.0.3",
-    "multer": "^2.2.0",
-    "mysql2": "^3.18.2",
-    "nodemailer": "^8.0.7",
-    "sharp": "^0.35.3"
-  }
+    "name": "recipe-shelter-backend",
+    "version": "1.0.0",
+    "type": "module",
+    "main": "dist/server.js",
+    "lint-staged": {
+        "src/**/*.ts": [
+            "eslint --fix",
+            "prettier --write"
+        ]
+    },
+    "scripts": {
+        "dev": "tsx watch src/server.ts",
+        "build": "tsc",
+        "test": "node --import tsx --test \"tests/**/*.test.ts\"",
+        "test:typecheck": "tsc -p tests/tsconfig.json",
+        "test:coverage": "node --import tsx --experimental-test-coverage --test-coverage-lines=80 --test-coverage-branches=90 --test-coverage-functions=70 --test \"tests/**/*.test.ts\"",
+        "test:integration": "node --import tsx --test \"tests/integration/**/*.test.ts\"",
+        "test:mysql": "node --import tsx --test \"tests/integration/mysql/**/*.test.ts\"",
+        "test:e2e": "node --import tsx --test \"tests/e2e/**/*.test.ts\"",
+        "start": "node dist/server.js",
+        "bootstrap:superadmin": "node dist/cli/bootstrap-super-admin.js",
+        "db:reset": "mysql -u root -p < database/reset.sql",
+        "lint": "eslint .",
+        "lint:fix": "eslint . --fix",
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
+        "prepare": "husky"
+    },
+    "devDependencies": {
+        "@eslint/js": "^9.39.4",
+        "@types/bcrypt": "^6.0.0",
+        "@types/cookie-parser": "^1.4.10",
+        "@types/cors": "^2.8.19",
+        "@types/express": "^5.0.6",
+        "@types/jsonwebtoken": "^9.0.10",
+        "@types/multer": "^2.2.0",
+        "@types/node": "^25.6.2",
+        "@types/nodemailer": "^8.0.0",
+        "eslint": "^9.39.4",
+        "eslint-config-prettier": "^10.1.8",
+        "eslint-plugin-import": "^2.32.0",
+        "globals": "^17.4.0",
+        "husky": "^9.1.7",
+        "lint-staged": "^16.4.0",
+        "prettier": "^3.9.5",
+        "tsx": "^4.21.0",
+        "typescript": "^5.9.3",
+        "typescript-eslint": "^8.57.1"
+    },
+    "dependencies": {
+        "@aws-sdk/client-s3": "^3.1085.0",
+        "@simplewebauthn/server": "^13.3.2",
+        "bcrypt": "^6.0.0",
+        "cookie-parser": "^1.4.7",
+        "cors": "^2.8.6",
+        "dotenv": "^17.3.1",
+        "express": "^5.2.1",
+        "jsonwebtoken": "^9.0.3",
+        "multer": "^2.2.0",
+        "mysql2": "^3.18.2",
+        "nodemailer": "^8.0.7",
+        "sharp": "^0.35.3"
+    }
 }

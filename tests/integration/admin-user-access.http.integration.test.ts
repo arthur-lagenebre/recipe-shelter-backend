@@ -9,7 +9,13 @@ import { createAdminUsersController } from '../../src/api/admin/admin.users.cont
 import { createAdminUsersRouter } from '../../src/api/admin/admin.users.routes.js';
 import { CommunityOnly, EnforceAuthorizationPolicies, StaffOnly } from '../../src/middlewares/authorization.js';
 import { errorHandler } from '../../src/middlewares/error-handler.js';
-import { configureAuthRbacRepository, configureAuthSessionRepository, configureAuthUserRepository, requireCommunityAuth, requireStaffAuth } from '../../src/middlewares/require-auth.js';
+import {
+    configureAuthRbacRepository,
+    configureAuthSessionRepository,
+    configureAuthUserRepository,
+    requireCommunityAuth,
+    requireStaffAuth
+} from '../../src/middlewares/require-auth.js';
 import { PERMISSIONS } from '../../src/security/permissions.js';
 import { AdminUserService } from '../../src/services/admin/admin.users.service.js';
 import { TestAdminAuditRecorder } from '../helpers/admin-audit.js';
@@ -50,13 +56,14 @@ describe('admin user access HTTP integration', () => {
 
     before(async () => {
         const userRepository = {
-            async findById(id: number) { return users.get(id) ?? null; }
+            async findById(id: number) {
+                return users.get(id) ?? null;
+            }
         };
         const adminRepository = {
             async ban(userId: number, adminUserId: number, reason: string) {
                 const user = users.get(userId);
-                if (!user)
-                    return false;
+                if (!user) return false;
                 users.set(userId, {
                     ...user,
                     status: 'banned',
@@ -68,8 +75,7 @@ describe('admin user access HTTP integration', () => {
             },
             async unban(userId: number) {
                 const user = users.get(userId);
-                if (!user)
-                    return false;
+                if (!user) return false;
                 users.set(userId, {
                     ...user,
                     status: 'active',
@@ -79,13 +85,9 @@ describe('admin user access HTTP integration', () => {
                 });
                 return true;
             },
-            async createModerationLog() { }
+            async createModerationLog() {}
         } as unknown as AdminUserRepository;
-        const service = new AdminUserService(
-            userRepository as unknown as UserRepository,
-            adminRepository,
-            new TestAdminAuditRecorder()
-        );
+        const service = new AdminUserService(userRepository as unknown as UserRepository, adminRepository, new TestAdminAuditRecorder());
         const app = express();
 
         configureAuthUserRepository(userRepository);
@@ -122,7 +124,7 @@ describe('admin user access HTTP integration', () => {
         });
 
         assert.equal(response.status, 401);
-        assert.equal((await response.json() as { error: { code: string } }).error.code, 'AUTH_NO_TOKEN');
+        assert.equal(((await response.json()) as { error: { code: string } }).error.code, 'AUTH_NO_TOKEN');
     });
 
     it('enforces community and staff account boundaries', async () => {
@@ -136,9 +138,9 @@ describe('admin user access HTTP integration', () => {
         assert.equal(communityAllowed.status, 200);
         assert.equal(staffAllowed.status, 200);
         assert.equal(communityDenied.status, 401);
-        assert.equal((await communityDenied.json() as { error: { code: string } }).error.code, 'AUTH_NO_TOKEN');
+        assert.equal(((await communityDenied.json()) as { error: { code: string } }).error.code, 'AUTH_NO_TOKEN');
         assert.equal(staffDenied.status, 401);
-        assert.equal((await staffDenied.json() as { error: { code: string } }).error.code, 'AUTH_NO_TOKEN');
+        assert.equal(((await staffDenied.json()) as { error: { code: string } }).error.code, 'AUTH_NO_TOKEN');
     });
 
     it('invalidates a banned user session and restores it after unban', async () => {
@@ -154,7 +156,7 @@ describe('admin user access HTTP integration', () => {
             headers: { cookie: userCookie }
         });
         assert.equal(bannedSession.status, 401);
-        assert.equal((await bannedSession.json() as { error: { code: string } }).error.code, 'AUTH_BAD_TOKEN');
+        assert.equal(((await bannedSession.json()) as { error: { code: string } }).error.code, 'AUTH_BAD_TOKEN');
 
         const unban = await fetch(`${server.baseUrl}/api/v1/admin/users/2/unban`, {
             method: 'POST',

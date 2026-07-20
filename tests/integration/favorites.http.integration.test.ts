@@ -128,7 +128,9 @@ describe('favorites HTTP integration', () => {
         const app = express();
 
         configureAuthUserRepository({
-            async findById(id) { return id === activeUser.id ? activeUser : null; }
+            async findById(id) {
+                return id === activeUser.id ? activeUser : null;
+            }
         });
         const sessions = new TestSessionRepository();
         configureAuthSessionRepository(sessions);
@@ -181,7 +183,7 @@ describe('favorites HTTP integration', () => {
         const listResponse = await fetch(`${server.baseUrl}/api/v1/favorites/me?page=1&limit=5`, {
             headers: { cookie: sessionCookie }
         });
-        const listBody = await listResponse.json() as { items: RecipeListItem[]; pagination: { limit: number; totalItems: number } };
+        const listBody = (await listResponse.json()) as { items: RecipeListItem[]; pagination: { limit: number; totalItems: number } };
 
         assert.equal(listResponse.status, 200);
         assert.equal(listBody.items[0]?.id, 12);
