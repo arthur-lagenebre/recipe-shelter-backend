@@ -2004,6 +2004,75 @@ type UnbanUserResponse = OkResponse;</code></pre>
       </div>
     </section>
 
+    <section aria-labelledby="admin-ingredients">
+      <h2 id="admin-ingredients">Admin ingredients</h2>
+      <p class="section-intro">Gestion du catalogue canonique et de ses alias. Chaque route exige la permission <code>ingredient.*</code> correspondante et produit un audit administratif. Les transitions de cycle de vie et la fusion exigent un motif de 10 à 1000 caractères.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Méthode</th>
+              <th>Route</th>
+              <th>Auth</th>
+              <th>Body / Query</th>
+              <th>Réponse</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="method get">GET</span></td>
+              <td><code>/api/v1/admin/ingredients</code></td>
+              <td><span class="auth admin">Staff + <code>ingredient.read</code></span></td>
+              <td><code>page</code>, <code>limit</code>, <code>status</code> et <code>q</code> optionnels.</td>
+              <td><code>200</code> catalogue paginé, incluant les statuts historiques.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span> / <span class="method patch">PATCH</span></td>
+              <td><code>/api/v1/admin/ingredients</code><br><code>/api/v1/admin/ingredients/:id</code></td>
+              <td><span class="auth admin">Staff + <code>ingredient.create</code> / <code>ingredient.update</code></span></td>
+              <td><code>name</code> et <code>slug</code> optionnel à la création ; mise à jour partielle d'un ingrédient actif.</td>
+              <td><code>201</code> à la création, <code>200</code> à la modification, <code>409</code> en cas de collision normalisée.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/admin/ingredients/:id/deprecate</code><br><code>/api/v1/admin/ingredients/:id/restore</code></td>
+              <td><span class="auth admin">Staff + <code>ingredient.deprecate</code></span></td>
+              <td><code>reason</code> requis.</td>
+              <td><code>200</code> ingrédient avec son nouveau statut.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/admin/ingredients/:id/merge</code></td>
+              <td><span class="auth admin">Staff + <code>ingredient.merge</code></span></td>
+              <td><code>targetIngredientId</code> et <code>reason</code> requis. La cible doit être active et distincte.</td>
+              <td><code>200</code> source conservée avec <code>status: "merged"</code> ; <code>409</code> si le nom source est déjà l'alias d'un troisième ingrédient.</td>
+            </tr>
+            <tr>
+              <td><span class="method get">GET</span> / <span class="method post">POST</span> / <span class="method patch">PATCH</span> / <span class="method delete">DELETE</span></td>
+              <td><code>/api/v1/admin/ingredients/:id/aliases</code><br><code>/api/v1/admin/ingredients/:id/aliases/:aliasId</code></td>
+              <td><span class="auth admin">Staff + <code>ingredient.read</code> ou <code>ingredient.alias.manage</code></span></td>
+              <td>Liste paginée ; écritures avec <code>name</code> et code BCP 47 <code>languageCode</code>.</td>
+              <td><code>200</code>, <code>201</code> ou <code>204</code>. Un alias préservant un nom fusionné est protégé.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="schema-grid">
+        <article class="schema">
+          <h3>Fusion d'ingrédients</h3>
+          <pre><code>type MergeIngredientRequest = {
+  targetIngredientId: number;
+  reason: string; // 10..1000 caractères
+};</code></pre>
+        </article>
+        <article class="schema">
+          <h3>Transaction et conservation</h3>
+          <p>La fusion verrouille les relations, remplace uniquement <code>RecipeIngredients.IngredientId</code>, transfère les alias et redirige l'historique. Le <code>DisplayText</code> rédigé par l'auteur et les autres champs de la ligne recette restent inchangés. Le nom français de la source devient un alias protégé de la cible ; un alias normalisé équivalent sur la source ou la cible est réutilisé. La mutation et l'audit avant/après sont validés ensemble, et tout échec annule l'ensemble.</p>
+        </article>
+      </div>
+    </section>
+
     <section aria-labelledby="admin-tags">
       <h2 id="admin-tags">Admin tags</h2>
       <p class="section-intro">Gestion paginée et non destructive du catalogue canonique. Chaque route exige sa permission explicite et produit un audit administratif. La dépréciation et la restauration partagent la permission de cycle de vie <code>tag.deprecate</code>. Les transitions de cycle de vie et la fusion exigent un motif de 10 à 1000 caractères.</p>

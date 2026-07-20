@@ -16,6 +16,7 @@ const ACTION_REASON_MIN_LENGTH = 10;
 const ACTION_REASON_MAX_LENGTH = 1000;
 const INGREDIENT_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const LANGUAGE_CODE_PATTERN = /^[a-z]{2,8}(?:-[a-z0-9]{1,8})*$/;
+const CANONICAL_INGREDIENT_LANGUAGE_CODE = 'fr';
 
 export type AdminCreateIngredientCommand = {
   name: string;
@@ -239,8 +240,19 @@ export class AdminIngredientService {
       if (target.status !== 'active')
         throw conflict('A merge target must be active', 'ADMIN_INGREDIENTS_MERGE_INVALID_TARGET_STATUS');
 
-      const result = await this.ingredients.merge(sourceIngredientId, target.id, db);
-      if (!result.merged)
+      const result = await this.ingredients.merge({
+        sourceIngredientId,
+        targetIngredientId: target.id,
+        sourceName: source.name,
+        sourceNormalizedName: source.normalizedName,
+        sourceNameLanguageCode: CANONICAL_INGREDIENT_LANGUAGE_CODE
+      }, db);
+      if (result.status === 'source_name_alias_conflict')
+        throw conflict(
+          'The source canonical name is already an alias of another ingredient',
+          'ADMIN_INGREDIENTS_MERGE_SOURCE_NAME_ALIAS_CONFLICT'
+        );
+      if (result.status === 'not_merged')
         throw conflict('Ingredient status changed concurrently', 'ADMIN_INGREDIENTS_STATUS_CONFLICT');
 
       const after = await this.requireIngredientForUpdate(sourceIngredientId, db);
@@ -275,7 +287,13 @@ export class AdminIngredientService {
           aliases: {
             sourceCount: 0,
             targetCount: result.targetAliasCountAfter,
-            transferredCount: result.transferredAliasCount
+            transferredCount: result.transferredAliasCount,
+            sourceNameAlias: {
+              name: source.name,
+              normalizedName: source.normalizedName,
+              languageCode: CANONICAL_INGREDIENT_LANGUAGE_CODE,
+              resolution: result.sourceNameAliasResolution
+            }
           },
           mergedIngredientsPointingToSourceCount: 0,
           redirectedMergedIngredientCount: result.redirectedMergedIngredientCount
@@ -361,6 +379,7 @@ export class AdminIngredientService {
       const ingredient = await this.requireIngredientForUpdate(ingredientId, db);
       requireActiveAliasTarget(ingredient);
       const before = await this.requireAliasForUpdate(ingredientId, aliasId, db);
+      await this.rejectMergeSourceNameAliasChange(ingredientId, aliasId, db);
       const name = command.name ?? before.name;
       const alias = requireWrittenAlias(await this.ingredients.updateAlias({
         id: aliasId,
@@ -397,6 +416,7 @@ export class AdminIngredientService {
       const ingredient = await this.requireIngredientForUpdate(ingredientId, db);
       requireActiveAliasTarget(ingredient);
       const before = await this.requireAliasForUpdate(ingredientId, aliasId, db);
+      await this.rejectMergeSourceNameAliasChange(ingredientId, aliasId, db);
       if (!await this.ingredients.deleteAlias(ingredientId, aliasId, db))
         throw conflict('Ingredient alias changed concurrently', 'ADMIN_INGREDIENT_ALIASES_CONFLICT');
 
@@ -438,6 +458,18 @@ export class AdminIngredientService {
       throw notFound('Ingredient alias not found', 'ADMIN_INGREDIENT_ALIASES_NOT_FOUND');
 
     return alias;
+  }
+
+  private async rejectMergeSourceNameAliasChange(
+    ingredientId: number,
+    aliasId: number,
+    db: Parameters<AdminIngredientRepository['isMergeSourceNameAlias']>[2]
+  ): Promise<void> {
+    if (await this.ingredients.isMergeSourceNameAlias(ingredientId, aliasId, db))
+      throw conflict(
+        'An alias preserving a merged ingredient source name cannot be changed',
+        'ADMIN_INGREDIENT_ALIASES_MERGE_SOURCE_NAME_PROTECTED'
+      );
   }
 }
 

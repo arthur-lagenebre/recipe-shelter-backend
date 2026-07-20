@@ -3,13 +3,15 @@ import { createPaginatedResult, formatLimitOffsetClause } from '../../utils/pagi
 import { mapIngredient, mapIngredientAlias } from '../ingredients/ingredient.mapper.js';
 
 import type { AdminIngredientRepository } from './admin.ingredients.repository.interface.js';
-import type { AdminIngredientAliasListFilters, AdminIngredientAliasUpdateInput, AdminIngredientAliasWriteInput, AdminIngredientAliasWriteResult, AdminIngredientListFilters, AdminIngredientMergeResult, AdminIngredientRestoreResult, AdminIngredientUpdateInput, AdminIngredientWriteInput, AdminIngredientWriteResult } from './admin.ingredients.types.js';
+import type { AdminIngredientAliasListFilters, AdminIngredientAliasUpdateInput, AdminIngredientAliasWriteInput, AdminIngredientAliasWriteResult, AdminIngredientListFilters, AdminIngredientMergeInput, AdminIngredientMergeResult, AdminIngredientRestoreResult, AdminIngredientUpdateInput, AdminIngredientWriteInput, AdminIngredientWriteResult } from './admin.ingredients.types.js';
 import type { PaginatedResult, PaginationOptions } from '../../utils/pagination.js';
 import type { Ingredient, IngredientAlias, IngredientAliasRow, IngredientRow } from '../ingredients/ingredient.types.js';
 import type { Pool, PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 
 type CountRow = RowDataPacket & { Count: number | string };
 type IdRow = RowDataPacket & { Id: number | string; IngredientId?: number | string };
+type IngredientIdRow = RowDataPacket & { IngredientId: number | string };
+type MergeAliasRow = IdRow & { NormalizedName: string; LanguageCode: string };
 type Where = { clause: string; params: Array<number | string> };
 
 const INGREDIENT_SELECT = `i.Id, i.Name, i.NormalizedName, i.Slug, i.Status,
@@ -162,7 +164,81 @@ export class AdminIngredientRepositoryMysql implements AdminIngredientRepository
     }
   }
 
-  async merge(sourceIngredientId: number, targetIngredientId: number, db: PoolConnection): Promise<AdminIngredientMergeResult> {
+  async merge(input: AdminIngredientMergeInput, db: PoolConnection): Promise<AdminIngredientMergeResult> {
+    const {
+      sourceIngredientId,
+      targetIngredientId,
+      sourceName,
+      sourceNormalizedName,
+      sourceNameLanguageCode
+    } = input;
+    const [mergedRows] = await db.execute<IdRow[]>(
+      `SELECT Id
+       FROM Ingredients
+       WHERE MergedIntoIngredientId = ?
+       ORDER BY Id ASC
+       FOR UPDATE`,
+      [sourceIngredientId]
+    );
+    const [aliasRows] = await db.execute<MergeAliasRow[]>(
+      `SELECT Id, IngredientId, NormalizedName, LanguageCode
+       FROM IngredientAliases
+       WHERE IngredientId IN (?, ?)
+          OR (LanguageCode = ? AND NormalizedName = ?)
+       ORDER BY Id ASC
+       FOR UPDATE`,
+      [sourceIngredientId, targetIngredientId, sourceNameLanguageCode, sourceNormalizedName]
+    );
+    const sourceNameAlias = aliasRows.find((row) =>
+      row.LanguageCode === sourceNameLanguageCode
+      && row.NormalizedName === sourceNormalizedName
+    );
+    const sourceNameAliasIngredientId = sourceNameAlias
+      ? Number(sourceNameAlias.IngredientId)
+      : null;
+
+    if (
+      sourceNameAliasIngredientId !== null
+      && sourceNameAliasIngredientId !== sourceIngredientId
+      && sourceNameAliasIngredientId !== targetIngredientId
+    ) {
+      return {
+        status: 'source_name_alias_conflict',
+        conflictingIngredientId: sourceNameAliasIngredientId
+      };
+    }
+
+    const sourceAliasCount = countIngredientRows(aliasRows, sourceIngredientId);
+    const targetAliasCount = countIngredientRows(aliasRows, targetIngredientId);
+    const sourceNameAliasResolution = sourceNameAliasIngredientId === sourceIngredientId
+      ? 'reused_source_alias' as const
+      : sourceNameAliasIngredientId === targetIngredientId
+        ? 'reused_target_alias' as const
+        : 'created' as const;
+
+    if (sourceNameAliasResolution === 'created') {
+      try {
+        await db.execute<ResultSetHeader>(
+          `INSERT INTO IngredientAliases (IngredientId, Name, NormalizedName, LanguageCode)
+           VALUES (?, ?, ?, ?)`,
+          [targetIngredientId, sourceName, sourceNormalizedName, sourceNameLanguageCode]
+        );
+      } catch (error) {
+        if (isDuplicateAlias(error)) {
+          return {
+            status: 'source_name_alias_conflict',
+            conflictingIngredientId: await findAliasIngredientId(
+              db,
+              sourceNameLanguageCode,
+              sourceNormalizedName
+            )
+          };
+        }
+
+        throw error;
+      }
+    }
+
     const [recipeRows] = await db.execute<IdRow[]>(
       `SELECT Id, IngredientId
        FROM RecipeIngredients
@@ -183,34 +259,6 @@ export class AdminIngredientRepositoryMysql implements AdminIngredientRepository
     if (recipeResult.affectedRows !== sourceRecipeCount)
       throw new Error('Ingredient recipe associations changed during merge');
 
-    const [aliasRows] = await db.execute<IdRow[]>(
-      `SELECT Id, IngredientId
-       FROM IngredientAliases
-       WHERE IngredientId IN (?, ?)
-       ORDER BY Id ASC
-       FOR UPDATE`,
-      [sourceIngredientId, targetIngredientId]
-    );
-    const sourceAliasCount = countIngredientRows(aliasRows, sourceIngredientId);
-    const targetAliasCount = countIngredientRows(aliasRows, targetIngredientId);
-    const [aliasResult] = await db.execute<ResultSetHeader>(
-      `UPDATE IngredientAliases
-       SET IngredientId = ?
-       WHERE IngredientId = ?`,
-      [targetIngredientId, sourceIngredientId]
-    );
-
-    if (aliasResult.affectedRows !== sourceAliasCount)
-      throw new Error('Ingredient aliases changed during merge');
-
-    const [mergedRows] = await db.execute<IdRow[]>(
-      `SELECT Id
-       FROM Ingredients
-       WHERE MergedIntoIngredientId = ?
-       ORDER BY Id ASC
-       FOR UPDATE`,
-      [sourceIngredientId]
-    );
     const [redirectResult] = await db.execute<ResultSetHeader>(
       `UPDATE Ingredients
        SET MergedIntoIngredientId = ?
@@ -221,6 +269,16 @@ export class AdminIngredientRepositoryMysql implements AdminIngredientRepository
     if (redirectResult.affectedRows !== mergedRows.length)
       throw new Error('Merged ingredient references changed during merge');
 
+    const [aliasResult] = await db.execute<ResultSetHeader>(
+      `UPDATE IngredientAliases
+       SET IngredientId = ?
+       WHERE IngredientId = ?`,
+      [targetIngredientId, sourceIngredientId]
+    );
+
+    if (aliasResult.affectedRows !== sourceAliasCount)
+      throw new Error('Ingredient aliases changed during merge');
+
     const [ingredientResult] = await db.execute<ResultSetHeader>(
       `UPDATE Ingredients
        SET Status = 'merged', MergedIntoIngredientId = ?
@@ -228,16 +286,22 @@ export class AdminIngredientRepositoryMysql implements AdminIngredientRepository
       [targetIngredientId, sourceIngredientId]
     );
 
+    if (ingredientResult.affectedRows === 0)
+      return { status: 'not_merged' };
+
     return {
-      merged: ingredientResult.affectedRows > 0,
+      status: 'merged',
       sourceRecipeAssociationCountBefore: sourceRecipeCount,
       targetRecipeAssociationCountBefore: targetRecipeCount,
       targetRecipeAssociationCountAfter: targetRecipeCount + recipeResult.affectedRows,
       transferredRecipeAssociationCount: recipeResult.affectedRows,
       sourceAliasCountBefore: sourceAliasCount,
       targetAliasCountBefore: targetAliasCount,
-      targetAliasCountAfter: targetAliasCount + aliasResult.affectedRows,
+      targetAliasCountAfter: targetAliasCount
+        + aliasResult.affectedRows
+        + (sourceNameAliasResolution === 'created' ? 1 : 0),
       transferredAliasCount: aliasResult.affectedRows,
+      sourceNameAliasResolution,
       redirectedMergedIngredientCount: redirectResult.affectedRows
     };
   }
@@ -274,6 +338,24 @@ export class AdminIngredientRepositoryMysql implements AdminIngredientRepository
     const row = firstOrNull(rows);
 
     return row ? mapIngredientAlias(row) : null;
+  }
+
+  async isMergeSourceNameAlias(ingredientId: number, aliasId: number, db: PoolConnection): Promise<boolean> {
+    const [rows] = await db.execute<RowDataPacket[]>(
+      `SELECT 1
+       FROM IngredientAliases AS ia
+       INNER JOIN Ingredients AS merged_source
+         ON merged_source.Status = 'merged'
+        AND merged_source.MergedIntoIngredientId = ia.IngredientId
+        AND merged_source.NormalizedName = ia.NormalizedName
+       WHERE ia.Id = ?
+         AND ia.IngredientId = ?
+         AND ia.LanguageCode = 'fr'
+       LIMIT 1`,
+      [aliasId, ingredientId]
+    );
+
+    return rows.length > 0;
   }
 
   async createAlias(input: AdminIngredientAliasWriteInput, db: PoolConnection): Promise<AdminIngredientAliasWriteResult> {
@@ -372,6 +454,23 @@ function buildAliasWhere(ingredientId: number, filters: AdminIngredientAliasList
 
 function countIngredientRows(rows: IdRow[], ingredientId: number): number {
   return rows.filter((row) => Number(row.IngredientId) === ingredientId).length;
+}
+
+async function findAliasIngredientId(
+  db: PoolConnection,
+  languageCode: string,
+  normalizedName: string
+): Promise<number | null> {
+  const [rows] = await db.execute<IngredientIdRow[]>(
+    `SELECT IngredientId
+     FROM IngredientAliases
+     WHERE LanguageCode = ? AND NormalizedName = ?
+     FOR UPDATE`,
+    [languageCode, normalizedName]
+  );
+  const ingredientId = firstOrNull(rows)?.IngredientId;
+
+  return ingredientId === undefined ? null : Number(ingredientId);
 }
 
 function getDuplicateIngredientStatus(error: unknown): 'normalized_name_taken' | 'slug_taken' | null {

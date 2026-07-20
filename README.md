@@ -411,6 +411,16 @@ Exemples :
 - `POST /api/v1/admin/tags/:id/deprecate`
 - `POST /api/v1/admin/tags/:id/restore`
 - `POST /api/v1/admin/tags/:id/merge`
+- `GET /api/v1/admin/ingredients`
+- `POST /api/v1/admin/ingredients`
+- `PATCH /api/v1/admin/ingredients/:id`
+- `POST /api/v1/admin/ingredients/:id/deprecate`
+- `POST /api/v1/admin/ingredients/:id/restore`
+- `POST /api/v1/admin/ingredients/:id/merge`
+- `GET /api/v1/admin/ingredients/:id/aliases`
+- `POST /api/v1/admin/ingredients/:id/aliases`
+- `PATCH /api/v1/admin/ingredients/:id/aliases/:aliasId`
+- `DELETE /api/v1/admin/ingredients/:id/aliases/:aliasId`
 - `GET /api/v1/categories`
 - `GET /api/v1/ingredients`
 - `GET /api/v1/tags`
@@ -473,6 +483,24 @@ par les filtres de recherche, à un `DisplayText` libre et obligatoire, utilisé
 pour le rendu. La quantité, l'unité, la note et l'ordre restent portés par cette
 ligne ; les lectures propriétaire, publique et administrative exposent le
 `displayText` sans le remplacer par le nom du catalogue.
+
+Le catalogue administratif des ingrédients est paginé et protégé par les
+permissions `ingredient.*`. `POST /api/v1/admin/ingredients/:id/merge` exige
+`ingredient.merge`, un `targetIngredientId` actif et un `reason` de 10 à 1000
+caractères. Dans une transaction unique, la fusion remplace les références de
+`RecipeIngredients` sans modifier `DisplayText`, la quantité, l'unité, la note
+ou l'ordre, redirige les ingrédients déjà fusionnés vers la nouvelle cible et
+transfère les alias. Le nom français de la source est créé comme alias de la
+cible, ou réutilise l'alias normalisé équivalent déjà rattaché à la source ou à
+la cible afin d'éviter un doublon. Si cet alias appartient à un troisième
+ingrédient, la fusion est refusée. L'alias historique ainsi retenu ne peut plus
+être modifié, déplacé ou supprimé tant qu'il matérialise une fusion.
+
+La mutation et l'événement `ingredients.merge` utilisent la transaction de
+l'audit administratif centralisé. L'audit conserve les états source/cible, les
+volumes de références et d'alias avant/après, la résolution de l'alias du nom
+source, les redirections historiques et l'indicateur de conservation des
+libellés auteur. Un échec d'audit annule donc l'intégralité de la fusion.
 
 Les tags sont rattachés à un groupe. Leur nom normalisé est produit en ignorant
 la casse et les accents, puis en remplaçant toute suite d'espaces ou de

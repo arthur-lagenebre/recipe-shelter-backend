@@ -7,15 +7,7 @@ import { createPaginatedResult } from '../../../src/utils/pagination.js';
 import { testAdminAuditContext, TestAdminAuditRecorder } from '../../helpers/admin-audit.js';
 
 import type { AdminIngredientRepository } from '../../../src/repositories/admin/admin.ingredients.repository.interface.js';
-import type {
-  AdminIngredientAliasListFilters,
-  AdminIngredientAliasUpdateInput,
-  AdminIngredientAliasWriteInput,
-  AdminIngredientListFilters,
-  AdminIngredientMergeResult,
-  AdminIngredientUpdateInput,
-  AdminIngredientWriteInput
-} from '../../../src/repositories/admin/admin.ingredients.types.js';
+import type { AdminIngredientAliasListFilters, AdminIngredientAliasUpdateInput, AdminIngredientAliasWriteInput, AdminIngredientListFilters, AdminIngredientMergeInput, AdminIngredientMergeResult, AdminIngredientUpdateInput, AdminIngredientWriteInput } from '../../../src/repositories/admin/admin.ingredients.types.js';
 import type { Ingredient, IngredientAlias } from '../../../src/repositories/ingredients/ingredient.types.js';
 import type { PaginationOptions } from '../../../src/utils/pagination.js';
 
@@ -34,15 +26,16 @@ class FakeAdminIngredientRepository implements AdminIngredientRepository {
     [11, createAlias(11, 2, 'Cherry tomato', 'cherry tomato', 'en')]
   ]);
   mergeResult: AdminIngredientMergeResult = {
-    merged: true,
+    status: 'merged',
     sourceRecipeAssociationCountBefore: 3,
     targetRecipeAssociationCountBefore: 2,
     targetRecipeAssociationCountAfter: 5,
     transferredRecipeAssociationCount: 3,
     sourceAliasCountBefore: 1,
     targetAliasCountBefore: 1,
-    targetAliasCountAfter: 2,
+    targetAliasCountAfter: 3,
     transferredAliasCount: 1,
+    sourceNameAliasResolution: 'created',
     redirectedMergedIngredientCount: 1
   };
   createStatus: 'normalized_name_taken' | 'slug_taken' | null = null;
@@ -120,10 +113,11 @@ class FakeAdminIngredientRepository implements AdminIngredientRepository {
     return 'restored' as const;
   }
 
-  async merge(sourceIngredientId: number, targetIngredientId: number): Promise<AdminIngredientMergeResult> {
-    if (!this.mergeResult.merged)
+  async merge(input: AdminIngredientMergeInput): Promise<AdminIngredientMergeResult> {
+    if (this.mergeResult.status !== 'merged')
       return { ...this.mergeResult };
 
+    const { sourceIngredientId, targetIngredientId } = input;
     const source = this.ingredients.get(sourceIngredientId)!;
     source.status = 'merged';
     source.mergedIntoIngredientId = targetIngredientId;
@@ -135,6 +129,16 @@ class FakeAdminIngredientRepository implements AdminIngredientRepository {
     for (const alias of this.aliases.values()) {
       if (alias.ingredientId === sourceIngredientId)
         alias.ingredientId = targetIngredientId;
+    }
+    if (this.mergeResult.sourceNameAliasResolution === 'created') {
+      const id = Math.max(...this.aliases.keys()) + 1;
+      this.aliases.set(id, createAlias(
+        id,
+        targetIngredientId,
+        input.sourceName,
+        input.sourceNormalizedName,
+        input.sourceNameLanguageCode
+      ));
     }
 
     return { ...this.mergeResult };
@@ -157,6 +161,18 @@ class FakeAdminIngredientRepository implements AdminIngredientRepository {
   async findAliasForUpdate(ingredientId: number, aliasId: number): Promise<IngredientAlias | null> {
     const alias = this.aliases.get(aliasId);
     return alias?.ingredientId === ingredientId ? cloneAlias(alias) : null;
+  }
+
+  async isMergeSourceNameAlias(ingredientId: number, aliasId: number): Promise<boolean> {
+    const alias = this.aliases.get(aliasId);
+    if (!alias || alias.ingredientId !== ingredientId || alias.languageCode !== 'fr')
+      return false;
+
+    return [...this.ingredients.values()].some((ingredient) =>
+      ingredient.status === 'merged'
+      && ingredient.mergedIntoIngredientId === ingredientId
+      && ingredient.normalizedName === alias.normalizedName
+    );
   }
 
   async createAlias(input: AdminIngredientAliasWriteInput) {
@@ -312,9 +328,126 @@ describe('AdminIngredientService', () => {
     });
     assert.deepEqual(audit.inputs[0]?.afterValues?.aliases, {
       sourceCount: 0,
-      targetCount: 2,
-      transferredCount: 1
+      targetCount: 3,
+      transferredCount: 1,
+      sourceNameAlias: {
+        name: 'Tomate cerise',
+        normalizedName: 'tomate cerise',
+        languageCode: 'fr',
+        resolution: 'created'
+      }
     });
+  });
+
+  it('rejects a source-name alias owned by another ingredient without audit', async () => {
+    repository.mergeResult = {
+      status: 'source_name_alias_conflict',
+      conflictingIngredientId: 3
+    };
+
+    await assert.rejects(
+      () => service.merge(2, {
+        targetIngredientId: 1,
+        reason: 'Le nom historique appartient ailleurs.'
+      }, actorUserId, testAdminAuditContext),
+      matchesHttpError(409, 'ADMIN_INGREDIENTS_MERGE_SOURCE_NAME_ALIAS_CONFLICT')
+    );
+    assert.equal(audit.inputs.length, 0);
+    assert.equal(repository.ingredients.get(2)?.status, 'active');
+  });
+
+  it('validates merge identifiers, body and reason before opening an audited transaction', async () => {
+    await assert.rejects(
+      () => service.merge(0, {
+        targetIngredientId: 1,
+        reason: 'Identifiant source invalide.'
+      }, actorUserId, testAdminAuditContext),
+      matchesHttpError(400, 'ADMIN_INGREDIENTS_BAD_ID')
+    );
+    await assert.rejects(
+      () => service.merge(1.5, {
+        targetIngredientId: 1,
+        reason: 'Identifiant source non entier.'
+      }, actorUserId, testAdminAuditContext),
+      matchesHttpError(400, 'ADMIN_INGREDIENTS_BAD_ID')
+    );
+    await assert.rejects(
+      () => service.merge(2, undefined as never, actorUserId, testAdminAuditContext),
+      matchesHttpError(400, 'ADMIN_INGREDIENTS_MERGE_BAD_BODY')
+    );
+    await assert.rejects(
+      () => service.merge(2, 'invalid body' as never, actorUserId, testAdminAuditContext),
+      matchesHttpError(400, 'ADMIN_INGREDIENTS_MERGE_BAD_BODY')
+    );
+    await assert.rejects(
+      () => service.merge(2, {
+        targetIngredientId: 0,
+        reason: 'Identifiant cible invalide.'
+      }, actorUserId, testAdminAuditContext),
+      matchesHttpError(400, 'ADMIN_INGREDIENTS_MERGE_BAD_TARGET_ID')
+    );
+    await assert.rejects(
+      () => service.merge(2, {
+        targetIngredientId: Number.NaN,
+        reason: 'Identifiant cible non numérique.'
+      }, actorUserId, testAdminAuditContext),
+      matchesHttpError(400, 'ADMIN_INGREDIENTS_MERGE_BAD_TARGET_ID')
+    );
+    await assert.rejects(
+      () => service.merge(2, {
+        targetIngredientId: 1,
+        reason: '   '
+      }, actorUserId, testAdminAuditContext),
+      matchesHttpError(400, 'ADMIN_INGREDIENTS_MERGE_REASON_REQUIRED')
+    );
+    await assert.rejects(
+      () => service.merge(2, {
+        targetIngredientId: 1,
+        reason: 'Court'
+      }, actorUserId, testAdminAuditContext),
+      matchesHttpError(400, 'ADMIN_INGREDIENTS_MERGE_REASON_TOO_SHORT')
+    );
+    await assert.rejects(
+      () => service.merge(2, {
+        targetIngredientId: 1,
+        reason: 'x'.repeat(1001)
+      }, actorUserId, testAdminAuditContext),
+      matchesHttpError(400, 'ADMIN_INGREDIENTS_MERGE_REASON_TOO_LONG')
+    );
+    assert.equal(audit.inputs.length, 0);
+  });
+
+  it('distinguishes a missing merge source from a missing target without audit', async () => {
+    await assert.rejects(
+      () => service.merge(999, {
+        targetIngredientId: 1,
+        reason: 'La source demandée est absente.'
+      }, actorUserId, testAdminAuditContext),
+      matchesHttpError(404, 'ADMIN_INGREDIENTS_NOT_FOUND')
+    );
+    await assert.rejects(
+      () => service.merge(2, {
+        targetIngredientId: 999,
+        reason: 'La cible demandée est absente.'
+      }, actorUserId, testAdminAuditContext),
+      matchesHttpError(404, 'ADMIN_INGREDIENTS_MERGE_TARGET_NOT_FOUND')
+    );
+    assert.equal(audit.inputs.length, 0);
+  });
+
+  it('rejects a concurrent merge no-op without mutating or auditing the source', async () => {
+    repository.mergeResult = { status: 'not_merged' };
+
+    await assert.rejects(
+      () => service.merge(2, {
+        targetIngredientId: 1,
+        reason: 'La source a changé pendant la fusion.'
+      }, actorUserId, testAdminAuditContext),
+      matchesHttpError(409, 'ADMIN_INGREDIENTS_STATUS_CONFLICT')
+    );
+    assert.equal(repository.ingredients.get(2)?.status, 'active');
+    assert.equal(repository.ingredients.get(2)?.mergedIntoIngredientId, null);
+    assert.equal(audit.inputs.length, 0);
   });
 
   it('rejects self-merges and invalid source or target states without audit', async () => {
@@ -377,6 +510,20 @@ describe('AdminIngredientService', () => {
     await assert.rejects(
       () => service.updateAlias(1, 11, { name: 'Mauvais parent' }, actorUserId, testAdminAuditContext),
       matchesHttpError(404, 'ADMIN_INGREDIENT_ALIASES_NOT_FOUND')
+    );
+    assert.equal(audit.inputs.length, 0);
+  });
+
+  it('protects an alias that preserves the historical name of a merged source', async () => {
+    repository.aliases.set(12, createAlias(12, 1, 'Tomate fusionnée', 'tomate fusionnee', 'fr'));
+
+    await assert.rejects(
+      () => service.updateAlias(1, 12, { name: 'Nom effacé' }, actorUserId, testAdminAuditContext),
+      matchesHttpError(409, 'ADMIN_INGREDIENT_ALIASES_MERGE_SOURCE_NAME_PROTECTED')
+    );
+    await assert.rejects(
+      () => service.deleteAlias(1, 12, actorUserId, testAdminAuditContext),
+      matchesHttpError(409, 'ADMIN_INGREDIENT_ALIASES_MERGE_SOURCE_NAME_PROTECTED')
     );
     assert.equal(audit.inputs.length, 0);
   });

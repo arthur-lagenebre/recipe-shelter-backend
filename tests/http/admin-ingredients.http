@@ -50,7 +50,8 @@ Cookie: rs_admin_session={{adminSessionCookie}}
 }
 
 ### Merge into an active canonical ingredient
-# Recipe ingredient references and aliases move to the target; author DisplayText values stay unchanged.
+# Recipe references and aliases move to the target; author DisplayText values stay unchanged.
+# The source canonical name is retained as a protected French alias on the target.
 POST {{baseUrl}}/admin/ingredients/{{ingredientId}}/merge
 Content-Type: application/json
 Cookie: rs_admin_session={{adminSessionCookie}}

@@ -974,6 +974,45 @@ BEGIN
       SET MYSQL_ERRNO = 1644,
           MESSAGE_TEXT = 'Ingredient aliases can only reference active canonical ingredients';
   END IF;
+
+  -- Canonical catalogue names are French. Once a source name represents a
+  -- completed merge, its normalized alias must keep resolving to the target.
+  IF OLD.LanguageCode = 'fr'
+     AND (
+       NEW.IngredientId <> OLD.IngredientId
+       OR BINARY NEW.Name <> BINARY OLD.Name
+       OR NEW.LanguageCode <> OLD.LanguageCode
+       OR NEW.NormalizedName <> OLD.NormalizedName
+     )
+     AND EXISTS (
+       SELECT 1
+       FROM Ingredients AS merged_ingredient
+       WHERE merged_ingredient.Status = 'merged'
+         AND merged_ingredient.MergedIntoIngredientId = OLD.IngredientId
+         AND merged_ingredient.NormalizedName = OLD.NormalizedName
+     ) THEN
+    SIGNAL SQLSTATE '45000'
+      SET MYSQL_ERRNO = 1644,
+          MESSAGE_TEXT = 'A merged ingredient source-name alias cannot be reassigned';
+  END IF;
+END;
+
+CREATE TRIGGER ingredient_aliases_merged_name_BD
+BEFORE DELETE ON IngredientAliases
+FOR EACH ROW
+BEGIN
+  IF OLD.LanguageCode = 'fr'
+     AND EXISTS (
+       SELECT 1
+       FROM Ingredients AS merged_ingredient
+       WHERE merged_ingredient.Status = 'merged'
+         AND merged_ingredient.MergedIntoIngredientId = OLD.IngredientId
+         AND merged_ingredient.NormalizedName = OLD.NormalizedName
+     ) THEN
+    SIGNAL SQLSTATE '45000'
+      SET MYSQL_ERRNO = 1644,
+          MESSAGE_TEXT = 'A merged ingredient source-name alias cannot be deleted';
+  END IF;
 END;
 
 CREATE TRIGGER ingredients_merge_integrity_BI
@@ -1007,6 +1046,18 @@ BEFORE UPDATE ON Ingredients
 FOR EACH ROW
 BEGIN
   DECLARE canonical_ingredient_status VARCHAR(16) DEFAULT NULL;
+
+  IF OLD.Status = 'merged'
+     AND (
+       NEW.Status <> 'merged'
+       OR BINARY NEW.Name <> BINARY OLD.Name
+       OR BINARY NEW.NormalizedName <> BINARY OLD.NormalizedName
+       OR BINARY NEW.Slug <> BINARY OLD.Slug
+     ) THEN
+    SIGNAL SQLSTATE '45000'
+      SET MYSQL_ERRNO = 1644,
+          MESSAGE_TEXT = 'A merged ingredient historical identity is immutable';
+  END IF;
 
   IF NEW.MergedIntoIngredientId IS NOT NULL AND NEW.MergedIntoIngredientId = NEW.Id THEN
     SIGNAL SQLSTATE '45000'
@@ -1292,6 +1343,20 @@ BEGIN
     SIGNAL SQLSTATE '45000'
       SET MYSQL_ERRNO = 1644,
           MESSAGE_TEXT = 'An ingredient must have no recipe associations before being merged';
+  END IF;
+
+  IF OLD.Status <> 'merged'
+     AND NEW.Status = 'merged'
+     AND NOT EXISTS (
+       SELECT 1
+       FROM IngredientAliases AS source_name_alias
+       WHERE source_name_alias.IngredientId = NEW.MergedIntoIngredientId
+         AND source_name_alias.LanguageCode = 'fr'
+         AND source_name_alias.NormalizedName = NEW.NormalizedName
+     ) THEN
+    SIGNAL SQLSTATE '45000'
+      SET MYSQL_ERRNO = 1644,
+          MESSAGE_TEXT = 'A merged ingredient must preserve its source name as a target alias';
   END IF;
 END;
 

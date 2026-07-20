@@ -4,9 +4,13 @@ import { after, before, describe, it } from 'node:test';
 
 import mysql from 'mysql2/promise';
 
+import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin-audit.repository.mysql.js';
 import { AdminIngredientRepositoryMysql } from '../../../src/repositories/admin/admin.ingredients.repository.mysql.js';
 import { IngredientRepositoryMysql } from '../../../src/repositories/ingredients/ingredient.repository.mysql.js';
 import { RecipeRepositoryMysql } from '../../../src/repositories/recipes/recipe.repository.mysql.js';
+import { AdminAuditActionRunnerMysql } from '../../../src/services/admin/admin-audit-action.runner.js';
+import { AdminAuditService } from '../../../src/services/admin/admin-audit.service.js';
+import { AdminIngredientService } from '../../../src/services/admin/admin.ingredients.service.js';
 import { env } from '../../../src/utils/env.js';
 
 const baseTestDatabaseName = process.env.TEST_DB_NAME?.trim() ?? '';
@@ -70,6 +74,24 @@ function assertAliasTargetRejected(error: unknown): boolean {
     assert.equal(
         mysqlError.sqlMessage,
         'Ingredient aliases can only reference active canonical ingredients'
+    );
+    return true;
+}
+
+function assertMergeSourceNameAliasProtected(error: unknown): boolean {
+    assert.ok(error instanceof Error);
+    assert.equal(
+        (error as Error & { code?: string }).code,
+        'ADMIN_INGREDIENT_ALIASES_MERGE_SOURCE_NAME_PROTECTED'
+    );
+    return true;
+}
+
+function assertMergeSourceNameAliasConflict(error: unknown): boolean {
+    assert.ok(error instanceof Error);
+    assert.equal(
+        (error as Error & { code?: string }).code,
+        'ADMIN_INGREDIENTS_MERGE_SOURCE_NAME_ALIAS_CONFLICT'
     );
     return true;
 }
@@ -271,6 +293,20 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
             ReferencedTableName: 'ingredients',
             ReferencedColumnName: 'Id'
         }]);
+
+        const [protectionTriggers] = await connection.query(
+            `SELECT TRIGGER_NAME AS TriggerName, ACTION_TIMING AS ActionTiming,
+                    EVENT_MANIPULATION AS EventManipulation
+             FROM information_schema.TRIGGERS
+             WHERE TRIGGER_SCHEMA = ?
+               AND TRIGGER_NAME = 'ingredient_aliases_merged_name_BD'`,
+            [databaseName]
+        );
+        assert.deepEqual(protectionTriggers, [{
+            TriggerName: 'ingredient_aliases_merged_name_BD',
+            ActionTiming: 'BEFORE',
+            EventManipulation: 'DELETE'
+        }]);
     });
 
     it('stores the author display text while recipe search uses the canonical ingredient id', async () => {
@@ -439,19 +475,26 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
         try {
             await db.beginTransaction();
             await repository.findByIdsForUpdate([980, 981], db);
-            const result = await repository.merge(980, 981, db);
+            const result = await repository.merge({
+                sourceIngredientId: 980,
+                targetIngredientId: 981,
+                sourceName: 'Ingredient merge source',
+                sourceNormalizedName: 'ingredient merge source',
+                sourceNameLanguageCode: 'fr'
+            }, db);
             await db.commit();
 
             assert.deepEqual(result, {
-                merged: true,
+                status: 'merged',
                 sourceRecipeAssociationCountBefore: 1,
                 targetRecipeAssociationCountBefore: 0,
                 targetRecipeAssociationCountAfter: 1,
                 transferredRecipeAssociationCount: 1,
                 sourceAliasCountBefore: 1,
                 targetAliasCountBefore: 0,
-                targetAliasCountAfter: 1,
+                targetAliasCountAfter: 2,
                 transferredAliasCount: 1,
+                sourceNameAliasResolution: 'created',
                 redirectedMergedIngredientCount: 1
             });
         } catch (error) {
@@ -477,9 +520,13 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
         const [aliases] = await connection.query(
             `SELECT IngredientId, Name, LanguageCode
              FROM IngredientAliases
-             WHERE Id = 980`
+             WHERE IngredientId = 981
+             ORDER BY Name`
         );
-        assert.deepEqual(aliases, [{ IngredientId: 981, Name: 'Alias de fusion', LanguageCode: 'fr' }]);
+        assert.deepEqual(aliases, [
+            { IngredientId: 981, Name: 'Alias de fusion', LanguageCode: 'fr' },
+            { IngredientId: 981, Name: 'Ingredient merge source', LanguageCode: 'fr' }
+        ]);
 
         const [ingredients] = await connection.query(
             `SELECT Id, Status, MergedIntoIngredientId
@@ -491,6 +538,348 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
             { Id: 980, Status: 'merged', MergedIntoIngredientId: 981 },
             { Id: 982, Status: 'merged', MergedIntoIngredientId: 981 }
         ]);
+
+        await assert.rejects(
+            () => connection.query(
+                `DELETE FROM IngredientAliases
+                 WHERE IngredientId = 981
+                   AND LanguageCode = 'fr'
+                   AND NormalizedName = 'ingredient merge source'`
+            ),
+            /A merged ingredient source-name alias cannot be deleted/
+        );
+    });
+
+    it('commits the ingredient merge and its complete audit atomically, then rolls both back on audit failure', async () => {
+        await connection.query(
+            `INSERT INTO Users (Id, Mail, Username, Password, AccountType, Status) VALUES
+               (985, 'ingredient-merge-staff@example.test', 'ingredient-merge-staff', 'test-password-hash', 'staff', 'inactive'),
+               (986, 'ingredient-merge-author-two@example.test', 'ingredient-merge-author-two', 'test-password-hash', 'community', 'active');
+             INSERT INTO Recipes (Id, UserId, CategoryId, Title, Slug, Description, PrepTimeMinutes, Servings) VALUES
+               (985, 986, 1, 'Ingredient transactional merge one', 'ingredient-transactional-merge-one', 'Fixture', 5, 2),
+               (986, 986, 1, 'Ingredient transactional merge two', 'ingredient-transactional-merge-two', 'Fixture', 5, 2);
+             INSERT INTO Ingredients (Id, Name, NormalizedName, Slug) VALUES
+               (985, 'Transactional ingredient source', 'transactional ingredient source', 'transactional-ingredient-source'),
+               (986, 'Transactional ingredient target', 'transactional ingredient target', 'transactional-ingredient-target'),
+               (988, 'Rollback ingredient source', 'rollback ingredient source', 'rollback-ingredient-source'),
+               (989, 'Rollback ingredient target', 'rollback ingredient target', 'rollback-ingredient-target');
+             INSERT INTO Ingredients (Id, Name, NormalizedName, Slug, Status, MergedIntoIngredientId)
+             VALUES (987, 'Transactional ingredient history', 'transactional ingredient history', 'transactional-ingredient-history', 'merged', 985);
+             INSERT INTO IngredientAliases (Id, IngredientId, Name, NormalizedName, LanguageCode)
+             VALUES (985, 985, 'Transactional source synonym', 'transactional source synonym', 'en');
+             INSERT INTO RecipeIngredients (Id, RecipeId, IngredientId, DisplayText, Quantity, Unit, Note, SortOrder) VALUES
+               (985, 985, 985, 'deux mesures rédigées par l’auteur', 2, 'mesures', 'premier texte', 1),
+               (986, 986, 985, 'une autre formulation source', 1, NULL, NULL, 1),
+               (987, 986, 986, 'formulation déjà canonique', 3, 'unités', NULL, 2),
+               (988, 985, 988, 'libellé qui doit rester sur la source', 4, 'parts', NULL, 2)`
+        );
+
+        const repository = new AdminIngredientRepositoryMysql(pool);
+        const auditActions = new AdminAuditActionRunnerMysql(
+            pool,
+            (db) => new AdminAuditService(new AdminAuditRepositoryMysql(db))
+        );
+        const service = new AdminIngredientService(repository, auditActions);
+        const correlationId = '00000000-0000-4000-8000-000000000985';
+
+        const merged = await service.merge(985, {
+            targetIngredientId: 986,
+            reason: 'Doublon confirmé par le test transactionnel.'
+        }, 985, { correlationId });
+
+        assert.equal(merged.status, 'merged');
+        assert.equal(merged.mergedIntoIngredientId, 986);
+        const [committedRecipeIngredients] = await connection.query(
+            `SELECT Id, IngredientId, DisplayText, Quantity, Unit, Note
+             FROM RecipeIngredients
+             WHERE Id IN (985, 986, 987)
+             ORDER BY Id`
+        );
+        assert.deepEqual(committedRecipeIngredients, [
+            {
+                Id: 985,
+                IngredientId: 986,
+                DisplayText: 'deux mesures rédigées par l’auteur',
+                Quantity: '2.000',
+                Unit: 'mesures',
+                Note: 'premier texte'
+            },
+            {
+                Id: 986,
+                IngredientId: 986,
+                DisplayText: 'une autre formulation source',
+                Quantity: '1.000',
+                Unit: null,
+                Note: null
+            },
+            {
+                Id: 987,
+                IngredientId: 986,
+                DisplayText: 'formulation déjà canonique',
+                Quantity: '3.000',
+                Unit: 'unités',
+                Note: null
+            }
+        ]);
+
+        const [committedAliases] = await connection.query(
+            `SELECT IngredientId, Name, NormalizedName, LanguageCode
+             FROM IngredientAliases
+             WHERE IngredientId = 986
+             ORDER BY LanguageCode, Name`
+        );
+        assert.deepEqual(committedAliases, [
+            {
+                IngredientId: 986,
+                Name: 'Transactional source synonym',
+                NormalizedName: 'transactional source synonym',
+                LanguageCode: 'en'
+            },
+            {
+                IngredientId: 986,
+                Name: 'Transactional ingredient source',
+                NormalizedName: 'transactional ingredient source',
+                LanguageCode: 'fr'
+            }
+        ]);
+
+        const [committedIngredients] = await connection.query(
+            `SELECT Id, Status, MergedIntoIngredientId
+             FROM Ingredients
+             WHERE Id IN (985, 986, 987)
+             ORDER BY Id`
+        );
+        assert.deepEqual(committedIngredients, [
+            { Id: 985, Status: 'merged', MergedIntoIngredientId: 986 },
+            { Id: 986, Status: 'active', MergedIntoIngredientId: null },
+            { Id: 987, Status: 'merged', MergedIntoIngredientId: 986 }
+        ]);
+
+        const [auditRows] = await connection.query(
+            `SELECT Action, TargetType, TargetId, Reason,
+                    JSON_UNQUOTE(JSON_EXTRACT(BeforeValues, '$.source.status')) AS BeforeSourceStatus,
+                    CAST(JSON_UNQUOTE(JSON_EXTRACT(BeforeValues, '$.recipeAssociations.sourceCount')) AS UNSIGNED) AS BeforeSourceRecipeCount,
+                    CAST(JSON_UNQUOTE(JSON_EXTRACT(BeforeValues, '$.aliases.sourceCount')) AS UNSIGNED) AS BeforeSourceAliasCount,
+                    JSON_UNQUOTE(JSON_EXTRACT(AfterValues, '$.source.status')) AS AfterSourceStatus,
+                    CAST(JSON_UNQUOTE(JSON_EXTRACT(AfterValues, '$.recipeAssociations.targetCount')) AS UNSIGNED) AS AfterTargetRecipeCount,
+                    JSON_UNQUOTE(JSON_EXTRACT(AfterValues, '$.recipeAssociations.authorDisplayTextPreserved')) AS DisplayTextPreserved,
+                    CAST(JSON_UNQUOTE(JSON_EXTRACT(AfterValues, '$.aliases.targetCount')) AS UNSIGNED) AS AfterTargetAliasCount,
+                    JSON_UNQUOTE(JSON_EXTRACT(AfterValues, '$.aliases.sourceNameAlias.resolution')) AS SourceNameAliasResolution,
+                    CAST(JSON_UNQUOTE(JSON_EXTRACT(AfterValues, '$.redirectedMergedIngredientCount')) AS UNSIGNED) AS RedirectedMergedIngredientCount
+             FROM AdminAuditLogs
+             WHERE CorrelationId = ?`,
+            [correlationId]
+        );
+        assert.deepEqual(auditRows, [{
+            Action: 'ingredients.merge',
+            TargetType: 'ingredient',
+            TargetId: '985',
+            Reason: 'Doublon confirmé par le test transactionnel.',
+            BeforeSourceStatus: 'active',
+            BeforeSourceRecipeCount: 2,
+            BeforeSourceAliasCount: 1,
+            AfterSourceStatus: 'merged',
+            AfterTargetRecipeCount: 3,
+            DisplayTextPreserved: 'true',
+            AfterTargetAliasCount: 2,
+            SourceNameAliasResolution: 'created',
+            RedirectedMergedIngredientCount: 1
+        }]);
+
+        const [sourceNameAliasRows] = await connection.query(
+            `SELECT Id
+             FROM IngredientAliases
+             WHERE IngredientId = 986
+               AND NormalizedName = 'transactional ingredient source'
+               AND LanguageCode = 'fr'`
+        );
+        const sourceNameAliasId = (sourceNameAliasRows as Array<{ Id: number }>)[0]?.Id;
+        assert.ok(sourceNameAliasId);
+        const protectedUpdateCorrelationId = '00000000-0000-4000-8000-000000000987';
+        const protectedDeleteCorrelationId = '00000000-0000-4000-8000-000000000988';
+        await assert.rejects(
+            () => service.updateAlias(986, sourceNameAliasId, {
+                name: 'Source historique modifiée'
+            }, 985, { correlationId: protectedUpdateCorrelationId }),
+            assertMergeSourceNameAliasProtected
+        );
+        await assert.rejects(
+            () => service.deleteAlias(
+                986,
+                sourceNameAliasId,
+                985,
+                { correlationId: protectedDeleteCorrelationId }
+            ),
+            assertMergeSourceNameAliasProtected
+        );
+
+        const updatedOrdinaryAlias = await service.updateAlias(986, 985, {
+            name: 'Updated transactional synonym'
+        }, 985, { correlationId: '00000000-0000-4000-8000-000000000989' });
+        assert.equal(updatedOrdinaryAlias.name, 'Updated transactional synonym');
+        const [protectedAliasState] = await connection.query(
+            `SELECT Name,
+                    (SELECT COUNT(*) FROM AdminAuditLogs
+                     WHERE CorrelationId IN (?, ?)) AS RejectedAuditCount
+             FROM IngredientAliases
+             WHERE Id = ?`,
+            [protectedUpdateCorrelationId, protectedDeleteCorrelationId, sourceNameAliasId]
+        );
+        assert.deepEqual(protectedAliasState, [{
+            Name: 'Transactional ingredient source',
+            RejectedAuditCount: 0
+        }]);
+
+        const failedCorrelationId = '00000000-0000-4000-8000-000000000986';
+        const failingService = new AdminIngredientService(
+            repository,
+            new AdminAuditActionRunnerMysql(pool, () => ({
+                async record() {
+                    throw new Error('forced ingredient merge audit failure');
+                }
+            }))
+        );
+        await assert.rejects(
+            () => failingService.merge(988, {
+                targetIngredientId: 989,
+                reason: 'Cette fusion doit être entièrement annulée.'
+            }, 985, { correlationId: failedCorrelationId }),
+            /forced ingredient merge audit failure/
+        );
+
+        const [rolledBack] = await connection.query(
+            `SELECT source.Status AS SourceStatus, source.MergedIntoIngredientId,
+                    (SELECT COUNT(*) FROM RecipeIngredients WHERE IngredientId = 988) AS SourceRecipeCount,
+                    (SELECT COUNT(*) FROM RecipeIngredients WHERE IngredientId = 989) AS TargetRecipeCount,
+                    (SELECT COUNT(*) FROM IngredientAliases
+                     WHERE IngredientId = 989 AND NormalizedName = 'rollback ingredient source' AND LanguageCode = 'fr') AS SourceNameAliasCount,
+                    (SELECT COUNT(*) FROM AdminAuditLogs WHERE CorrelationId = ?) AS AuditCount
+             FROM Ingredients AS source
+             WHERE source.Id = 988`,
+            [failedCorrelationId]
+        );
+        assert.deepEqual(rolledBack, [{
+            SourceStatus: 'active',
+            MergedIntoIngredientId: null,
+            SourceRecipeCount: 1,
+            TargetRecipeCount: 0,
+            SourceNameAliasCount: 0,
+            AuditCount: 0
+        }]);
+    });
+
+    it('rejects an alias collision without changing recipes, ingredients or audit history', async () => {
+        await connection.query(
+            `INSERT INTO Ingredients (Id, Name, NormalizedName, Slug) VALUES
+               (990, 'Collision ingredient source', 'collision ingredient source', 'collision-ingredient-source'),
+               (991, 'Collision ingredient target', 'collision ingredient target', 'collision-ingredient-target'),
+               (992, 'Collision ingredient owner', 'collision ingredient owner', 'collision-ingredient-owner');
+             INSERT INTO IngredientAliases (Id, IngredientId, Name, NormalizedName, LanguageCode)
+             VALUES (990, 992, 'Collision ingredient source', 'collision ingredient source', 'fr');
+             INSERT INTO RecipeIngredients (Id, RecipeId, IngredientId, DisplayText)
+             VALUES (990, 985, 990, 'libellé auteur conservé après conflit')`
+        );
+
+        const repository = new AdminIngredientRepositoryMysql(pool);
+        const service = new AdminIngredientService(
+            repository,
+            new AdminAuditActionRunnerMysql(
+                pool,
+                (db) => new AdminAuditService(new AdminAuditRepositoryMysql(db))
+            )
+        );
+        const correlationId = '00000000-0000-4000-8000-000000000990';
+        await assert.rejects(
+            () => service.merge(990, {
+                targetIngredientId: 991,
+                reason: 'Le nom source entre en collision avec un alias tiers.'
+            }, 985, { correlationId }),
+            assertMergeSourceNameAliasConflict
+        );
+
+        const [unchangedState] = await connection.query(
+            `SELECT source.Status AS SourceStatus,
+                    source.MergedIntoIngredientId,
+                    recipeIngredient.IngredientId AS RecipeIngredientId,
+                    recipeIngredient.DisplayText,
+                    alias.IngredientId AS AliasOwnerId,
+                    (SELECT COUNT(*) FROM AdminAuditLogs WHERE CorrelationId = ?) AS AuditCount
+             FROM Ingredients AS source
+             INNER JOIN RecipeIngredients AS recipeIngredient ON recipeIngredient.Id = 990
+             INNER JOIN IngredientAliases AS alias ON alias.Id = 990
+             WHERE source.Id = 990`,
+            [correlationId]
+        );
+        assert.deepEqual(unchangedState, [{
+            SourceStatus: 'active',
+            MergedIntoIngredientId: null,
+            RecipeIngredientId: 990,
+            DisplayText: 'libellé auteur conservé après conflit',
+            AliasOwnerId: 992,
+            AuditCount: 0
+        }]);
+    });
+
+    it('serializes a concurrent recipe ingredient so it cannot recreate a merged source reference', async () => {
+        await connection.query(
+            `INSERT INTO Ingredients (Id, Name, NormalizedName, Slug) VALUES
+               (995, 'Concurrent ingredient source', 'concurrent ingredient source', 'concurrent-ingredient-source'),
+               (996, 'Concurrent ingredient target', 'concurrent ingredient target', 'concurrent-ingredient-target')`
+        );
+        const mergeDb = await pool.getConnection();
+        const recipeDb = await pool.getConnection();
+
+        try {
+            await mergeDb.beginTransaction();
+            await recipeDb.beginTransaction();
+            const repository = new AdminIngredientRepositoryMysql(pool);
+            await repository.findByIdsForUpdate([995, 996], mergeDb);
+
+            const pendingAssociation = recipeDb.execute(
+                `INSERT INTO RecipeIngredients (Id, RecipeId, IngredientId, DisplayText)
+                 VALUES (995, 985, 995, 'référence concurrente')`
+            ).then(
+                () => null,
+                (error: unknown) => error
+            );
+
+            const result = await repository.merge({
+                sourceIngredientId: 995,
+                targetIngredientId: 996,
+                sourceName: 'Concurrent ingredient source',
+                sourceNormalizedName: 'concurrent ingredient source',
+                sourceNameLanguageCode: 'fr'
+            }, mergeDb);
+            assert.equal(result.status, 'merged');
+            await mergeDb.commit();
+
+            const associationError = await pendingAssociation;
+            assert.ok(associationError instanceof Error);
+            assert.match(
+                (associationError as Error & { sqlMessage?: string }).sqlMessage ?? associationError.message,
+                /Recipes can only reference active canonical ingredients/
+            );
+            await recipeDb.rollback();
+
+            const [persistedState] = await connection.query(
+                `SELECT source.Status AS SourceStatus, source.MergedIntoIngredientId,
+                        (SELECT COUNT(*) FROM RecipeIngredients WHERE IngredientId = 995) AS SourceRecipeCount,
+                        (SELECT COUNT(*) FROM RecipeIngredients WHERE IngredientId = 996) AS TargetRecipeCount
+                 FROM Ingredients AS source
+                 WHERE source.Id = 995`
+            );
+            assert.deepEqual(persistedState, [{
+                SourceStatus: 'merged',
+                MergedIntoIngredientId: 996,
+                SourceRecipeCount: 0,
+                TargetRecipeCount: 0
+            }]);
+        } finally {
+            await mergeDb.rollback();
+            await recipeDb.rollback();
+            mergeDb.release();
+            recipeDb.release();
+        }
     });
 
     it('rejects equivalent active names while preserving deprecated and merged variants', async () => {

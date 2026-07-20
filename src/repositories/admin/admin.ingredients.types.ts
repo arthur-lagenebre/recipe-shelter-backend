@@ -27,8 +27,16 @@ export type AdminIngredientWriteResult =
 
 export type AdminIngredientRestoreResult = 'restored' | 'normalized_name_taken' | 'not_updated';
 
-export type AdminIngredientMergeResult = {
-  merged: boolean;
+export type AdminIngredientMergeInput = {
+  sourceIngredientId: number;
+  targetIngredientId: number;
+  sourceName: string;
+  sourceNormalizedName: string;
+  sourceNameLanguageCode: string;
+};
+
+export type AdminIngredientMergeSuccess = {
+  status: 'merged';
   sourceRecipeAssociationCountBefore: number;
   targetRecipeAssociationCountBefore: number;
   targetRecipeAssociationCountAfter: number;
@@ -37,8 +45,14 @@ export type AdminIngredientMergeResult = {
   targetAliasCountBefore: number;
   targetAliasCountAfter: number;
   transferredAliasCount: number;
+  sourceNameAliasResolution: 'created' | 'reused_source_alias' | 'reused_target_alias';
   redirectedMergedIngredientCount: number;
 };
+
+export type AdminIngredientMergeResult =
+  | AdminIngredientMergeSuccess
+  | { status: 'not_merged' }
+  | { status: 'source_name_alias_conflict'; conflictingIngredientId: number | null };
 
 export type AdminIngredientAliasWriteInput = {
   ingredientId: number;
