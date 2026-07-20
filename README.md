@@ -161,6 +161,7 @@ le backend. Le catalogue initial est le suivant :
 | Commentaires | `comment.review`, `comment.hide`, `comment.restore`, `comments.update`, `comments.delete` |
 | Utilisateurs community | `user.read`, `user.ban`, `user.unban` |
 | Catalogue | `catalog.read`, `catalog.manage` |
+| Tags | `tag.create`, `tag.update` |
 | Staff | `staff.read`, `staff.create`, `staff.disable`, `staff.enable`, `staff.role.grant`, `staff.role.revoke`, `staff.session.revoke` |
 | Audit | `audit.read` |
 
@@ -188,7 +189,7 @@ La matrice initiale est explicite et insérée de manière idempotente par le se
 | `RecipeModerator` | `recipe.review`, `recipe.publish`, `recipe.reject`, `recipe.archive` |
 | `CommentModerator` | `comment.review`, `comment.hide`, `comment.restore`, `comments.update` |
 | `UserAdmin` | `user.read`, `user.ban`, `user.unban` |
-| `CatalogManager` | `catalog.read`, `catalog.manage` |
+| `CatalogManager` | `catalog.read`, `catalog.manage`, `tag.create`, `tag.update` |
 | `SuperAdmin` | Toutes les permissions listées dans le catalogue, associées explicitement |
 
 Les suppressions définitives de recettes et commentaires, la gestion du staff,
@@ -221,9 +222,10 @@ effective des recettes, commentaires, utilisateurs, invitations et sessions staf
 seule entrée avec l'acteur, la cible, l'état avant/après, l'adresse IP, le
 user-agent et le `correlationId`. La mutation métier et cette entrée utilisent
 la même transaction ; un échec d'audit annule donc aussi la mutation. Les APIs
-actuelles des tags, ingrédients et catégories restent en lecture seule et aucun
-modèle d'alias n'est encore présent : il n'existe pas d'action applicative de ces
-domaines à journaliser à ce stade.
+actuelles des tags, ingrédients et catégories restent en lecture seule : il
+n'existe pas encore d'action applicative de ces domaines à journaliser. Le
+modèle Tag porte toutefois son cycle de vie (`active`, `deprecated`, `merged`)
+et la cible canonique d'une fusion en préparation des mutations administratives.
 
 Les lectures de la liste, d'un profil staff et de ses sessions administrées
 sont également auditées. Elles n'enregistrent ni e-mail ni secret : seulement la
@@ -429,13 +431,26 @@ L'upload de couverture attend exactement un fichier dans le champ `image` et acc
 }
 ```
 
-Les tags sont rattachés à un groupe. Les réponses `GET /api/v1/tags` et `GET /api/v1/tags/:id` incluent donc un objet `group` :
+Les tags sont rattachés à un groupe. Ils possèdent un nom normalisé unique, une
+description optionnelle, un statut `active`, `deprecated` ou `merged`, ainsi que
+les dates de création et de dernière modification. Un tag fusionné référence le
+tag canonique via `mergedIntoTagId`; les autres statuts exposent `null`. Les
+réponses `GET /api/v1/tags` et `GET /api/v1/tags/:id` incluent également l'objet
+`group`. Le schéma refuse les suppressions physiques : un tag obsolète doit être
+déprécié ou fusionné. La liste publique ne propose que les tags `active`, tandis
+que la consultation par identifiant conserve l'état et la cible des anciens tags :
 
 ```json
 {
   "id": 1,
   "name": "Végétarien",
+  "normalizedName": "vegetarien",
   "slug": "vegetarien",
+  "description": null,
+  "status": "active",
+  "mergedIntoTagId": null,
+  "createdAt": "2026-07-20T08:00:00.000Z",
+  "updatedAt": "2026-07-20T08:00:00.000Z",
   "group": {
     "id": 1,
     "name": "Régimes alimentaires",

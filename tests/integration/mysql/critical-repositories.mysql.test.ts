@@ -114,12 +114,12 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
                 (13, 'Search other blocked', 'search-other-blocked');
             INSERT INTO Equipments (Id, Name, Slug) VALUES (1, 'Pot', 'pot');
             INSERT INTO TagGroups (Id, Name, Slug, SortOrder) VALUES (1, 'Time', 'time', 1);
-            INSERT INTO Tags (Id, GroupId, Name, Slug) VALUES
-                (1, 1, 'Quick', 'quick'),
-                (10, 1, 'Search base', 'search-base'),
-                (11, 1, 'Search required', 'search-required'),
-                (12, 1, 'Search blocked', 'search-blocked'),
-                (13, 1, 'Search other blocked', 'search-other-blocked');
+            INSERT INTO Tags (Id, GroupId, Name, NormalizedName, Slug) VALUES
+                (1, 1, 'Quick', 'quick', 'quick'),
+                (10, 1, 'Search base', 'search base', 'search-base'),
+                (11, 1, 'Search required', 'search required', 'search-required'),
+                (12, 1, 'Search blocked', 'search blocked', 'search-blocked'),
+                (13, 1, 'Search other blocked', 'search other blocked', 'search-other-blocked');
 
             INSERT INTO Recipes (Id, UserId, CategoryId, Title, Slug, Description, PrepTimeMinutes, RestTimeMinutes, CookTimeMinutes, Servings, Status, PublishedAt) VALUES
                 (100, 2, 2, 'Filterfixture alpha', 'filterfixture-alpha', 'Search fixture', 5, NULL, 5, 2, 'published', '2026-07-07 10:00:00'),

@@ -38,7 +38,7 @@ INSERT INTO Permissions (Id, Code, Description) VALUES
 (13, 'comments.update', "Modifier des commentaires dans l'administration"),
 (14, 'comments.delete', "Supprimer définitivement des commentaires"),
 (15, 'catalog.read', "Consulter le catalogue dans l'administration"),
-(16, 'catalog.manage', "Créer, modifier et supprimer des catégories, ingrédients, tags et ustensiles"),
+(16, 'catalog.manage', "Créer, modifier et supprimer des catégories, ingrédients et ustensiles"),
 (17, 'staff.read', "Consulter les comptes staff et leurs rôles"),
 (18, 'staff.create', "Inviter un compte staff avec ses rôles initiaux"),
 (19, 'staff.disable', "Désactiver un compte staff et révoquer ses accès"),
@@ -46,7 +46,9 @@ INSERT INTO Permissions (Id, Code, Description) VALUES
 (21, 'staff.role.grant', "Attribuer un rôle à un compte staff"),
 (22, 'staff.role.revoke', "Retirer un rôle à un compte staff"),
 (23, 'staff.session.revoke', "Révoquer les sessions actives des comptes staff"),
-(24, 'audit.read', "Consulter le journal d'audit administratif")
+(24, 'audit.read', "Consulter le journal d'audit administratif"),
+(25, 'tag.create', "Créer un tag canonique"),
+(26, 'tag.update', "Modifier, déprécier ou fusionner un tag")
 AS new_permissions
 ON DUPLICATE KEY UPDATE
   Code = new_permissions.Code,
@@ -75,6 +77,8 @@ FROM (
   -- CatalogManager: gestion complète des données du catalogue.
   UNION ALL SELECT 'CatalogManager', 'catalog.read'
   UNION ALL SELECT 'CatalogManager', 'catalog.manage'
+  UNION ALL SELECT 'CatalogManager', 'tag.create'
+  UNION ALL SELECT 'CatalogManager', 'tag.update'
   -- SuperAdmin: catalogue explicite complet, sans wildcard ni héritage de rôle.
   UNION ALL SELECT 'SuperAdmin', 'system.health.read'
   UNION ALL SELECT 'SuperAdmin', 'user.read'
@@ -100,6 +104,8 @@ FROM (
   UNION ALL SELECT 'SuperAdmin', 'staff.role.revoke'
   UNION ALL SELECT 'SuperAdmin', 'staff.session.revoke'
   UNION ALL SELECT 'SuperAdmin', 'audit.read'
+  UNION ALL SELECT 'SuperAdmin', 'tag.create'
+  UNION ALL SELECT 'SuperAdmin', 'tag.update'
 ) AS role_permission_matrix
 INNER JOIN Roles AS roles ON roles.Code = role_permission_matrix.RoleCode
 INNER JOIN Permissions AS permissions ON permissions.Code = role_permission_matrix.PermissionCode
@@ -425,88 +431,90 @@ ON DUPLICATE KEY UPDATE
 -- =====================================================
 -- Tags
 -- =====================================================
-INSERT INTO Tags (Name, Slug, GroupId) VALUES
+INSERT INTO Tags (Name, NormalizedName, Slug, GroupId) VALUES
 -- Régimes alimentaires
-('Végétarien', 'vegetarien', 1),
-('Vegan', 'vegan', 1),
-('Sans gluten', 'sans-gluten', 1),
-('Sans lactose', 'sans-lactose', 1),
-('Sans sucre ajouté', 'sans-sucre-ajoute', 1),
-('Cétogène', 'cetogene', 1),
-('Halal', 'halal', 1),
-('Casher', 'casher', 1),
-('Sans noix', 'sans-noix', 1),
-('Sans oeuf', 'sans-oeuf', 1),
-('Sans porc', 'sans-porc', 1),
-('Paléo', 'paleo', 1),
-('Cru', 'cru', 1),
+('Végétarien', 'vegetarien', 'vegetarien', 1),
+('Vegan', 'vegan', 'vegan', 1),
+('Sans gluten', 'sans gluten', 'sans-gluten', 1),
+('Sans lactose', 'sans lactose', 'sans-lactose', 1),
+('Sans sucre ajouté', 'sans sucre ajoute', 'sans-sucre-ajoute', 1),
+('Cétogène', 'cetogene', 'cetogene', 1),
+('Halal', 'halal', 'halal', 1),
+('Casher', 'casher', 'casher', 1),
+('Sans noix', 'sans noix', 'sans-noix', 1),
+('Sans oeuf', 'sans oeuf', 'sans-oeuf', 1),
+('Sans porc', 'sans porc', 'sans-porc', 1),
+('Paléo', 'paleo', 'paleo', 1),
+('Cru', 'cru', 'cru', 1),
 -- Nutrition
-('Healthy', 'healthy', 2),
-('Light', 'light', 2),
-('Protéiné', 'proteine', 2),
-('Riche en fibres', 'riche-fibres', 2),
-('Faible en calories', 'faible-calories', 2),
-('Riche en fer', 'riche-fer', 2),
-('Riche en oméga-3', 'riche-omega-3', 2),
-('Anti-inflammatoire', 'anti-inflammatoire', 2),
+('Healthy', 'healthy', 'healthy', 2),
+('Light', 'light', 'light', 2),
+('Protéiné', 'proteine', 'proteine', 2),
+('Riche en fibres', 'riche en fibres', 'riche-fibres', 2),
+('Faible en calories', 'faible en calories', 'faible-calories', 2),
+('Riche en fer', 'riche en fer', 'riche-fer', 2),
+('Riche en oméga-3', 'riche en omega-3', 'riche-omega-3', 2),
+('Anti-inflammatoire', 'anti-inflammatoire', 'anti-inflammatoire', 2),
 -- Difficulté
-('Facile', 'facile', 3),
-('Intermédiaire', 'intermediaire', 3),
-('Difficile', 'difficile', 3),
+('Facile', 'facile', 'facile', 3),
+('Intermédiaire', 'intermediaire', 'intermediaire', 3),
+('Difficile', 'difficile', 'difficile', 3),
 -- Temps
-('Très rapide', 'tres-rapide', 4),
-('Rapide', 'rapide', 4),
-('Longue cuisson', 'longue-cuisson', 4),
-('Marinade', 'marinade', 4),
-('Sans cuisson', 'sans-cuisson', 4),
-('Une seule casserole', 'une-seule-casserole', 4),
+('Très rapide', 'tres rapide', 'tres-rapide', 4),
+('Rapide', 'rapide', 'rapide', 4),
+('Longue cuisson', 'longue cuisson', 'longue-cuisson', 4),
+('Marinade', 'marinade', 'marinade', 4),
+('Sans cuisson', 'sans cuisson', 'sans-cuisson', 4),
+('Une seule casserole', 'une seule casserole', 'une-seule-casserole', 4),
 -- Occasion
-('Anniversaire', 'anniversaire', 5),
-('Noël', 'noel', 5),
-('Pâques', 'paques', 5),
-('Saint-Valentin', 'saint-valentin', 5),
-('Repas de fête', 'repas-fete', 5),
-('Brunch', 'brunch', 5),
-('Barbecue', 'barbecue', 5),
-('Pique-nique', 'pique-nique', 5),
-('Ramadan', 'ramadan', 5),
-('Halloween', 'halloween', 5),
-('Nouvel An', 'nouvel-an', 5),
+('Anniversaire', 'anniversaire', 'anniversaire', 5),
+('Noël', 'noel', 'noel', 5),
+('Pâques', 'paques', 'paques', 5),
+('Saint-Valentin', 'saint-valentin', 'saint-valentin', 5),
+('Repas de fête', 'repas de fete', 'repas-fete', 5),
+('Brunch', 'brunch', 'brunch', 5),
+('Barbecue', 'barbecue', 'barbecue', 5),
+('Pique-nique', 'pique-nique', 'pique-nique', 5),
+('Ramadan', 'ramadan', 'ramadan', 5),
+('Halloween', 'halloween', 'halloween', 5),
+('Nouvel An', 'nouvel an', 'nouvel-an', 5),
 -- Ambiance / Style
-('Comfort food', 'comfort-food', 6),
-('Fait maison', 'fait-maison', 6),
-('Économique', 'economique', 6),
-('Batch cooking', 'batch-cooking', 6),
-('Cuisine de saison', 'cuisine-saison', 6),
-('Recette de grand-mère', 'recette-grand-mere', 6),
+('Comfort food', 'comfort food', 'comfort-food', 6),
+('Fait maison', 'fait maison', 'fait-maison', 6),
+('Économique', 'economique', 'economique', 6),
+('Batch cooking', 'batch cooking', 'batch-cooking', 6),
+('Cuisine de saison', 'cuisine de saison', 'cuisine-saison', 6),
+('Recette de grand-mère', 'recette de grand-mere', 'recette-grand-mere', 6),
 -- Technique
-('Mijoté', 'mijote', 7),
-('Grillé', 'grille', 7),
-('Frit', 'frit', 7),
-('Vapeur', 'vapeur', 7),
-('Cuit au four', 'cuit-au-four', 7),
-('Fermenté', 'fermente', 7),
-('Fumé', 'fume', 7),
+('Mijoté', 'mijote', 'mijote', 7),
+('Grillé', 'grille', 'grille', 7),
+('Frit', 'frit', 'frit', 7),
+('Vapeur', 'vapeur', 'vapeur', 7),
+('Cuit au four', 'cuit au four', 'cuit-au-four', 7),
+('Fermenté', 'fermente', 'fermente', 7),
+('Fumé', 'fume', 'fume', 7),
 -- Cuisines du monde
-('Cuisine française', 'cuisine-francaise', 8),
-('Cuisine italienne', 'cuisine-italienne', 8),
-('Cuisine asiatique', 'cuisine-asiatique', 8),
-('Cuisine japonaise', 'cuisine-japonaise', 8),
-('Cuisine chinoise', 'cuisine-chinoise', 8),
-('Cuisine thaïlandaise', 'cuisine-thailandaise', 8),
-('Cuisine indienne', 'cuisine-indienne', 8),
-('Cuisine libanaise', 'cuisine-libanaise', 8),
-('Cuisine mexicaine', 'cuisine-mexicaine', 8),
-('Cuisine orientale', 'cuisine-orientale', 8),
-('Cuisine méditerranéenne', 'cuisine-mediterraneenne', 8),
-('Cuisine grecque', 'cuisine-grecque', 8),
-('Cuisine espagnole', 'cuisine-espagnole', 8),
-('Cuisine américaine', 'cuisine-americaine', 8),
-('Cuisine africaine', 'cuisine-africaine', 8),
-('Cuisine antillaise', 'cuisine-antillaise', 8),
-('Cuisine brésilienne', 'cuisine-bresilienne', 8)
+('Cuisine française', 'cuisine francaise', 'cuisine-francaise', 8),
+('Cuisine italienne', 'cuisine italienne', 'cuisine-italienne', 8),
+('Cuisine asiatique', 'cuisine asiatique', 'cuisine-asiatique', 8),
+('Cuisine japonaise', 'cuisine japonaise', 'cuisine-japonaise', 8),
+('Cuisine chinoise', 'cuisine chinoise', 'cuisine-chinoise', 8),
+('Cuisine thaïlandaise', 'cuisine thailandaise', 'cuisine-thailandaise', 8),
+('Cuisine indienne', 'cuisine indienne', 'cuisine-indienne', 8),
+('Cuisine libanaise', 'cuisine libanaise', 'cuisine-libanaise', 8),
+('Cuisine mexicaine', 'cuisine mexicaine', 'cuisine-mexicaine', 8),
+('Cuisine orientale', 'cuisine orientale', 'cuisine-orientale', 8),
+('Cuisine méditerranéenne', 'cuisine mediterraneenne', 'cuisine-mediterraneenne', 8),
+('Cuisine grecque', 'cuisine grecque', 'cuisine-grecque', 8),
+('Cuisine espagnole', 'cuisine espagnole', 'cuisine-espagnole', 8),
+('Cuisine américaine', 'cuisine americaine', 'cuisine-americaine', 8),
+('Cuisine africaine', 'cuisine africaine', 'cuisine-africaine', 8),
+('Cuisine antillaise', 'cuisine antillaise', 'cuisine-antillaise', 8),
+('Cuisine brésilienne', 'cuisine bresilienne', 'cuisine-bresilienne', 8)
 AS new_row
 ON DUPLICATE KEY UPDATE
+  Name = new_row.Name,
+  NormalizedName = new_row.NormalizedName,
   Slug = new_row.Slug,
   GroupId = new_row.GroupId;
 

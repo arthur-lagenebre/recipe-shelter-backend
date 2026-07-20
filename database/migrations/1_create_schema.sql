@@ -895,16 +895,114 @@ CREATE TABLE Tags (
   Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   GroupId BIGINT UNSIGNED NOT NULL,
   Name VARCHAR(255) NOT NULL,
-  Slug VARCHAR(255) NOT NULL,
+  NormalizedName VARCHAR(255) CHARACTER SET ascii COLLATE ascii_general_ci NOT NULL,
+  Slug VARCHAR(255) CHARACTER SET ascii COLLATE ascii_general_ci NOT NULL,
+  Description VARCHAR(1000) NULL,
+  Status ENUM('active', 'deprecated', 'merged') NOT NULL DEFAULT 'active',
+  MergedIntoTagId BIGINT UNSIGNED NULL,
+  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (Id),
-  KEY idx_tags_group_id (GroupId),
-  UNIQUE KEY tags_name_UK (Name),
+  UNIQUE KEY tags_normalized_name_UK (NormalizedName),
   UNIQUE KEY tags_slug_UK (Slug),
+  KEY idx_tags_group_status_name (GroupId, Status, Name),
+  KEY idx_tags_status_name (Status, Name),
+  KEY idx_tags_merged_into_tag_id (MergedIntoTagId),
+  CONSTRAINT tags_name_CK
+    CHECK (CHAR_LENGTH(Name) = CHAR_LENGTH(TRIM(Name)) AND CHAR_LENGTH(TRIM(Name)) > 0),
+  CONSTRAINT tags_normalized_name_CK
+    CHECK (
+      CHAR_LENGTH(NormalizedName) = CHAR_LENGTH(TRIM(NormalizedName))
+      AND CHAR_LENGTH(TRIM(NormalizedName)) > 0
+      AND BINARY NormalizedName = BINARY LOWER(NormalizedName)
+      AND NormalizedName REGEXP '^[a-z0-9]+([ ''-][a-z0-9]+)*$'
+    ),
+  CONSTRAINT tags_slug_CK
+    CHECK (
+      BINARY Slug = BINARY LOWER(Slug)
+      AND Slug REGEXP '^[a-z0-9]+(-[a-z0-9]+)*$'
+    ),
+  CONSTRAINT tags_description_CK
+    CHECK (
+      Description IS NULL
+      OR (CHAR_LENGTH(Description) = CHAR_LENGTH(TRIM(Description))
+          AND CHAR_LENGTH(TRIM(Description)) > 0)
+    ),
+  CONSTRAINT tags_merge_status_CK
+    CHECK (
+      (Status = 'merged' AND MergedIntoTagId IS NOT NULL)
+      OR (Status IN ('active', 'deprecated') AND MergedIntoTagId IS NULL)
+    ),
   CONSTRAINT tags_group_FK
     FOREIGN KEY (GroupId) REFERENCES TagGroups(Id)
     ON UPDATE CASCADE
+    ON DELETE RESTRICT,
+  CONSTRAINT tags_merged_into_tag_FK
+    FOREIGN KEY (MergedIntoTagId) REFERENCES Tags(Id)
+    ON UPDATE RESTRICT
     ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TRIGGER tags_merge_integrity_BI
+BEFORE INSERT ON Tags
+FOR EACH ROW
+BEGIN
+  IF NEW.MergedIntoTagId IS NOT NULL AND NEW.MergedIntoTagId = NEW.Id THEN
+    SIGNAL SQLSTATE '45000'
+      SET MYSQL_ERRNO = 1644,
+          MESSAGE_TEXT = 'A tag cannot be merged into itself';
+  END IF;
+  IF NEW.MergedIntoTagId IS NOT NULL
+     AND NOT EXISTS (
+       SELECT 1
+       FROM Tags AS canonical_tag
+       WHERE canonical_tag.Id = NEW.MergedIntoTagId
+         AND canonical_tag.Status = 'active'
+     ) THEN
+    SIGNAL SQLSTATE '45000'
+      SET MYSQL_ERRNO = 1644,
+          MESSAGE_TEXT = 'A merged tag must reference an active canonical tag';
+  END IF;
+END;
+
+CREATE TRIGGER tags_merge_integrity_BU
+BEFORE UPDATE ON Tags
+FOR EACH ROW
+BEGIN
+  IF NEW.MergedIntoTagId IS NOT NULL AND NEW.MergedIntoTagId = NEW.Id THEN
+    SIGNAL SQLSTATE '45000'
+      SET MYSQL_ERRNO = 1644,
+          MESSAGE_TEXT = 'A tag cannot be merged into itself';
+  END IF;
+  IF NEW.MergedIntoTagId IS NOT NULL
+     AND NOT EXISTS (
+       SELECT 1
+       FROM Tags AS canonical_tag
+       WHERE canonical_tag.Id = NEW.MergedIntoTagId
+         AND canonical_tag.Status = 'active'
+     ) THEN
+    SIGNAL SQLSTATE '45000'
+      SET MYSQL_ERRNO = 1644,
+          MESSAGE_TEXT = 'A merged tag must reference an active canonical tag';
+  END IF;
+  IF NEW.Status <> 'active'
+     AND EXISTS (
+       SELECT 1
+       FROM Tags AS merged_tag
+       WHERE merged_tag.MergedIntoTagId = NEW.Id
+     ) THEN
+    SIGNAL SQLSTATE '45000'
+      SET MYSQL_ERRNO = 1644,
+          MESSAGE_TEXT = 'A canonical merge target must remain active';
+  END IF;
+END;
+
+CREATE TRIGGER tags_no_delete_BD
+BEFORE DELETE ON Tags
+FOR EACH ROW
+SIGNAL SQLSTATE '45000'
+  SET MYSQL_ERRNO = 1644,
+      MESSAGE_TEXT = 'Tags cannot be physically deleted; deprecate or merge them instead';
 
 -- ---------- Recipe content ----------
 CREATE TABLE RecipeSteps (

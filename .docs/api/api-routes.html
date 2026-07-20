@@ -1411,7 +1411,7 @@ type DeleteFavoriteResponse = OkResponse;</code></pre>
               <td><code>/api/v1/tags</code></td>
               <td><span class="auth public">Public</span></td>
               <td>Aucun.</td>
-              <td><code>200</code> liste des tags avec leur groupe.</td>
+              <td><code>200</code> liste des tags actifs avec leur groupe.</td>
             </tr>
             <tr>
               <td><span class="method get">GET</span></td>
@@ -1452,7 +1452,13 @@ type Ingredient = {
 type Tag = {
   id: number;
   name: string;
+  normalizedName: string;
   slug: string;
+  description: string | null;
+  status: "active" | "deprecated" | "merged";
+  mergedIntoTagId: number | null;
+  createdAt: string; // date ISO 8601
+  updatedAt: string; // date ISO 8601
   group: TagGroup;
 };
 

@@ -154,7 +154,9 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
         assert.deepEqual(permissionsByRole, {
             CatalogManager: [
                 PERMISSIONS.catalogManage,
-                PERMISSIONS.catalogRead
+                PERMISSIONS.catalogRead,
+                PERMISSIONS.tagCreate,
+                PERMISSIONS.tagUpdate
             ],
             CommentModerator: [
                 PERMISSIONS.commentHide,

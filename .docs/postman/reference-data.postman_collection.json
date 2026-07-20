@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Recipe Shelter - Reference Data",
-    "description": "Postman collection for categories, equipments, ingredients, and tags routes. Tag responses include their group.",
+    "description": "Postman collection for categories, equipments, ingredients, and tags routes. Tag responses include canonical identity, lifecycle, audit timestamps, and their group.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -174,7 +174,7 @@
     },
     {
       "name": "Tags",
-      "description": "Returns tags with their group.",
+      "description": "Returns active tags with canonical identity, lifecycle, audit timestamps, and their group.",
       "request": {
         "method": "GET",
         "header": [

@@ -10,9 +10,12 @@ export class TagRepositoryMysql implements TagRepository {
 
     async findAll(): Promise<Tag[]> {
         const [rows] = await this.db.execute(
-            `SELECT t.Id, t.Name, t.Slug, tg.Id AS GroupId, tg.Name AS GroupName, tg.Slug AS GroupSlug, tg.SortOrder AS GroupSortOrder
+            `SELECT t.Id, t.Name, t.NormalizedName, t.Slug, t.Description, t.Status, t.MergedIntoTagId,
+                    t.CreatedAt, t.UpdatedAt,
+                    tg.Id AS GroupId, tg.Name AS GroupName, tg.Slug AS GroupSlug, tg.SortOrder AS GroupSortOrder
              FROM Tags AS t
              INNER JOIN TagGroups AS tg ON tg.Id = t.GroupId
+             WHERE t.Status = 'active'
              ORDER BY tg.SortOrder ASC, t.Name ASC`);
 
         return (rows as TagRow[]).map(mapTag);
@@ -20,7 +23,9 @@ export class TagRepositoryMysql implements TagRepository {
 
     async findById(id: number): Promise<Tag | null> {
         const [rows] = await this.db.execute(
-            `SELECT t.Id, t.Name, t.Slug, tg.Id AS GroupId, tg.Name AS GroupName, tg.Slug AS GroupSlug, tg.SortOrder AS GroupSortOrder
+            `SELECT t.Id, t.Name, t.NormalizedName, t.Slug, t.Description, t.Status, t.MergedIntoTagId,
+                    t.CreatedAt, t.UpdatedAt,
+                    tg.Id AS GroupId, tg.Name AS GroupName, tg.Slug AS GroupSlug, tg.SortOrder AS GroupSortOrder
              FROM Tags AS t
              INNER JOIN TagGroups AS tg ON tg.Id = t.GroupId
              WHERE t.Id = ?`,

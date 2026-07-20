@@ -29,7 +29,13 @@ const ingredient: Ingredient = { id: 3, name: 'Flour', slug: 'flour' };
 const tag: Tag = {
     id: 4,
     name: 'Quick',
+    normalizedName: 'quick',
     slug: 'quick',
+    description: null,
+    status: 'active',
+    mergedIntoTagId: null,
+    createdAt: new Date('2026-01-01T00:00:00.000Z'),
+    updatedAt: new Date('2026-01-01T00:00:00.000Z'),
     group: { id: 1, name: 'Time', slug: 'time', sortOrder: 1 }
 };
 
