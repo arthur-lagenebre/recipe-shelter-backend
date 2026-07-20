@@ -773,6 +773,7 @@ CREATE TABLE Recipes (
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (Id),
   UNIQUE KEY recipes_slug_UK (Slug),
+  UNIQUE KEY recipes_id_user_id_UK (Id, UserId),
   KEY idx_recipes_user_id (UserId),
   KEY idx_recipes_category_id (CategoryId),
   KEY idx_recipes_status (Status),
@@ -1251,6 +1252,171 @@ BEGIN
           MESSAGE_TEXT = 'A canonical merge target must remain active';
   END IF;
 END;
+
+-- ---------- Catalogue proposals ----------
+-- Proposals are historical review records. They never create canonical
+-- catalogue entries or change a recipe by themselves.
+CREATE TABLE CatalogProposals (
+  Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  AuthorUserId BIGINT UNSIGNED NOT NULL,
+  RecipeId BIGINT UNSIGNED NOT NULL,
+  ProposalType ENUM('tag', 'ingredient') NOT NULL,
+  ProposedName VARCHAR(255) NOT NULL,
+  NormalizedName VARCHAR(255) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  Status ENUM('pending', 'accepted', 'rejected', 'merged') NOT NULL DEFAULT 'pending',
+  MatchedTagId BIGINT UNSIGNED NULL,
+  MatchedIngredientId BIGINT UNSIGNED NULL,
+  ReviewedByStaffUserId BIGINT UNSIGNED NULL,
+  ReviewReason TEXT NULL,
+  CreatedAt DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  ReviewedAt DATETIME(6) NULL,
+  PRIMARY KEY (Id),
+  UNIQUE KEY catalog_proposals_pending_recipe_name_UK (
+    RecipeId,
+    ProposalType,
+    ((CASE WHEN Status = 'pending' THEN NormalizedName ELSE NULL END))
+  ),
+  KEY idx_catalog_proposals_queue (Status, ProposalType, CreatedAt, Id),
+  KEY idx_catalog_proposals_author_history (AuthorUserId, CreatedAt, Id),
+  KEY idx_catalog_proposals_recipe_history (RecipeId, CreatedAt, Id),
+  KEY idx_catalog_proposals_recipe_author (RecipeId, AuthorUserId),
+  KEY idx_catalog_proposals_reviewer_history (ReviewedByStaffUserId, ReviewedAt, Id),
+  KEY idx_catalog_proposals_matched_tag_id (MatchedTagId),
+  KEY idx_catalog_proposals_matched_ingredient_id (MatchedIngredientId),
+  CONSTRAINT catalog_proposals_proposed_name_CK
+    CHECK (
+      CHAR_LENGTH(ProposedName) = CHAR_LENGTH(TRIM(ProposedName))
+      AND CHAR_LENGTH(ProposedName) > 0
+    ),
+  CONSTRAINT catalog_proposals_normalized_name_CK
+    CHECK (
+      CHAR_LENGTH(NormalizedName) = CHAR_LENGTH(TRIM(NormalizedName))
+      AND CHAR_LENGTH(NormalizedName) > 0
+      AND BINARY NormalizedName = BINARY LOWER(NormalizedName)
+      AND NormalizedName REGEXP '^[a-z0-9]+( [a-z0-9]+)*$'
+      AND CONVERT(NormalizedName USING utf8mb4) COLLATE utf8mb4_0900_ai_ci
+        = TRIM(REGEXP_REPLACE(LOWER(ProposedName), '[^[:alnum:]]+', ' ')) COLLATE utf8mb4_0900_ai_ci
+    ),
+  CONSTRAINT catalog_proposals_lifecycle_CK
+    CHECK (
+      (Status = 'pending'
+        AND MatchedTagId IS NULL
+        AND MatchedIngredientId IS NULL
+        AND ReviewedByStaffUserId IS NULL
+        AND ReviewReason IS NULL
+        AND ReviewedAt IS NULL)
+      OR (Status = 'rejected'
+        AND MatchedTagId IS NULL
+        AND MatchedIngredientId IS NULL
+        AND ReviewedByStaffUserId IS NOT NULL
+        AND ReviewReason IS NOT NULL
+        AND CHAR_LENGTH(TRIM(ReviewReason)) >= 10
+        AND CHAR_LENGTH(ReviewReason) <= 1000
+        AND ReviewedAt IS NOT NULL
+        AND ReviewedAt >= CreatedAt)
+      OR (Status IN ('accepted', 'merged')
+        AND ReviewedByStaffUserId IS NOT NULL
+        AND ReviewReason IS NOT NULL
+        AND CHAR_LENGTH(TRIM(ReviewReason)) >= 10
+        AND CHAR_LENGTH(ReviewReason) <= 1000
+        AND ReviewedAt IS NOT NULL
+        AND ReviewedAt >= CreatedAt
+        AND ((ProposalType = 'tag'
+              AND MatchedTagId IS NOT NULL
+              AND MatchedIngredientId IS NULL)
+          OR (ProposalType = 'ingredient'
+              AND MatchedTagId IS NULL
+              AND MatchedIngredientId IS NOT NULL)))
+    ),
+  CONSTRAINT catalog_proposals_author_FK
+    FOREIGN KEY (AuthorUserId) REFERENCES CommunityProfiles(UserId)
+    ON UPDATE RESTRICT
+    ON DELETE RESTRICT,
+  CONSTRAINT catalog_proposals_recipe_author_FK
+    FOREIGN KEY (RecipeId, AuthorUserId) REFERENCES Recipes(Id, UserId)
+    ON UPDATE RESTRICT
+    ON DELETE RESTRICT,
+  CONSTRAINT catalog_proposals_matched_tag_FK
+    FOREIGN KEY (MatchedTagId) REFERENCES Tags(Id)
+    ON UPDATE RESTRICT
+    ON DELETE RESTRICT,
+  CONSTRAINT catalog_proposals_matched_ingredient_FK
+    FOREIGN KEY (MatchedIngredientId) REFERENCES Ingredients(Id)
+    ON UPDATE RESTRICT
+    ON DELETE RESTRICT,
+  CONSTRAINT catalog_proposals_reviewer_FK
+    FOREIGN KEY (ReviewedByStaffUserId) REFERENCES StaffProfiles(UserId)
+    ON UPDATE RESTRICT
+    ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TRIGGER catalog_proposals_pending_only_BI
+BEFORE INSERT ON CatalogProposals
+FOR EACH ROW
+BEGIN
+  IF NEW.Status <> 'pending' THEN
+    SIGNAL SQLSTATE '45000'
+      SET MYSQL_ERRNO = 1644,
+          MESSAGE_TEXT = 'Catalog proposals must be created with pending status';
+  END IF;
+END;
+
+CREATE TRIGGER catalog_proposals_review_BU
+BEFORE UPDATE ON CatalogProposals
+FOR EACH ROW
+BEGIN
+  DECLARE matched_catalog_status VARCHAR(16) DEFAULT NULL;
+
+  IF NEW.AuthorUserId <> OLD.AuthorUserId
+     OR NEW.RecipeId <> OLD.RecipeId
+     OR NEW.ProposalType <> OLD.ProposalType
+     OR BINARY NEW.ProposedName <> BINARY OLD.ProposedName
+     OR BINARY NEW.NormalizedName <> BINARY OLD.NormalizedName
+     OR NEW.CreatedAt <> OLD.CreatedAt THEN
+    SIGNAL SQLSTATE '45000'
+      SET MYSQL_ERRNO = 1644,
+          MESSAGE_TEXT = 'Catalog proposal identity is immutable';
+  END IF;
+
+  IF OLD.Status <> 'pending' THEN
+    SIGNAL SQLSTATE '45000'
+      SET MYSQL_ERRNO = 1644,
+          MESSAGE_TEXT = 'Reviewed catalog proposals are immutable';
+  END IF;
+
+  IF NEW.Status IN ('accepted', 'merged') AND NEW.ProposalType = 'tag' THEN
+    SELECT Status
+    INTO matched_catalog_status
+    FROM Tags
+    WHERE Id = NEW.MatchedTagId
+    FOR SHARE;
+
+    IF matched_catalog_status IS NULL OR matched_catalog_status <> 'active' THEN
+      SIGNAL SQLSTATE '45000'
+        SET MYSQL_ERRNO = 1644,
+            MESSAGE_TEXT = 'A reviewed tag proposal must match an active canonical tag';
+    END IF;
+  ELSEIF NEW.Status IN ('accepted', 'merged') AND NEW.ProposalType = 'ingredient' THEN
+    SELECT Status
+    INTO matched_catalog_status
+    FROM Ingredients
+    WHERE Id = NEW.MatchedIngredientId
+    FOR SHARE;
+
+    IF matched_catalog_status IS NULL OR matched_catalog_status <> 'active' THEN
+      SIGNAL SQLSTATE '45000'
+        SET MYSQL_ERRNO = 1644,
+            MESSAGE_TEXT = 'A reviewed ingredient proposal must match an active canonical ingredient';
+    END IF;
+  END IF;
+END;
+
+CREATE TRIGGER catalog_proposals_no_delete_BD
+BEFORE DELETE ON CatalogProposals
+FOR EACH ROW
+SIGNAL SQLSTATE '45000'
+  SET MYSQL_ERRNO = 1644,
+      MESSAGE_TEXT = 'Catalog proposals are historical records and cannot be physically deleted';
 
 -- ---------- Recipe content ----------
 CREATE TABLE RecipeSteps (

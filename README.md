@@ -560,6 +560,23 @@ défaut et le schéma protège également les écritures directes : un tag réf�
 par une recette doit être déprécié ou fusionné. Sa ligne historique est ainsi
 conservée ; la dépréciation maintient aussi ses associations existantes.
 
+Le schéma contient également le modèle dormant `CatalogProposals` pour les
+suggestions de tags et d'ingrédients liées à une recette. Une proposition
+conserve son auteur, son libellé normalisé et commence obligatoirement avec le
+statut `pending`. Une revue staff unique la clôt en `accepted`, `rejected` ou
+`merged`, avec un motif et un horodatage. Les statuts `accepted` et `merged`
+référencent exactement un tag ou un ingrédient canonique actif au moment de la
+revue et correspondant au type de proposition ; une proposition rejetée ne
+référence aucune entité du catalogue. L'identité et la décision deviennent
+immuables et la suppression physique est interdite afin de conserver tout
+l'historique.
+
+Ce modèle n'est encore exposé par aucune route. Insérer ou accepter une
+proposition ne crée pas automatiquement d'entité canonique, ne l'associe pas à
+la recette et ne conditionne aucun changement de statut de cette recette. Les
+futures actions de revue devront réaliser explicitement leur mutation métier et
+leur audit administratif centralisé dans une même transaction.
+
 `POST /api/v1/auth/login` est réservé aux comptes community et pose le cookie
 HttpOnly `rs_app_session`, avec l’audience JWT `recipe-shelter-app` et une durée
 de 7 jours par défaut. Les endpoints `GET /api/v1/auth/me` et
