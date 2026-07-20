@@ -173,7 +173,7 @@ describe('staff management HTTP integration', () => {
       headers: { cookie: actorCookie }
     });
     assert.equal(list.status, 200);
-    assert.equal((await list.json() as { staff: unknown[] }).staff.length, 3);
+    assert.equal((await list.json() as unknown[]).length, 3);
 
     const details = await fetch(`${server.baseUrl}/api/v1/admin/staff/${targetUser.id}`, {
       headers: { cookie: actorCookie }

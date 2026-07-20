@@ -14,7 +14,7 @@ export function createStaffSessionsController(staffSessions: StaffSessionService
       const currentSessionId = getCurrentStaffSessionId(req);
       const sessions = await staffSessions.listOwn(req.auth!.userId, currentSessionId);
 
-      res.status(200).json({ sessions });
+      res.status(200).json(sessions);
     }),
 
     revokeOwn: asyncHandler(async (req, res) => {

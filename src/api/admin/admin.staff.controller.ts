@@ -9,7 +9,7 @@ export function createAdminStaffController(staff: AdminStaffService) {
     list: asyncHandler(async (req, res) => {
       const accounts = await staff.list(req.auth!.userId, getAdminAuditRequestContext(req));
 
-      res.status(200).json({ staff: accounts });
+      res.status(200).json(accounts);
     }),
 
     get: asyncHandler(async (req, res) => {

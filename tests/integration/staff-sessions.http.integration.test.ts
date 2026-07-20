@@ -131,12 +131,12 @@ describe('staff session management HTTP boundaries', () => {
     });
 
     assert.equal(response.status, 200);
-    const body = await response.json() as { sessions: Array<Record<string, unknown>> };
-    assert.equal(body.sessions.length, 1);
-    assert.equal(body.sessions[0]?.id, actorSessionId);
-    assert.equal(body.sessions[0]?.isCurrent, true);
-    assert.equal(body.sessions[0]?.mfaMethod, 'webauthn');
-    assert.equal('webAuthnCredentialId' in (body.sessions[0] ?? {}), false);
+    const body = await response.json() as Array<Record<string, unknown>>;
+    assert.equal(body.length, 1);
+    assert.equal(body[0]?.id, actorSessionId);
+    assert.equal(body[0]?.isCurrent, true);
+    assert.equal(body[0]?.mfaMethod, 'webauthn');
+    assert.equal('webAuthnCredentialId' in (body[0] ?? {}), false);
     assert.doesNotMatch(JSON.stringify(body), /test-staff-credential|token|publicKey|challenge/i);
 
     const communityResponse = await fetch(`${server.baseUrl}/api/v1/admin/auth/sessions`, {
