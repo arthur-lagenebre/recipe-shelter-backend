@@ -158,7 +158,7 @@ le backend. Le catalogue initial est le suivant :
 | --- | --- |
 | Système | `system.health.read` |
 | Recettes | `recipe.review`, `recipe.publish`, `recipe.reject`, `recipe.archive`, `recipes.delete` |
-| Commentaires | `comments.read`, `comments.moderate`, `comments.update`, `comments.delete` |
+| Commentaires | `comment.review`, `comment.hide`, `comment.restore`, `comments.update`, `comments.delete` |
 | Utilisateurs community | `users.read`, `users.moderate` |
 | Catalogue | `catalog.read`, `catalog.manage` |
 | Staff | `staff.read`, `staff.create`, `staff.disable`, `staff.enable`, `staff.role.grant`, `staff.role.revoke`, `staff.session.revoke` |
@@ -169,7 +169,7 @@ La matrice initiale est explicite et insérée de manière idempotente par le se
 | Rôle | Permissions |
 | --- | --- |
 | `RecipeModerator` | `recipe.review`, `recipe.publish`, `recipe.reject`, `recipe.archive` |
-| `CommentModerator` | `comments.read`, `comments.moderate`, `comments.update` |
+| `CommentModerator` | `comment.review`, `comment.hide`, `comment.restore`, `comments.update` |
 | `UserAdmin` | `users.read`, `users.moderate` |
 | `CatalogManager` | `catalog.read`, `catalog.manage` |
 | `SuperAdmin` | Toutes les permissions listées dans le catalogue, associées explicitement |

@@ -34,13 +34,13 @@ type AdminPolicy = {
 
 const ADMIN_POLICIES: AdminPolicy[] = [
     { method: 'GET', path: '/api/v1/admin/audit-logs', permission: PERMISSIONS.auditRead },
-    { method: 'GET', path: '/api/v1/admin/comments/moderated', permission: PERMISSIONS.commentsRead },
-    { method: 'GET', path: '/api/v1/admin/comments/moderated/count', permission: PERMISSIONS.commentsRead },
-    { method: 'GET', path: '/api/v1/admin/comments/soft-deleted', permission: PERMISSIONS.commentsRead },
-    { method: 'GET', path: '/api/v1/admin/comments/soft-deleted/count', permission: PERMISSIONS.commentsRead },
-    { method: 'POST', path: '/api/v1/admin/comments/1/hide', permission: PERMISSIONS.commentsModerate },
-    { method: 'POST', path: '/api/v1/admin/comments/1/unmoderate', permission: PERMISSIONS.commentsModerate },
-    { method: 'POST', path: '/api/v1/admin/comments/1/restore', permission: PERMISSIONS.commentsModerate },
+    { method: 'GET', path: '/api/v1/admin/comments/moderated', permission: PERMISSIONS.commentReview },
+    { method: 'GET', path: '/api/v1/admin/comments/moderated/count', permission: PERMISSIONS.commentReview },
+    { method: 'GET', path: '/api/v1/admin/comments/soft-deleted', permission: PERMISSIONS.commentReview },
+    { method: 'GET', path: '/api/v1/admin/comments/soft-deleted/count', permission: PERMISSIONS.commentReview },
+    { method: 'POST', path: '/api/v1/admin/comments/1/hide', permission: PERMISSIONS.commentHide },
+    { method: 'POST', path: '/api/v1/admin/comments/1/unmoderate', permission: PERMISSIONS.commentRestore },
+    { method: 'POST', path: '/api/v1/admin/comments/1/restore', permission: PERMISSIONS.commentRestore },
     { method: 'PATCH', path: '/api/v1/admin/comments/1', permission: PERMISSIONS.commentsUpdate },
     { method: 'DELETE', path: '/api/v1/admin/comments/1', permission: PERMISSIONS.commentsDelete },
     { method: 'GET', path: '/api/v1/admin/recipes/pending', permission: PERMISSIONS.recipeReview },
@@ -243,6 +243,36 @@ describe('administrative endpoint authorization policies', () => {
             });
 
             assert.equal(response.status, 403, `${policy.method} ${policy.path} must reject other recipe permissions`);
+            assert.equal(
+                (await response.json() as { error: { code: string } }).error.code,
+                'AUTH_PERMISSION_REQUIRED'
+            );
+            assert.equal(controllerCalls, controllerCallsBeforeRequest);
+        }
+    });
+
+    it('keeps comment moderation permissions isolated by action', async () => {
+        const commentModerationPolicies = [
+            { method: 'GET', path: '/api/v1/admin/comments/moderated', permission: PERMISSIONS.commentReview },
+            { method: 'POST', path: '/api/v1/admin/comments/1/hide', permission: PERMISSIONS.commentHide },
+            { method: 'POST', path: '/api/v1/admin/comments/1/unmoderate', permission: PERMISSIONS.commentRestore },
+            { method: 'POST', path: '/api/v1/admin/comments/1/restore', permission: PERMISSIONS.commentRestore }
+        ] as const;
+        const commentModerationPermissions = [
+            PERMISSIONS.commentReview,
+            PERMISSIONS.commentHide,
+            PERMISSIONS.commentRestore
+        ];
+
+        for (const policy of commentModerationPolicies) {
+            grantedPermissions = commentModerationPermissions.filter((permission) => permission !== policy.permission);
+            const controllerCallsBeforeRequest = controllerCalls;
+            const response = await fetch(`${server.baseUrl}${policy.path}`, {
+                method: policy.method,
+                headers: { cookie }
+            });
+
+            assert.equal(response.status, 403, `${policy.method} ${policy.path} must reject other comment permissions`);
             assert.equal(
                 (await response.json() as { error: { code: string } }).error.code,
                 'AUTH_PERMISSION_REQUIRED'

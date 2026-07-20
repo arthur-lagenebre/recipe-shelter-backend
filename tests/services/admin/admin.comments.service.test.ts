@@ -229,14 +229,26 @@ describe('AdminCommentService', () => {
         assert.equal(audit.inputs.length, 0);
     });
 
-    it('restores a soft deleted comment', async () => {
+    it('restores and audits a soft deleted comment', async () => {
         repository.comment = { ...baseComment, deletedAt: new Date('2026-05-09T11:00:00.000Z'), deletedByUserId: 20 };
         const result = await service.restore(1, 99, testAdminAuditContext);
 
         assert.equal(result, true);
         assert.equal(repository.restoredId, 1);
         assert.equal(audit.inputs.length, 1);
-        assert.equal(audit.inputs[0]?.eventType, 'comments.restore');
+        assert.deepEqual(audit.inputs[0], {
+            actorUserId: 99,
+            eventType: 'comments.restore',
+            targetType: 'comment',
+            targetId: 1,
+            beforeValues: {
+                ...snapshotBaseComment(),
+                isDeleted: true,
+                deletedByUserId: 20
+            },
+            afterValues: snapshotBaseComment(),
+            ...testAdminAuditContext
+        });
     });
 
     it('rejects restore when comment does not exist', async () => {

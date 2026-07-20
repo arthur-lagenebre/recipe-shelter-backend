@@ -31,20 +31,21 @@ INSERT INTO Permissions (Id, Code, Description) VALUES
 (6,  'recipe.reject', "Rejeter les recettes en attente"),
 (7,  'recipe.archive', "Archiver les recettes publiées ou rejetées"),
 (8,  'recipes.delete', "Supprimer définitivement des recettes"),
-(9,  'comments.read', "Consulter les commentaires dans l'administration"),
-(10, 'comments.moderate', "Masquer, restaurer et démodérer des commentaires"),
-(11, 'comments.update', "Modifier des commentaires dans l'administration"),
-(12, 'comments.delete', "Supprimer définitivement des commentaires"),
-(13, 'catalog.read', "Consulter le catalogue dans l'administration"),
-(14, 'catalog.manage', "Créer, modifier et supprimer des catégories, ingrédients, tags et ustensiles"),
-(15, 'staff.read', "Consulter les comptes staff et leurs rôles"),
-(16, 'staff.create', "Inviter un compte staff avec ses rôles initiaux"),
-(17, 'staff.disable', "Désactiver un compte staff et révoquer ses accès"),
-(18, 'staff.enable', "Réactiver un compte staff désactivé"),
-(19, 'staff.role.grant', "Attribuer un rôle à un compte staff"),
-(20, 'staff.role.revoke', "Retirer un rôle à un compte staff"),
-(21, 'staff.session.revoke', "Révoquer les sessions actives des comptes staff"),
-(22, 'audit.read', "Consulter le journal d'audit administratif")
+(9,  'comment.review', "Consulter les commentaires à modérer"),
+(10, 'comment.hide', "Masquer les commentaires visibles"),
+(11, 'comment.restore', "Restaurer les commentaires masqués ou supprimés par leur auteur"),
+(12, 'comments.update', "Modifier des commentaires dans l'administration"),
+(13, 'comments.delete', "Supprimer définitivement des commentaires"),
+(14, 'catalog.read', "Consulter le catalogue dans l'administration"),
+(15, 'catalog.manage', "Créer, modifier et supprimer des catégories, ingrédients, tags et ustensiles"),
+(16, 'staff.read', "Consulter les comptes staff et leurs rôles"),
+(17, 'staff.create', "Inviter un compte staff avec ses rôles initiaux"),
+(18, 'staff.disable', "Désactiver un compte staff et révoquer ses accès"),
+(19, 'staff.enable', "Réactiver un compte staff désactivé"),
+(20, 'staff.role.grant', "Attribuer un rôle à un compte staff"),
+(21, 'staff.role.revoke', "Retirer un rôle à un compte staff"),
+(22, 'staff.session.revoke', "Révoquer les sessions actives des comptes staff"),
+(23, 'audit.read', "Consulter le journal d'audit administratif")
 AS new_permissions
 ON DUPLICATE KEY UPDATE
   Code = new_permissions.Code,
@@ -62,8 +63,9 @@ FROM (
   UNION ALL SELECT 'RecipeModerator', 'recipe.reject'
   UNION ALL SELECT 'RecipeModerator', 'recipe.archive'
   -- CommentModerator: consultation et modération réversible, sans suppression définitive.
-  UNION ALL SELECT 'CommentModerator', 'comments.read'
-  UNION ALL SELECT 'CommentModerator', 'comments.moderate'
+  UNION ALL SELECT 'CommentModerator', 'comment.review'
+  UNION ALL SELECT 'CommentModerator', 'comment.hide'
+  UNION ALL SELECT 'CommentModerator', 'comment.restore'
   UNION ALL SELECT 'CommentModerator', 'comments.update'
   -- UserAdmin: consultation et modération des seuls comptes community.
   UNION ALL SELECT 'UserAdmin', 'users.read'
@@ -80,8 +82,9 @@ FROM (
   UNION ALL SELECT 'SuperAdmin', 'recipe.reject'
   UNION ALL SELECT 'SuperAdmin', 'recipe.archive'
   UNION ALL SELECT 'SuperAdmin', 'recipes.delete'
-  UNION ALL SELECT 'SuperAdmin', 'comments.read'
-  UNION ALL SELECT 'SuperAdmin', 'comments.moderate'
+  UNION ALL SELECT 'SuperAdmin', 'comment.review'
+  UNION ALL SELECT 'SuperAdmin', 'comment.hide'
+  UNION ALL SELECT 'SuperAdmin', 'comment.restore'
   UNION ALL SELECT 'SuperAdmin', 'comments.update'
   UNION ALL SELECT 'SuperAdmin', 'comments.delete'
   UNION ALL SELECT 'SuperAdmin', 'catalog.read'

@@ -21,13 +21,13 @@ type AdminCommentsController = {
 export function createAdminCommentsRouter(controller: AdminCommentsController) {
     const router = Router();
 
-    router.get('/moderated', requireStaffAuth, RequirePermission(PERMISSIONS.commentsRead), controller.listModeratedComments);
-    router.get('/moderated/count', requireStaffAuth, RequirePermission(PERMISSIONS.commentsRead), controller.countModeratedComments);
-    router.get('/soft-deleted', requireStaffAuth, RequirePermission(PERMISSIONS.commentsRead), controller.listSoftDeletedComments);
-    router.get('/soft-deleted/count', requireStaffAuth, RequirePermission(PERMISSIONS.commentsRead), controller.countSoftDeletedComments);
-    router.post('/:id/hide', requireStaffAuth, RequirePermission(PERMISSIONS.commentsModerate), controller.hideComment);
-    router.post('/:id/unmoderate', requireStaffAuth, RequirePermission(PERMISSIONS.commentsModerate), controller.unmoderateComment);
-    router.post('/:id/restore', requireStaffAuth, RequirePermission(PERMISSIONS.commentsModerate), controller.restoreComment);
+    router.get('/moderated', requireStaffAuth, RequirePermission(PERMISSIONS.commentReview), controller.listModeratedComments);
+    router.get('/moderated/count', requireStaffAuth, RequirePermission(PERMISSIONS.commentReview), controller.countModeratedComments);
+    router.get('/soft-deleted', requireStaffAuth, RequirePermission(PERMISSIONS.commentReview), controller.listSoftDeletedComments);
+    router.get('/soft-deleted/count', requireStaffAuth, RequirePermission(PERMISSIONS.commentReview), controller.countSoftDeletedComments);
+    router.post('/:id/hide', requireStaffAuth, RequirePermission(PERMISSIONS.commentHide), controller.hideComment);
+    router.post('/:id/unmoderate', requireStaffAuth, RequirePermission(PERMISSIONS.commentRestore), controller.unmoderateComment);
+    router.post('/:id/restore', requireStaffAuth, RequirePermission(PERMISSIONS.commentRestore), controller.restoreComment);
     router.patch('/:id', requireStaffAuth, RequirePermission(PERMISSIONS.commentsUpdate), controller.updateComment);
     router.delete('/:id', requireStaffAuth, RequirePermission(PERMISSIONS.commentsDelete), controller.deleteComment);
 

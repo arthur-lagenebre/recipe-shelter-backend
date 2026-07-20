@@ -13,8 +13,9 @@ const EXPECTED_ROLE_PERMISSIONS: Record<string, string[]> = {
         PERMISSIONS.catalogRead
     ],
     CommentModerator: [
-        PERMISSIONS.commentsModerate,
-        PERMISSIONS.commentsRead,
+        PERMISSIONS.commentHide,
+        PERMISSIONS.commentRestore,
+        PERMISSIONS.commentReview,
         PERMISSIONS.commentsUpdate
     ],
     RecipeModerator: [
@@ -47,7 +48,7 @@ describe('RBAC seed catalog', () => {
         assert.ok(applicationCodes.every((code) => /^[a-z]+(?:\.[a-z]+)+$/.test(code)));
         assert.deepEqual(
             [...new Set(applicationCodes.map((code) => code.split('.')[0]))].sort(),
-            ['audit', 'catalog', 'comments', 'recipe', 'recipes', 'staff', 'system', 'users']
+            ['audit', 'catalog', 'comment', 'comments', 'recipe', 'recipes', 'staff', 'system', 'users']
         );
         assert.ok(applicationCodes.every((code) => isPermissionCode(code)));
         assert.equal(isPermissionCode('unknown.permission'), false);

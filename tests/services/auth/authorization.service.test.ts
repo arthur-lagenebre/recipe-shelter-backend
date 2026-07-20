@@ -54,8 +54,9 @@ const ROLE_PERMISSIONS = {
         PERMISSIONS.recipeArchive
     ],
     CommentModerator: [
-        PERMISSIONS.commentsRead,
-        PERMISSIONS.commentsModerate,
+        PERMISSIONS.commentReview,
+        PERMISSIONS.commentHide,
+        PERMISSIONS.commentRestore,
         PERMISSIONS.commentsUpdate
     ],
     UserAdmin: [

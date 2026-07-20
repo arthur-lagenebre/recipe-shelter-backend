@@ -157,8 +157,9 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
                 PERMISSIONS.catalogRead
             ],
             CommentModerator: [
-                PERMISSIONS.commentsModerate,
-                PERMISSIONS.commentsRead,
+                PERMISSIONS.commentHide,
+                PERMISSIONS.commentRestore,
+                PERMISSIONS.commentReview,
                 PERMISSIONS.commentsUpdate
             ],
             RecipeModerator: [
