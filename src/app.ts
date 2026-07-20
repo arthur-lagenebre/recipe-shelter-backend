@@ -205,7 +205,7 @@ function createDefaultDependencies(): AppDependencies {
     contactService: new ContactService(mailer),
     emailValidationService,
     equipmentService: new EquipmentService(equipmentRepository),
-    favoriteService: new FavoriteService(favoriteRepository),
+    favoriteService: new FavoriteService(favoriteRepository, recipeRepository),
     imageStorage,
     ingredientService: new IngredientService(ingredientRepository),
     passwordResetService: new PasswordResetService(userRepository, passwordResetRepository, sessionRepository, mailer, env.http.frontendBaseUrl),

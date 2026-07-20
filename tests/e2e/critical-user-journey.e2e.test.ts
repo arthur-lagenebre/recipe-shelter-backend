@@ -401,7 +401,7 @@ describe('critical user journey E2E', () => {
                 adminRecipeRepository,
                 new TestAdminAuditRecorder()
             ),
-            favoriteService: new FavoriteService(new CriticalFlowFavoriteRepository(recipes)),
+            favoriteService: new FavoriteService(new CriticalFlowFavoriteRepository(recipes), recipeRepository),
             commentService: new CommentService(new CriticalFlowCommentRepository())
         });
 

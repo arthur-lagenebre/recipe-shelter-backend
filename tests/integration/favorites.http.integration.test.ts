@@ -16,7 +16,8 @@ import { startHttpTestServer } from '../helpers/http-test-server.js';
 
 import type { FavoriteRepository } from '../../src/repositories/favorites/favorites.repository.interface.js';
 import type { Favorite } from '../../src/repositories/favorites/favorites.types.js';
-import type { RecipeListItem } from '../../src/repositories/recipes/recipe.types.js';
+import type { RecipeRepository } from '../../src/repositories/recipes/recipe.repository.interface.js';
+import type { Recipe, RecipeListItem } from '../../src/repositories/recipes/recipe.types.js';
 import type { User } from '../../src/repositories/users/user.types.js';
 import type { PaginationOptions } from '../../src/utils/pagination.js';
 import type { HttpTestServer } from '../helpers/http-test-server.js';
@@ -51,6 +52,44 @@ const publishedRecipe: RecipeListItem = {
     isFavorite: true
 };
 
+const publishedRecipeRecord: Recipe = {
+    id: 12,
+    userId: 8,
+    categoryId: 1,
+    title: 'Summer salad',
+    slug: 'summer-salad',
+    description: 'Fresh and quick',
+    coverImage: null,
+    prepTimeMinutes: 10,
+    restTimeMinutes: null,
+    cookTimeMinutes: null,
+    servings: 2,
+    status: 'published',
+    createdAt: new Date('2026-06-30T10:00:00.000Z'),
+    submittedAt: new Date('2026-07-01T09:00:00.000Z'),
+    moderatedAt: new Date('2026-07-01T10:00:00.000Z'),
+    moderatedByUserId: 1,
+    publishedAt: new Date('2026-07-01T10:00:00.000Z'),
+    archivedAt: null,
+    rejectionReason: null,
+    updatedAt: new Date('2026-07-01T10:00:00.000Z'),
+    tagIds: [],
+    ingredients: [],
+    steps: [],
+    equipments: []
+};
+
+const draftRecipeRecord: Recipe = {
+    ...publishedRecipeRecord,
+    id: 13,
+    slug: 'draft-13',
+    status: 'draft',
+    submittedAt: null,
+    moderatedAt: null,
+    moderatedByUserId: null,
+    publishedAt: null
+};
+
 class InMemoryFavoriteRepository implements FavoriteRepository {
     private readonly favorites = new Map<string, Favorite>();
 
@@ -76,7 +115,16 @@ describe('favorites HTTP integration', () => {
 
     before(async () => {
         const repository = new InMemoryFavoriteRepository();
-        const service = new FavoriteService(repository);
+        const recipes = new Map([
+            [publishedRecipeRecord.id, publishedRecipeRecord],
+            [draftRecipeRecord.id, draftRecipeRecord]
+        ]);
+        const recipeRepository = {
+            async findById(id: number) {
+                return recipes.get(id) ?? null;
+            }
+        } as RecipeRepository;
+        const service = new FavoriteService(repository, recipeRepository);
         const app = express();
 
         configureAuthUserRepository({
@@ -103,6 +151,18 @@ describe('favorites HTTP integration', () => {
         assert.equal(response.status, 401);
         assert.deepEqual(await response.json(), {
             error: { message: 'Missing session cookie', code: 'AUTH_NO_TOKEN' }
+        });
+    });
+
+    it("rejects another user's unpublished recipe", async () => {
+        const response = await fetch(`${server.baseUrl}/api/v1/favorites/13`, {
+            method: 'POST',
+            headers: { cookie: sessionCookie }
+        });
+
+        assert.equal(response.status, 403);
+        assert.deepEqual(await response.json(), {
+            error: { message: 'Recipe access denied', code: 'RECIPES_ACCESS_DENIED' }
         });
     });
 
