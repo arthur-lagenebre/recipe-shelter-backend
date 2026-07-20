@@ -25,7 +25,16 @@ const category: Category = {
     updatedAt: new Date('2026-01-01T00:00:00.000Z')
 };
 const equipment: Equipment = { id: 2, name: 'Whisk', slug: 'whisk' };
-const ingredient: Ingredient = { id: 3, name: 'Flour', slug: 'flour' };
+const ingredient: Ingredient = {
+    id: 3,
+    name: 'Flour',
+    normalizedName: 'flour',
+    slug: 'flour',
+    status: 'active',
+    mergedIntoIngredientId: null,
+    createdAt: new Date('2026-01-01T00:00:00.000Z'),
+    updatedAt: new Date('2026-01-01T00:00:00.000Z')
+};
 const tag: Tag = {
     id: 4,
     name: 'Quick',

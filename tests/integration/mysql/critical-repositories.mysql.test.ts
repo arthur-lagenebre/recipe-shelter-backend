@@ -106,12 +106,12 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
             INSERT INTO RecipeCategories (Id, Name, Slug, IconName) VALUES
                 (1, 'Main', 'main', 'dish'),
                 (2, 'Search fixtures', 'search-fixtures', 'search');
-            INSERT INTO Ingredients (Id, Name, Slug) VALUES
-                (1, 'Pasta', 'pasta'),
-                (10, 'Search base', 'search-base'),
-                (11, 'Search required', 'search-required'),
-                (12, 'Search blocked', 'search-blocked'),
-                (13, 'Search other blocked', 'search-other-blocked');
+            INSERT INTO Ingredients (Id, Name, NormalizedName, Slug) VALUES
+                (1, 'Pasta', 'pasta', 'pasta'),
+                (10, 'Search base', 'search base', 'search-base'),
+                (11, 'Search required', 'search required', 'search-required'),
+                (12, 'Search blocked', 'search blocked', 'search-blocked'),
+                (13, 'Search other blocked', 'search other blocked', 'search-other-blocked');
             INSERT INTO Equipments (Id, Name, Slug) VALUES (1, 'Pot', 'pot');
             INSERT INTO TagGroups (Id, Name, Slug, SortOrder) VALUES (1, 'Time', 'time', 1);
             INSERT INTO Tags (Id, GroupId, Name, NormalizedName, Slug) VALUES

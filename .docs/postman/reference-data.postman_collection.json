@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Recipe Shelter - Reference Data",
-    "description": "Postman collection for categories, equipments, ingredients, and tags routes. Tag responses include canonical identity, lifecycle, audit timestamps, and their group.",
+    "description": "Postman collection for categories, equipments, ingredients, and tags routes. Ingredient and tag responses include canonical identity, lifecycle, and audit timestamps; tags also include their group.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -127,6 +127,7 @@
     },
     {
       "name": "Ingredients",
+      "description": "Returns active canonical ingredients with their normalized identity, lifecycle, and audit timestamps.",
       "request": {
         "method": "GET",
         "header": [
@@ -150,6 +151,7 @@
     },
     {
       "name": "Ingredient by id",
+      "description": "Returns an ingredient by id, including deprecated or merged historical entries and their canonical merge target.",
       "request": {
         "method": "GET",
         "header": [

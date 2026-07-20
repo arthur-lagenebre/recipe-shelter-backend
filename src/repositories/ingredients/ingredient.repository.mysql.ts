@@ -11,15 +11,17 @@ export class IngredientRepositoryMysql implements IngredientRepository {
 
     async findAll(): Promise<Ingredient[]> {
         const [rows] = await this.db.execute(
-            `SELECT Id, Name, Slug
-             FROM Ingredients`);
+            `SELECT Id, Name, NormalizedName, Slug, Status, MergedIntoIngredientId, CreatedAt, UpdatedAt
+             FROM Ingredients
+             WHERE Status = 'active'
+             ORDER BY Name ASC`);
 
         return (rows as IngredientRow[]).map(mapIngredient);
     }
 
     async findById(id: number): Promise<Ingredient | null> {
         const [rows] = await this.db.execute(
-            `SELECT Id, Name, Slug
+            `SELECT Id, Name, NormalizedName, Slug, Status, MergedIntoIngredientId, CreatedAt, UpdatedAt
              FROM Ingredients
              WHERE Id = ?`,
             [id]

@@ -861,11 +861,118 @@ CREATE TABLE RecipeImages (
 CREATE TABLE Ingredients (
   Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   Name VARCHAR(255) NOT NULL,
-  Slug VARCHAR(255) NOT NULL,
+  NormalizedName VARCHAR(255) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  Slug VARCHAR(255) CHARACTER SET ascii COLLATE ascii_general_ci NOT NULL,
+  Status ENUM('active', 'deprecated', 'merged') NOT NULL DEFAULT 'active',
+  MergedIntoIngredientId BIGINT UNSIGNED NULL,
+  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (Id),
-  UNIQUE KEY ingredients_name_UK (Name),
-  UNIQUE KEY ingredients_slug_UK (Slug)
+  UNIQUE KEY ingredients_active_normalized_name_UK ((
+    CAST(
+      CASE
+        WHEN Status = 'active' THEN TRIM(REGEXP_REPLACE(LOWER(Name), '[^[:alnum:]]+', ' '))
+        ELSE NULL
+      END AS CHAR(255) CHARACTER SET utf8mb4
+    ) COLLATE utf8mb4_0900_ai_ci
+  )),
+  UNIQUE KEY ingredients_slug_UK (Slug),
+  KEY idx_ingredients_status_name (Status, Name),
+  KEY idx_ingredients_merged_into_ingredient_id (MergedIntoIngredientId),
+  CONSTRAINT ingredients_name_CK
+    CHECK (CHAR_LENGTH(Name) = CHAR_LENGTH(TRIM(Name)) AND CHAR_LENGTH(TRIM(Name)) > 0),
+  CONSTRAINT ingredients_normalized_name_CK
+    CHECK (
+      CHAR_LENGTH(NormalizedName) = CHAR_LENGTH(TRIM(NormalizedName))
+      AND CHAR_LENGTH(TRIM(NormalizedName)) > 0
+      AND BINARY NormalizedName = BINARY LOWER(NormalizedName)
+      AND NormalizedName REGEXP '^[a-z0-9]+( [a-z0-9]+)*$'
+      AND CONVERT(NormalizedName USING utf8mb4) COLLATE utf8mb4_0900_ai_ci = TRIM(REGEXP_REPLACE(LOWER(Name), '[^[:alnum:]]+', ' ')) COLLATE utf8mb4_0900_ai_ci
+    ),
+  CONSTRAINT ingredients_slug_CK
+    CHECK (
+      BINARY Slug = BINARY LOWER(Slug)
+      AND Slug REGEXP '^[a-z0-9]+(-[a-z0-9]+)*$'
+    ),
+  CONSTRAINT ingredients_merge_status_CK
+    CHECK (
+      (Status = 'merged' AND MergedIntoIngredientId IS NOT NULL)
+      OR (Status IN ('active', 'deprecated') AND MergedIntoIngredientId IS NULL)
+    ),
+  CONSTRAINT ingredients_merged_into_ingredient_FK
+    FOREIGN KEY (MergedIntoIngredientId) REFERENCES Ingredients(Id)
+    ON UPDATE RESTRICT
+    ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TRIGGER ingredients_merge_integrity_BI
+BEFORE INSERT ON Ingredients
+FOR EACH ROW
+BEGIN
+  DECLARE canonical_ingredient_status VARCHAR(16) DEFAULT NULL;
+
+  IF NEW.MergedIntoIngredientId IS NOT NULL AND NEW.MergedIntoIngredientId = NEW.Id THEN
+    SIGNAL SQLSTATE '45000'
+      SET MYSQL_ERRNO = 1644,
+          MESSAGE_TEXT = 'An ingredient cannot be merged into itself';
+  END IF;
+  IF NEW.MergedIntoIngredientId IS NOT NULL THEN
+    SELECT Status
+    INTO canonical_ingredient_status
+    FROM Ingredients
+    WHERE Id = NEW.MergedIntoIngredientId
+    FOR SHARE;
+
+    IF canonical_ingredient_status IS NULL OR canonical_ingredient_status <> 'active' THEN
+      SIGNAL SQLSTATE '45000'
+        SET MYSQL_ERRNO = 1644,
+            MESSAGE_TEXT = 'A merged ingredient must reference an active canonical ingredient';
+    END IF;
+  END IF;
+END;
+
+CREATE TRIGGER ingredients_merge_integrity_BU
+BEFORE UPDATE ON Ingredients
+FOR EACH ROW
+BEGIN
+  DECLARE canonical_ingredient_status VARCHAR(16) DEFAULT NULL;
+
+  IF NEW.MergedIntoIngredientId IS NOT NULL AND NEW.MergedIntoIngredientId = NEW.Id THEN
+    SIGNAL SQLSTATE '45000'
+      SET MYSQL_ERRNO = 1644,
+          MESSAGE_TEXT = 'An ingredient cannot be merged into itself';
+  END IF;
+  IF NEW.MergedIntoIngredientId IS NOT NULL THEN
+    SELECT Status
+    INTO canonical_ingredient_status
+    FROM Ingredients
+    WHERE Id = NEW.MergedIntoIngredientId
+    FOR SHARE;
+
+    IF canonical_ingredient_status IS NULL OR canonical_ingredient_status <> 'active' THEN
+      SIGNAL SQLSTATE '45000'
+        SET MYSQL_ERRNO = 1644,
+            MESSAGE_TEXT = 'A merged ingredient must reference an active canonical ingredient';
+    END IF;
+  END IF;
+  IF NEW.Status <> 'active'
+     AND EXISTS (
+       SELECT 1
+       FROM Ingredients AS merged_ingredient
+       WHERE merged_ingredient.MergedIntoIngredientId = NEW.Id
+     ) THEN
+    SIGNAL SQLSTATE '45000'
+      SET MYSQL_ERRNO = 1644,
+          MESSAGE_TEXT = 'A canonical ingredient merge target must remain active';
+  END IF;
+END;
+
+CREATE TRIGGER ingredients_no_delete_BD
+BEFORE DELETE ON Ingredients
+FOR EACH ROW
+SIGNAL SQLSTATE '45000'
+  SET MYSQL_ERRNO = 1644,
+      MESSAGE_TEXT = 'Ingredients cannot be physically deleted; deprecate or merge them instead';
 
 -- ---------- Equipment catalogue ----------
 CREATE TABLE Equipments (

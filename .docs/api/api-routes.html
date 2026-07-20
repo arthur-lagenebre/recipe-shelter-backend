@@ -1398,14 +1398,14 @@ type DeleteFavoriteResponse = OkResponse;</code></pre>
               <td><code>/api/v1/ingredients</code></td>
               <td><span class="auth public">Public</span></td>
               <td>Aucun.</td>
-              <td><code>200</code> liste des ingrédients.</td>
+              <td><code>200</code> liste des ingrédients canoniques actifs.</td>
             </tr>
             <tr>
               <td><span class="method get">GET</span></td>
               <td><code>/api/v1/ingredients/:id</code></td>
               <td><span class="auth public">Public</span></td>
               <td><code>id</code> entier positif.</td>
-              <td><code>200</code> ingrédient.</td>
+              <td><code>200</code> ingrédient, avec son statut et son éventuelle cible de fusion.</td>
             </tr>
             <tr>
               <td><span class="method get">GET</span></td>
@@ -1428,7 +1428,7 @@ type DeleteFavoriteResponse = OkResponse;</code></pre>
       <div class="schema-grid">
         <article class="schema">
           <h3>Reference data</h3>
-          <p>Objets renvoyés par les routes catégories, équipements, ingrédients et tags. Les tags incluent leur groupe. Leur <code>normalizedName</code> ignore la casse, les accents et les suites d'espaces ou de ponctuation ; cette identité est unique parmi les tags actifs.</p>
+          <p>Objets renvoyés par les routes catégories, équipements, ingrédients et tags. Les ingrédients et les tags possèdent une identité normalisée unique parmi les entrées actives ; les tags incluent également leur groupe.</p>
           <pre><code>type Category = {
   id: number;
   name: string;
@@ -1447,7 +1447,12 @@ type Equipment = {
 type Ingredient = {
   id: number;
   name: string;
+  normalizedName: string;
   slug: string;
+  status: "active" | "deprecated" | "merged";
+  mergedIntoIngredientId: number | null;
+  createdAt: string; // date ISO 8601
+  updatedAt: string; // date ISO 8601
 };
 
 type Tag = {

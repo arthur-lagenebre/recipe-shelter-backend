@@ -223,9 +223,10 @@ seule entrée avec l'acteur, la cible, l'état avant/après, l'adresse IP, le
 user-agent et le `correlationId`. La mutation métier et cette entrée utilisent
 la même transaction ; un échec d'audit annule donc aussi la mutation. Les APIs
 actuelles des tags, ingrédients et catégories restent en lecture seule : il
-n'existe pas encore d'action applicative de ces domaines à journaliser. Le
-modèle Tag porte toutefois son cycle de vie (`active`, `deprecated`, `merged`)
-et la cible canonique d'une fusion en préparation des mutations administratives.
+n'existe pas encore d'action applicative de ces domaines à journaliser. Les
+modèles Tag et Ingredient portent toutefois leur cycle de vie (`active`,
+`deprecated`, `merged`) et la cible canonique d'une fusion en préparation des
+mutations administratives.
 
 Les lectures de la liste, d'un profil staff et de ses sessions administrées
 sont également auditées. Elles n'enregistrent ni e-mail ni secret : seulement la
@@ -434,6 +435,29 @@ L'upload de couverture attend exactement un fichier dans le champ `image` et acc
   "width": 1600,
   "height": 1067,
   "altText": "Tarte aux pommes"
+}
+```
+
+Les ingrédients suivent eux aussi une identité canonique. Leur nom normalisé
+ignore la casse et les accents, puis remplace toute suite d'espaces ou de
+ponctuation par un espace simple. Cette identité est unique parmi les ingrédients
+actifs ; les anciennes entrées peuvent rester consultables avec le statut
+`deprecated` ou `merged`. Dans ce dernier cas, `mergedIntoIngredientId` désigne
+obligatoirement un ingrédient canonique actif. Le schéma conserve les dates de
+création et de dernière modification et refuse les suppressions physiques. La
+liste `GET /api/v1/ingredients` ne renvoie que les ingrédients actifs, alors que
+`GET /api/v1/ingredients/:id` permet encore de résoudre une entrée historique :
+
+```json
+{
+  "id": 105,
+  "name": "Crème fraîche",
+  "normalizedName": "creme fraiche",
+  "slug": "creme-fraiche",
+  "status": "active",
+  "mergedIntoIngredientId": null,
+  "createdAt": "2026-07-20T08:00:00.000Z",
+  "updatedAt": "2026-07-20T08:00:00.000Z"
 }
 ```
 
