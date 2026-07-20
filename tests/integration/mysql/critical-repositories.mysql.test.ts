@@ -60,11 +60,13 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
                 (2, 'RecipeModerator', 'moderator', 'Moderation access');
             INSERT INTO Permissions (Id, Code, Description) VALUES
                 (1, 'users.moderate', 'Moderate users'),
-                (2, 'recipes.read', 'Read recipes'),
-                (3, 'recipes.moderate', 'Moderate recipes');
+                (2, 'recipe.review', 'Review recipes'),
+                (3, 'recipe.publish', 'Publish recipes'),
+                (4, 'recipe.reject', 'Reject recipes'),
+                (5, 'recipe.archive', 'Archive recipes');
             INSERT INTO RolePermissions (RoleId, PermissionId) VALUES
-                (1, 1), (1, 2), (1, 3),
-                (2, 2), (2, 3);
+                (1, 1), (1, 2), (1, 3), (1, 4), (1, 5),
+                (2, 2), (2, 3), (2, 4), (2, 5);
             INSERT INTO Users (Id, Mail, Username, Password, AccountType, Status, EmailValidatedAt, BannedByUserId, BannedReason, BannedAt) VALUES
                 (1, 'admin@test.local', 'admin', 'hash', 'staff', 'inactive', CURRENT_TIMESTAMP, NULL, NULL, NULL),
                 (2, 'reader@test.local', 'reader', 'hash', 'community', 'active', CURRENT_TIMESTAMP, NULL, NULL, NULL),
@@ -218,8 +220,10 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
             [staff.id, staff.id]
         );
         assert.deepEqual(await rbac.findPermissionCodesByStaffUserId(staff.id), [
-            'recipes.moderate',
-            'recipes.read',
+            'recipe.archive',
+            'recipe.publish',
+            'recipe.reject',
+            'recipe.review',
             'users.moderate'
         ]);
         await assert.rejects(() => pool.query(`INSERT INTO StaffRoles (StaffUserId, RoleId) VALUES (?, 1)`, [staff.id]));
@@ -230,7 +234,7 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
         await assert.rejects(() => pool.query(
             `INSERT INTO Roles (Code, Name, Description) VALUES ('SUPERADMIN', 'Other administrator', 'Duplicate')`
         ));
-        await assert.rejects(() => pool.query(`INSERT INTO Permissions (Code, Description) VALUES ('RECIPES.READ', 'Duplicate')`));
+        await assert.rejects(() => pool.query(`INSERT INTO Permissions (Code, Description) VALUES ('RECIPE.REVIEW', 'Duplicate')`));
         const author = await users.create({
             mail: 'author@test.local',
             username: 'author',

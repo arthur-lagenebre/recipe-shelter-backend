@@ -162,9 +162,10 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
                 PERMISSIONS.commentsUpdate
             ],
             RecipeModerator: [
-                PERMISSIONS.recipesArchive,
-                PERMISSIONS.recipesModerate,
-                PERMISSIONS.recipesRead
+                PERMISSIONS.recipeArchive,
+                PERMISSIONS.recipePublish,
+                PERMISSIONS.recipeReject,
+                PERMISSIONS.recipeReview
             ],
             SuperAdmin: [...Object.values(PERMISSIONS)].sort(),
             UserAdmin: [

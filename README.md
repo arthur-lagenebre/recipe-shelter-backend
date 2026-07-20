@@ -157,7 +157,7 @@ le backend. Le catalogue initial est le suivant :
 | Domaine | Permissions |
 | --- | --- |
 | Système | `system.health.read` |
-| Recettes | `recipes.read`, `recipes.moderate`, `recipes.archive`, `recipes.delete` |
+| Recettes | `recipe.review`, `recipe.publish`, `recipe.reject`, `recipe.archive`, `recipes.delete` |
 | Commentaires | `comments.read`, `comments.moderate`, `comments.update`, `comments.delete` |
 | Utilisateurs community | `users.read`, `users.moderate` |
 | Catalogue | `catalog.read`, `catalog.manage` |
@@ -168,7 +168,7 @@ La matrice initiale est explicite et insérée de manière idempotente par le se
 
 | Rôle | Permissions |
 | --- | --- |
-| `RecipeModerator` | `recipes.read`, `recipes.moderate`, `recipes.archive` |
+| `RecipeModerator` | `recipe.review`, `recipe.publish`, `recipe.reject`, `recipe.archive` |
 | `CommentModerator` | `comments.read`, `comments.moderate`, `comments.update` |
 | `UserAdmin` | `users.read`, `users.moderate` |
 | `CatalogManager` | `catalog.read`, `catalog.manage` |

@@ -19,12 +19,12 @@ type AdminRecipesController = {
 export function createAdminRecipesRouter(controller: AdminRecipesController) {
     const router = Router();
 
-    router.get('/pending', requireStaffAuth, RequirePermission(PERMISSIONS.recipesRead), controller.listPendingRecipes);
-    router.get('/pending/count', requireStaffAuth, RequirePermission(PERMISSIONS.recipesRead), controller.countPendingRecipes);
-    router.get('/:id', requireStaffAuth, RequirePermission(PERMISSIONS.recipesRead), controller.getRecipeAdmin);
-    router.post('/:id/approve', requireStaffAuth, RequirePermission(PERMISSIONS.recipesModerate), controller.approveRecipe);
-    router.post('/:id/reject', requireStaffAuth, RequirePermission(PERMISSIONS.recipesModerate), controller.rejectRecipe);
-    router.post('/:id/archive', requireStaffAuth, RequirePermission(PERMISSIONS.recipesArchive), controller.archiveRecipe);
+    router.get('/pending', requireStaffAuth, RequirePermission(PERMISSIONS.recipeReview), controller.listPendingRecipes);
+    router.get('/pending/count', requireStaffAuth, RequirePermission(PERMISSIONS.recipeReview), controller.countPendingRecipes);
+    router.get('/:id', requireStaffAuth, RequirePermission(PERMISSIONS.recipeReview), controller.getRecipeAdmin);
+    router.post('/:id/approve', requireStaffAuth, RequirePermission(PERMISSIONS.recipePublish), controller.approveRecipe);
+    router.post('/:id/reject', requireStaffAuth, RequirePermission(PERMISSIONS.recipeReject), controller.rejectRecipe);
+    router.post('/:id/archive', requireStaffAuth, RequirePermission(PERMISSIONS.recipeArchive), controller.archiveRecipe);
     router.delete('/:id', requireStaffAuth, RequirePermission(PERMISSIONS.recipesDelete), controller.deleteRecipe);
 
     return router;

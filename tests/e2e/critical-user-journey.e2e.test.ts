@@ -387,7 +387,7 @@ describe('critical user journey E2E', () => {
             authService,
             authRbacRepository: {
                 async findPermissionCodesByStaffUserId(staffUserId) {
-                    return staffUserId === 1 ? [PERMISSIONS.recipesRead, PERMISSIONS.recipesModerate] : [];
+                    return staffUserId === 1 ? [PERMISSIONS.recipeReview, PERMISSIONS.recipePublish, PERMISSIONS.recipeReject] : [];
                 }
             },
             authSessionRepository: sessions,

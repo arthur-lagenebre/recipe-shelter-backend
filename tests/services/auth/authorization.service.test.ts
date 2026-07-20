@@ -48,9 +48,10 @@ function createStaffAuth(
 
 const ROLE_PERMISSIONS = {
     RecipeModerator: [
-        PERMISSIONS.recipesRead,
-        PERMISSIONS.recipesModerate,
-        PERMISSIONS.recipesArchive
+        PERMISSIONS.recipeReview,
+        PERMISSIONS.recipePublish,
+        PERMISSIONS.recipeReject,
+        PERMISSIONS.recipeArchive
     ],
     CommentModerator: [
         PERMISSIONS.commentsRead,

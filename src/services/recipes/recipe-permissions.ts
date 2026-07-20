@@ -9,7 +9,7 @@ export function isRecipeOwner(recipe: Recipe, auth: AuthContext): boolean {
 }
 
 export function canViewRecipe(recipe: Recipe, auth: AuthContext): boolean {
-    return hasPermission(auth, PERMISSIONS.recipesRead) || isRecipeOwner(recipe, auth) || recipe.status === 'published';
+    return hasPermission(auth, PERMISSIONS.recipeReview) || isRecipeOwner(recipe, auth) || recipe.status === 'published';
 }
 
 export function canEditRecipe(recipe: Recipe, auth: AuthContext): boolean {

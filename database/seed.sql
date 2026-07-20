@@ -26,24 +26,25 @@ INSERT INTO Permissions (Id, Code, Description) VALUES
 (1,  'system.health.read', "Consulter l'état de santé du service"),
 (2,  'users.read', "Consulter les comptes community et leur historique de modération"),
 (3,  'users.moderate', "Bannir et réactiver des comptes community"),
-(4,  'recipes.read', "Consulter les recettes dans l'administration"),
-(5,  'recipes.moderate', "Approuver et rejeter les recettes en attente"),
-(6,  'recipes.archive', "Archiver les recettes publiées ou rejetées"),
-(7,  'recipes.delete', "Supprimer définitivement des recettes"),
-(8,  'comments.read', "Consulter les commentaires dans l'administration"),
-(9,  'comments.moderate', "Masquer, restaurer et démodérer des commentaires"),
-(10, 'comments.update', "Modifier des commentaires dans l'administration"),
-(11, 'comments.delete', "Supprimer définitivement des commentaires"),
-(12, 'catalog.read', "Consulter le catalogue dans l'administration"),
-(13, 'catalog.manage', "Créer, modifier et supprimer des catégories, ingrédients, tags et ustensiles"),
-(14, 'staff.read', "Consulter les comptes staff et leurs rôles"),
-(15, 'staff.create', "Inviter un compte staff avec ses rôles initiaux"),
-(16, 'staff.disable', "Désactiver un compte staff et révoquer ses accès"),
-(17, 'staff.enable', "Réactiver un compte staff désactivé"),
-(18, 'staff.role.grant', "Attribuer un rôle à un compte staff"),
-(19, 'staff.role.revoke', "Retirer un rôle à un compte staff"),
-(20, 'staff.session.revoke', "Révoquer les sessions actives des comptes staff"),
-(21, 'audit.read', "Consulter le journal d'audit administratif")
+(4,  'recipe.review', "Consulter les recettes à modérer"),
+(5,  'recipe.publish', "Publier les recettes en attente"),
+(6,  'recipe.reject', "Rejeter les recettes en attente"),
+(7,  'recipe.archive', "Archiver les recettes publiées ou rejetées"),
+(8,  'recipes.delete', "Supprimer définitivement des recettes"),
+(9,  'comments.read', "Consulter les commentaires dans l'administration"),
+(10, 'comments.moderate', "Masquer, restaurer et démodérer des commentaires"),
+(11, 'comments.update', "Modifier des commentaires dans l'administration"),
+(12, 'comments.delete', "Supprimer définitivement des commentaires"),
+(13, 'catalog.read', "Consulter le catalogue dans l'administration"),
+(14, 'catalog.manage', "Créer, modifier et supprimer des catégories, ingrédients, tags et ustensiles"),
+(15, 'staff.read', "Consulter les comptes staff et leurs rôles"),
+(16, 'staff.create', "Inviter un compte staff avec ses rôles initiaux"),
+(17, 'staff.disable', "Désactiver un compte staff et révoquer ses accès"),
+(18, 'staff.enable', "Réactiver un compte staff désactivé"),
+(19, 'staff.role.grant', "Attribuer un rôle à un compte staff"),
+(20, 'staff.role.revoke', "Retirer un rôle à un compte staff"),
+(21, 'staff.session.revoke', "Révoquer les sessions actives des comptes staff"),
+(22, 'audit.read', "Consulter le journal d'audit administratif")
 AS new_permissions
 ON DUPLICATE KEY UPDATE
   Code = new_permissions.Code,
@@ -56,9 +57,10 @@ INSERT INTO RolePermissions (RoleId, PermissionId)
 SELECT roles.Id, permissions.Id
 FROM (
   -- RecipeModerator: consultation et cycle de modération, sans suppression définitive.
-  SELECT 'RecipeModerator' AS RoleCode, 'recipes.read' AS PermissionCode
-  UNION ALL SELECT 'RecipeModerator', 'recipes.moderate'
-  UNION ALL SELECT 'RecipeModerator', 'recipes.archive'
+  SELECT 'RecipeModerator' AS RoleCode, 'recipe.review' AS PermissionCode
+  UNION ALL SELECT 'RecipeModerator', 'recipe.publish'
+  UNION ALL SELECT 'RecipeModerator', 'recipe.reject'
+  UNION ALL SELECT 'RecipeModerator', 'recipe.archive'
   -- CommentModerator: consultation et modération réversible, sans suppression définitive.
   UNION ALL SELECT 'CommentModerator', 'comments.read'
   UNION ALL SELECT 'CommentModerator', 'comments.moderate'
@@ -73,9 +75,10 @@ FROM (
   UNION ALL SELECT 'SuperAdmin', 'system.health.read'
   UNION ALL SELECT 'SuperAdmin', 'users.read'
   UNION ALL SELECT 'SuperAdmin', 'users.moderate'
-  UNION ALL SELECT 'SuperAdmin', 'recipes.read'
-  UNION ALL SELECT 'SuperAdmin', 'recipes.moderate'
-  UNION ALL SELECT 'SuperAdmin', 'recipes.archive'
+  UNION ALL SELECT 'SuperAdmin', 'recipe.review'
+  UNION ALL SELECT 'SuperAdmin', 'recipe.publish'
+  UNION ALL SELECT 'SuperAdmin', 'recipe.reject'
+  UNION ALL SELECT 'SuperAdmin', 'recipe.archive'
   UNION ALL SELECT 'SuperAdmin', 'recipes.delete'
   UNION ALL SELECT 'SuperAdmin', 'comments.read'
   UNION ALL SELECT 'SuperAdmin', 'comments.moderate'

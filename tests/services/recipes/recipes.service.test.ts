@@ -38,7 +38,7 @@ const baseRecipe: Recipe = {
 };
 
 const auth: AuthContext = { userId: 2, username: 'owner', accountType: 'community', status: 'active', permissions: [] };
-const adminAuth: AuthContext = { userId: 1, username: 'admin', accountType: 'staff', status: 'active', permissions: [PERMISSIONS.recipesRead] };
+const adminAuth: AuthContext = { userId: 1, username: 'admin', accountType: 'staff', status: 'active', permissions: [PERMISSIONS.recipeReview] };
 const pagination: PaginationOptions = { page: 1, limit: 12, offset: 0 };
 
 class FakeRecipeRepository implements RecipeRepository {
