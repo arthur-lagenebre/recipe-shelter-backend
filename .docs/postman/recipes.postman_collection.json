@@ -655,6 +655,142 @@
       }
     },
     {
+      "name": "Create recipe draft - servings out of range",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "rs_app_session={{sessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Cake au citron\",\n  \"servings\": 101\n}"
+        }
+      }
+    },
+    {
+      "name": "Create recipe draft - negative prep time",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "rs_app_session={{sessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Cake au citron\",\n  \"prepTimeMinutes\": -5\n}"
+        }
+      }
+    },
+    {
+      "name": "Create recipe draft - title too long",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "rs_app_session={{sessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Un titre de recette bien trop long qui depasse tres largement la limite maximale autorisee de deux cents caracteres afin de forcer volontairement le rejet par la validation du backend recipe shelter pendant ce test Postman automatise\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Create recipe draft - too many ingredients",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "rs_app_session={{sessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/recipes",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "recipes"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Cake au citron\",\n  \"ingredients\": {{ingredientsOverLimitJson}}\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const tooMany = Array.from({ length: 101 }, (_, index) => ({ displayText: `Ingredient ${index + 1}` }));",
+              "pm.collectionVariables.set('ingredientsOverLimitJson', JSON.stringify(tooMany));"
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "Get my recipe by id",
       "request": {
         "method": "GET",

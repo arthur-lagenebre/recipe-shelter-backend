@@ -26,6 +26,10 @@
       "value": "1"
     },
     {
+      "key": "replyCommentId",
+      "value": "2"
+    },
+    {
       "key": "recipeSlug",
       "value": "cake-marbre-maison"
     }
@@ -229,6 +233,11 @@
               "  const json = pm.response.json();",
               "  pm.expect(json.parentCommentId).to.eql(Number(pm.collectionVariables.get('parentCommentId')));",
               "  pm.expect(json.comment).to.eql(\"Merci pour l'astuce.\");",
+              "});",
+              "",
+              "pm.test('save reply id', () => {",
+              "  const json = pm.response.json();",
+              "  if (json.id) pm.collectionVariables.set('replyCommentId', String(json.id));",
               "});"
             ]
           }
@@ -459,6 +468,55 @@
           "raw": "{\n  \"parentCommentId\": {{parentCommentId}},\n  \"comment\": \"Une reponse a une reponse doit etre refusee.\"\n}"
         }
       }
+    },
+    {
+      "name": "Update reply - rating not allowed",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "rs_app_session={{sessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/comments/{{replyCommentId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "comments",
+            "{{replyCommentId}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"rating\": 4,\n  \"comment\": \"Une reponse ne peut toujours pas noter la recette.\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 400', () => {",
+              "  pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test('error code is COMMENTS_UPDATE_REPLY_WITH_RATING', () => {",
+              "  pm.expect(pm.response.json().code).to.eql('COMMENTS_UPDATE_REPLY_WITH_RATING');",
+              "});"
+            ]
+          }
+        }
+      ]
     },
     {
       "name": "Update my comment",

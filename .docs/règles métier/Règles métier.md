@@ -67,6 +67,7 @@ Appliquée à l'inscription, à la réinitialisation, au changement de mot de pa
 
 - Demande (`forgot-password`) : toujours une réponse neutre, que l'email existe ou non (pas de fuite d'information). Un token est généré, valable **30 minutes**, et toute demande antérieure non utilisée est invalidée.
 - Réinitialisation (`reset-password`) : le nouveau mot de passe doit respecter la politique ci-dessus ; le token doit être valide et non expiré. Un email de confirmation de changement est envoyé après succès.
+- Succès → **toutes** les sessions `community` de l'utilisateur sont révoquées, sans exception : ce flux n'a pas de session courante à préserver (voir aussi [1.7](#17-mise-à-jour-du-profil-compte-connecté)).
 
 ### 1.7 Mise à jour du profil (compte connecté)
 
@@ -75,7 +76,7 @@ Pour changer l'email, le mot de passe ou le nom d'utilisateur (`/users/me/...`),
 | Action | Règles |
 |---|---|
 | Changer l'email | Nouvel email requis, format valide, différent de l'actuel, non déjà utilisé par un autre compte. |
-| Changer le mot de passe | Le nouveau mot de passe doit être différent de l'actuel et respecter la politique de mot de passe. |
+| Changer le mot de passe | Le nouveau mot de passe doit être différent de l'actuel et respecter la politique de mot de passe. Succès → toutes les **autres** sessions `community` sont révoquées ; la session courante (celle qui vient de faire la demande) est préservée. |
 | Changer le nom d'utilisateur | Minimum 3 caractères, différent de l'actuel, non déjà pris. |
 
 ### 1.8 Comptes staff & double authentification WebAuthn
@@ -126,7 +127,7 @@ Pour changer l'email, le mot de passe ou le nom d'utilisateur (`/users/me/...`),
 
 ### 2.3 Permissions notables
 
-Les permissions sont segmentées par domaine (`user.*`, `recipe.*`, `comment.*`, `catalog.*`, `staff.*`, `tag.*`, `ingredient.*`, `audit.read`, `system.health.read`). Chaque action de service vérifie une permission précise (ex. : `recipe.publish` ≠ `recipe.reject` ≠ `recipe.archive` ≠ `recipes.delete`), permettant des rôles très granulaires.
+Les permissions sont segmentées par domaine (`user.*`, `recipe.*`, `comment.*`, `catalog.*`, `staff.*`, `tag.*`, `ingredient.*`, `equipment.create`, `audit.read`, `system.health.read`). Chaque action de service vérifie une permission précise (ex. : `recipe.publish` ≠ `recipe.reject` ≠ `recipe.archive` ≠ `recipes.delete`), permettant des rôles très granulaires.
 
 ### 2.4 Réauthentification récente exigée (« step-up »)
 
@@ -174,16 +175,21 @@ draft → pending → published → archived
 
 ### 3.3 Contenu d'une recette
 
-- **Titre** : obligatoire, **minimum 5 caractères**.
-- **Description, temps de préparation/repos/cuisson, portions** : optionnels à la saisie, valeurs par défaut appliquées à la création (description vide, 0 min de préparation, 1 portion, temps de repos/cuisson nuls).
-- **Ingrédients** :
+- **Titre** : obligatoire, entre **5 et 200 caractères** (après trim).
+- **Description** : optionnelle, **5000 caractères maximum**.
+- **Temps de préparation** (`prepTimeMinutes`) : optionnel, entier entre **0 et 1440** (minutes).
+- **Temps de repos** (`restTimeMinutes`) : optionnel ou nul, entier entre **0 et 43200** (minutes).
+- **Temps de cuisson** (`cookTimeMinutes`) : optionnel ou nul, entier entre **0 et 4320** (minutes).
+- **Portions** (`servings`) : optionnel, entier entre **1 et 100**.
+- Valeurs par défaut appliquées à la création lorsque ces champs sont omis (description vide, 0 min de préparation, 1 portion, temps de repos/cuisson nuls).
+- **Ingrédients** (au plus **100** par recette) :
   - `displayText` obligatoire, non vide, **255 caractères maximum**.
   - Peut référencer un ingrédient canonique du catalogue (`ingredientId`) **ou** rester libre (texte non catalogué).
   - Si non catalogué, le texte est normalisé (minuscules, translittération des caractères spéciaux type `œ→oe`, `ß→ss`…) et doit produire un nom normalisé non vide d'au plus 255 caractères — sinon rejeté (`RECIPES_BAD_INGREDIENT_NAME`).
-  - `quantity` (nombre ou nul), `unit` (texte libre ou nul), `note` (texte libre ou nul), `sortOrder` (ordre d'affichage).
-- **Étapes** : chacune a un numéro (`stepNumber`) et une description obligatoire.
-- **Ustensiles** : référence obligatoire à un ustensile du catalogue (`equipmentId`).
-- **Tags** : liste d'identifiants de tags catalogués ; les doublons sont automatiquement dédupliqués.
+  - `quantity` (nombre ou nul, entre **0 et 10000**), `unit` (texte libre ou nul), `note` (texte libre ou nul), `sortOrder` (ordre d'affichage).
+- **Étapes** (au plus **100** par recette) : chacune a un numéro (`stepNumber`) et une description obligatoire.
+- **Ustensiles** (au plus **50** par recette) : référence obligatoire à un ustensile du catalogue (`equipmentId`).
+- **Tags** (au plus **20** par recette) : liste d'identifiants de tags catalogués ; les doublons sont automatiquement dédupliqués.
 - **Catégorie** : optionnelle, doit référencer une catégorie existante.
 
 ### 3.4 Slugs
@@ -242,6 +248,7 @@ Pour les tags et les ingrédients, un nom canonique et son **nom normalisé** so
 ### 4.6 Catégories & ustensiles
 
 - Gestion simple en lecture (pas de workflow de dépréciation/fusion identifié pour ces deux entités dans la version actuelle) ; nom et slug uniques.
+- Les ustensiles portent désormais, comme les tags et les ingrédients, un **nom normalisé** (`NormalizedName`) garantissant l'unicité parmi les entrées actives et permettant leur rattachement au système de proposition communautaire (voir [section 5](#5-propositions-de-catalogue-contributions-communautaires)). Leur création directe par le staff est réservée à la permission `equipment.create`.
 
 ### 4.7 Règles communes de validation
 
@@ -255,23 +262,24 @@ Pour les tags et les ingrédients, un nom canonique et son **nom normalisé** so
 
 ## 5. Propositions de catalogue (contributions communautaires)
 
-Un utilisateur `community` peut proposer, depuis une recette qu'il a écrite, la création d'un tag ou d'un ingrédient qui n'existe pas encore dans le catalogue.
+Un utilisateur `community` peut proposer, depuis une recette qu'il a écrite, la création d'un tag, d'un ingrédient **ou d'un ustensile** qui n'existe pas encore dans le catalogue.
 
 - La recette référencée doit exister **et** appartenir à l'auteur de la proposition.
 - Le nom proposé (255 caractères max) est normalisé selon les mêmes règles que le catalogue ; s'il ne produit aucun nom normalisé exploitable, la proposition est rejetée.
 - Si une entrée **active** du catalogue porte déjà ce nom normalisé, la proposition est refusée (conflit) — inutile de proposer ce qui existe déjà.
 - Une proposition équivalente déjà **en attente** pour la même recette ne peut pas être dupliquée.
 - Chaque proposition suit un cycle de vie strict : `pending` → `accepted` / `rejected` / `merged`, avec verrouillage total après revue (immuabilité en base une fois le statut changé).
-- Limite de fréquence : **10 propositions par heure** par utilisateur (tag + ingrédient confondus, cf. [12.1](#121-limitation-de-fréquence-rate-limiting)).
+- Limite de fréquence : **10 propositions par heure** par utilisateur (tag + ingrédient + ustensile confondus, cf. [12.1](#121-limitation-de-fréquence-rate-limiting)).
 
 ### Traitement par le staff (`catalog.manage`)
 
 | Décision | Effet |
 |---|---|
-| **Accepter (tag)** | Crée un nouveau tag actif dans le groupe indiqué, avec le nom proposé ; la proposition passe à `accepted`. |
-| **Accepter (ingrédient)** | Crée un nouvel ingrédient actif ; la proposition passe à `accepted`. |
+| **Accepter (tag)** | Exige en plus `tag.create`. Crée un nouveau tag actif dans le groupe indiqué, avec le nom proposé ; la proposition passe à `accepted`. |
+| **Accepter (ingrédient)** | Exige en plus `ingredient.create`. Crée un nouvel ingrédient actif ; la proposition passe à `accepted`. |
+| **Accepter (ustensile)** | Exige en plus `equipment.create`. Crée un nouvel ustensile actif ; la proposition passe à `accepted`. |
 | **Rejeter** | Nécessite une raison de 10 à 1000 caractères ; aucune entrée créée. |
-| **Associer (associate)** | Rattache la proposition à un tag/ingrédient existant **actif** déjà présent (au lieu d'en créer un nouveau) ; passe à `merged`. |
+| **Associer (associate)** | Rattache la proposition à un tag/ingrédient/ustensile existant **actif** déjà présent (au lieu d'en créer un nouveau) ; passe à `merged`. |
 | **Convertir en alias** | (Ingrédients uniquement) Crée un alias linguistique sur un ingrédient cible actif existant ; passe à `merged`. |
 
 Toute action de revue exige une **raison de 10 à 1000 caractères**, et toute création qui entrerait en collision avec un nom déjà actif est refusée.
@@ -280,22 +288,24 @@ Toute action de revue exige une **raison de 10 à 1000 caractères**, et toute c
 
 ## 6. Commentaires & notation
 
-- Un commentaire est rattaché à une recette et peut être une **réponse** à un commentaire existant, mais **un seul niveau d'imbrication est autorisé** : on ne peut pas répondre à une réponse (`COMMENTS_CREATE_NESTED_REPLY`).
+- Un commentaire est rattaché à une recette, a un texte (`comment`) obligatoire de **1 à 2000 caractères**, et peut être une **réponse** à un commentaire existant, mais **un seul niveau d'imbrication est autorisé** : on ne peut pas répondre à une réponse (`COMMENTS_CREATE_NESTED_REPLY`).
 - **Note (rating)** : optionnelle, entier entre **1 et 5**.
-- **Une réponse ne peut pas porter de note** — la note n'a de sens que sur un commentaire racine.
+- **Une réponse ne peut pas porter de note** — la note n'a de sens que sur un commentaire racine. Cette règle s'applique aussi bien à la **création** (`COMMENTS_CREATE_REPLY_WITH_RATING`) qu'à la **modification** ultérieure d'une réponse (`COMMENTS_UPDATE_REPLY_WITH_RATING`) : on ne peut pas non plus ajouter une note après coup à une réponse existante.
 - Modification et suppression d'un commentaire réservées à son auteur (sinon `403`).
 - La suppression par l'auteur est un **soft delete** (le commentaire est marqué supprimé, pas physiquement retiré).
 - **Modération staff** (`comment.hide` / `comment.restore` / `comments.update` / `comments.delete`) :
   - Masquer un commentaire (« hide ») exige une raison de 10 à 1000 caractères.
   - Un commentaire ne peut être « démodéré » ou restauré que par le staff.
   - La suppression définitive (`comments.delete`) est distincte du masquage et de la suppression douce par l'auteur, et est réservée à une permission spécifique.
+  - **Un commentaire ayant encore des réponses ne peut pas être supprimé définitivement** (`ADMIN_COMMENTS_DELETE_HAS_REPLIES`, conflit `409`) : il faut d'abord supprimer ou réaffecter ses réponses.
 
 ---
 
 ## 7. Favoris
 
 - Un favori associe un utilisateur `community` à une recette (une seule fois : clé primaire composite `utilisateur + recette`).
-- Ajout et retrait libres pour l'utilisateur connecté ; aucune règle métier supplémentaire (pas de restriction sur les recettes non publiées côté service, la visibilité est gérée en amont par le contrôleur/la recherche).
+- Ajout : la recette doit exister (sinon `404 RECIPES_NOT_FOUND`) ; si elle n'est pas `published`, seul son propre auteur peut la mettre en favori — toute autre personne reçoit `403 RECIPES_ACCESS_DENIED` (une recette `draft`/`pending` d'un tiers ne peut donc pas être mise en favori).
+- Retrait libre pour l'utilisateur connecté, sans restriction supplémentaire.
 
 ---
 
@@ -372,6 +382,7 @@ Quasi toutes les actions administratives destructives ou correctives (bannir/dé
 - Contraintes de longueur : nom 2–100, email ≤255 (+ format valide), sujet 3–150, message 10–5000 caractères.
 - Limite de fréquence : **5 messages par heure** par adresse IP (voir [12.1](#121-limitation-de-fréquence-rate-limiting)).
 - L'échec d'envoi SMTP renvoie une erreur dédiée (`CONTACT_SEND_FAILED`) sans exposer les détails internes.
+- **Protection anti-bot silencieuse** : le formulaire porte un champ **honeypot** (`company`) qui doit rester vide, ainsi qu'un horodatage `formRenderedAt` capturant l'affichage du formulaire. Une soumission est jugée suspecte si le honeypot est rempli **ou** si le délai écoulé depuis `formRenderedAt` est inférieur à **3 secondes**. Dans ce cas, l'API répond **exactement comme en cas de succès** (`200`, même message) mais n'envoie aucun email réel — un choix délibéré pour ne jamais révéler à un bot qu'il a été détecté.
 
 ---
 
@@ -406,7 +417,7 @@ Quasi toutes les actions administratives destructives ou correctives (bannir/dé
 |---|---|
 | Authentification (inscription, connexion, validation email, mot de passe oublié, connexion staff, enrôlement MFA, activation d'invitation) | **5 tentatives / 15 minutes** par clé (IP + méthode + route) |
 | Formulaire de contact | **5 messages / heure** |
-| Propositions de catalogue (tag + ingrédient) | **10 propositions / heure** |
+| Propositions de catalogue (tag + ingrédient + ustensile) | **10 propositions / heure** |
 
 Chaque réponse inclut les en-têtes `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset`, et `Retry-After` en cas de dépassement (`429`).
 

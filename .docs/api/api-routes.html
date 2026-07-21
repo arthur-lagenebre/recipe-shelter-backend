@@ -654,7 +654,7 @@ type PaginatedResult&lt;T&gt; = {
               <td><code>/api/v1/auth/reset-password</code></td>
               <td><span class="auth public">Public</span></td>
               <td><code>token</code>, <code>password</code>. Alias accepté: <code>newPassword</code>.</td>
-              <td><code>200</code> confirmation.</td>
+              <td><code>200</code> confirmation. Révoque absolument toutes les sessions community de l'utilisateur, y compris celle qui a initié la demande.</td>
             </tr>
           </tbody>
         </table>
@@ -824,7 +824,7 @@ type ResetPasswordResponse = MessageResponse;</code></pre>
               <td><code>/api/v1/users/me/password</code></td>
               <td><span class="auth">Session</span></td>
               <td><code>currentPassword</code>, <code>newPassword</code>.</td>
-              <td><code>200</code> confirmation.</td>
+              <td><code>200</code> confirmation. Révoque les autres sessions community de l'utilisateur ; la session courante est préservée.</td>
             </tr>
           </tbody>
         </table>
@@ -948,7 +948,7 @@ type UpdatePasswordResponse = {
               <td><span class="method post">POST</span></td>
               <td><code>/api/v1/recipes</code></td>
               <td><span class="auth">Community active</span></td>
-              <td>Body recette. <code>title</code> requis, min 5 caractères.</td>
+              <td>Body recette. <code>title</code> requis, 5..200 caractères.</td>
               <td><code>201</code> brouillon créé.</td>
             </tr>
             <tr>
@@ -962,7 +962,7 @@ type UpdatePasswordResponse = {
               <td><span class="method patch">PATCH</span></td>
               <td><code>/api/v1/recipes/me/:id</code></td>
               <td><span class="auth">Community active</span></td>
-              <td>Body recette. <code>title</code> requis, min 5 caractères.</td>
+              <td>Body recette. <code>title</code> requis, 5..200 caractères.</td>
               <td><code>200</code> brouillon mis à jour.</td>
             </tr>
             <tr>
@@ -989,17 +989,17 @@ type UpdatePasswordResponse = {
           <p>Corps de création et mise à jour d’une recette.</p>
           <pre><code>type RecipeBody = {
   categoryId?: number | null;
-  title: string;
-  description?: string;
+  title: string; // 5..200 caractères après trim
+  description?: string; // 0..5000 caractères
   coverImageUrl?: string | null;
-  prepTimeMinutes?: number;
-  restTimeMinutes?: number | null;
-  cookTimeMinutes?: number | null;
-  servings?: number;
-  tagIds?: number[];
-  ingredients?: RecipeIngredientInput[];
-  steps?: RecipeStepInput[];
-  equipments?: RecipeEquipmentInput[];
+  prepTimeMinutes?: number; // 0..1440
+  restTimeMinutes?: number | null; // 0..43200
+  cookTimeMinutes?: number | null; // 0..4320
+  servings?: number; // 1..100
+  tagIds?: number[]; // 20 éléments maximum
+  ingredients?: RecipeIngredientInput[]; // 100 éléments maximum
+  steps?: RecipeStepInput[]; // 100 éléments maximum
+  equipments?: RecipeEquipmentInput[]; // 50 éléments maximum
 };
 
 type CreateRecipeBody = RecipeBody;
@@ -1012,7 +1012,7 @@ type UpdateRecipeBody = RecipeBody;</code></pre>
           <pre><code>type RecipeIngredientInput = {
   ingredientId?: number | null;
   displayText: string; // rédaction de l'auteur, 1..255 caractères après trim
-  quantity?: number | null;
+  quantity?: number | null; // 0..10000
   unit?: string | null;
   note?: string | null;
   sortOrder?: number;
@@ -1242,7 +1242,7 @@ type RecipeDetailTag = {
               <td><span class="method patch">PATCH</span></td>
               <td><code>/api/v1/comments/:id</code></td>
               <td><span class="auth">Community active</span></td>
-              <td><code>comment</code> requis, <code>rating</code> 1..5 ou <code>null</code>.</td>
+              <td><code>comment</code> requis, <code>rating</code> 1..5 ou <code>null</code>. Une réponse (<code>parentCommentId</code> non nul) ne peut pas recevoir de note : <code>400 COMMENTS_UPDATE_REPLY_WITH_RATING</code>.</td>
               <td><code>200</code> commentaire mis à jour.</td>
             </tr>
             <tr>
@@ -1267,7 +1267,7 @@ type RecipeDetailTag = {
 };
 
 type UpdateCommentBody = {
-  rating?: number | null; // 1..5 ou null
+  rating?: number | null; // 1..5 ou null, seulement sur commentaire racine
   comment: string;
 };</code></pre>
         </article>
@@ -1317,7 +1317,7 @@ type DeleteCommentResponse = OkResponse;</code></pre>
               <td><code>/api/v1/favorites/:recipeId</code></td>
               <td><span class="auth">Community active</span></td>
               <td><code>recipeId</code> entier positif.</td>
-              <td><code>200</code> favori créé.</td>
+              <td><code>200</code> favori créé. Erreurs : <code>404 RECIPES_NOT_FOUND</code> (recette introuvable) et <code>403 RECIPES_ACCESS_DENIED</code> (recette non publiée appartenant à un tiers).</td>
             </tr>
             <tr>
               <td><span class="method get">GET</span></td>
@@ -1484,7 +1484,7 @@ type TagGroup = {
 
     <section aria-labelledby="catalog-proposals">
       <h2 id="catalog-proposals">Propositions catalogue</h2>
-      <p class="section-intro">Suggestions de tags et d'ingrédients liées à une recette appartenant au compte community actif. Chaque route est limitée à 10 tentatives par heure et par adresse IP. Une proposition reste en attente de revue et ne crée ni entité canonique, ni association à la recette.</p>
+      <p class="section-intro">Suggestions de tags, d'ingrédients et d'ustensiles liées à une recette appartenant au compte community actif. Chaque route est limitée à 10 tentatives par heure et par adresse IP. Une proposition reste en attente de revue et ne crée ni entité canonique, ni association à la recette.</p>
       <div class="table-wrap">
         <table>
           <thead>
@@ -1507,6 +1507,13 @@ type TagGroup = {
             <tr>
               <td><span class="method post">POST</span></td>
               <td><code>/api/v1/catalog/ingredient-proposals</code></td>
+              <td><span class="auth">Community active</span></td>
+              <td><code>{ "recipeId": number, "name": string }</code>. Nom non vide, 255 caractères maximum.</td>
+              <td><code>201</code> proposition <code>pending</code>.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/catalog/equipment-proposals</code></td>
               <td><span class="auth">Community active</span></td>
               <td><code>{ "recipeId": number, "name": string }</code>. Nom non vide, 255 caractères maximum.</td>
               <td><code>201</code> proposition <code>pending</code>.</td>
@@ -1552,6 +1559,13 @@ type TagGroup = {
             </tr>
             <tr>
               <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/admin/catalog-proposals/equipments/:id/accept</code></td>
+              <td><span class="auth">catalog.manage + equipment.create</span></td>
+              <td><code>{ "reason": string }</code>.</td>
+              <td><code>201</code> proposition <code>accepted</code> liée à l'ustensile créé.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
               <td><code>/api/v1/admin/catalog-proposals/:id/reject</code></td>
               <td><span class="auth">catalog.manage</span></td>
               <td><code>{ "reason": string }</code>.</td>
@@ -1570,6 +1584,13 @@ type TagGroup = {
               <td><span class="auth">catalog.manage</span></td>
               <td><code>{ "targetIngredientId": number, "reason": string }</code>.</td>
               <td><code>200</code> proposition <code>merged</code> liée à un ingrédient actif.</td>
+            </tr>
+            <tr>
+              <td><span class="method post">POST</span></td>
+              <td><code>/api/v1/admin/catalog-proposals/equipments/:id/associate</code></td>
+              <td><span class="auth">catalog.manage</span></td>
+              <td><code>{ "targetEquipmentId": number, "reason": string }</code>.</td>
+              <td><code>200</code> proposition <code>merged</code> liée à un ustensile actif.</td>
             </tr>
             <tr>
               <td><span class="method post">POST</span></td>
@@ -1595,12 +1616,13 @@ type CatalogProposal = {
   id: number;
   authorUserId: number;
   recipeId: number;
-  proposalType: "tag" | "ingredient";
+  proposalType: "tag" | "ingredient" | "equipment";
   proposedName: string;
   normalizedName: string;
   status: "pending" | "accepted" | "rejected" | "merged";
   matchedTagId: number | null;
   matchedIngredientId: number | null;
+  matchedEquipmentId: number | null;
   reviewedByStaffUserId: number | null;
   reviewReason: string | null;
   createdAt: ISODateString;
@@ -1616,7 +1638,7 @@ type CatalogProposal = {
 
     <section aria-labelledby="contact">
       <h2 id="contact">Contact</h2>
-      <p class="section-intro">Envoi d’un message de contact via SMTP. L’endpoint est limité à 5 tentatives par heure.</p>
+      <p class="section-intro">Envoi d’un message de contact via SMTP. L’endpoint est limité à 5 tentatives par heure. Une soumission jugée suspecte (honeypot <code>company</code> rempli ou délai insuffisant depuis <code>formRenderedAt</code>) reçoit malgré tout une réponse <code>200</code> identique à un envoi réussi, sans qu’aucun email ne parte réellement : ce choix délibéré évite de renseigner un bot sur la détection.</p>
       <div class="table-wrap">
         <table>
           <thead>
@@ -1633,7 +1655,7 @@ type CatalogProposal = {
               <td><span class="method post">POST</span></td>
               <td><code>/api/v1/contact</code></td>
               <td><span class="auth public">Public</span></td>
-              <td><code>name</code> 2..100, <code>email</code> valide, <code>subject</code> 3..150, <code>message</code> 10..5000.</td>
+              <td><code>name</code> 2..100, <code>email</code> valide, <code>subject</code> 3..150, <code>message</code> 10..5000, <code>company</code> et <code>formRenderedAt</code> optionnels (honeypot / anti-bot).</td>
               <td><code>200</code> résultat d’envoi.</td>
             </tr>
           </tbody>
@@ -1649,6 +1671,8 @@ type CatalogProposal = {
   email: string; // email valide
   subject: string; // 3..150
   message: string; // 10..5000
+  company?: string; // honeypot : doit rester vide, un remplissage signale un bot
+  formRenderedAt?: string; // ISO 8601, horodatage d'affichage du formulaire pour détecter une soumission trop rapide
 };
 
 type ContactMessageResponse = {
@@ -1955,7 +1979,7 @@ type DeleteRecipeAdminResponse = OkResponse;</code></pre>
               <td><code>/api/v1/admin/comments/:id</code></td>
               <td><span class="auth admin">Admin</span></td>
               <td><code>id</code> entier positif.</td>
-              <td><code>200</code> <code>{ "ok": true }</code>.</td>
+              <td><code>200</code> <code>{ "ok": true }</code>. Refusée si le commentaire a encore des réponses : <code>409 ADMIN_COMMENTS_DELETE_HAS_REPLIES</code>.</td>
             </tr>
           </tbody>
         </table>

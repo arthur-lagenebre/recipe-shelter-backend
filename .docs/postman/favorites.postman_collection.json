@@ -16,6 +16,14 @@
     {
       "key": "recipeId",
       "value": "1"
+    },
+    {
+      "key": "otherUserDraftRecipeId",
+      "value": "2"
+    },
+    {
+      "key": "notFoundRecipeId",
+      "value": "999999"
     }
   ],
   "item": [
@@ -42,6 +50,82 @@
           ]
         }
       }
+    },
+    {
+      "name": "Add favorite - recipe not visible",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "rs_app_session={{sessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/favorites/{{otherUserDraftRecipeId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "favorites",
+            "{{otherUserDraftRecipeId}}"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 403', () => pm.response.to.have.status(403));",
+              "pm.test('error code is RECIPES_ACCESS_DENIED', () => {",
+              "  pm.expect(pm.response.json().code).to.eql('RECIPES_ACCESS_DENIED');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Add favorite - recipe not found",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "rs_app_session={{sessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/favorites/{{notFoundRecipeId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "favorites",
+            "{{notFoundRecipeId}}"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 404', () => pm.response.to.have.status(404));",
+              "pm.test('error code is RECIPES_NOT_FOUND', () => {",
+              "  pm.expect(pm.response.json().code).to.eql('RECIPES_NOT_FOUND');",
+              "});"
+            ]
+          }
+        }
+      ]
     },
     {
       "name": "My favorite recipes",

@@ -27,7 +27,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"name\": \"Recipe Shelter Visitor\",\n  \"email\": \"{{contactEmail}}\",\n  \"subject\": \"Question sur Recipe Shelter\",\n  \"message\": \"Bonjour, je souhaite obtenir plus d'informations sur Recipe Shelter.\"\n}"
+          "raw": "{\n  \"name\": \"Recipe Shelter Visitor\",\n  \"email\": \"{{contactEmail}}\",\n  \"subject\": \"Question sur Recipe Shelter\",\n  \"message\": \"Bonjour, je souhaite obtenir plus d'informations sur Recipe Shelter.\",\n  \"company\": \"\",\n  \"formRenderedAt\": \"{{$isoTimestamp}}\"\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/api/v1/contact",
@@ -68,7 +68,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"name\": \"Recipe Shelter Visitor\",\n  \"email\": \"invalid-email\",\n  \"subject\": \"Question sur Recipe Shelter\",\n  \"message\": \"Bonjour, je teste la validation du formulaire de contact.\"\n}"
+          "raw": "{\n  \"name\": \"Recipe Shelter Visitor\",\n  \"email\": \"invalid-email\",\n  \"subject\": \"Question sur Recipe Shelter\",\n  \"message\": \"Bonjour, je teste la validation du formulaire de contact.\",\n  \"company\": \"\",\n  \"formRenderedAt\": \"{{$isoTimestamp}}\"\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/api/v1/contact",
@@ -95,7 +95,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"name\": \"\",\n  \"email\": \"{{contactEmail}}\",\n  \"subject\": \"\",\n  \"message\": \"\"\n}"
+          "raw": "{\n  \"name\": \"\",\n  \"email\": \"{{contactEmail}}\",\n  \"subject\": \"\",\n  \"message\": \"\",\n  \"company\": \"\",\n  \"formRenderedAt\": \"{{$isoTimestamp}}\"\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/api/v1/contact",
@@ -109,6 +109,47 @@
           ]
         }
       }
+    },
+    {
+      "name": "Send contact message - honeypot triggered",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Recipe Shelter Visitor\",\n  \"email\": \"{{contactEmail}}\",\n  \"subject\": \"Question sur Recipe Shelter\",\n  \"message\": \"Bonjour, ceci est un envoi automatise de test.\",\n  \"company\": \"Acme Corp\",\n  \"formRenderedAt\": \"{{$isoTimestamp}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/contact",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "contact"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200 despite honeypot', () => pm.response.to.have.status(200));",
+              "pm.test('response looks identical to a successful send', () => {",
+              "  pm.expect(pm.response.json().message).to.eql('Contact message sent');",
+              "});"
+            ]
+          }
+        }
+      ]
     }
   ]
 }

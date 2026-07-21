@@ -1,0 +1,679 @@
+{
+  "info": {
+    "name": "Recipe Shelter - Catalog Proposals",
+    "description": "Postman collection for community catalog proposal routes (tags, ingredients, equipments) and their staff review.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "sessionCookie",
+      "value": "PASTE_RS_APP_SESSION_COOKIE_HERE"
+    },
+    {
+      "key": "adminSessionCookie",
+      "value": "PASTE_RS_ADMIN_SESSION_COOKIE_HERE"
+    },
+    {
+      "key": "recipeId",
+      "value": "1"
+    },
+    {
+      "key": "otherUserRecipeId",
+      "value": "2"
+    },
+    {
+      "key": "proposalId",
+      "value": "1"
+    },
+    {
+      "key": "tagGroupId",
+      "value": "1"
+    },
+    {
+      "key": "targetTagId",
+      "value": "1"
+    },
+    {
+      "key": "targetIngredientId",
+      "value": "1"
+    },
+    {
+      "key": "targetEquipmentId",
+      "value": "1"
+    }
+  ],
+  "item": [
+    {
+      "name": "Create tag proposal",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "rs_app_session={{sessionCookie}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"recipeId\": {{recipeId}},\n  \"name\": \"Sans arachide\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/catalog/tag-proposals",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "catalog",
+            "tag-proposals"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('proposal is pending', () => {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.proposalType).to.eql('tag');",
+              "  pm.expect(json.status).to.eql('pending');",
+              "});",
+              "",
+              "pm.test('save proposal id', () => {",
+              "  const json = pm.response.json();",
+              "  if (json.id) pm.collectionVariables.set('proposalId', String(json.id));",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create ingredient proposal",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "rs_app_session={{sessionCookie}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"recipeId\": {{recipeId}},\n  \"name\": \"Baie de goji\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/catalog/ingredient-proposals",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "catalog",
+            "ingredient-proposals"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('proposal is pending', () => {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.proposalType).to.eql('ingredient');",
+              "  pm.expect(json.status).to.eql('pending');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create equipment proposal",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "rs_app_session={{sessionCookie}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"recipeId\": {{recipeId}},\n  \"name\": \"Thermometre de cuisson\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/catalog/equipment-proposals",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "catalog",
+            "equipment-proposals"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('proposal is pending', () => {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.proposalType).to.eql('equipment');",
+              "  pm.expect(json.status).to.eql('pending');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create ingredient proposal - canonical name already taken",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "rs_app_session={{sessionCookie}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"recipeId\": {{recipeId}},\n  \"name\": \"Tomate\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/catalog/ingredient-proposals",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "catalog",
+            "ingredient-proposals"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 409', () => pm.response.to.have.status(409));",
+              "pm.test('error code is CATALOG_PROPOSALS_CANONICAL_NAME_EXISTS', () => {",
+              "  pm.expect(pm.response.json().code).to.eql('CATALOG_PROPOSALS_CANONICAL_NAME_EXISTS');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create tag proposal - recipe not owned by author",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "rs_app_session={{sessionCookie}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"recipeId\": {{otherUserRecipeId}},\n  \"name\": \"Sans arachide\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/catalog/tag-proposals",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "catalog",
+            "tag-proposals"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 404', () => pm.response.to.have.status(404));",
+              "pm.test('error code is CATALOG_PROPOSALS_RECIPE_NOT_FOUND', () => {",
+              "  pm.expect(pm.response.json().code).to.eql('CATALOG_PROPOSALS_RECIPE_NOT_FOUND');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "List pending catalog proposals as admin",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "rs_admin_session={{adminSessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/admin/catalog-proposals?status=pending",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "admin",
+            "catalog-proposals"
+          ],
+          "query": [
+            {
+              "key": "status",
+              "value": "pending"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('response is paginated', () => {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.items).to.be.an('array');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Accept tag proposal as admin",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "rs_admin_session={{adminSessionCookie}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"groupId\": {{tagGroupId}},\n  \"reason\": \"Proposition pertinente et libelle conforme au catalogue.\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/admin/catalog-proposals/tags/{{proposalId}}/accept",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "admin",
+            "catalog-proposals",
+            "tags",
+            "{{proposalId}}",
+            "accept"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('proposal is accepted', () => {",
+              "  pm.expect(pm.response.json().status).to.eql('accepted');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Accept ingredient proposal as admin",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "rs_admin_session={{adminSessionCookie}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"reason\": \"Ingredient courant, ajout au catalogue canonique.\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/admin/catalog-proposals/ingredients/{{proposalId}}/accept",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "admin",
+            "catalog-proposals",
+            "ingredients",
+            "{{proposalId}}",
+            "accept"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('proposal is accepted', () => {",
+              "  pm.expect(pm.response.json().status).to.eql('accepted');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Accept equipment proposal as admin",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "rs_admin_session={{adminSessionCookie}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"reason\": \"Ustensile courant, ajout au catalogue canonique.\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/admin/catalog-proposals/equipments/{{proposalId}}/accept",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "admin",
+            "catalog-proposals",
+            "equipments",
+            "{{proposalId}}",
+            "accept"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('proposal is accepted', () => {",
+              "  pm.expect(pm.response.json().status).to.eql('accepted');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject catalog proposal as admin",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "rs_admin_session={{adminSessionCookie}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"reason\": \"Libelle trop proche d'une entree existante du catalogue.\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/admin/catalog-proposals/{{proposalId}}/reject",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "admin",
+            "catalog-proposals",
+            "{{proposalId}}",
+            "reject"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('proposal is rejected', () => {",
+              "  pm.expect(pm.response.json().status).to.eql('rejected');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Associate tag proposal to existing tag as admin",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "rs_admin_session={{adminSessionCookie}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"targetTagId\": {{targetTagId}},\n  \"reason\": \"Doublon d'un tag canonique deja actif.\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/admin/catalog-proposals/tags/{{proposalId}}/associate",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "admin",
+            "catalog-proposals",
+            "tags",
+            "{{proposalId}}",
+            "associate"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('proposal is merged', () => {",
+              "  pm.expect(pm.response.json().status).to.eql('merged');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Associate ingredient proposal to existing ingredient as admin",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "rs_admin_session={{adminSessionCookie}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"targetIngredientId\": {{targetIngredientId}},\n  \"reason\": \"Doublon d'un ingredient canonique deja actif.\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/admin/catalog-proposals/ingredients/{{proposalId}}/associate",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "admin",
+            "catalog-proposals",
+            "ingredients",
+            "{{proposalId}}",
+            "associate"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('proposal is merged', () => {",
+              "  pm.expect(pm.response.json().status).to.eql('merged');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Associate equipment proposal to existing equipment as admin",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "rs_admin_session={{adminSessionCookie}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"targetEquipmentId\": {{targetEquipmentId}},\n  \"reason\": \"Doublon d'un ustensile canonique deja actif.\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/admin/catalog-proposals/equipments/{{proposalId}}/associate",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "admin",
+            "catalog-proposals",
+            "equipments",
+            "{{proposalId}}",
+            "associate"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('proposal is merged', () => {",
+              "  pm.expect(pm.response.json().status).to.eql('merged');",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

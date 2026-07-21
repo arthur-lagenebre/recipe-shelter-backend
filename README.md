@@ -165,6 +165,7 @@ le backend. Le catalogue initial est le suivant :
 | Catalogue | `catalog.read`, `catalog.manage` |
 | Tags | `tag.read`, `tag.create`, `tag.update`, `tag.deprecate`, `tag.merge` |
 | Ingrédients | `ingredient.read`, `ingredient.create`, `ingredient.update`, `ingredient.deprecate`, `ingredient.merge`, `ingredient.alias.manage` |
+| Ustensiles | `equipment.create` |
 | Staff | `staff.read`, `staff.create`, `staff.disable`, `staff.enable`, `staff.role.grant`, `staff.role.revoke`, `staff.session.revoke` |
 | Audit | `audit.read` |
 
@@ -192,7 +193,7 @@ La matrice initiale est explicite et insérée de manière idempotente par le se
 | `RecipeModerator` | `recipe.review`, `recipe.publish`, `recipe.reject`, `recipe.archive` |
 | `CommentModerator` | `comment.review`, `comment.hide`, `comment.restore`, `comments.update` |
 | `UserAdmin` | `user.read`, `user.ban`, `user.unban` |
-| `CatalogManager` | `catalog.read`, `catalog.manage`, toutes les permissions `tag.*` et `ingredient.*` listées ci-dessus |
+| `CatalogManager` | `catalog.read`, `catalog.manage`, toutes les permissions `tag.*` et `ingredient.*` listées ci-dessus, `equipment.create` |
 | `SuperAdmin` | Toutes les permissions listées dans le catalogue, associées explicitement |
 
 Les suppressions définitives de recettes et commentaires, la gestion du staff,
