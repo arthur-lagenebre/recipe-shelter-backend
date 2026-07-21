@@ -19,23 +19,14 @@ export class AdminUserRepositoryMysql implements AdminUserRepository {
 
     async findBannedForAdmin(): Promise<BannedUser[]> {
         const [rows] = await this.db.execute(
-            `SELECT u.Id, u.Username, u.Mail, cp.Status, cp.BannedAt, cp.BannedReason, bannedBy.Username AS BannedByUsername
-             FROM Users AS u
-             INNER JOIN CommunityProfiles AS cp ON cp.UserId = u.Id
-             LEFT JOIN Users AS bannedBy ON cp.BannedByUserId = bannedBy.Id
-             WHERE cp.Status = 'banned'
-             ORDER BY cp.BannedAt DESC, u.Id DESC`
+            `SELECT u.Id, u.Username, u.Mail, cp.Status, cp.BannedAt, cp.BannedReason, bannedBy.Username AS BannedByUsername FROM Users AS u INNER JOIN CommunityProfiles AS cp ON cp.UserId = u.Id LEFT JOIN Users AS bannedBy ON cp.BannedByUserId = bannedBy.Id WHERE cp.Status = 'banned' ORDER BY cp.BannedAt DESC, u.Id DESC`
         );
 
         return (rows as BannedUserRow[]).map(mapBannedUser);
     }
 
     async countBannedForAdmin(): Promise<number> {
-        const [rows] = await this.db.execute(
-            `SELECT COUNT(*) AS Count
-             FROM CommunityProfiles
-             WHERE Status = 'banned'`
-        );
+        const [rows] = await this.db.execute(`SELECT COUNT(*) AS Count FROM CommunityProfiles WHERE Status = 'banned'`);
 
         const row = firstOrNull(rows as { Count: number }[]);
         return row?.Count ?? 0;
@@ -43,12 +34,7 @@ export class AdminUserRepositoryMysql implements AdminUserRepository {
 
     async findAdminUserById(userId: number): Promise<AdminUserDetails | null> {
         const [rows] = await this.db.execute(
-            `SELECT u.Id, u.Username, u.Mail, COALESCE(cp.Status, sp.Status) AS Status,
-                    cp.BannedReason, cp.BannedAt, cp.BannedByUserId, u.CreatedAt, u.UpdatedAt
-             FROM Users AS u
-             LEFT JOIN CommunityProfiles AS cp ON cp.UserId = u.Id
-             LEFT JOIN StaffProfiles AS sp ON sp.UserId = u.Id
-             WHERE u.Id = ?`,
+            `SELECT u.Id, u.Username, u.Mail, COALESCE(cp.Status, sp.Status) AS Status, cp.BannedReason, cp.BannedAt, cp.BannedByUserId, u.CreatedAt, u.UpdatedAt FROM Users AS u LEFT JOIN CommunityProfiles AS cp ON cp.UserId = u.Id LEFT JOIN StaffProfiles AS sp ON sp.UserId = u.Id WHERE u.Id = ?`,
             [userId]
         );
 
@@ -80,20 +66,13 @@ export class AdminUserRepositoryMysql implements AdminUserRepository {
     async ban(userId: number, adminUserId: number, reason: string, db?: PoolConnection): Promise<boolean> {
         return this.updateUserTransaction(async (conn) => {
             const [result] = await conn.execute<ResultSetHeader>(
-                `UPDATE CommunityProfiles
-                 SET Status = 'banned',
-                     BannedByUserId = ?,
-                     BannedReason = ?,
-                     BannedAt = CURRENT_TIMESTAMP
-                 WHERE UserId = ?`,
+                `UPDATE CommunityProfiles SET Status = 'banned', BannedByUserId = ?, BannedReason = ?, BannedAt = CURRENT_TIMESTAMP WHERE UserId = ?`,
                 [adminUserId, reason, userId]
             );
 
             if (result.affectedRows > 0) {
                 await conn.execute(
-                    `UPDATE Users
-                     SET Status = 'banned', BannedByUserId = ?, BannedReason = ?, BannedAt = CURRENT_TIMESTAMP
-                     WHERE Id = ? AND AccountType = 'community'`,
+                    `UPDATE Users SET Status = 'banned', BannedByUserId = ?, BannedReason = ?, BannedAt = CURRENT_TIMESTAMP WHERE Id = ? AND AccountType = 'community'`,
                     [adminUserId, reason, userId]
                 );
             }
@@ -105,20 +84,13 @@ export class AdminUserRepositoryMysql implements AdminUserRepository {
     async unban(userId: number, adminUserId: number, reason: string, db?: PoolConnection): Promise<boolean> {
         return this.updateUserTransaction(async (conn) => {
             const [result] = await conn.execute<ResultSetHeader>(
-                `UPDATE CommunityProfiles
-                 SET Status = 'active',
-                     BannedByUserId = NULL,
-                     BannedReason = NULL,
-                     BannedAt = NULL
-                 WHERE UserId = ?`,
+                `UPDATE CommunityProfiles SET Status = 'active', BannedByUserId = NULL, BannedReason = NULL, BannedAt = NULL WHERE UserId = ?`,
                 [userId]
             );
 
             if (result.affectedRows > 0) {
                 await conn.execute(
-                    `UPDATE Users
-                     SET Status = 'active', BannedByUserId = NULL, BannedReason = NULL, BannedAt = NULL
-                     WHERE Id = ? AND AccountType = 'community'`,
+                    `UPDATE Users SET Status = 'active', BannedByUserId = NULL, BannedReason = NULL, BannedAt = NULL WHERE Id = ? AND AccountType = 'community'`,
                     [userId]
                 );
             }
@@ -129,14 +101,7 @@ export class AdminUserRepositoryMysql implements AdminUserRepository {
 
     async createModerationLog(auditLogId: number, userId: number, db: PoolConnection): Promise<void> {
         const [result] = await db.execute<ResultSetHeader>(
-            `INSERT INTO UserModerationLogs (AdminAuditLogId, UserId)
-             SELECT audit.Id, ?
-             FROM AdminAuditLogs AS audit
-             WHERE audit.Id = ?
-               AND audit.Action IN ('users.ban', 'users.unban')
-               AND audit.TargetType = 'community_user'
-               AND audit.Reason IS NOT NULL
-               AND BINARY audit.TargetId = BINARY CAST(? AS CHAR)`,
+            `INSERT INTO UserModerationLogs (AdminAuditLogId, UserId) SELECT audit.Id, ? FROM AdminAuditLogs AS audit WHERE audit.Id = ? AND audit.Action IN ('users.ban', 'users.unban') AND audit.TargetType = 'community_user' AND audit.Reason IS NOT NULL AND BINARY audit.TargetId = BINARY CAST(? AS CHAR)`,
             [userId, auditLogId, userId]
         );
 

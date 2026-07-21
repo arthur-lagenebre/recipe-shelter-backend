@@ -40,12 +40,15 @@ function createPool(options: FakeOptions = {}) {
                     ]
                 ];
             }
-            if (/FROM Users AS u/.test(sql)) return [options.identityRows ?? []];
+            if (/FROM Users AS u/.test(sql))
+                return [options.identityRows ?? []];
             if (/INSERT INTO Users/.test(sql)) {
-                if (options.userInsertError) throw options.userInsertError;
+                if (options.userInsertError)
+                    throw options.userInsertError;
                 return [{ insertId: 42, affectedRows: 1 }];
             }
-            if (/INSERT INTO StaffInvitations/.test(sql)) return [{ insertId: 7, affectedRows: 1 }];
+            if (/INSERT INTO StaffInvitations/.test(sql))
+                return [{ insertId: 7, affectedRows: 1 }];
             if (/FROM StaffInvitations/.test(sql)) {
                 return [
                     options.invitationRows ?? [
@@ -101,7 +104,8 @@ describe('StaffInvitationRepositoryMysql', () => {
         const result = await repository.create(input);
 
         assert.equal(result.status, 'created');
-        if (result.status !== 'created') return;
+        if (result.status !== 'created')
+            return;
         assert.deepEqual(result.invitation, {
             id: 7,
             staffUserId: 42,

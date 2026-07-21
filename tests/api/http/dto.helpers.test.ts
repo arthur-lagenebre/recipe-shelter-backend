@@ -1,14 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import {
-    getBoundedArray,
-    getBoundedInteger,
-    getBoundedNullableInteger,
-    getBoundedNullableNumber,
-    getBoundedString,
-    getRequiredBoundedString
-} from '../../../src/api/http/dto.helpers.js';
+import { getBoundedArray, getBoundedInteger, getBoundedNullableInteger, getBoundedNullableNumber, getBoundedString, getRequiredBoundedString } from '../../../src/api/http/dto.helpers.js';
 import { HttpError } from '../../../src/utils/errors.js';
 
 function assertHttpError(error: unknown, code: string, status: number): void {
@@ -227,7 +220,8 @@ describe('dto.helpers bounded validators', () => {
 
     describe('getBoundedArray', () => {
         const parser = (item: unknown) => {
-            if (typeof item !== 'number') throw new Error('should not be called on an already-invalid array');
+            if (typeof item !== 'number')
+                throw new Error('should not be called on an already-invalid array');
             return item * 2;
         };
 

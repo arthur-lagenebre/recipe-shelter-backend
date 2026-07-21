@@ -184,10 +184,7 @@ describe('FavoriteService', () => {
         it(`rejects another user's ${status} recipe`, async () => {
             recipeRepository.recipe = { ...storedRecipe, userId: 8, status };
 
-            await assert.rejects(
-                () => service.createFavorite(7, 12),
-                (error) => assertHttpError(error, 'RECIPES_ACCESS_DENIED', 403)
-            );
+            await assert.rejects(() => service.createFavorite(7, 12), (error) => assertHttpError(error, 'RECIPES_ACCESS_DENIED', 403));
             assert.equal(repository.createInput, null);
         });
     }
@@ -195,20 +192,14 @@ describe('FavoriteService', () => {
     it('rejects a recipe that does not exist', async () => {
         recipeRepository.recipe = null;
 
-        await assert.rejects(
-            () => service.createFavorite(7, 12),
-            (error) => assertHttpError(error, 'RECIPES_NOT_FOUND', 404)
-        );
+        await assert.rejects(() => service.createFavorite(7, 12), (error) => assertHttpError(error, 'RECIPES_NOT_FOUND', 404));
         assert.equal(repository.createInput, null);
     });
 
     it('reports a repository creation failure', async () => {
         repository.createResult = null;
 
-        await assert.rejects(
-            () => service.createFavorite(7, 12),
-            (error) => assertHttpError(error, 'FAVORITE_CANNOT_BE_CREATED')
-        );
+        await assert.rejects(() => service.createFavorite(7, 12), (error) => assertHttpError(error, 'FAVORITE_CANNOT_BE_CREATED'));
     });
 
     it('deletes a favorite without checking recipe visibility', async () => {
@@ -222,10 +213,7 @@ describe('FavoriteService', () => {
     it('reports a repository deletion failure', async () => {
         repository.deleteResult = false;
 
-        await assert.rejects(
-            () => service.deleteFavorite(7, 12),
-            (error) => assertHttpError(error, 'FAVORITE_CANNOT_BE_DELETED')
-        );
+        await assert.rejects(() => service.deleteFavorite(7, 12), (error) => assertHttpError(error, 'FAVORITE_CANNOT_BE_DELETED'));
     });
 
     it('returns the paginated favorite recipes without altering pagination', async () => {

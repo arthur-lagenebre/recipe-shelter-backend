@@ -7,13 +7,7 @@ import { TestAdminAuditRecorder, testAdminAuditContext } from '../../helpers/adm
 
 import type { AdminUserRepository } from '../../../src/repositories/admin/admin.users.repository.interface.js';
 import type { AdminUserDetails, BannedUser, UserModerationLog } from '../../../src/repositories/admin/admin.users.types.js';
-import type {
-    CommunityProfile,
-    CreateUserInput,
-    StaffProfile,
-    User,
-    UserWithPassword
-} from '../../../src/repositories/users/user.types.js';
+import type { CommunityProfile, CreateUserInput, StaffProfile, User, UserWithPassword } from '../../../src/repositories/users/user.types.js';
 import type { UserRepository } from '../../../src/repositories/users/user.repository.interface.js';
 
 const baseUser: User = {

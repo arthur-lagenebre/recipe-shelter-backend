@@ -1,9 +1,4 @@
-import type {
-    AdminAuditRecordInput,
-    AdminAuditRecordReceipt,
-    AdminAuditRecorder,
-    AdminAuditRequestContext
-} from '../../src/services/admin/admin.audit.service.js';
+import type { AdminAuditRecordInput, AdminAuditRecordReceipt, AdminAuditRecorder, AdminAuditRequestContext } from '../../src/services/admin/admin.audit.service.js';
 import type { AdminAuditActionRunner, AdminAuditActionScope } from '../../src/services/admin/admin.audit-action.runner.js';
 import type { PoolConnection } from 'mysql2/promise';
 
@@ -18,7 +13,8 @@ export class TestAdminAuditRecorder implements AdminAuditRecorder, AdminAuditAct
     error: Error | null = null;
 
     async record(input: AdminAuditRecordInput): Promise<AdminAuditRecordReceipt> {
-        if (this.error) throw this.error;
+        if (this.error)
+            throw this.error;
 
         this.inputs.push(input);
         return {

@@ -8,6 +8,7 @@ import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin
 import { AdminIngredientRepositoryMysql } from '../../../src/repositories/admin/admin.ingredients.repository.mysql.js';
 import { AdminTagRepositoryMysql } from '../../../src/repositories/admin/admin.tags.repository.mysql.js';
 import { CatalogProposalRepositoryMysql } from '../../../src/repositories/catalog/catalog-proposals.repository.mysql.js';
+import { EquipmentRepositoryMysql } from '../../../src/repositories/equipments/equipment.repository.mysql.js';
 import { AdminAuditActionRunnerMysql } from '../../../src/services/admin/admin.audit-action.runner.js';
 import { AdminAuditService } from '../../../src/services/admin/admin.audit.service.js';
 import { AdminCatalogProposalService } from '../../../src/services/admin/admin.catalog-proposals.service.js';
@@ -29,14 +30,19 @@ const activeTagId = 8_600;
 const deprecatedTagId = 8_601;
 const activeIngredientId = 8_600;
 const deprecatedIngredientId = 8_601;
+const activeEquipmentId = 8_600;
 
 function requireCatalogProposalsTestDatabaseName(): string {
-    if (!/^[a-zA-Z0-9_]+$/.test(baseTestDatabaseName)) throw new Error('TEST_DB_NAME must contain only letters, numbers and underscores');
-    if (!baseTestDatabaseName.toLowerCase().includes('test')) throw new Error('TEST_DB_NAME must contain "test"');
-    if (baseTestDatabaseName === env.db.name) throw new Error('TEST_DB_NAME must be different from DB_NAME');
+    if (!/^[a-zA-Z0-9_]+$/.test(baseTestDatabaseName))
+        throw new Error('TEST_DB_NAME must contain only letters, numbers and underscores');
+    if (!baseTestDatabaseName.toLowerCase().includes('test'))
+        throw new Error('TEST_DB_NAME must contain "test"');
+    if (baseTestDatabaseName === env.db.name)
+        throw new Error('TEST_DB_NAME must be different from DB_NAME');
 
     const databaseName = `${baseTestDatabaseName}_catalog_proposals`;
-    if (databaseName.length > 64) throw new Error('TEST_DB_NAME is too long for the catalog proposals integration database suffix');
+    if (databaseName.length > 64)
+        throw new Error('TEST_DB_NAME is too long for the catalog proposals integration database suffix');
     return databaseName;
 }
 
@@ -86,38 +92,7 @@ describe('catalog proposals schema MySQL integration', { skip: !mysqlEnabled && 
 
         await connection.query(schema);
         await connection.query(seed);
-        await connection.query(
-            `INSERT INTO Users (Id, Mail, Username, Password, AccountType, Status) VALUES
-         (?, 'proposal-author@test.local', 'Proposal Author', 'non-secret-test-hash', 'community', 'active'),
-         (?, 'proposal-other@test.local', 'Proposal Other', 'non-secret-test-hash', 'community', 'active'),
-         (?, 'proposal-reviewer@test.local', 'Proposal Reviewer', 'non-secret-test-hash', 'staff', 'inactive');
-       INSERT INTO Recipes
-         (Id, UserId, Title, Slug, Description, PrepTimeMinutes, Servings)
-       VALUES
-         (?, ?, 'Catalog proposal recipe', 'catalog-proposal-recipe', 'Recipe used to verify proposal isolation.', 10, 2),
-         (?, ?, 'Other catalog proposal recipe', 'other-catalog-proposal-recipe', 'Recipe owned by another author.', 15, 4);
-       INSERT INTO TagGroups (Id, Name, Slug, SortOrder)
-       VALUES (8600, 'Catalog proposal fixtures', 'catalog-proposal-fixtures', 99);
-       INSERT INTO Tags (Id, GroupId, Name, NormalizedName, Slug, Status) VALUES
-         (?, 8600, 'Existing proposal tag', 'existing proposal tag', 'existing-proposal-tag', 'active'),
-         (?, 8600, 'Deprecated proposal tag', 'deprecated proposal tag', 'deprecated-proposal-tag', 'deprecated');
-       INSERT INTO Ingredients (Id, Name, NormalizedName, Slug, Status) VALUES
-         (?, 'Accepted proposal ingredient', 'accepted proposal ingredient', 'accepted-proposal-ingredient', 'active'),
-         (?, 'Deprecated proposal ingredient', 'deprecated proposal ingredient', 'deprecated-proposal-ingredient', 'deprecated')`,
-            [
-                authorUserId,
-                otherAuthorUserId,
-                reviewerUserId,
-                authorRecipeId,
-                authorUserId,
-                otherAuthorRecipeId,
-                otherAuthorUserId,
-                activeTagId,
-                deprecatedTagId,
-                activeIngredientId,
-                deprecatedIngredientId
-            ]
-        );
+        await connection.query(`INSERT INTO Users (Id, Mail, Username, Password, AccountType, Status) VALUES (?, 'proposal-author@test.local', 'Proposal Author', 'non-secret-test-hash', 'community', 'active'), (?, 'proposal-other@test.local', 'Proposal Other', 'non-secret-test-hash', 'community', 'active'), (?, 'proposal-reviewer@test.local', 'Proposal Reviewer', 'non-secret-test-hash', 'staff', 'inactive'); INSERT INTO Recipes (Id, UserId, Title, Slug, Description, PrepTimeMinutes, Servings) VALUES (?, ?, 'Catalog proposal recipe', 'catalog-proposal-recipe', 'Recipe used to verify proposal isolation.', 10, 2), (?, ?, 'Other catalog proposal recipe', 'other-catalog-proposal-recipe', 'Recipe owned by another author.', 15, 4); INSERT INTO TagGroups (Id, Name, Slug, SortOrder) VALUES (8600, 'Catalog proposal fixtures', 'catalog-proposal-fixtures', 99); INSERT INTO Tags (Id, GroupId, Name, NormalizedName, Slug, Status) VALUES (?, 8600, 'Existing proposal tag', 'existing proposal tag', 'existing-proposal-tag', 'active'), (?, 8600, 'Deprecated proposal tag', 'deprecated proposal tag', 'deprecated-proposal-tag', 'deprecated'); INSERT INTO Ingredients (Id, Name, NormalizedName, Slug, Status) VALUES (?, 'Accepted proposal ingredient', 'accepted proposal ingredient', 'accepted-proposal-ingredient', 'active'), (?, 'Deprecated proposal ingredient', 'deprecated proposal ingredient', 'deprecated-proposal-ingredient', 'deprecated'); INSERT INTO Equipments (Id, Name, NormalizedName, Slug) VALUES (?, 'Existing proposal equipment', 'existing proposal equipment', 'existing-proposal-equipment')`, [ authorUserId, otherAuthorUserId, reviewerUserId, authorRecipeId, authorUserId, otherAuthorRecipeId, otherAuthorUserId, activeTagId, deprecatedTagId, activeIngredientId, deprecatedIngredientId, activeEquipmentId ]);
 
         pool = mysql.createPool({
             host: env.db.host,
@@ -130,7 +105,8 @@ describe('catalog proposals schema MySQL integration', { skip: !mysqlEnabled && 
 
     after(async () => {
         if (connection) {
-            if (pool) await pool.end();
+            if (pool)
+                await pool.end();
             await connection.query(`DROP DATABASE IF EXISTS \`${requireCatalogProposalsTestDatabaseName()}\``);
             await connection.end();
         }
@@ -138,20 +114,13 @@ describe('catalog proposals schema MySQL integration', { skip: !mysqlEnabled && 
 
     it('builds the final model from an empty database then applies the central seed', async () => {
         const databaseName = requireCatalogProposalsTestDatabaseName();
-        const [columns] = await connection.query(
-            `SELECT COLUMN_NAME AS ColumnName, COLUMN_TYPE AS ColumnType,
-              IS_NULLABLE AS IsNullable, COLUMN_DEFAULT AS ColumnDefault
-       FROM information_schema.COLUMNS
-       WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'CatalogProposals'
-       ORDER BY ORDINAL_POSITION`,
-            [databaseName]
-        );
+        const [columns] = await connection.query(`SELECT COLUMN_NAME AS ColumnName, COLUMN_TYPE AS ColumnType, IS_NULLABLE AS IsNullable, COLUMN_DEFAULT AS ColumnDefault FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'CatalogProposals' ORDER BY ORDINAL_POSITION`, [databaseName]);
 
         assert.deepEqual(columns, [
             { ColumnName: 'Id', ColumnType: 'bigint unsigned', IsNullable: 'NO', ColumnDefault: null },
             { ColumnName: 'AuthorUserId', ColumnType: 'bigint unsigned', IsNullable: 'NO', ColumnDefault: null },
             { ColumnName: 'RecipeId', ColumnType: 'bigint unsigned', IsNullable: 'NO', ColumnDefault: null },
-            { ColumnName: 'ProposalType', ColumnType: "enum('tag','ingredient')", IsNullable: 'NO', ColumnDefault: null },
+            { ColumnName: 'ProposalType', ColumnType: "enum('tag','ingredient','equipment')", IsNullable: 'NO', ColumnDefault: null },
             { ColumnName: 'ProposedName', ColumnType: 'varchar(255)', IsNullable: 'NO', ColumnDefault: null },
             { ColumnName: 'NormalizedName', ColumnType: 'varchar(255)', IsNullable: 'NO', ColumnDefault: null },
             {
@@ -162,31 +131,26 @@ describe('catalog proposals schema MySQL integration', { skip: !mysqlEnabled && 
             },
             { ColumnName: 'MatchedTagId', ColumnType: 'bigint unsigned', IsNullable: 'YES', ColumnDefault: null },
             { ColumnName: 'MatchedIngredientId', ColumnType: 'bigint unsigned', IsNullable: 'YES', ColumnDefault: null },
+            { ColumnName: 'MatchedEquipmentId', ColumnType: 'bigint unsigned', IsNullable: 'YES', ColumnDefault: null },
             { ColumnName: 'ReviewedByStaffUserId', ColumnType: 'bigint unsigned', IsNullable: 'YES', ColumnDefault: null },
             { ColumnName: 'ReviewReason', ColumnType: 'text', IsNullable: 'YES', ColumnDefault: null },
             { ColumnName: 'CreatedAt', ColumnType: 'datetime(6)', IsNullable: 'NO', ColumnDefault: 'CURRENT_TIMESTAMP(6)' },
             { ColumnName: 'ReviewedAt', ColumnType: 'datetime(6)', IsNullable: 'YES', ColumnDefault: null }
         ]);
 
-        const [foreignKeys] = await connection.query(
-            `SELECT CONSTRAINT_NAME AS ConstraintName,
-              GROUP_CONCAT(COLUMN_NAME ORDER BY ORDINAL_POSITION SEPARATOR ',') AS ColumnNames,
-              LOWER(REFERENCED_TABLE_NAME) AS ReferencedTableName,
-              GROUP_CONCAT(REFERENCED_COLUMN_NAME ORDER BY ORDINAL_POSITION SEPARATOR ',') AS ReferencedColumnNames
-       FROM information_schema.KEY_COLUMN_USAGE
-       WHERE CONSTRAINT_SCHEMA = ?
-         AND TABLE_NAME = 'CatalogProposals'
-         AND REFERENCED_TABLE_NAME IS NOT NULL
-       GROUP BY CONSTRAINT_NAME, REFERENCED_TABLE_NAME
-       ORDER BY CONSTRAINT_NAME`,
-            [databaseName]
-        );
+        const [foreignKeys] = await connection.query(`SELECT CONSTRAINT_NAME AS ConstraintName, GROUP_CONCAT(COLUMN_NAME ORDER BY ORDINAL_POSITION SEPARATOR ',') AS ColumnNames, LOWER(REFERENCED_TABLE_NAME) AS ReferencedTableName, GROUP_CONCAT(REFERENCED_COLUMN_NAME ORDER BY ORDINAL_POSITION SEPARATOR ',') AS ReferencedColumnNames FROM information_schema.KEY_COLUMN_USAGE WHERE CONSTRAINT_SCHEMA = ? AND TABLE_NAME = 'CatalogProposals' AND REFERENCED_TABLE_NAME IS NOT NULL GROUP BY CONSTRAINT_NAME, REFERENCED_TABLE_NAME ORDER BY CONSTRAINT_NAME`, [databaseName]);
         assert.deepEqual(foreignKeys, [
             {
                 ConstraintName: 'catalog_proposals_author_FK',
                 ColumnNames: 'AuthorUserId',
                 ReferencedTableName: 'communityprofiles',
                 ReferencedColumnNames: 'UserId'
+            },
+            {
+                ConstraintName: 'catalog_proposals_matched_equipment_FK',
+                ColumnNames: 'MatchedEquipmentId',
+                ReferencedTableName: 'equipments',
+                ReferencedColumnNames: 'Id'
             },
             {
                 ConstraintName: 'catalog_proposals_matched_ingredient_FK',
@@ -268,11 +232,7 @@ describe('catalog proposals schema MySQL integration', { skip: !mysqlEnabled && 
             (error: unknown) => assertHttpConflict(error, 'CATALOG_PROPOSALS_CANONICAL_NAME_EXISTS')
         );
 
-        await connection.execute(
-            `INSERT INTO IngredientAliases (IngredientId, Name, NormalizedName, LanguageCode)
-       VALUES (?, 'Moon dust', 'moon dust', 'en')`,
-            [activeIngredientId]
-        );
+        await connection.execute(`INSERT INTO IngredientAliases (IngredientId, Name, NormalizedName, LanguageCode) VALUES (?, 'Moon dust', 'moon dust', 'en')`, [activeIngredientId]);
         await assert.rejects(
             () =>
                 service.createIngredientProposal({
@@ -283,81 +243,23 @@ describe('catalog proposals schema MySQL integration', { skip: !mysqlEnabled && 
             (error: unknown) => assertHttpConflict(error, 'CATALOG_PROPOSALS_CANONICAL_NAME_EXISTS')
         );
 
-        const [canonicalMutations] = await connection.query(
-            `SELECT
-         (SELECT COUNT(*) FROM Tags WHERE NormalizedName = 'api catalogue suggestion') AS TagCount,
-         (SELECT COUNT(*) FROM Ingredients WHERE NormalizedName = 'moon dust') AS IngredientCount`
-        );
+        const [canonicalMutations] = await connection.query(`SELECT (SELECT COUNT(*) FROM Tags WHERE NormalizedName = 'api catalogue suggestion') AS TagCount, (SELECT COUNT(*) FROM Ingredients WHERE NormalizedName = 'moon dust') AS IngredientCount`);
         assert.deepEqual(canonicalMutations, [{ TagCount: 0, IngredientCount: 0 }]);
     });
 
     it('supports every lifecycle outcome without changing or blocking the recipe lifecycle', async () => {
-        const [mergedInsert] = await connection.execute<mysql.ResultSetHeader>(
-            `INSERT INTO CatalogProposals
-         (AuthorUserId, RecipeId, ProposalType, ProposedName, NormalizedName)
-       VALUES (?, ?, 'tag', 'Cuisine solaire', 'cuisine solaire')`,
-            [authorUserId, authorRecipeId]
-        );
-        const [acceptedInsert] = await connection.execute<mysql.ResultSetHeader>(
-            `INSERT INTO CatalogProposals
-         (AuthorUserId, RecipeId, ProposalType, ProposedName, NormalizedName)
-       VALUES (?, ?, 'ingredient', 'Poudre de lune', 'poudre de lune')`,
-            [authorUserId, authorRecipeId]
-        );
-        const [rejectedInsert] = await connection.execute<mysql.ResultSetHeader>(
-            `INSERT INTO CatalogProposals
-         (AuthorUserId, RecipeId, ProposalType, ProposedName, NormalizedName)
-       VALUES (?, ?, 'tag', 'Style impossible', 'style impossible')`,
-            [authorUserId, authorRecipeId]
-        );
-        const [pendingInsert] = await connection.execute<mysql.ResultSetHeader>(
-            `INSERT INTO CatalogProposals
-         (AuthorUserId, RecipeId, ProposalType, ProposedName, NormalizedName)
-       VALUES (?, ?, 'ingredient', 'Nuage d''épices', 'nuage d epices')`,
-            [authorUserId, authorRecipeId]
-        );
+        const [mergedInsert] = await connection.execute<mysql.ResultSetHeader>(`INSERT INTO CatalogProposals (AuthorUserId, RecipeId, ProposalType, ProposedName, NormalizedName) VALUES (?, ?, 'tag', 'Cuisine solaire', 'cuisine solaire')`, [authorUserId, authorRecipeId]);
+        const [acceptedInsert] = await connection.execute<mysql.ResultSetHeader>(`INSERT INTO CatalogProposals (AuthorUserId, RecipeId, ProposalType, ProposedName, NormalizedName) VALUES (?, ?, 'ingredient', 'Poudre de lune', 'poudre de lune')`, [authorUserId, authorRecipeId]);
+        const [rejectedInsert] = await connection.execute<mysql.ResultSetHeader>(`INSERT INTO CatalogProposals (AuthorUserId, RecipeId, ProposalType, ProposedName, NormalizedName) VALUES (?, ?, 'tag', 'Style impossible', 'style impossible')`, [authorUserId, authorRecipeId]);
+        const [pendingInsert] = await connection.execute<mysql.ResultSetHeader>(`INSERT INTO CatalogProposals (AuthorUserId, RecipeId, ProposalType, ProposedName, NormalizedName) VALUES (?, ?, 'ingredient', 'Nuage d''épices', 'nuage d epices')`, [authorUserId, authorRecipeId]);
 
-        await connection.execute(
-            `UPDATE CatalogProposals
-       SET Status = 'merged', MatchedTagId = ?, ReviewedByStaffUserId = ?,
-           ReviewReason = 'This suggestion matches the existing canonical tag.',
-           ReviewedAt = CURRENT_TIMESTAMP(6)
-       WHERE Id = ?`,
-            [activeTagId, reviewerUserId, mergedInsert.insertId]
-        );
-        await connection.execute(
-            `UPDATE CatalogProposals
-       SET Status = 'accepted', MatchedIngredientId = ?, ReviewedByStaffUserId = ?,
-           ReviewReason = 'This ingredient is accepted into the canonical catalogue.',
-           ReviewedAt = CURRENT_TIMESTAMP(6)
-       WHERE Id = ?`,
-            [activeIngredientId, reviewerUserId, acceptedInsert.insertId]
-        );
-        await connection.execute(
-            `UPDATE CatalogProposals
-       SET Status = 'rejected', ReviewedByStaffUserId = ?,
-           ReviewReason = 'This suggestion is not suitable for the shared catalogue.',
-           ReviewedAt = CURRENT_TIMESTAMP(6)
-       WHERE Id = ?`,
-            [reviewerUserId, rejectedInsert.insertId]
-        );
+        await connection.execute(`UPDATE CatalogProposals SET Status = 'merged', MatchedTagId = ?, ReviewedByStaffUserId = ?, ReviewReason = 'This suggestion matches the existing canonical tag.', ReviewedAt = CURRENT_TIMESTAMP(6) WHERE Id = ?`, [activeTagId, reviewerUserId, mergedInsert.insertId]);
+        await connection.execute(`UPDATE CatalogProposals SET Status = 'accepted', MatchedIngredientId = ?, ReviewedByStaffUserId = ?, ReviewReason = 'This ingredient is accepted into the canonical catalogue.', ReviewedAt = CURRENT_TIMESTAMP(6) WHERE Id = ?`, [activeIngredientId, reviewerUserId, acceptedInsert.insertId]);
+        await connection.execute(`UPDATE CatalogProposals SET Status = 'rejected', ReviewedByStaffUserId = ?, ReviewReason = 'This suggestion is not suitable for the shared catalogue.', ReviewedAt = CURRENT_TIMESTAMP(6) WHERE Id = ?`, [reviewerUserId, rejectedInsert.insertId]);
 
-        await connection.execute(
-            `UPDATE Recipes
-       SET Status = 'pending', SubmittedAt = CURRENT_TIMESTAMP
-       WHERE Id = ?`,
-            [authorRecipeId]
-        );
+        await connection.execute(`UPDATE Recipes SET Status = 'pending', SubmittedAt = CURRENT_TIMESTAMP WHERE Id = ?`, [authorRecipeId]);
 
-        const [proposals] = await connection.query(
-            `SELECT ProposalType, Status, MatchedTagId, MatchedIngredientId,
-              ReviewedByStaffUserId, ReviewReason IS NOT NULL AS HasReviewReason,
-              ReviewedAt IS NOT NULL AS HasReviewedAt
-       FROM CatalogProposals
-       WHERE Id IN (?, ?, ?, ?)
-       ORDER BY Id`,
-            [mergedInsert.insertId, acceptedInsert.insertId, rejectedInsert.insertId, pendingInsert.insertId]
-        );
+        const [proposals] = await connection.query(`SELECT ProposalType, Status, MatchedTagId, MatchedIngredientId, ReviewedByStaffUserId, ReviewReason IS NOT NULL AS HasReviewReason, ReviewedAt IS NOT NULL AS HasReviewedAt FROM CatalogProposals WHERE Id IN (?, ?, ?, ?) ORDER BY Id`, [mergedInsert.insertId, acceptedInsert.insertId, rejectedInsert.insertId, pendingInsert.insertId]);
         assert.deepEqual(proposals, [
             {
                 ProposalType: 'tag',
@@ -402,30 +304,22 @@ describe('catalog proposals schema MySQL integration', { skip: !mysqlEnabled && 
     });
 
     it('processes the staff queue with canonical, association, alias and rejection audits in atomic transactions', async () => {
-        const insertProposal = async (proposalType: 'tag' | 'ingredient', proposedName: string, normalizedName: string) => {
-            const [result] = await connection.execute<mysql.ResultSetHeader>(
-                `INSERT INTO CatalogProposals
-           (AuthorUserId, RecipeId, ProposalType, ProposedName, NormalizedName)
-         VALUES (?, ?, ?, ?, ?)`,
-                [authorUserId, authorRecipeId, proposalType, proposedName, normalizedName]
-            );
+        const insertProposal = async (proposalType: 'tag' | 'ingredient' | 'equipment', proposedName: string, normalizedName: string) => {
+            const [result] = await connection.execute<mysql.ResultSetHeader>(`INSERT INTO CatalogProposals (AuthorUserId, RecipeId, ProposalType, ProposedName, NormalizedName) VALUES (?, ?, ?, ?, ?)`, [authorUserId, authorRecipeId, proposalType, proposedName, normalizedName]);
             return result.insertId;
         };
         const proposalIds = {
             acceptedTag: await insertProposal('tag', 'Staff accepted tag', 'staff accepted tag'),
             acceptedIngredient: await insertProposal('ingredient', 'Staff accepted ingredient', 'staff accepted ingredient'),
+            acceptedEquipment: await insertProposal('equipment', 'Staff accepted equipment', 'staff accepted equipment'),
             associatedTag: await insertProposal('tag', 'Existing tag synonym', 'existing tag synonym'),
             aliasedIngredient: await insertProposal('ingredient', 'Ingredient moon synonym', 'ingredient moon synonym'),
+            associatedEquipment: await insertProposal('equipment', 'Existing equipment synonym', 'existing equipment synonym'),
             rejected: await insertProposal('ingredient', 'Rejected staff ingredient', 'rejected staff ingredient')
         };
         const proposalRepository = new CatalogProposalRepositoryMysql(pool);
         const auditActions = new AdminAuditActionRunnerMysql(pool, (db) => new AdminAuditService(new AdminAuditRepositoryMysql(db)));
-        const service = new AdminCatalogProposalService(
-            proposalRepository,
-            new AdminTagRepositoryMysql(pool),
-            new AdminIngredientRepositoryMysql(pool),
-            auditActions
-        );
+        const service = new AdminCatalogProposalService(proposalRepository, new AdminTagRepositoryMysql(pool), new AdminIngredientRepositoryMysql(pool), new EquipmentRepositoryMysql(pool), auditActions);
         const context = { ipAddress: '192.0.2.86', userAgent: 'Catalog proposal MySQL test' };
 
         const queue = await service.list({ status: 'pending' }, { page: 1, limit: 50, offset: 0 }, reviewerUserId, context);
@@ -448,11 +342,28 @@ describe('catalog proposals schema MySQL integration', { skip: !mysqlEnabled && 
             reviewerUserId,
             context
         );
+        const acceptedEquipment = await service.acceptEquipment(
+            proposalIds.acceptedEquipment,
+            {
+                reason: 'Ustensile validé depuis la proposition staff.'
+            },
+            reviewerUserId,
+            context
+        );
         await service.associateTag(
             proposalIds.associatedTag,
             {
                 targetTagId: activeTagId,
                 reason: 'Ce libellé correspond au tag actif existant.'
+            },
+            reviewerUserId,
+            context
+        );
+        await service.associateEquipment(
+            proposalIds.associatedEquipment,
+            {
+                targetEquipmentId: activeEquipmentId,
+                reason: "Ce libellé correspond à l'ustensile existant."
             },
             reviewerUserId,
             context
@@ -469,19 +380,14 @@ describe('catalog proposals schema MySQL integration', { skip: !mysqlEnabled && 
         );
         await service.reject(proposalIds.rejected, 'Cette suggestion ne convient pas au catalogue.', reviewerUserId, context);
 
-        const [reviews] = await connection.query(
-            `SELECT Id, Status, MatchedTagId, MatchedIngredientId, ReviewedByStaffUserId
-       FROM CatalogProposals
-       WHERE Id IN (?, ?, ?, ?, ?)
-       ORDER BY Id`,
-            Object.values(proposalIds)
-        );
+        const [reviews] = await connection.query(`SELECT Id, Status, MatchedTagId, MatchedIngredientId, MatchedEquipmentId, ReviewedByStaffUserId FROM CatalogProposals WHERE Id IN (?, ?, ?, ?, ?, ?, ?) ORDER BY Id`, Object.values(proposalIds));
         assert.deepEqual(reviews, [
             {
                 Id: proposalIds.acceptedTag,
                 Status: 'accepted',
                 MatchedTagId: acceptedTag.matchedTagId,
                 MatchedIngredientId: null,
+                MatchedEquipmentId: null,
                 ReviewedByStaffUserId: reviewerUserId
             },
             {
@@ -489,6 +395,15 @@ describe('catalog proposals schema MySQL integration', { skip: !mysqlEnabled && 
                 Status: 'accepted',
                 MatchedTagId: null,
                 MatchedIngredientId: acceptedIngredient.matchedIngredientId,
+                MatchedEquipmentId: null,
+                ReviewedByStaffUserId: reviewerUserId
+            },
+            {
+                Id: proposalIds.acceptedEquipment,
+                Status: 'accepted',
+                MatchedTagId: null,
+                MatchedIngredientId: null,
+                MatchedEquipmentId: acceptedEquipment.matchedEquipmentId,
                 ReviewedByStaffUserId: reviewerUserId
             },
             {
@@ -496,6 +411,7 @@ describe('catalog proposals schema MySQL integration', { skip: !mysqlEnabled && 
                 Status: 'merged',
                 MatchedTagId: activeTagId,
                 MatchedIngredientId: null,
+                MatchedEquipmentId: null,
                 ReviewedByStaffUserId: reviewerUserId
             },
             {
@@ -503,6 +419,15 @@ describe('catalog proposals schema MySQL integration', { skip: !mysqlEnabled && 
                 Status: 'merged',
                 MatchedTagId: null,
                 MatchedIngredientId: activeIngredientId,
+                MatchedEquipmentId: null,
+                ReviewedByStaffUserId: reviewerUserId
+            },
+            {
+                Id: proposalIds.associatedEquipment,
+                Status: 'merged',
+                MatchedTagId: null,
+                MatchedIngredientId: null,
+                MatchedEquipmentId: activeEquipmentId,
                 ReviewedByStaffUserId: reviewerUserId
             },
             {
@@ -510,44 +435,31 @@ describe('catalog proposals schema MySQL integration', { skip: !mysqlEnabled && 
                 Status: 'rejected',
                 MatchedTagId: null,
                 MatchedIngredientId: null,
+                MatchedEquipmentId: null,
                 ReviewedByStaffUserId: reviewerUserId
             }
         ]);
         assert.ok(Number(acceptedTag.matchedTagId) > 0);
         assert.ok(Number(acceptedIngredient.matchedIngredientId) > 0);
+        assert.ok(Number(acceptedEquipment.matchedEquipmentId) > 0);
 
-        const [catalogWrites] = await connection.query(
-            `SELECT
-         (SELECT COUNT(*) FROM Tags WHERE NormalizedName = 'staff accepted tag' AND Status = 'active') AS TagCount,
-         (SELECT COUNT(*) FROM Ingredients WHERE NormalizedName = 'staff accepted ingredient' AND Status = 'active') AS IngredientCount,
-         (SELECT COUNT(*) FROM IngredientAliases
-          WHERE IngredientId = ? AND NormalizedName = 'ingredient moon synonym' AND LanguageCode = 'fr') AS AliasCount,
-         (SELECT COUNT(*) FROM RecipeTags WHERE RecipeId = ? AND TagId = ?) AS AssociatedRecipeTagCount,
-         (SELECT COUNT(*) FROM RecipeIngredients WHERE RecipeId = ? AND IngredientId = ?) AS AssociatedRecipeIngredientCount`,
-            [activeIngredientId, authorRecipeId, activeTagId, authorRecipeId, activeIngredientId]
-        );
+        const [catalogWrites] = await connection.query(`SELECT (SELECT COUNT(*) FROM Tags WHERE NormalizedName = 'staff accepted tag' AND Status = 'active') AS TagCount, (SELECT COUNT(*) FROM Ingredients WHERE NormalizedName = 'staff accepted ingredient' AND Status = 'active') AS IngredientCount, (SELECT COUNT(*) FROM Equipments WHERE NormalizedName = 'staff accepted equipment') AS EquipmentCount, (SELECT COUNT(*) FROM IngredientAliases WHERE IngredientId = ? AND NormalizedName = 'ingredient moon synonym' AND LanguageCode = 'fr') AS AliasCount, (SELECT COUNT(*) FROM RecipeTags WHERE RecipeId = ? AND TagId = ?) AS AssociatedRecipeTagCount, (SELECT COUNT(*) FROM RecipeIngredients WHERE RecipeId = ? AND IngredientId = ?) AS AssociatedRecipeIngredientCount`, [activeIngredientId, authorRecipeId, activeTagId, authorRecipeId, activeIngredientId]);
         assert.deepEqual(catalogWrites, [
             {
                 TagCount: 1,
                 IngredientCount: 1,
+                EquipmentCount: 1,
                 AliasCount: 1,
                 AssociatedRecipeTagCount: 0,
                 AssociatedRecipeIngredientCount: 0
             }
         ]);
 
-        const [auditCounts] = await connection.query(
-            `SELECT Action, COUNT(*) AS EventCount
-       FROM AdminAuditLogs
-       WHERE ActorUserId = ? AND Action LIKE 'catalog.proposals.%'
-       GROUP BY Action
-       ORDER BY Action`,
-            [reviewerUserId]
-        );
+        const [auditCounts] = await connection.query(`SELECT Action, COUNT(*) AS EventCount FROM AdminAuditLogs WHERE ActorUserId = ? AND Action LIKE 'catalog.proposals.%' GROUP BY Action ORDER BY Action`, [reviewerUserId]);
         assert.deepEqual(auditCounts, [
-            { Action: 'catalog.proposals.accept', EventCount: 2 },
+            { Action: 'catalog.proposals.accept', EventCount: 3 },
             { Action: 'catalog.proposals.alias', EventCount: 1 },
-            { Action: 'catalog.proposals.associate', EventCount: 1 },
+            { Action: 'catalog.proposals.associate', EventCount: 2 },
             { Action: 'catalog.proposals.list', EventCount: 1 },
             { Action: 'catalog.proposals.reject', EventCount: 1 }
         ]);
@@ -571,12 +483,7 @@ describe('catalog proposals schema MySQL integration', { skip: !mysqlEnabled && 
             );
         }
 
-        await connection.execute(
-            `INSERT INTO CatalogProposals
-         (AuthorUserId, RecipeId, ProposalType, ProposedName, NormalizedName)
-       VALUES (?, ?, 'tag', 'Doublon proposé', 'doublon propose')`,
-            [authorUserId, authorRecipeId]
-        );
+        await connection.execute(`INSERT INTO CatalogProposals (AuthorUserId, RecipeId, ProposalType, ProposedName, NormalizedName) VALUES (?, ?, 'tag', 'Doublon proposé', 'doublon propose')`, [authorUserId, authorRecipeId]);
         await assert.rejects(() =>
             connection.execute(
                 `INSERT INTO CatalogProposals
@@ -604,30 +511,14 @@ describe('catalog proposals schema MySQL integration', { skip: !mysqlEnabled && 
     });
 
     it('requires coherent staff reviews and active type-safe canonical matches', async () => {
-        const createProposal = async (proposalType: 'tag' | 'ingredient', name: string): Promise<number> => {
+        const createProposal = async (proposalType: 'tag' | 'ingredient' | 'equipment', name: string): Promise<number> => {
             const normalizedName = name.toLowerCase();
-            const [result] = await connection.execute<mysql.ResultSetHeader>(
-                `INSERT INTO CatalogProposals
-           (AuthorUserId, RecipeId, ProposalType, ProposedName, NormalizedName)
-         VALUES (?, ?, ?, ?, ?)`,
-                [authorUserId, authorRecipeId, proposalType, name, normalizedName]
-            );
+            const [result] = await connection.execute<mysql.ResultSetHeader>(`INSERT INTO CatalogProposals (AuthorUserId, RecipeId, ProposalType, ProposedName, NormalizedName) VALUES (?, ?, ?, ?, ?)`, [authorUserId, authorRecipeId, proposalType, name, normalizedName]);
             return result.insertId;
         };
 
         const directFinalId = await createProposal('tag', 'Direct final fixture');
-        await assert.rejects(
-            () =>
-                connection.execute(
-                    `INSERT INTO CatalogProposals
-         (AuthorUserId, RecipeId, ProposalType, ProposedName, NormalizedName, Status,
-          ReviewedByStaffUserId, ReviewReason, ReviewedAt)
-       VALUES (?, ?, 'tag', 'Direct final insert', 'direct final insert', 'rejected',
-               ?, 'A final proposal cannot bypass the pending review state.', CURRENT_TIMESTAMP(6))`,
-                    [authorUserId, authorRecipeId, reviewerUserId]
-                ),
-            assertMysqlSignal('Catalog proposals must be created with pending status')
-        );
+        await assert.rejects(() => connection.execute(`INSERT INTO CatalogProposals (AuthorUserId, RecipeId, ProposalType, ProposedName, NormalizedName, Status, ReviewedByStaffUserId, ReviewReason, ReviewedAt) VALUES (?, ?, 'tag', 'Direct final insert', 'direct final insert', 'rejected', ?, 'A final proposal cannot bypass the pending review state.', CURRENT_TIMESTAMP(6))`, [authorUserId, authorRecipeId, reviewerUserId]), assertMysqlSignal('Catalog proposals must be created with pending status'));
 
         await assert.rejects(() =>
             connection.execute(
@@ -639,32 +530,13 @@ describe('catalog proposals schema MySQL integration', { skip: !mysqlEnabled && 
         );
 
         const deprecatedTagProposalId = await createProposal('tag', 'Deprecated tag match');
-        await assert.rejects(
-            () =>
-                connection.execute(
-                    `UPDATE CatalogProposals
-       SET Status = 'merged', MatchedTagId = ?, ReviewedByStaffUserId = ?,
-           ReviewReason = 'A deprecated catalogue target must not resolve a proposal.',
-           ReviewedAt = CURRENT_TIMESTAMP(6)
-       WHERE Id = ?`,
-                    [deprecatedTagId, reviewerUserId, deprecatedTagProposalId]
-                ),
-            assertMysqlSignal('A reviewed tag proposal must match an active canonical tag')
-        );
+        await assert.rejects(() => connection.execute(`UPDATE CatalogProposals SET Status = 'merged', MatchedTagId = ?, ReviewedByStaffUserId = ?, ReviewReason = 'A deprecated catalogue target must not resolve a proposal.', ReviewedAt = CURRENT_TIMESTAMP(6) WHERE Id = ?`, [deprecatedTagId, reviewerUserId, deprecatedTagProposalId]), assertMysqlSignal('A reviewed tag proposal must match an active canonical tag'));
 
         const deprecatedIngredientProposalId = await createProposal('ingredient', 'Deprecated ingredient match');
-        await assert.rejects(
-            () =>
-                connection.execute(
-                    `UPDATE CatalogProposals
-       SET Status = 'accepted', MatchedIngredientId = ?, ReviewedByStaffUserId = ?,
-           ReviewReason = 'A deprecated catalogue target must not resolve a proposal.',
-           ReviewedAt = CURRENT_TIMESTAMP(6)
-       WHERE Id = ?`,
-                    [deprecatedIngredientId, reviewerUserId, deprecatedIngredientProposalId]
-                ),
-            assertMysqlSignal('A reviewed ingredient proposal must match an active canonical ingredient')
-        );
+        await assert.rejects(() => connection.execute(`UPDATE CatalogProposals SET Status = 'accepted', MatchedIngredientId = ?, ReviewedByStaffUserId = ?, ReviewReason = 'A deprecated catalogue target must not resolve a proposal.', ReviewedAt = CURRENT_TIMESTAMP(6) WHERE Id = ?`, [deprecatedIngredientId, reviewerUserId, deprecatedIngredientProposalId]), assertMysqlSignal('A reviewed ingredient proposal must match an active canonical ingredient'));
+
+        const unknownEquipmentProposalId = await createProposal('equipment', 'Unknown equipment match');
+        await assert.rejects(() => connection.execute(`UPDATE CatalogProposals SET Status = 'accepted', MatchedEquipmentId = 999999, ReviewedByStaffUserId = ?, ReviewReason = 'A missing catalogue target must not resolve a proposal.', ReviewedAt = CURRENT_TIMESTAMP(6) WHERE Id = ?`, [reviewerUserId, unknownEquipmentProposalId]), assertMysqlSignal('A reviewed equipment proposal must match an existing canonical equipment'));
 
         const wrongTargetProposalId = await createProposal('tag', 'Wrong target type');
         await assert.rejects(() =>
@@ -692,49 +564,16 @@ describe('catalog proposals schema MySQL integration', { skip: !mysqlEnabled && 
     });
 
     it('preserves the complete proposal identity and terminal review history', async () => {
-        const [result] = await connection.execute<mysql.ResultSetHeader>(
-            `INSERT INTO CatalogProposals
-         (AuthorUserId, RecipeId, ProposalType, ProposedName, NormalizedName)
-       VALUES (?, ?, 'ingredient', 'Historical proposal', 'historical proposal')`,
-            [authorUserId, authorRecipeId]
-        );
+        const [result] = await connection.execute<mysql.ResultSetHeader>(`INSERT INTO CatalogProposals (AuthorUserId, RecipeId, ProposalType, ProposedName, NormalizedName) VALUES (?, ?, 'ingredient', 'Historical proposal', 'historical proposal')`, [authorUserId, authorRecipeId]);
 
-        await assert.rejects(
-            () =>
-                connection.execute(
-                    `UPDATE CatalogProposals
-       SET ProposedName = 'Changed historical proposal', NormalizedName = 'changed historical proposal'
-       WHERE Id = ?`,
-                    [result.insertId]
-                ),
-            assertMysqlSignal('Catalog proposal identity is immutable')
-        );
+        await assert.rejects(() => connection.execute(`UPDATE CatalogProposals SET ProposedName = 'Changed historical proposal', NormalizedName = 'changed historical proposal' WHERE Id = ?`, [result.insertId]), assertMysqlSignal('Catalog proposal identity is immutable'));
 
-        await connection.execute(
-            `UPDATE CatalogProposals
-       SET Status = 'rejected', ReviewedByStaffUserId = ?,
-           ReviewReason = 'The proposal is rejected while its original identity is retained.',
-           ReviewedAt = CURRENT_TIMESTAMP(6)
-       WHERE Id = ?`,
-            [reviewerUserId, result.insertId]
-        );
+        await connection.execute(`UPDATE CatalogProposals SET Status = 'rejected', ReviewedByStaffUserId = ?, ReviewReason = 'The proposal is rejected while its original identity is retained.', ReviewedAt = CURRENT_TIMESTAMP(6) WHERE Id = ?`, [reviewerUserId, result.insertId]);
 
-        await assert.rejects(
-            () => connection.execute(`UPDATE CatalogProposals SET Status = 'pending' WHERE Id = ?`, [result.insertId]),
-            assertMysqlSignal('Reviewed catalog proposals are immutable')
-        );
-        await assert.rejects(
-            () => connection.execute(`DELETE FROM CatalogProposals WHERE Id = ?`, [result.insertId]),
-            assertMysqlSignal('Catalog proposals are historical records and cannot be physically deleted')
-        );
+        await assert.rejects(() => connection.execute(`UPDATE CatalogProposals SET Status = 'pending' WHERE Id = ?`, [result.insertId]), assertMysqlSignal('Reviewed catalog proposals are immutable'));
+        await assert.rejects(() => connection.execute(`DELETE FROM CatalogProposals WHERE Id = ?`, [result.insertId]), assertMysqlSignal('Catalog proposals are historical records and cannot be physically deleted'));
 
-        const [history] = await connection.query(
-            `SELECT ProposedName, NormalizedName, Status, ReviewedByStaffUserId,
-              ReviewReason, CreatedAt, ReviewedAt
-       FROM CatalogProposals
-       WHERE Id = ?`,
-            [result.insertId]
-        );
+        const [history] = await connection.query(`SELECT ProposedName, NormalizedName, Status, ReviewedByStaffUserId, ReviewReason, CreatedAt, ReviewedAt FROM CatalogProposals WHERE Id = ?`, [result.insertId]);
         const proposal = (history as Array<Record<string, unknown>>)[0];
         assert.deepEqual(
             proposal && {

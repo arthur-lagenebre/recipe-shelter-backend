@@ -9,12 +9,7 @@ import { createAdminCatalogProposalsController } from '../../src/api/admin/admin
 import { createAdminCatalogProposalsRouter } from '../../src/api/admin/admin.catalog-proposals.routes.js';
 import { EnforceAuthorizationPolicies } from '../../src/middlewares/authorization.js';
 import { errorHandler } from '../../src/middlewares/error-handler.js';
-import {
-    configureAuthRbacRepository,
-    configureAuthSessionRepository,
-    configureAuthUserRepository,
-    requireStaffAuth
-} from '../../src/middlewares/require-auth.js';
+import { configureAuthRbacRepository, configureAuthSessionRepository, configureAuthUserRepository, requireStaffAuth } from '../../src/middlewares/require-auth.js';
 import { PERMISSIONS } from '../../src/security/permissions.js';
 import { AdminCatalogProposalService } from '../../src/services/admin/admin.catalog-proposals.service.js';
 import { createPaginatedResult } from '../../src/utils/pagination.js';
@@ -52,6 +47,7 @@ const pendingProposal: CatalogProposal = {
     status: 'pending',
     matchedTagId: null,
     matchedIngredientId: null,
+    matchedEquipmentId: null,
     reviewedByStaffUserId: null,
     reviewReason: null,
     createdAt: new Date('2026-07-20T10:00:00.000Z'),
@@ -76,6 +72,11 @@ class FakeAdminCatalogProposalService {
         return reviewedProposal('accepted', { matchedIngredientId: 200, proposalType: 'ingredient' });
     }
 
+    async acceptEquipment(...args: unknown[]) {
+        this.calls.push({ method: 'acceptEquipment', args });
+        return reviewedProposal('accepted', { matchedEquipmentId: 400, proposalType: 'equipment' });
+    }
+
     async reject(...args: unknown[]) {
         this.calls.push({ method: 'reject', args });
         return reviewedProposal('rejected');
@@ -89,6 +90,11 @@ class FakeAdminCatalogProposalService {
     async associateIngredient(...args: unknown[]) {
         this.calls.push({ method: 'associateIngredient', args });
         return reviewedProposal('merged', { matchedIngredientId: 20, proposalType: 'ingredient' });
+    }
+
+    async associateEquipment(...args: unknown[]) {
+        this.calls.push({ method: 'associateEquipment', args });
+        return reviewedProposal('merged', { matchedEquipmentId: 30, proposalType: 'equipment' });
     }
 
     async convertIngredientToAlias(...args: unknown[]) {
@@ -123,10 +129,7 @@ describe('admin catalog proposal HTTP integration', () => {
         app.use(express.json());
         const adminRouter = express.Router();
         adminRouter.use(requireStaffAuth, EnforceAuthorizationPolicies(adminAuthorizationPolicies));
-        adminRouter.use(
-            '/catalog-proposals',
-            createAdminCatalogProposalsRouter(createAdminCatalogProposalsController(service as unknown as AdminCatalogProposalService))
-        );
+        adminRouter.use('/catalog-proposals', createAdminCatalogProposalsRouter(createAdminCatalogProposalsController(service as unknown as AdminCatalogProposalService)));
         app.use('/api/v1/admin', adminRouter);
         app.use(errorHandler);
 
@@ -189,6 +192,60 @@ describe('admin catalog proposal HTTP integration', () => {
         assert.deepEqual(call?.args[1], {
             groupId: 8,
             reason: 'Proposition validée par le catalogue.'
+        });
+    });
+
+    it('requires catalog management and equipment creation before accepting an equipment', async () => {
+        const url = `${server.baseUrl}/api/v1/admin/catalog-proposals/equipments/5/accept`;
+        const body = JSON.stringify({
+            name: 'Free canonical name must be ignored',
+            reason: 'Proposition validée par le catalogue.'
+        });
+
+        for (const incompletePermissions of [[PERMISSIONS.catalogManage], [PERMISSIONS.equipmentCreate]]) {
+            permissions = incompletePermissions;
+            const denied = await fetch(url, {
+                method: 'POST',
+                headers: { cookie, 'content-type': 'application/json' },
+                body
+            });
+            assert.equal(denied.status, 403);
+        }
+
+        permissions = [PERMISSIONS.catalogManage, PERMISSIONS.equipmentCreate];
+        const accepted = await fetch(url, {
+            method: 'POST',
+            headers: { cookie, 'content-type': 'application/json' },
+            body
+        });
+
+        assert.equal(accepted.status, 201);
+        assert.equal(((await accepted.json()) as { status: string }).status, 'accepted');
+        const call = service.calls.at(-1);
+        assert.equal(call?.method, 'acceptEquipment');
+        assert.deepEqual(call?.args[1], {
+            reason: 'Proposition validée par le catalogue.'
+        });
+    });
+
+    it('associates an equipment proposal to an existing target under catalog management alone', async () => {
+        permissions = [PERMISSIONS.catalogManage];
+        const response = await fetch(`${server.baseUrl}/api/v1/admin/catalog-proposals/equipments/6/associate`, {
+            method: 'POST',
+            headers: { cookie, 'content-type': 'application/json' },
+            body: JSON.stringify({
+                targetEquipmentId: 30,
+                reason: 'Correspond à un ustensile déjà présent.'
+            })
+        });
+
+        assert.equal(response.status, 200);
+        assert.equal(((await response.json()) as { status: string }).status, 'merged');
+        const call = service.calls.at(-1);
+        assert.equal(call?.method, 'associateEquipment');
+        assert.deepEqual(call?.args[1], {
+            targetEquipmentId: 30,
+            reason: 'Correspond à un ustensile déjà présent.'
         });
     });
 

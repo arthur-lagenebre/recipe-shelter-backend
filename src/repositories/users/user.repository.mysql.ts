@@ -88,9 +88,7 @@ export class UserRepositoryMysql implements UserRepository {
 
     async findCommunityProfileByUserId(userId: number): Promise<CommunityProfile | null> {
         const [rows] = await this.db.execute(
-            `SELECT UserId, Status, BannedByUserId, BannedReason, BannedAt, CreatedAt, UpdatedAt
-             FROM CommunityProfiles
-             WHERE UserId = ?`,
+            `SELECT UserId, Status, BannedByUserId, BannedReason, BannedAt, CreatedAt, UpdatedAt FROM CommunityProfiles WHERE UserId = ?`,
             [userId]
         );
 
@@ -100,10 +98,7 @@ export class UserRepositoryMysql implements UserRepository {
 
     async findStaffProfileByUserId(userId: number): Promise<StaffProfile | null> {
         const [rows] = await this.db.execute(
-            `SELECT UserId, Status, MfaEnrolledAt, DisabledByStaffUserId, DisabledReason, DisabledAt,
-                    CreatedAt, UpdatedAt
-             FROM StaffProfiles
-             WHERE UserId = ?`,
+            `SELECT UserId, Status, MfaEnrolledAt, DisabledByStaffUserId, DisabledReason, DisabledAt, CreatedAt, UpdatedAt FROM StaffProfiles WHERE UserId = ?`,
             [userId]
         );
 
@@ -125,34 +120,17 @@ export class UserRepositoryMysql implements UserRepository {
     }
 
     async updateEmail(userId: number, mail: string): Promise<void> {
-        await this.db.execute(
-            `UPDATE Users
-             SET Mail = ?
-             WHERE Id = ?`,
-            [mail, userId]
-        );
+        await this.db.execute(`UPDATE Users SET Mail = ? WHERE Id = ?`, [mail, userId]);
     }
 
     async isEmailTaken(mail: string): Promise<boolean> {
-        const [rows] = await this.db.execute(
-            `SELECT 1 AS One
-             FROM Users
-             WHERE Mail = ?
-             LIMIT 1`,
-            [mail]
-        );
+        const [rows] = await this.db.execute(`SELECT 1 AS One FROM Users WHERE Mail = ? LIMIT 1`, [mail]);
 
         return firstOrNull(rows as ExistsRow[]) !== null;
     }
 
     async isUsernameTaken(username: string): Promise<boolean> {
-        const [rows] = await this.db.execute(
-            `SELECT 1 AS One
-             FROM Users
-             WHERE Username = ?
-             LIMIT 1`,
-            [username]
-        );
+        const [rows] = await this.db.execute(`SELECT 1 AS One FROM Users WHERE Username = ? LIMIT 1`, [username]);
 
         return firstOrNull(rows as ExistsRow[]) !== null;
     }
@@ -168,24 +146,19 @@ export class UserRepositoryMysql implements UserRepository {
             await conn.beginTransaction();
 
             const [result] = await conn.execute<ResultSetHeader>(
-                `INSERT INTO Users (Mail, Username, Password, AccountType, Status)
-                 VALUES (?, ?, ?, ?, ?)`,
+                `INSERT INTO Users (Mail, Username, Password, AccountType, Status) VALUES (?, ?, ?, ?, ?)`,
                 [input.mail, input.username, input.passwordHash, input.accountType, legacyStatus]
             );
             insertId = Number(result.insertId);
 
             if (input.accountType === 'community') {
                 await conn.execute(
-                    `INSERT INTO CommunityProfiles (UserId, AccountType, Status)
-                     VALUES (?, 'community', ?)
-                     ON DUPLICATE KEY UPDATE Status = ?`,
+                    `INSERT INTO CommunityProfiles (UserId, AccountType, Status) VALUES (?, 'community', ?) ON DUPLICATE KEY UPDATE Status = ?`,
                     [insertId, profileStatus, profileStatus]
                 );
             } else {
                 await conn.execute(
-                    `INSERT INTO StaffProfiles (UserId, AccountType, Status)
-                     VALUES (?, 'staff', ?)
-                     ON DUPLICATE KEY UPDATE Status = ?`,
+                    `INSERT INTO StaffProfiles (UserId, AccountType, Status) VALUES (?, 'staff', ?) ON DUPLICATE KEY UPDATE Status = ?`,
                     [insertId, profileStatus, profileStatus]
                 );
             }
@@ -211,17 +184,13 @@ export class UserRepositoryMysql implements UserRepository {
         try {
             await conn.beginTransaction();
             const [profileResult] = await conn.execute<ResultSetHeader>(
-                `UPDATE CommunityProfiles
-                 SET Status = 'active'
-                 WHERE UserId = ? AND Status = 'inactive'`,
+                `UPDATE CommunityProfiles SET Status = 'active' WHERE UserId = ? AND Status = 'inactive'`,
                 [userId]
             );
 
             if (profileResult.affectedRows > 0) {
                 await conn.execute(
-                    `UPDATE Users
-                     SET Status = 'active', EmailValidatedAt = CURRENT_TIMESTAMP
-                     WHERE Id = ? AND AccountType = 'community'`,
+                    `UPDATE Users SET Status = 'active', EmailValidatedAt = CURRENT_TIMESTAMP WHERE Id = ? AND AccountType = 'community'`,
                     [userId]
                 );
             }
@@ -237,21 +206,11 @@ export class UserRepositoryMysql implements UserRepository {
     }
 
     async updatePassword(userId: number, passwordHash: string): Promise<void> {
-        await this.db.execute(
-            `UPDATE Users
-             SET Password = ?
-             WHERE Id = ?`,
-            [passwordHash, userId]
-        );
+        await this.db.execute(`UPDATE Users SET Password = ? WHERE Id = ?`, [passwordHash, userId]);
     }
 
     async updateUsername(userId: number, username: string): Promise<void> {
-        await this.db.execute(
-            `UPDATE Users
-             SET Username = ?
-             WHERE Id = ?`,
-            [username, userId]
-        );
+        await this.db.execute(`UPDATE Users SET Username = ? WHERE Id = ?`, [username, userId]);
     }
 }
 

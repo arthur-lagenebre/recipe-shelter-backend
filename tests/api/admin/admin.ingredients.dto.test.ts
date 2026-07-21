@@ -1,18 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import {
-    parseAdminIngredientActionReasonBody,
-    parseAdminIngredientAliasIdParam,
-    parseAdminIngredientAliasListFilters,
-    parseAdminIngredientIdParam,
-    parseAdminIngredientListFilters,
-    parseCreateAdminIngredientAliasBody,
-    parseCreateAdminIngredientBody,
-    parseMergeAdminIngredientBody,
-    parseUpdateAdminIngredientAliasBody,
-    parseUpdateAdminIngredientBody
-} from '../../../src/api/admin/admin.ingredients.dto.js';
+import { parseAdminIngredientActionReasonBody, parseAdminIngredientAliasIdParam, parseAdminIngredientAliasListFilters, parseAdminIngredientIdParam, parseAdminIngredientListFilters, parseCreateAdminIngredientAliasBody, parseCreateAdminIngredientBody, parseMergeAdminIngredientBody, parseUpdateAdminIngredientAliasBody, parseUpdateAdminIngredientBody } from '../../../src/api/admin/admin.ingredients.dto.js';
 import { HttpError } from '../../../src/utils/errors.js';
 
 describe('admin ingredients DTO validation', () => {

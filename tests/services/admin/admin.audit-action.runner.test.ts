@@ -124,7 +124,8 @@ function createRunner(connection: PoolConnection, events: string[], auditError?:
                 assert.equal(input.eventType, 'users.ban');
                 events.push('audit');
 
-                if (auditError) throw auditError;
+                if (auditError)
+                    throw auditError;
 
                 return { id: 1, correlationId: input.correlationId! };
             }

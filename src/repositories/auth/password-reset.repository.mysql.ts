@@ -15,31 +15,20 @@ export class PasswordResetRepositoryMysql implements PasswordResetRepository {
 
     async create(input: PasswordResetCreateInput): Promise<void> {
         await this.db.execute(
-            `INSERT INTO PasswordResets (UserId, TokenHash, ExpiresAt)
-            VALUES (?, ?, DATE_ADD(NOW(), INTERVAL ? MINUTE))`,
+            `INSERT INTO PasswordResets (UserId, TokenHash, ExpiresAt) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL ? MINUTE))`,
             [input.userId, input.tokenHash, input.expiresInMinutes]
         );
     }
 
     async invalidateAllForUser(userId: number): Promise<void> {
-        await this.db.execute(
-            `UPDATE PasswordResets
-            SET UsedAt = NOW()
-            WHERE UserId = ?
-                AND UsedAt IS NULL
-                AND ExpiresAt > NOW()`,
-            [userId]
-        );
+        await this.db.execute(`UPDATE PasswordResets SET UsedAt = NOW() WHERE UserId = ? AND UsedAt IS NULL AND ExpiresAt > NOW()`, [
+            userId
+        ]);
     }
 
     async findValidByTokenHash(tokenHash: string): Promise<PasswordResetRow | null> {
         const [rows] = await this.db.execute(
-            `SELECT Id, UserId, TokenHash, ExpiresAt, UsedAt, CreatedAt
-            FROM PasswordResets
-            WHERE TokenHash = ?
-                AND UsedAt IS NULL
-                AND ExpiresAt > NOW()
-            LIMIT 1`,
+            `SELECT Id, UserId, TokenHash, ExpiresAt, UsedAt, CreatedAt FROM PasswordResets WHERE TokenHash = ? AND UsedAt IS NULL AND ExpiresAt > NOW() LIMIT 1`,
             [tokenHash]
         );
 
@@ -49,11 +38,6 @@ export class PasswordResetRepositoryMysql implements PasswordResetRepository {
     }
 
     async markUsed(id: number): Promise<void> {
-        await this.db.execute(
-            `UPDATE PasswordResets
-            SET UsedAt = NOW()
-            WHERE Id = ?`,
-            [id]
-        );
+        await this.db.execute(`UPDATE PasswordResets SET UsedAt = NOW() WHERE Id = ?`, [id]);
     }
 }

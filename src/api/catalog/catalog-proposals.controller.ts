@@ -23,6 +23,16 @@ export function createCatalogProposalsController(catalogProposalService: Catalog
             });
 
             res.status(201).json(proposal);
+        }),
+
+        createEquipmentProposal: asyncHandler(async (req, res) => {
+            const body = parseCreateCatalogProposalBody(req.body);
+            const proposal = await catalogProposalService.createEquipmentProposal({
+                authorUserId: req.auth!.userId,
+                ...body
+            });
+
+            res.status(201).json(proposal);
         })
     };
 }

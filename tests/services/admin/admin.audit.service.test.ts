@@ -6,11 +6,7 @@ import { ADMIN_AUDIT_FAILURE_POLICY, AdminAuditService } from '../../../src/serv
 import { HttpError } from '../../../src/utils/errors.js';
 import { logger } from '../../../src/utils/logger.js';
 
-import type {
-    AdminAuditRepository,
-    AdminAuditSnapshot,
-    CreateAdminAuditLogInput
-} from '../../../src/repositories/admin/admin.audit.repository.interface.js';
+import type { AdminAuditRepository, AdminAuditSnapshot, CreateAdminAuditLogInput } from '../../../src/repositories/admin/admin.audit.repository.interface.js';
 import type { AdminAuditEventType } from '../../../src/services/admin/admin.audit.events.js';
 
 const correlationId = '00000000-0000-4000-8000-000000000802';
@@ -21,7 +17,8 @@ class FakeAdminAuditRepository implements AdminAuditRepository {
 
     async create(input: CreateAdminAuditLogInput): Promise<number> {
         this.inputs.push(input);
-        if (this.error) throw this.error;
+        if (this.error)
+            throw this.error;
 
         return 82;
     }

@@ -1,9 +1,11 @@
 import { getAdminAuditRequestContext } from './admin.audit.context.js';
 import {
+    parseAcceptEquipmentCatalogProposalBody,
     parseAcceptIngredientCatalogProposalBody,
     parseAcceptTagCatalogProposalBody,
     parseAdminCatalogProposalIdParam,
     parseAdminCatalogProposalListFilters,
+    parseAssociateEquipmentCatalogProposalBody,
     parseAssociateIngredientCatalogProposalBody,
     parseAssociateTagCatalogProposalBody,
     parseConvertCatalogProposalToAliasBody,
@@ -42,6 +44,14 @@ export function createAdminCatalogProposalsController(proposals: AdminCatalogPro
             res.status(201).json(proposal);
         }),
 
+        acceptEquipment: asyncHandler(async (req, res) => {
+            const proposalId = parseAdminCatalogProposalIdParam(req.params.id);
+            const input = parseAcceptEquipmentCatalogProposalBody(req.body);
+            const proposal = await proposals.acceptEquipment(proposalId, input, req.auth!.userId, getAdminAuditRequestContext(req));
+
+            res.status(201).json(proposal);
+        }),
+
         reject: asyncHandler(async (req, res) => {
             const proposalId = parseAdminCatalogProposalIdParam(req.params.id);
             const reason = parseRejectCatalogProposalBody(req.body);
@@ -62,6 +72,14 @@ export function createAdminCatalogProposalsController(proposals: AdminCatalogPro
             const proposalId = parseAdminCatalogProposalIdParam(req.params.id);
             const input = parseAssociateIngredientCatalogProposalBody(req.body);
             const proposal = await proposals.associateIngredient(proposalId, input, req.auth!.userId, getAdminAuditRequestContext(req));
+
+            res.status(200).json(proposal);
+        }),
+
+        associateEquipment: asyncHandler(async (req, res) => {
+            const proposalId = parseAdminCatalogProposalIdParam(req.params.id);
+            const input = parseAssociateEquipmentCatalogProposalBody(req.body);
+            const proposal = await proposals.associateEquipment(proposalId, input, req.auth!.userId, getAdminAuditRequestContext(req));
 
             res.status(200).json(proposal);
         }),

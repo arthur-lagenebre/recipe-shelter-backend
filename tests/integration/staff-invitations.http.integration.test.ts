@@ -9,23 +9,14 @@ import { createStaffInvitationsController } from '../../src/api/admin/admin.staf
 import { createStaffInvitationsRouter } from '../../src/api/admin/admin.staff-invitations.routes.js';
 import { EnforceAuthorizationPolicies } from '../../src/middlewares/authorization.js';
 import { errorHandler } from '../../src/middlewares/error-handler.js';
-import {
-    configureAuthRbacRepository,
-    configureAuthSessionRepository,
-    configureAuthUserRepository,
-    requireStaffAuth
-} from '../../src/middlewares/require-auth.js';
+import { configureAuthRbacRepository, configureAuthSessionRepository, configureAuthUserRepository, requireStaffAuth } from '../../src/middlewares/require-auth.js';
 import { PERMISSIONS } from '../../src/security/permissions.js';
 import { StaffInvitationService } from '../../src/services/admin/admin.staff-invitation.service.js';
 import { TestAdminAuditRecorder } from '../helpers/admin-audit.js';
 import { TestSessionRepository } from '../helpers/auth-session.js';
 import { startHttpTestServer } from '../helpers/http-test-server.js';
 
-import type {
-    CreateStaffInvitationInput,
-    CreateStaffInvitationResult,
-    StaffInvitationRepository
-} from '../../src/repositories/admin/admin.staff-invitation.repository.interface.js';
+import type { CreateStaffInvitationInput, CreateStaffInvitationResult, StaffInvitationRepository } from '../../src/repositories/admin/admin.staff-invitation.repository.interface.js';
 import type { User } from '../../src/repositories/users/user.types.js';
 import type { StaffInvitationMailInput } from '../../src/services/mail/mail.types.js';
 import type { HttpTestServer } from '../helpers/http-test-server.js';

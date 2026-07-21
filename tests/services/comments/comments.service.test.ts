@@ -49,7 +49,8 @@ class FakeCommentRepository implements CommentRepository {
     async create(input: CreateCommentInput): Promise<PublicComment> {
         this.createdInput = input;
 
-        if (this.createResult === null) return null as never;
+        if (this.createResult === null)
+            return null as never;
 
         return {
             ...basePublicComment,
@@ -68,7 +69,8 @@ class FakeCommentRepository implements CommentRepository {
     async update(input: UpdateCommentInput): Promise<PublicComment | null> {
         this.updatedInput = input;
 
-        if (this.comment?.userId !== input.userId) return null;
+        if (this.comment?.userId !== input.userId)
+            return null;
 
         return {
             ...basePublicComment,

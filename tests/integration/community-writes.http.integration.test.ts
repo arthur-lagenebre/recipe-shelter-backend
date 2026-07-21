@@ -10,11 +10,7 @@ import { createFavoritesRouter } from '../../src/api/favorites/favorites.routes.
 import { createRecipesRouter } from '../../src/api/recipes/recipes.routes.js';
 import { errorHandler } from '../../src/middlewares/error-handler.js';
 import { notFound } from '../../src/middlewares/not-found.js';
-import {
-    configureAuthRbacRepository,
-    configureAuthSessionRepository,
-    configureAuthUserRepository
-} from '../../src/middlewares/require-auth.js';
+import { configureAuthRbacRepository, configureAuthSessionRepository, configureAuthUserRepository } from '../../src/middlewares/require-auth.js';
 import { PERMISSIONS } from '../../src/security/permissions.js';
 import { TestSessionRepository } from '../helpers/auth-session.js';
 import { startHttpTestServer } from '../helpers/http-test-server.js';
@@ -94,7 +90,8 @@ describe('community write HTTP boundary', () => {
         };
         const catalogProposalsController = {
             createTagProposal: unexpectedControllerCall,
-            createIngredientProposal: unexpectedControllerCall
+            createIngredientProposal: unexpectedControllerCall,
+            createEquipmentProposal: unexpectedControllerCall
         };
         const favoritesController = {
             createFavorite: unexpectedControllerCall,
@@ -104,8 +101,10 @@ describe('community write HTTP boundary', () => {
 
         configureAuthUserRepository({
             async findById(id) {
-                if (id === staff.id) return staff;
-                if (id === communityUser.id) return communityUser;
+                if (id === staff.id)
+                    return staff;
+                if (id === communityUser.id)
+                    return communityUser;
                 return null;
             }
         });

@@ -22,11 +22,7 @@ export class FavoriteRepositoryMysql implements FavoriteRepository {
     ) {}
 
     async create(userId: number, recipeId: number): Promise<Favorite> {
-        await this.db.execute(
-            `INSERT INTO Favorites (UserId, RecipeId)
-             VALUES (?, ?)`,
-            [userId, recipeId]
-        );
+        await this.db.execute(`INSERT INTO Favorites (UserId, RecipeId) VALUES (?, ?)`, [userId, recipeId]);
 
         const created = await this.findById(userId, recipeId);
 
@@ -36,23 +32,20 @@ export class FavoriteRepositoryMysql implements FavoriteRepository {
     }
 
     async findById(userId: number, recipeId: number): Promise<Favorite | null> {
-        const [rows] = await this.db.execute(
-            `SELECT UserId, RecipeId, CreatedAt
-             FROM Favorites
-             WHERE UserId = ? AND RecipeId = ?`,
-            [userId, recipeId]
-        );
+        const [rows] = await this.db.execute(`SELECT UserId, RecipeId, CreatedAt FROM Favorites WHERE UserId = ? AND RecipeId = ?`, [
+            userId,
+            recipeId
+        ]);
 
         const row = firstOrNull(rows as FavoriteRow[]);
         return row ? mapFavorite(row) : null;
     }
 
     async delete(userId: number, recipeId: number): Promise<boolean> {
-        const [result] = await this.db.execute<ResultSetHeader>(
-            `DELETE FROM Favorites
-             WHERE UserId = ? AND RecipeId = ?`,
-            [userId, recipeId]
-        );
+        const [result] = await this.db.execute<ResultSetHeader>(`DELETE FROM Favorites WHERE UserId = ? AND RecipeId = ?`, [
+            userId,
+            recipeId
+        ]);
 
         return result.affectedRows > 0;
     }
@@ -61,10 +54,7 @@ export class FavoriteRepositoryMysql implements FavoriteRepository {
         const limitOffsetClause = formatLimitOffsetClause(pagination);
 
         const [countRows] = await this.db.execute(
-            `SELECT COUNT(*) AS Count
-             FROM Favorites AS f
-             INNER JOIN Recipes AS r ON r.Id = f.RecipeId
-             WHERE r.Status = 'published' AND f.UserId = ?`,
+            `SELECT COUNT(*) AS Count FROM Favorites AS f INNER JOIN Recipes AS r ON r.Id = f.RecipeId WHERE r.Status = 'published' AND f.UserId = ?`,
             [userId]
         );
 

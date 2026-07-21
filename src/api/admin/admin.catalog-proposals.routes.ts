@@ -10,9 +10,11 @@ export type AdminCatalogProposalsController = {
     list: RequestHandler;
     acceptTag: RequestHandler;
     acceptIngredient: RequestHandler;
+    acceptEquipment: RequestHandler;
     reject: RequestHandler;
     associateTag: RequestHandler;
     associateIngredient: RequestHandler;
+    associateEquipment: RequestHandler;
     convertIngredientToAlias: RequestHandler;
 };
 
@@ -34,6 +36,13 @@ export function createAdminCatalogProposalsRouter(controller: AdminCatalogPropos
         RequirePermission(PERMISSIONS.ingredientCreate),
         controller.acceptIngredient
     );
+    router.post(
+        '/equipments/:id/accept',
+        requireStaffAuth,
+        RequirePermission(PERMISSIONS.catalogManage),
+        RequirePermission(PERMISSIONS.equipmentCreate),
+        controller.acceptEquipment
+    );
     router.post('/:id/reject', requireStaffAuth, RequirePermission(PERMISSIONS.catalogManage), controller.reject);
     router.post('/tags/:id/associate', requireStaffAuth, RequirePermission(PERMISSIONS.catalogManage), controller.associateTag);
     router.post(
@@ -42,6 +51,7 @@ export function createAdminCatalogProposalsRouter(controller: AdminCatalogPropos
         RequirePermission(PERMISSIONS.catalogManage),
         controller.associateIngredient
     );
+    router.post('/equipments/:id/associate', requireStaffAuth, RequirePermission(PERMISSIONS.catalogManage), controller.associateEquipment);
     router.post(
         '/ingredients/:id/alias',
         requireStaffAuth,

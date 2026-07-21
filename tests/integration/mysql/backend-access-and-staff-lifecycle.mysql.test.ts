@@ -18,12 +18,7 @@ import { createStaffAuthRouter } from '../../../src/api/auth/auth.routes.js';
 import { createHealthRouter } from '../../../src/api/health/health.routes.js';
 import { EnforceAuthorizationPolicies } from '../../../src/middlewares/authorization.js';
 import { errorHandler } from '../../../src/middlewares/error-handler.js';
-import {
-    configureAuthRbacRepository,
-    configureAuthSessionRepository,
-    configureAuthUserRepository,
-    requireStaffAuth
-} from '../../../src/middlewares/require-auth.js';
+import { configureAuthRbacRepository, configureAuthSessionRepository, configureAuthUserRepository, requireStaffAuth } from '../../../src/middlewares/require-auth.js';
 import { AdminStaffRepositoryMysql } from '../../../src/repositories/admin/admin.staff.repository.mysql.js';
 import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin.audit.repository.mysql.js';
 import { StaffInvitationRepositoryMysql } from '../../../src/repositories/admin/admin.staff-invitation.repository.mysql.js';
@@ -90,7 +85,8 @@ const EXPECTED_PERMISSIONS_BY_ROLE: Record<SeededRoleCode, readonly PermissionCo
         PERMISSIONS.ingredientUpdate,
         PERMISSIONS.ingredientDeprecate,
         PERMISSIONS.ingredientMerge,
-        PERMISSIONS.ingredientAliasManage
+        PERMISSIONS.ingredientAliasManage,
+        PERMISSIONS.equipmentCreate
     ],
     SuperAdmin: Object.values(PERMISSIONS)
 };
@@ -98,6 +94,7 @@ const EXPECTED_PERMISSIONS_BY_ROLE: Record<SeededRoleCode, readonly PermissionCo
 const ADDITIONAL_ROUTE_PERMISSIONS: Readonly<Record<string, readonly PermissionCode[]>> = {
     '/catalog-proposals/tags/:id/accept': [PERMISSIONS.tagCreate],
     '/catalog-proposals/ingredients/:id/accept': [PERMISSIONS.ingredientCreate],
+    '/catalog-proposals/equipments/:id/accept': [PERMISSIONS.equipmentCreate],
     '/catalog-proposals/ingredients/:id/alias': [PERMISSIONS.ingredientAliasManage]
 };
 
@@ -181,12 +178,7 @@ describe(
                 roleCookies.set(roleCode, (await issueStaffSession(staffUserId)).cookie);
             }
             actorCookie = roleCookies.get('SuperAdmin')!;
-            staleActorCookie = (
-                await issueStaffSession(
-                    STAFF_FIXTURE_IDS.SuperAdmin,
-                    new Date(Date.now() - env.auth.staffMfa.reauthenticationMaxAgeMs - 60_000)
-                )
-            ).cookie;
+            staleActorCookie = (await issueStaffSession(STAFF_FIXTURE_IDS.SuperAdmin, new Date(Date.now() - env.auth.staffMfa.reauthenticationMaxAgeMs - 60_000))).cookie;
 
             await createActiveStaffFixture(NO_ROLE_STAFF_ID, null);
             const noRoleUser = await requireUser(NO_ROLE_STAFF_ID);
@@ -207,14 +199,7 @@ describe(
             const disabledSession = await issueStaffSession(DISABLED_STAFF_ID);
             disabledCookie = disabledSession.cookie;
             disabledSessionId = disabledSession.id;
-            await pool.execute(
-                `UPDATE StaffProfiles
-       SET Status = 'disabled', DisabledByStaffUserId = ?,
-           DisabledReason = 'Security fixture disabled for integration coverage.',
-           DisabledAt = CURRENT_TIMESTAMP
-       WHERE UserId = ?`,
-                [STAFF_FIXTURE_IDS.SuperAdmin, DISABLED_STAFF_ID]
-            );
+            await pool.execute(`UPDATE StaffProfiles SET Status = 'disabled', DisabledByStaffUserId = ?, DisabledReason = 'Security fixture disabled for integration coverage.', DisabledAt = CURRENT_TIMESTAMP WHERE UserId = ?`, [STAFF_FIXTURE_IDS.SuperAdmin, DISABLED_STAFF_ID]);
 
             await createActiveStaffFixture(ROLE_REVOKED_STAFF_ID, 'RecipeModerator');
             const roleRevokedSession = await issueStaffSession(ROLE_REVOKED_STAFF_ID);
@@ -222,12 +207,7 @@ describe(
             roleRevokedSessionId = roleRevokedSession.id;
             await pool.execute(`DELETE FROM StaffRoles WHERE StaffUserId = ?`, [ROLE_REVOKED_STAFF_ID]);
 
-            await pool.execute(
-                `INSERT INTO Users (Id, Mail, Username, Password, AccountType, Status, EmailValidatedAt)
-       VALUES (?, 'community-matrix@test.invalid', 'community-matrix', 'test-password-hash',
-               'community', 'active', CURRENT_TIMESTAMP)`,
-                [COMMUNITY_USER_ID]
-            );
+            await pool.execute(`INSERT INTO Users (Id, Mail, Username, Password, AccountType, Status, EmailValidatedAt) VALUES (?, 'community-matrix@test.invalid', 'community-matrix', 'test-password-hash', 'community', 'active', CURRENT_TIMESTAMP)`, [COMMUNITY_USER_ID]);
             const community = await requireUser(COMMUNITY_USER_ID);
             const communitySessionId = nextUuid(COMMUNITY_USER_ID);
             await sessions.createCommunitySession({
@@ -242,9 +222,12 @@ describe(
         });
 
         after(async () => {
-            if (matrixServer) await matrixServer.close();
-            if (lifecycleServer) await lifecycleServer.close();
-            if (pool) await pool.end();
+            if (matrixServer)
+                await matrixServer.close();
+            if (lifecycleServer)
+                await lifecycleServer.close();
+            if (pool)
+                await pool.end();
             if (connection) {
                 await connection.query(`DROP DATABASE IF EXISTS \`${requireBackendIntegrationDatabaseName()}\``);
                 await connection.end();
@@ -263,7 +246,8 @@ describe(
                     const response = await callEndpoint(matrixServer, endpoint, roleCookies.get(roleCode)!);
                     const scenario = `${roleCode} ${endpoint.method} ${endpoint.path}`;
                     assert.equal(response.status, expectedAllowed ? 204 : 403, scenario);
-                    if (!expectedAllowed) assert.equal(await responseErrorCode(response), 'AUTH_PERMISSION_REQUIRED', scenario);
+                    if (!expectedAllowed)
+                        assert.equal(await responseErrorCode(response), 'AUTH_PERMISSION_REQUIRED', scenario);
                 }
             }
         });
@@ -292,11 +276,7 @@ describe(
                 assert.equal(await responseErrorCode(response), 'AUTH_BAD_TOKEN', label);
             }
 
-            const [rows] = await pool.execute<RowDataPacket[]>(
-                `SELECT Id, RevocationType, RevokedByStaffUserId
-       FROM StaffSessions WHERE Id IN (?, ?) ORDER BY Id`,
-                [disabledSessionId, roleRevokedSessionId]
-            );
+            const [rows] = await pool.execute<RowDataPacket[]>(`SELECT Id, RevocationType, RevokedByStaffUserId FROM StaffSessions WHERE Id IN (?, ?) ORDER BY Id`, [disabledSessionId, roleRevokedSessionId]);
             const actual = rows.map((row) => ({
                 id: row.Id as string,
                 revocationType: row.RevocationType as string,
@@ -335,10 +315,7 @@ describe(
                 roles: Array<{ code: string }>;
             };
             assert.equal(invitation.status, 'invited');
-            assert.deepEqual(
-                invitation.roles.map((role) => role.code),
-                ['RecipeModerator']
-            );
+            assert.deepEqual(invitation.roles.map((role) => role.code), ['RecipeModerator']);
             assert.equal(invitationMessages.length, 1);
             assert.match(invitationMessages[0]?.invitationUrl ?? '', /token=integration-invitation-token$/);
 
@@ -455,14 +432,8 @@ describe(
             assert.equal(revokedRoleCookieAccess.status, 401);
             assert.equal(await responseErrorCode(revokedRoleCookieAccess), 'AUTH_BAD_TOKEN');
 
-            const [lastRoleRevocations] = await pool.execute<RowDataPacket[]>(
-                `SELECT RevocationType FROM StaffSessions WHERE Id IN (?, ?) ORDER BY Id`,
-                [targetSessionOne.id, targetSessionTwo.id]
-            );
-            assert.deepEqual(
-                lastRoleRevocations.map((row) => row.RevocationType),
-                ['roles_removed', 'roles_removed']
-            );
+            const [lastRoleRevocations] = await pool.execute<RowDataPacket[]>(`SELECT RevocationType FROM StaffSessions WHERE Id IN (?, ?) ORDER BY Id`, [targetSessionOne.id, targetSessionTwo.id]);
+            assert.deepEqual(lastRoleRevocations.map((row) => row.RevocationType), ['roles_removed', 'roles_removed']);
 
             const restoreRecipeModerator = await lifecycleRequest(`/api/v1/admin/staff/${invitation.staffUserId}/roles/RecipeModerator`, {
                 method: 'POST',
@@ -581,22 +552,7 @@ describe(
             assert.equal(await sessions.isStaffSessionActive(postEnableSessionTwo.id, invitation.staffUserId), false);
 
             const [auditRows] = await pool.execute<RowDataPacket[]>(`SELECT Action FROM AdminAuditLogs ORDER BY Id`);
-            assert.deepEqual(
-                auditRows.map((row) => row.Action),
-                [
-                    'staff.invitations.create',
-                    'staff.read',
-                    'staff.roles.grant',
-                    'staff.roles.revoke',
-                    'staff.roles.revoke',
-                    'staff.roles.grant',
-                    'staff.disable',
-                    'staff.enable',
-                    'staff.sessions.list',
-                    'staff.sessions.revoke',
-                    'staff.sessions.revoke'
-                ]
-            );
+            assert.deepEqual(auditRows.map((row) => row.Action), [ 'staff.invitations.create', 'staff.read', 'staff.roles.grant', 'staff.roles.revoke', 'staff.roles.revoke', 'staff.roles.grant', 'staff.disable', 'staff.enable', 'staff.sessions.list', 'staff.sessions.revoke', 'staff.sessions.revoke' ]);
         });
 
         it('returns stable staff business errors without mutation or audit side effects', async () => {
@@ -665,34 +621,16 @@ describe(
             });
             assert.equal(invalidReason.status, 400);
             assert.equal(await responseErrorCode(invalidReason), 'STAFF_ROLE_GRANT_REASON_TOO_SHORT');
-            assert.deepEqual(
-                (await staff.findById(target.id))?.roles.map((role) => role.code),
-                ['RecipeModerator']
-            );
+            assert.deepEqual((await staff.findById(target.id))?.roles.map((role) => role.code), ['RecipeModerator']);
             assert.equal(await countAuditRows(), auditCountBefore);
         });
 
         async function createActiveStaffFixture(staffUserId: number, roleCode: SeededRoleCode | null): Promise<void> {
-            await pool.execute(
-                `INSERT INTO Users (Id, Mail, Username, Password, AccountType, Status, EmailValidatedAt)
-       VALUES (?, ?, ?, 'test-password-hash', 'staff', 'inactive', CURRENT_TIMESTAMP)`,
-                [staffUserId, `staff-${staffUserId}@test.invalid`, `staff-${staffUserId}`]
-            );
-            await pool.execute(
-                `INSERT INTO StaffWebAuthnCredentials
-         (CredentialId, StaffUserId, PublicKey, SignatureCounter, Transports,
-          DeviceType, BackedUp, Aaguid)
-       VALUES (?, ?, 0x0102, 0, JSON_ARRAY('internal'), 'singleDevice', FALSE,
-               '00000000-0000-0000-0000-000000000000')`,
-                [`credential-${staffUserId}`, staffUserId]
-            );
+            await pool.execute(`INSERT INTO Users (Id, Mail, Username, Password, AccountType, Status, EmailValidatedAt) VALUES (?, ?, ?, 'test-password-hash', 'staff', 'inactive', CURRENT_TIMESTAMP)`, [staffUserId, `staff-${staffUserId}@test.invalid`, `staff-${staffUserId}`]);
+            await pool.execute(`INSERT INTO StaffWebAuthnCredentials (CredentialId, StaffUserId, PublicKey, SignatureCounter, Transports, DeviceType, BackedUp, Aaguid) VALUES (?, ?, 0x0102, 0, JSON_ARRAY('internal'), 'singleDevice', FALSE, '00000000-0000-0000-0000-000000000000')`, [`credential-${staffUserId}`, staffUserId]);
             await pool.execute(`UPDATE StaffProfiles SET MfaEnrolledAt = CURRENT_TIMESTAMP WHERE UserId = ?`, [staffUserId]);
             if (roleCode) {
-                await pool.execute(
-                    `INSERT INTO StaffRoles (StaffUserId, RoleId)
-         SELECT ?, Id FROM Roles WHERE Code = ?`,
-                    [staffUserId, roleCode]
-                );
+                await pool.execute(`INSERT INTO StaffRoles (StaffUserId, RoleId) SELECT ?, Id FROM Roles WHERE Code = ?`, [staffUserId, roleCode]);
             }
             await pool.execute(`UPDATE Users SET Status = 'active' WHERE Id = ?`, [staffUserId]);
         }
@@ -750,9 +688,11 @@ describe(
                     list: endpointHandler,
                     acceptTag: endpointHandler,
                     acceptIngredient: endpointHandler,
+                    acceptEquipment: endpointHandler,
                     reject: endpointHandler,
                     associateTag: endpointHandler,
                     associateIngredient: endpointHandler,
+                    associateEquipment: endpointHandler,
                     convertIngredientToAlias: endpointHandler
                 })
             );
@@ -850,12 +790,16 @@ describe(
 );
 
 function requireBackendIntegrationDatabaseName(): string {
-    if (!/^[a-zA-Z0-9_]+$/.test(baseTestDatabaseName)) throw new Error('TEST_DB_NAME must contain only letters, numbers and underscores');
-    if (!baseTestDatabaseName.toLowerCase().includes('test')) throw new Error('TEST_DB_NAME must contain "test"');
-    if (baseTestDatabaseName === env.db.name) throw new Error('TEST_DB_NAME must be different from DB_NAME');
+    if (!/^[a-zA-Z0-9_]+$/.test(baseTestDatabaseName))
+        throw new Error('TEST_DB_NAME must contain only letters, numbers and underscores');
+    if (!baseTestDatabaseName.toLowerCase().includes('test'))
+        throw new Error('TEST_DB_NAME must contain "test"');
+    if (baseTestDatabaseName === env.db.name)
+        throw new Error('TEST_DB_NAME must be different from DB_NAME');
 
     const databaseName = `${baseTestDatabaseName}_backend_access`;
-    if (databaseName.length > 64) throw new Error('TEST_DB_NAME is too long for the backend access integration database suffix');
+    if (databaseName.length > 64)
+        throw new Error('TEST_DB_NAME is too long for the backend access integration database suffix');
     return databaseName;
 }
 

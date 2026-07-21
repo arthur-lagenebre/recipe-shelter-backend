@@ -22,13 +22,7 @@ import type { Comment, CreateCommentInput, PublicComment, UpdateCommentInput } f
 import type { FavoriteRepository } from '../../src/repositories/favorite/favorite.repository.interface.js';
 import type { Favorite } from '../../src/repositories/favorite/favorite.types.js';
 import type { RecipeRepository } from '../../src/repositories/recipes/recipe.repository.interface.js';
-import type {
-    Recipe,
-    RecipeInput,
-    RecipeListItem,
-    RecipeSearchFilters,
-    UpdateRecipeInput
-} from '../../src/repositories/recipes/recipe.types.js';
+import type { Recipe, RecipeInput, RecipeListItem, RecipeSearchFilters, UpdateRecipeInput } from '../../src/repositories/recipes/recipe.types.js';
 import type { UserRepository } from '../../src/repositories/users/user.repository.interface.js';
 import type { User, UserWithPassword } from '../../src/repositories/users/user.types.js';
 import type { EmailValidationService } from '../../src/services/auth/email-validation.service.js';
@@ -160,7 +154,8 @@ class CriticalFlowRecipeRepository implements Partial<RecipeRepository> {
 
     async archive(id: number): Promise<boolean> {
         const recipe = this.recipes.get(id);
-        if (!recipe) return false;
+        if (!recipe)
+            return false;
 
         this.recipes.set(id, { ...recipe, status: 'archived', archivedAt: now, updatedAt: now });
         return true;
@@ -182,7 +177,8 @@ class CriticalFlowRecipeRepository implements Partial<RecipeRepository> {
 
     publish(id: number, adminUserId: number): boolean {
         const recipe = this.recipes.get(id);
-        if (!recipe) return false;
+        if (!recipe)
+            return false;
 
         this.recipes.set(id, {
             ...recipe,
@@ -197,7 +193,8 @@ class CriticalFlowRecipeRepository implements Partial<RecipeRepository> {
 
     reject(id: number, adminUserId: number, rejectionReason: string): boolean {
         const recipe = this.recipes.get(id);
-        if (!recipe) return false;
+        if (!recipe)
+            return false;
 
         this.recipes.set(id, {
             ...recipe,
@@ -212,7 +209,8 @@ class CriticalFlowRecipeRepository implements Partial<RecipeRepository> {
 
     private requireRecipe(id: number): Recipe {
         const recipe = this.recipes.get(id);
-        if (!recipe) throw new Error(`Recipe ${id} not found`);
+        if (!recipe)
+            throw new Error(`Recipe ${id} not found`);
 
         return recipe;
     }
@@ -294,7 +292,8 @@ class CriticalFlowCommentRepository implements CommentRepository {
 
     async update(input: UpdateCommentInput): Promise<PublicComment | null> {
         const current = this.comments.get(input.id);
-        if (!current || current.userId !== input.userId) return null;
+        if (!current || current.userId !== input.userId)
+            return null;
 
         const updated = { ...current, rating: input.rating, comment: input.comment, updatedAt: now };
         this.comments.set(updated.id, updated);
@@ -303,7 +302,8 @@ class CriticalFlowCommentRepository implements CommentRepository {
 
     async softDelete(id: number, userId: number): Promise<boolean> {
         const comment = this.comments.get(id);
-        if (!comment || comment.userId !== userId) return false;
+        if (!comment || comment.userId !== userId)
+            return false;
 
         this.comments.set(id, { ...comment, deletedAt: now, deletedByUserId: userId });
         return true;
@@ -367,8 +367,7 @@ describe('critical user journey E2E', () => {
                           moderatedByUserId: recipe.moderatedByUserId,
                           rejectionReason: recipe.rejectionReason,
                           archiveReason: null
-                      }
-                    : null;
+                      } : null;
             },
             async publish(id: number, adminUserId: number) {
                 return recipes.publish(id, adminUserId);

@@ -33,7 +33,8 @@ export const PERMISSIONS = {
     ingredientUpdate: 'ingredient.update',
     ingredientDeprecate: 'ingredient.deprecate',
     ingredientMerge: 'ingredient.merge',
-    ingredientAliasManage: 'ingredient.alias.manage'
+    ingredientAliasManage: 'ingredient.alias.manage',
+    equipmentCreate: 'equipment.create'
 } as const;
 
 export type PermissionCode = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

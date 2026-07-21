@@ -7,16 +7,7 @@ import { createPaginatedResult } from '../../../src/utils/pagination.js';
 import { testAdminAuditContext, TestAdminAuditRecorder } from '../../helpers/admin-audit.js';
 
 import type { AdminIngredientRepository } from '../../../src/repositories/admin/admin.ingredients.repository.interface.js';
-import type {
-    AdminIngredientAliasListFilters,
-    AdminIngredientAliasUpdateInput,
-    AdminIngredientAliasWriteInput,
-    AdminIngredientListFilters,
-    AdminIngredientMergeInput,
-    AdminIngredientMergeResult,
-    AdminIngredientUpdateInput,
-    AdminIngredientWriteInput
-} from '../../../src/repositories/admin/admin.ingredients.types.js';
+import type { AdminIngredientAliasListFilters, AdminIngredientAliasUpdateInput, AdminIngredientAliasWriteInput, AdminIngredientListFilters, AdminIngredientMergeInput, AdminIngredientMergeResult, AdminIngredientUpdateInput, AdminIngredientWriteInput } from '../../../src/repositories/admin/admin.ingredients.types.js';
 import type { Ingredient, IngredientAlias } from '../../../src/repositories/ingredients/ingredient.types.js';
 import type { PaginationOptions } from '../../../src/utils/pagination.js';
 
@@ -54,15 +45,8 @@ class FakeAdminIngredientRepository implements AdminIngredientRepository {
     deleteAliasConflict = false;
     mergedSourceTargets = new Set<number>([1]);
 
-    async find(
-        filters: AdminIngredientListFilters,
-        page: PaginationOptions
-    ): Promise<ReturnType<typeof createPaginatedResult<Ingredient>>> {
-        const matches = [...this.ingredients.values()].filter(
-            (ingredient) =>
-                (filters.status === undefined || ingredient.status === filters.status) &&
-                (filters.q === undefined || ingredient.name.toLowerCase().includes(filters.q.toLowerCase()))
-        );
+    async find(filters: AdminIngredientListFilters, page: PaginationOptions): Promise<ReturnType<typeof createPaginatedResult<Ingredient>>> {
+        const matches = [...this.ingredients.values()].filter((ingredient) => (filters.status === undefined || ingredient.status === filters.status) && (filters.q === undefined || ingredient.name.toLowerCase().includes(filters.q.toLowerCase())));
 
         return createPaginatedResult(matches.slice(page.offset, page.offset + page.limit).map(cloneIngredient), matches.length, page);
     }
@@ -80,7 +64,8 @@ class FakeAdminIngredientRepository implements AdminIngredientRepository {
     }
 
     async create(input: AdminIngredientWriteInput) {
-        if (this.createStatus) return { status: this.createStatus } as const;
+        if (this.createStatus)
+            return { status: this.createStatus } as const;
 
         const id = Math.max(...this.ingredients.keys()) + 1;
         const ingredient = createIngredient(id, input.name, input.normalizedName, input.slug);
@@ -89,7 +74,8 @@ class FakeAdminIngredientRepository implements AdminIngredientRepository {
     }
 
     async update(input: AdminIngredientUpdateInput) {
-        if (this.createStatus) return { status: this.createStatus } as const;
+        if (this.createStatus)
+            return { status: this.createStatus } as const;
 
         const current = this.ingredients.get(input.id)!;
         const ingredient = { ...current, ...input, updatedAt: new Date('2026-07-21T10:00:00.000Z') };
@@ -107,7 +93,8 @@ class FakeAdminIngredientRepository implements AdminIngredientRepository {
 
     async deprecate(ingredientId: number): Promise<boolean> {
         const ingredient = this.ingredients.get(ingredientId);
-        if (this.deprecateConflict || !ingredient || ingredient.status !== 'active') return false;
+        if (this.deprecateConflict || !ingredient || ingredient.status !== 'active')
+            return false;
 
         ingredient.status = 'deprecated';
         ingredient.updatedAt = new Date('2026-07-21T10:00:00.000Z');
@@ -116,8 +103,10 @@ class FakeAdminIngredientRepository implements AdminIngredientRepository {
 
     async restore(ingredientId: number) {
         const ingredient = this.ingredients.get(ingredientId);
-        if (this.restoreConflict || !ingredient || ingredient.status !== 'deprecated') return 'not_updated' as const;
-        if (this.createStatus === 'normalized_name_taken') return 'normalized_name_taken' as const;
+        if (this.restoreConflict || !ingredient || ingredient.status !== 'deprecated')
+            return 'not_updated' as const;
+        if (this.createStatus === 'normalized_name_taken')
+            return 'normalized_name_taken' as const;
 
         ingredient.status = 'active';
         ingredient.updatedAt = new Date('2026-07-21T10:00:00.000Z');
@@ -125,7 +114,8 @@ class FakeAdminIngredientRepository implements AdminIngredientRepository {
     }
 
     async merge(input: AdminIngredientMergeInput): Promise<AdminIngredientMergeResult> {
-        if (this.mergeResult.status !== 'merged') return { ...this.mergeResult };
+        if (this.mergeResult.status !== 'merged')
+            return { ...this.mergeResult };
 
         const { sourceIngredientId, targetIngredientId } = input;
         const source = this.ingredients.get(sourceIngredientId)!;
@@ -133,29 +123,23 @@ class FakeAdminIngredientRepository implements AdminIngredientRepository {
         source.mergedIntoIngredientId = targetIngredientId;
         source.updatedAt = new Date('2026-07-21T10:00:00.000Z');
         for (const ingredient of this.ingredients.values()) {
-            if (ingredient.mergedIntoIngredientId === sourceIngredientId) ingredient.mergedIntoIngredientId = targetIngredientId;
+            if (ingredient.mergedIntoIngredientId === sourceIngredientId)
+                ingredient.mergedIntoIngredientId = targetIngredientId;
         }
         for (const alias of this.aliases.values()) {
-            if (alias.ingredientId === sourceIngredientId) alias.ingredientId = targetIngredientId;
+            if (alias.ingredientId === sourceIngredientId)
+                alias.ingredientId = targetIngredientId;
         }
         if (this.mergeResult.sourceNameAliasResolution === 'created') {
             const id = Math.max(...this.aliases.keys()) + 1;
-            this.aliases.set(
-                id,
-                createAlias(id, targetIngredientId, input.sourceName, input.sourceNormalizedName, input.sourceNameLanguageCode)
-            );
+            this.aliases.set(id, createAlias(id, targetIngredientId, input.sourceName, input.sourceNormalizedName, input.sourceNameLanguageCode));
         }
 
         return { ...this.mergeResult };
     }
 
     async findAliases(ingredientId: number, filters: AdminIngredientAliasListFilters, page: PaginationOptions) {
-        const matches = [...this.aliases.values()].filter(
-            (alias) =>
-                alias.ingredientId === ingredientId &&
-                (filters.languageCode === undefined || alias.languageCode === filters.languageCode) &&
-                (filters.q === undefined || alias.name.toLowerCase().includes(filters.q.toLowerCase()))
-        );
+        const matches = [...this.aliases.values()].filter((alias) => alias.ingredientId === ingredientId && (filters.languageCode === undefined || alias.languageCode === filters.languageCode) && (filters.q === undefined || alias.name.toLowerCase().includes(filters.q.toLowerCase())));
 
         return createPaginatedResult(matches.slice(page.offset, page.offset + page.limit).map(cloneAlias), matches.length, page);
     }
@@ -167,18 +151,15 @@ class FakeAdminIngredientRepository implements AdminIngredientRepository {
 
     async isMergeSourceNameAlias(ingredientId: number, aliasId: number): Promise<boolean> {
         const alias = this.aliases.get(aliasId);
-        if (!alias || alias.ingredientId !== ingredientId || alias.languageCode !== 'fr') return false;
+        if (!alias || alias.ingredientId !== ingredientId || alias.languageCode !== 'fr')
+            return false;
 
-        return [...this.ingredients.values()].some(
-            (ingredient) =>
-                ingredient.status === 'merged' &&
-                ingredient.mergedIntoIngredientId === ingredientId &&
-                ingredient.normalizedName === alias.normalizedName
-        );
+        return [...this.ingredients.values()].some((ingredient) => ingredient.status === 'merged' && ingredient.mergedIntoIngredientId === ingredientId && ingredient.normalizedName === alias.normalizedName);
     }
 
     async createAlias(input: AdminIngredientAliasWriteInput) {
-        if (this.aliasTaken) return { status: 'alias_taken' as const };
+        if (this.aliasTaken)
+            return { status: 'alias_taken' as const };
 
         const id = Math.max(...this.aliases.keys()) + 1;
         const alias = createAlias(id, input.ingredientId, input.name, input.normalizedName, input.languageCode);
@@ -187,7 +168,8 @@ class FakeAdminIngredientRepository implements AdminIngredientRepository {
     }
 
     async updateAlias(input: AdminIngredientAliasUpdateInput) {
-        if (this.aliasTaken) return { status: 'alias_taken' as const };
+        if (this.aliasTaken)
+            return { status: 'alias_taken' as const };
 
         const current = this.aliases.get(input.id)!;
         const alias = { ...current, ...input, updatedAt: new Date('2026-07-21T10:00:00.000Z') };
@@ -337,49 +319,28 @@ describe('AdminIngredientService', () => {
     });
 
     it('blocks deprecation of canonical targets and ingredients carrying aliases', async () => {
-        await assert.rejects(
-            () => service.deprecate(1, 'Cible canonique encore utilisée.', actorUserId, testAdminAuditContext),
-            matchesHttpError(409, 'ADMIN_INGREDIENTS_DEPRECATE_CANONICAL_TARGET')
-        );
+        await assert.rejects(() => service.deprecate(1, 'Cible canonique encore utilisée.', actorUserId, testAdminAuditContext), matchesHttpError(409, 'ADMIN_INGREDIENTS_DEPRECATE_CANONICAL_TARGET'));
         repository.mergedSourceTargets.clear();
-        await assert.rejects(
-            () => service.deprecate(2, 'Alias encore rattaché à retirer.', actorUserId, testAdminAuditContext),
-            matchesHttpError(409, 'ADMIN_INGREDIENTS_DEPRECATE_HAS_ALIASES')
-        );
+        await assert.rejects(() => service.deprecate(2, 'Alias encore rattaché à retirer.', actorUserId, testAdminAuditContext), matchesHttpError(409, 'ADMIN_INGREDIENTS_DEPRECATE_HAS_ALIASES'));
         assert.equal(audit.inputs.length, 0);
     });
 
     it('rejects invalid and concurrent lifecycle transitions without audit', async () => {
-        await assert.rejects(
-            () => service.deprecate(3, 'Already outside the active catalogue.', actorUserId, testAdminAuditContext),
-            matchesHttpError(409, 'ADMIN_INGREDIENTS_DEPRECATE_INVALID_STATUS')
-        );
-        await assert.rejects(
-            () => service.restore(2, 'Still active in the canonical catalogue.', actorUserId, testAdminAuditContext),
-            matchesHttpError(409, 'ADMIN_INGREDIENTS_RESTORE_INVALID_STATUS')
-        );
+        await assert.rejects(() => service.deprecate(3, 'Already outside the active catalogue.', actorUserId, testAdminAuditContext), matchesHttpError(409, 'ADMIN_INGREDIENTS_DEPRECATE_INVALID_STATUS'));
+        await assert.rejects(() => service.restore(2, 'Still active in the canonical catalogue.', actorUserId, testAdminAuditContext), matchesHttpError(409, 'ADMIN_INGREDIENTS_RESTORE_INVALID_STATUS'));
 
         repository.createStatus = 'normalized_name_taken';
-        await assert.rejects(
-            () => service.restore(3, 'Canonical name was assigned elsewhere.', actorUserId, testAdminAuditContext),
-            matchesHttpError(409, 'ADMIN_INGREDIENTS_NORMALIZED_NAME_TAKEN')
-        );
+        await assert.rejects(() => service.restore(3, 'Canonical name was assigned elsewhere.', actorUserId, testAdminAuditContext), matchesHttpError(409, 'ADMIN_INGREDIENTS_NORMALIZED_NAME_TAKEN'));
 
         repository.createStatus = null;
         repository.restoreConflict = true;
-        await assert.rejects(
-            () => service.restore(3, 'Concurrent restore must be rejected.', actorUserId, testAdminAuditContext),
-            matchesHttpError(409, 'ADMIN_INGREDIENTS_STATUS_CONFLICT')
-        );
+        await assert.rejects(() => service.restore(3, 'Concurrent restore must be rejected.', actorUserId, testAdminAuditContext), matchesHttpError(409, 'ADMIN_INGREDIENTS_STATUS_CONFLICT'));
 
         repository.restoreConflict = false;
         repository.mergedSourceTargets.clear();
         repository.aliases.delete(11);
         repository.deprecateConflict = true;
-        await assert.rejects(
-            () => service.deprecate(2, 'Concurrent deprecation must be rejected.', actorUserId, testAdminAuditContext),
-            matchesHttpError(409, 'ADMIN_INGREDIENTS_STATUS_CONFLICT')
-        );
+        await assert.rejects(() => service.deprecate(2, 'Concurrent deprecation must be rejected.', actorUserId, testAdminAuditContext), matchesHttpError(409, 'ADMIN_INGREDIENTS_STATUS_CONFLICT'));
 
         assert.equal(audit.inputs.length, 0);
     });
@@ -469,14 +430,8 @@ describe('AdminIngredientService', () => {
                 ),
             matchesHttpError(400, 'ADMIN_INGREDIENTS_BAD_ID')
         );
-        await assert.rejects(
-            () => service.merge(2, undefined as never, actorUserId, testAdminAuditContext),
-            matchesHttpError(400, 'ADMIN_INGREDIENTS_MERGE_BAD_BODY')
-        );
-        await assert.rejects(
-            () => service.merge(2, 'invalid body' as never, actorUserId, testAdminAuditContext),
-            matchesHttpError(400, 'ADMIN_INGREDIENTS_MERGE_BAD_BODY')
-        );
+        await assert.rejects(() => service.merge(2, undefined as never, actorUserId, testAdminAuditContext), matchesHttpError(400, 'ADMIN_INGREDIENTS_MERGE_BAD_BODY'));
+        await assert.rejects(() => service.merge(2, 'invalid body' as never, actorUserId, testAdminAuditContext), matchesHttpError(400, 'ADMIN_INGREDIENTS_MERGE_BAD_BODY'));
         await assert.rejects(
             () =>
                 service.merge(
@@ -703,10 +658,7 @@ describe('AdminIngredientService', () => {
 
         repository.aliasTaken = false;
         repository.deleteAliasConflict = true;
-        await assert.rejects(
-            () => service.deleteAlias(1, 10, actorUserId, testAdminAuditContext),
-            matchesHttpError(409, 'ADMIN_INGREDIENT_ALIASES_CONFLICT')
-        );
+        await assert.rejects(() => service.deleteAlias(1, 10, actorUserId, testAdminAuditContext), matchesHttpError(409, 'ADMIN_INGREDIENT_ALIASES_CONFLICT'));
         assert.equal(audit.inputs.length, 0);
     });
 
@@ -717,22 +669,12 @@ describe('AdminIngredientService', () => {
             () => service.updateAlias(1, 12, { name: 'Nom effacé' }, actorUserId, testAdminAuditContext),
             matchesHttpError(409, 'ADMIN_INGREDIENT_ALIASES_MERGE_SOURCE_NAME_PROTECTED')
         );
-        await assert.rejects(
-            () => service.deleteAlias(1, 12, actorUserId, testAdminAuditContext),
-            matchesHttpError(409, 'ADMIN_INGREDIENT_ALIASES_MERGE_SOURCE_NAME_PROTECTED')
-        );
+        await assert.rejects(() => service.deleteAlias(1, 12, actorUserId, testAdminAuditContext), matchesHttpError(409, 'ADMIN_INGREDIENT_ALIASES_MERGE_SOURCE_NAME_PROTECTED'));
         assert.equal(audit.inputs.length, 0);
     });
 });
 
-function createIngredient(
-    id: number,
-    name: string,
-    normalizedName: string,
-    slug: string,
-    status: Ingredient['status'] = 'active',
-    mergedIntoIngredientId: number | null = null
-): Ingredient {
+function createIngredient(id: number, name: string, normalizedName: string, slug: string, status: Ingredient['status'] = 'active', mergedIntoIngredientId: number | null = null): Ingredient {
     return {
         id,
         name,

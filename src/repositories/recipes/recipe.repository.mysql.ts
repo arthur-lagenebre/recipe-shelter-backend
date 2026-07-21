@@ -83,8 +83,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
             await connection.beginTransaction();
 
             const [result] = await connection.execute<ResultSetHeader>(
-                `INSERT INTO Recipes (UserId, CategoryId, Title, Slug, Description, PrepTimeMinutes, RestTimeMinutes, CookTimeMinutes, Servings, Status)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                `INSERT INTO Recipes (UserId, CategoryId, Title, Slug, Description, PrepTimeMinutes, RestTimeMinutes, CookTimeMinutes, Servings, Status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
                     input.userId,
                     input.categoryId ?? null,
@@ -199,9 +198,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
 
     async submit(id: number, slug: string): Promise<Recipe> {
         await this.db.execute(
-            `UPDATE Recipes
-             SET Status = 'pending', Slug = ?, SubmittedAt = CURRENT_TIMESTAMP, ModeratedAt = NULL, ModeratedByUserId = NULL, RejectionReason = NULL
-             WHERE Id = ?`,
+            `UPDATE Recipes SET Status = 'pending', Slug = ?, SubmittedAt = CURRENT_TIMESTAMP, ModeratedAt = NULL, ModeratedByUserId = NULL, RejectionReason = NULL WHERE Id = ?`,
             [slug, id]
         );
 
@@ -214,9 +211,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
 
     async archive(id: number, db?: PoolConnection): Promise<boolean> {
         const [result] = await (db ?? this.db).execute<ResultSetHeader>(
-            `UPDATE Recipes
-             SET Status = 'archived', ArchivedAt = CURRENT_TIMESTAMP
-             WHERE Id = ?`,
+            `UPDATE Recipes SET Status = 'archived', ArchivedAt = CURRENT_TIMESTAMP WHERE Id = ?`,
             [id]
         );
 
@@ -224,13 +219,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
     }
 
     async existsBySlug(slug: string): Promise<boolean> {
-        const [rows] = await this.db.execute(
-            `SELECT 1
-             FROM Recipes
-             WHERE Slug = ?
-             LIMIT 1`,
-            [slug]
-        );
+        const [rows] = await this.db.execute(`SELECT 1 FROM Recipes WHERE Slug = ? LIMIT 1`, [slug]);
 
         return !!firstOrNull(rows as Array<{ 1: number }>);
     }
@@ -249,12 +238,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
     async findByUserId(userId: number, pagination: PaginationOptions): Promise<PaginatedResult<RecipeSummary>> {
         const limitOffsetClause = formatLimitOffsetClause(pagination);
 
-        const [countRows] = await this.db.execute(
-            `SELECT COUNT(*) AS Count
-             FROM Recipes
-             WHERE UserId = ?`,
-            [userId]
-        );
+        const [countRows] = await this.db.execute(`SELECT COUNT(*) AS Count FROM Recipes WHERE UserId = ?`, [userId]);
 
         const [rows] = await this.db.execute(
             `SELECT r.Id, r.Title, r.Slug, r.Description, r.Status, r.CreatedAt, r.SubmittedAt, r.PublishedAt, r.RejectionReason, r.UpdatedAt,
@@ -494,8 +478,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
         const ingredients = await this.resolveIngredientIds(connection, input.ingredients);
 
         await connection.query(
-            `INSERT INTO RecipeIngredients (RecipeId, IngredientId, DisplayText, Quantity, Unit, Note, SortOrder)
-             VALUES ?`,
+            `INSERT INTO RecipeIngredients (RecipeId, IngredientId, DisplayText, Quantity, Unit, Note, SortOrder) VALUES ?`,
             [
                 ingredients.map((ingredient) => [
                     recipeId,
@@ -515,47 +498,34 @@ export class RecipeRepositoryMysql implements RecipeRepository {
     private async insertSteps(connection: PoolConnection, recipeId: number, input: RecipeInput): Promise<void> {
         if (!input.steps?.length) return;
 
-        await connection.query(
-            `INSERT INTO RecipeSteps (RecipeId, StepNumber, Description)
-             VALUES ?`,
-            [input.steps.map((step, index) => [recipeId, step.stepNumber ?? index + 1, step.description])]
-        );
+        await connection.query(`INSERT INTO RecipeSteps (RecipeId, StepNumber, Description) VALUES ?`, [
+            input.steps.map((step, index) => [recipeId, step.stepNumber ?? index + 1, step.description])
+        ]);
     }
 
     private async insertEquipments(connection: PoolConnection, recipeId: number, input: RecipeInput): Promise<void> {
         if (!input.equipments?.length) return;
 
-        await connection.query(
-            `INSERT INTO RecipeEquipments (RecipeId, EquipmentId)
-             VALUES ?`,
-            [input.equipments.map((equipment) => [recipeId, equipment.equipmentId])]
-        );
+        await connection.query(`INSERT INTO RecipeEquipments (RecipeId, EquipmentId) VALUES ?`, [
+            input.equipments.map((equipment) => [recipeId, equipment.equipmentId])
+        ]);
     }
 
     private async insertTags(connection: PoolConnection, recipeId: number, input: RecipeInput): Promise<void> {
         if (!input.tagIds?.length) return;
 
-        await connection.query(
-            `INSERT INTO RecipeTags (RecipeId, TagId)
-             VALUES ?`,
-            [input.tagIds.map((tagId) => [recipeId, tagId])]
-        );
+        await connection.query(`INSERT INTO RecipeTags (RecipeId, TagId) VALUES ?`, [input.tagIds.map((tagId) => [recipeId, tagId])]);
     }
 
     private async replaceIngredients(connection: PoolConnection, recipeId: number, input: RecipeInput): Promise<void> {
-        await connection.execute(
-            `DELETE FROM RecipeIngredients
-             WHERE RecipeId = ?`,
-            [recipeId]
-        );
+        await connection.execute(`DELETE FROM RecipeIngredients WHERE RecipeId = ?`, [recipeId]);
 
         if (!input.ingredients?.length) return;
 
         const ingredients = await this.resolveIngredientIds(connection, input.ingredients);
 
         await connection.query(
-            `INSERT INTO RecipeIngredients (RecipeId, IngredientId, DisplayText, Quantity, Unit, Note, SortOrder)
-             VALUES ?`,
+            `INSERT INTO RecipeIngredients (RecipeId, IngredientId, DisplayText, Quantity, Unit, Note, SortOrder) VALUES ?`,
             [
                 ingredients.map((ingredient) => [
                     recipeId,
@@ -635,10 +605,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
         if (!proposalsByNormalizedName.size) return;
 
         await connection.query(
-            `INSERT INTO CatalogProposals
-               (AuthorUserId, RecipeId, ProposalType, ProposedName, NormalizedName)
-             VALUES ?
-             ON DUPLICATE KEY UPDATE Id = CatalogProposals.Id`,
+            `INSERT INTO CatalogProposals (AuthorUserId, RecipeId, ProposalType, ProposedName, NormalizedName) VALUES ? ON DUPLICATE KEY UPDATE Id = CatalogProposals.Id`,
             [
                 [...proposalsByNormalizedName.values()].map((ingredient) => [
                     authorUserId,
@@ -652,59 +619,36 @@ export class RecipeRepositoryMysql implements RecipeRepository {
     }
 
     private async replaceSteps(connection: PoolConnection, recipeId: number, input: RecipeInput): Promise<void> {
-        await connection.execute(
-            `DELETE FROM RecipeSteps
-             WHERE RecipeId = ?`,
-            [recipeId]
-        );
+        await connection.execute(`DELETE FROM RecipeSteps WHERE RecipeId = ?`, [recipeId]);
 
         if (!input.steps?.length) return;
 
-        await connection.query(
-            `INSERT INTO RecipeSteps (RecipeId, StepNumber, Description)
-             VALUES ?`,
-            [input.steps.map((step, index) => [recipeId, step.stepNumber ?? index + 1, step.description])]
-        );
+        await connection.query(`INSERT INTO RecipeSteps (RecipeId, StepNumber, Description) VALUES ?`, [
+            input.steps.map((step, index) => [recipeId, step.stepNumber ?? index + 1, step.description])
+        ]);
     }
 
     private async replaceEquipments(connection: PoolConnection, recipeId: number, input: RecipeInput): Promise<void> {
-        await connection.execute(
-            `DELETE FROM RecipeEquipments
-             WHERE RecipeId = ?`,
-            [recipeId]
-        );
+        await connection.execute(`DELETE FROM RecipeEquipments WHERE RecipeId = ?`, [recipeId]);
 
         if (!input.equipments?.length) return;
 
-        await connection.query(
-            `INSERT INTO RecipeEquipments (RecipeId, EquipmentId)
-             VALUES ?`,
-            [input.equipments.map((equipment) => [recipeId, equipment.equipmentId])]
-        );
+        await connection.query(`INSERT INTO RecipeEquipments (RecipeId, EquipmentId) VALUES ?`, [
+            input.equipments.map((equipment) => [recipeId, equipment.equipmentId])
+        ]);
     }
 
     private async replaceTags(connection: PoolConnection, recipeId: number, input: RecipeInput): Promise<void> {
-        await connection.execute(
-            `DELETE FROM RecipeTags
-             WHERE RecipeId = ?`,
-            [recipeId]
-        );
+        await connection.execute(`DELETE FROM RecipeTags WHERE RecipeId = ?`, [recipeId]);
 
         if (!input.tagIds?.length) return;
 
-        await connection.query(
-            `INSERT INTO RecipeTags (RecipeId, TagId)
-             VALUES ?`,
-            [input.tagIds.map((tagId) => [recipeId, tagId])]
-        );
+        await connection.query(`INSERT INTO RecipeTags (RecipeId, TagId) VALUES ?`, [input.tagIds.map((tagId) => [recipeId, tagId])]);
     }
 
     private async findIngredientsByRecipeId(recipeId: number): Promise<RecipeIngredientRow[]> {
         const [rows] = await this.db.execute(
-            `SELECT IngredientId, DisplayText, Quantity, Unit, Note, SortOrder
-             FROM RecipeIngredients
-             WHERE RecipeId = ?
-             ORDER BY SortOrder, Id`,
+            `SELECT IngredientId, DisplayText, Quantity, Unit, Note, SortOrder FROM RecipeIngredients WHERE RecipeId = ? ORDER BY SortOrder, Id`,
             [recipeId]
         );
 
@@ -712,45 +656,26 @@ export class RecipeRepositoryMysql implements RecipeRepository {
     }
 
     private async findStepsByRecipeId(recipeId: number): Promise<RecipeStepRow[]> {
-        const [rows] = await this.db.execute(
-            `SELECT StepNumber, Description
-             FROM RecipeSteps
-             WHERE RecipeId = ?`,
-            [recipeId]
-        );
+        const [rows] = await this.db.execute(`SELECT StepNumber, Description FROM RecipeSteps WHERE RecipeId = ?`, [recipeId]);
 
         return rows as RecipeStepRow[];
     }
 
     private async findEquipmentsByRecipeId(recipeId: number): Promise<RecipeEquipmentRow[]> {
-        const [rows] = await this.db.execute(
-            `SELECT EquipmentId
-             FROM RecipeEquipments
-             WHERE RecipeId = ?`,
-            [recipeId]
-        );
+        const [rows] = await this.db.execute(`SELECT EquipmentId FROM RecipeEquipments WHERE RecipeId = ?`, [recipeId]);
 
         return rows as RecipeEquipmentRow[];
     }
 
     private async findTagIdsByRecipeId(recipeId: number): Promise<number[]> {
-        const [rows] = await this.db.execute(
-            `SELECT TagId
-             FROM RecipeTags
-             WHERE RecipeId = ?`,
-            [recipeId]
-        );
+        const [rows] = await this.db.execute(`SELECT TagId FROM RecipeTags WHERE RecipeId = ?`, [recipeId]);
 
         return (rows as RecipeTagRow[]).map((row) => row.TagId);
     }
 
     private async findDetailIngredientsByRecipeId(recipeId: number): Promise<RecipeDetailIngredientRow[]> {
         const [rows] = await this.db.execute(
-            `SELECT ri.IngredientId, i.Name, i.Slug, ri.DisplayText, ri.Quantity, ri.Unit, ri.Note, ri.SortOrder
-             FROM RecipeIngredients AS ri
-             LEFT JOIN Ingredients AS i ON i.Id = ri.IngredientId
-             WHERE ri.RecipeId = ?
-             ORDER BY ri.SortOrder, ri.Id`,
+            `SELECT ri.IngredientId, i.Name, i.Slug, ri.DisplayText, ri.Quantity, ri.Unit, ri.Note, ri.SortOrder FROM RecipeIngredients AS ri LEFT JOIN Ingredients AS i ON i.Id = ri.IngredientId WHERE ri.RecipeId = ? ORDER BY ri.SortOrder, ri.Id`,
             [recipeId]
         );
 
@@ -758,22 +683,14 @@ export class RecipeRepositoryMysql implements RecipeRepository {
     }
 
     private async findDetailStepsByRecipeId(recipeId: number): Promise<RecipeDetailStepRow[]> {
-        const [rows] = await this.db.execute(
-            `SELECT StepNumber, Description
-             FROM RecipeSteps
-             WHERE RecipeId = ?`,
-            [recipeId]
-        );
+        const [rows] = await this.db.execute(`SELECT StepNumber, Description FROM RecipeSteps WHERE RecipeId = ?`, [recipeId]);
 
         return rows as RecipeDetailStepRow[];
     }
 
     private async findDetailEquipmentsByRecipeId(recipeId: number): Promise<RecipeDetailEquipmentRow[]> {
         const [rows] = await this.db.execute(
-            `SELECT e.Id, e.Name, e.Slug
-             FROM RecipeEquipments AS re
-             INNER JOIN Equipments AS e ON e.Id = re.EquipmentId
-             WHERE re.RecipeId = ?`,
+            `SELECT e.Id, e.Name, e.Slug FROM RecipeEquipments AS re INNER JOIN Equipments AS e ON e.Id = re.EquipmentId WHERE re.RecipeId = ?`,
             [recipeId]
         );
 
@@ -782,10 +699,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
 
     private async findDetailTagIdsByRecipeId(recipeId: number): Promise<RecipeDetailTagRow[]> {
         const [rows] = await this.db.execute(
-            `SELECT t.Id, t.Name, t.Slug
-             FROM RecipeTags AS rt
-             INNER JOIN Tags AS t ON t.Id = rt.TagId
-             WHERE rt.RecipeId = ?`,
+            `SELECT t.Id, t.Name, t.Slug FROM RecipeTags AS rt INNER JOIN Tags AS t ON t.Id = rt.TagId WHERE rt.RecipeId = ?`,
             [recipeId]
         );
 
@@ -794,11 +708,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
 
     private async findDetailCommentsByRecipeId(recipeId: number): Promise<RecipeDetailCommentRow[]> {
         const [rows] = await this.db.execute(
-            `SELECT c.Id, u.Id AS AuthorId, u.Username AS AuthorUsername, c.ParentCommentId, c.ModeratedAt, c.DeletedAt, c.Rating, c.Comment, c.CreatedAt, c.UpdatedAt
-             FROM Comments AS c
-             INNER JOIN Users AS u ON u.Id = c.UserId
-             WHERE c.RecipeId = ?
-             ORDER BY COALESCE(c.ParentCommentId, c.Id), c.ParentCommentId IS NOT NULL, c.CreatedAt`,
+            `SELECT c.Id, u.Id AS AuthorId, u.Username AS AuthorUsername, c.ParentCommentId, c.ModeratedAt, c.DeletedAt, c.Rating, c.Comment, c.CreatedAt, c.UpdatedAt FROM Comments AS c INNER JOIN Users AS u ON u.Id = c.UserId WHERE c.RecipeId = ? ORDER BY COALESCE(c.ParentCommentId, c.Id), c.ParentCommentId IS NOT NULL, c.CreatedAt`,
             [recipeId]
         );
 
@@ -807,11 +717,7 @@ export class RecipeRepositoryMysql implements RecipeRepository {
 
     private async findDetailCommentStatsByRecipeId(recipeId: number): Promise<RecipeDetailCommentStatsRow> {
         const [rows] = await this.db.execute(
-            `SELECT COUNT(*) AS CommentsCount,
-                    AVG(CASE WHEN DeletedAt IS NULL AND ModeratedAt IS NULL AND Rating IS NOT NULL THEN Rating END) AS AverageRating,
-                    COUNT(CASE WHEN DeletedAt IS NULL AND ModeratedAt IS NULL AND Rating IS NOT NULL THEN 1 END) AS RatingsCount
-             FROM Comments
-             WHERE RecipeId = ?`,
+            `SELECT COUNT(*) AS CommentsCount, AVG(CASE WHEN DeletedAt IS NULL AND ModeratedAt IS NULL AND Rating IS NOT NULL THEN Rating END) AS AverageRating, COUNT(CASE WHEN DeletedAt IS NULL AND ModeratedAt IS NULL AND Rating IS NOT NULL THEN 1 END) AS RatingsCount FROM Comments WHERE RecipeId = ?`,
             [recipeId]
         );
 

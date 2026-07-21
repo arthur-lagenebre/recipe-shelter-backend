@@ -76,7 +76,8 @@ async function runHandler(handler: RequestHandler, req: unknown, res: TestRespon
 
     await new Promise((resolve) => setImmediate(resolve));
 
-    if (nextError) throw nextError;
+    if (nextError)
+        throw nextError;
 }
 
 function createController(authService: unknown) {

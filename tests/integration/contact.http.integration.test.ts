@@ -70,7 +70,8 @@ describe('contact HTTP integration', () => {
         assert.equal(invalid.status, 400);
         assert.equal(((await invalid.json()) as { error: { code: string } }).error.code, 'CONTACT_INVALID_EMAIL');
 
-        for (let attempt = 0; attempt < 4; attempt++) assert.equal((await sendContact(server.baseUrl, validMessage)).status, 200);
+        for (let attempt = 0; attempt < 4; attempt++)
+            assert.equal((await sendContact(server.baseUrl, validMessage)).status, 200);
 
         const limited = await sendContact(server.baseUrl, validMessage);
         assert.equal(limited.status, 429);

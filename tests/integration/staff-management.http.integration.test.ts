@@ -9,12 +9,7 @@ import { createAdminStaffController } from '../../src/api/admin/admin.staff.cont
 import { createAdminStaffRouter } from '../../src/api/admin/admin.staff.routes.js';
 import { EnforceAuthorizationPolicies } from '../../src/middlewares/authorization.js';
 import { errorHandler } from '../../src/middlewares/error-handler.js';
-import {
-    configureAuthRbacRepository,
-    configureAuthSessionRepository,
-    configureAuthUserRepository,
-    requireStaffAuth
-} from '../../src/middlewares/require-auth.js';
+import { configureAuthRbacRepository, configureAuthSessionRepository, configureAuthUserRepository, requireStaffAuth } from '../../src/middlewares/require-auth.js';
 import { PERMISSIONS } from '../../src/security/permissions.js';
 import { AdminStaffService } from '../../src/services/admin/admin.staff.service.js';
 import { TestAdminAuditRecorder } from '../helpers/admin-audit.js';
@@ -57,16 +52,15 @@ class HttpAdminStaffRepository implements AdminStaffRepository {
     }
 
     async lockAndCheckLastActiveSuperAdmin(staffUserId: number): Promise<boolean> {
-        const activeSuperAdmins = [...this.accounts.values()].filter(
-            (account) => account.status === 'active' && account.roles.some((role) => role.code === 'SuperAdmin')
-        );
+        const activeSuperAdmins = [...this.accounts.values()].filter((account) => account.status === 'active' && account.roles.some((role) => role.code === 'SuperAdmin'));
 
         return activeSuperAdmins.length === 1 && activeSuperAdmins[0]?.id === staffUserId;
     }
 
     async disable(staffUserId: number, actorStaffUserId: number, reason: string): Promise<number | null> {
         const account = this.accounts.get(staffUserId);
-        if (!account || account.status !== 'active') return null;
+        if (!account || account.status !== 'active')
+            return null;
 
         const revokedSessionCount = account.activeSessionCount;
         account.status = 'disabled';
@@ -82,7 +76,8 @@ class HttpAdminStaffRepository implements AdminStaffRepository {
 
     async enable(staffUserId: number): Promise<boolean> {
         const account = this.accounts.get(staffUserId);
-        if (!account || account.status !== 'disabled') return false;
+        if (!account || account.status !== 'disabled')
+            return false;
 
         account.status = 'active';
         account.disabledByStaffUserId = null;
@@ -95,7 +90,8 @@ class HttpAdminStaffRepository implements AdminStaffRepository {
     async grantRole(staffUserId: number, roleId: number): Promise<boolean> {
         const account = this.accounts.get(staffUserId);
         const role = [...this.roles.values()].find((candidate) => candidate.id === roleId);
-        if (!account || !role || account.roles.some((candidate) => candidate.id === roleId)) return false;
+        if (!account || !role || account.roles.some((candidate) => candidate.id === roleId))
+            return false;
 
         account.roles.push(role);
         account.roles.sort((left, right) => left.code.localeCompare(right.code));
@@ -105,7 +101,8 @@ class HttpAdminStaffRepository implements AdminStaffRepository {
     async revokeRole(staffUserId: number, roleId: number): Promise<boolean> {
         const account = this.accounts.get(staffUserId);
         const roleIndex = account?.roles.findIndex((role) => role.id === roleId) ?? -1;
-        if (!account || roleIndex < 0) return false;
+        if (!account || roleIndex < 0)
+            return false;
 
         account.roles.splice(roleIndex, 1);
         return true;
@@ -180,10 +177,7 @@ describe('staff management HTTP integration', () => {
         });
         assert.equal(details.status, 200);
         assert.equal(((await details.json()) as { id: number }).id, targetUser.id);
-        assert.deepEqual(
-            audit.inputs.map((input) => input.eventType),
-            ['staff.list', 'staff.read']
-        );
+        assert.deepEqual(audit.inputs.map((input) => input.eventType), ['staff.list', 'staff.read']);
     });
 
     it('requires exact lifecycle permissions and meaningful audited reasons', async () => {
@@ -212,10 +206,7 @@ describe('staff management HTTP integration', () => {
         });
         assert.equal(enabled.status, 200);
         assert.equal(((await enabled.json()) as { status: string }).status, 'active');
-        assert.deepEqual(
-            audit.inputs.map((input) => input.eventType),
-            ['staff.disable', 'staff.enable']
-        );
+        assert.deepEqual(audit.inputs.map((input) => input.eventType), ['staff.disable', 'staff.enable']);
     });
 
     it('grants and revokes a role only with their distinct permissions and audits the motif', async () => {
@@ -291,10 +282,7 @@ describe('staff management HTTP integration', () => {
             body: JSON.stringify({ reason: 'Ordinary role assignment cleanup remains permitted.' })
         });
         assert.equal(revokeOrdinaryRole.status, 200);
-        assert.deepEqual(
-            audit.inputs.map((input) => input.eventType),
-            ['staff.roles.grant', 'staff.roles.revoke']
-        );
+        assert.deepEqual(audit.inputs.map((input) => input.eventType), ['staff.roles.grant', 'staff.roles.revoke']);
     });
 
     it('rejects every privileged self-action with a stable business error and no side effect', async () => {

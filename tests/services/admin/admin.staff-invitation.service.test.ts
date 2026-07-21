@@ -5,11 +5,7 @@ import { StaffInvitationService } from '../../../src/services/admin/admin.staff-
 import { HttpError } from '../../../src/utils/errors.js';
 import { TestAdminAuditRecorder, testAdminAuditContext } from '../../helpers/admin-audit.js';
 
-import type {
-    CreateStaffInvitationInput,
-    CreateStaffInvitationResult,
-    StaffInvitationRepository
-} from '../../../src/repositories/admin/admin.staff-invitation.repository.interface.js';
+import type { CreateStaffInvitationInput, CreateStaffInvitationResult, StaffInvitationRepository } from '../../../src/repositories/admin/admin.staff-invitation.repository.interface.js';
 import type { StaffInvitationMailInput, StaffInvitationMailer } from '../../../src/services/mail/mail.types.js';
 import type { PoolConnection } from 'mysql2/promise';
 
@@ -46,7 +42,8 @@ class FakeStaffInvitationMailer implements StaffInvitationMailer {
     error: Error | null = null;
 
     async sendStaffInvitationEmail(input: StaffInvitationMailInput): Promise<void> {
-        if (this.error) throw this.error;
+        if (this.error)
+            throw this.error;
 
         this.messages.push(input);
     }

@@ -23,7 +23,8 @@ class FakeTransporter {
     deliveryError: Error | null = null;
 
     async sendMail(message: SendMailOptions): Promise<SentMessageInfo> {
-        if (this.deliveryError) throw this.deliveryError;
+        if (this.deliveryError)
+            throw this.deliveryError;
 
         this.messages.push(message);
         return { messageId: 'test-message' } as SentMessageInfo;

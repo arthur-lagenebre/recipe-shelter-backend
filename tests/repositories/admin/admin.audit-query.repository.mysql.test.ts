@@ -20,7 +20,8 @@ describe('AdminAuditQueryRepositoryMysql', () => {
             async execute(sql: string, params: unknown) {
                 calls.push({ sql, params });
 
-                if (sql.includes('COUNT(*)')) return [[{ Count: '51' }], []];
+                if (sql.includes('COUNT(*)'))
+                    return [[{ Count: '51' }], []];
 
                 return [
                     [

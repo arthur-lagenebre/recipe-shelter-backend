@@ -38,10 +38,7 @@ describe('S3ImageStorage', () => {
         assert.equal(await storage.exists(key), true);
         await storage.delete(key);
 
-        assert.deepEqual(
-            commands.map((command) => command.constructor.name),
-            ['PutObjectCommand', 'HeadObjectCommand', 'DeleteObjectCommand']
-        );
+        assert.deepEqual(commands.map((command) => command.constructor.name), ['PutObjectCommand', 'HeadObjectCommand', 'DeleteObjectCommand']);
         assert.deepEqual(commands[0]?.input, {
             Bucket: 'recipe-shelter',
             Key: key,
@@ -85,10 +82,7 @@ describe('S3ImageStorage', () => {
             };
             const storage = new S3ImageStorage(config, client as never);
 
-            await assert.rejects(
-                () => storage.exists('recipes/10/image-id/large.webp'),
-                (caught) => caught === error
-            );
+            await assert.rejects(() => storage.exists('recipes/10/image-id/large.webp'), (caught) => caught === error);
         }
     });
 });

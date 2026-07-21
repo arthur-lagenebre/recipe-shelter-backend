@@ -18,12 +18,16 @@ const baseTestDatabaseName = process.env.TEST_DB_NAME?.trim() ?? '';
 const mysqlEnabled = Boolean(baseTestDatabaseName);
 
 function requireStaffManagementTestDatabaseName(): string {
-    if (!/^[a-zA-Z0-9_]+$/.test(baseTestDatabaseName)) throw new Error('TEST_DB_NAME must contain only letters, numbers and underscores');
-    if (!baseTestDatabaseName.toLowerCase().includes('test')) throw new Error('TEST_DB_NAME must contain "test"');
-    if (baseTestDatabaseName === env.db.name) throw new Error('TEST_DB_NAME must be different from DB_NAME');
+    if (!/^[a-zA-Z0-9_]+$/.test(baseTestDatabaseName))
+        throw new Error('TEST_DB_NAME must contain only letters, numbers and underscores');
+    if (!baseTestDatabaseName.toLowerCase().includes('test'))
+        throw new Error('TEST_DB_NAME must contain "test"');
+    if (baseTestDatabaseName === env.db.name)
+        throw new Error('TEST_DB_NAME must be different from DB_NAME');
 
     const databaseName = `${baseTestDatabaseName}_staff_management`;
-    if (databaseName.length > 64) throw new Error('TEST_DB_NAME is too long for the staff management integration database suffix');
+    if (databaseName.length > 64)
+        throw new Error('TEST_DB_NAME is too long for the staff management integration database suffix');
     return databaseName;
 }
 
@@ -67,64 +71,25 @@ describe('staff management MySQL integration', { skip: !mysqlEnabled && 'Set TES
             timezone: 'Z'
         });
 
-        const [actorResult] = await pool.execute<mysql.ResultSetHeader>(
-            `INSERT INTO Users (Mail, Username, Password, AccountType, Status, EmailValidatedAt)
-       VALUES ('staff-manager@test.local', 'Staff Manager', 'password-hash', 'staff', 'inactive', CURRENT_TIMESTAMP)`
-        );
-        const [targetResult] = await pool.execute<mysql.ResultSetHeader>(
-            `INSERT INTO Users (Mail, Username, Password, AccountType, Status, EmailValidatedAt)
-       VALUES ('managed-staff@test.local', 'Managed Staff', 'password-hash', 'staff', 'inactive', CURRENT_TIMESTAMP)`
-        );
+        const [actorResult] = await pool.execute<mysql.ResultSetHeader>(`INSERT INTO Users (Mail, Username, Password, AccountType, Status, EmailValidatedAt) VALUES ('staff-manager@test.local', 'Staff Manager', 'password-hash', 'staff', 'inactive', CURRENT_TIMESTAMP)`);
+        const [targetResult] = await pool.execute<mysql.ResultSetHeader>(`INSERT INTO Users (Mail, Username, Password, AccountType, Status, EmailValidatedAt) VALUES ('managed-staff@test.local', 'Managed Staff', 'password-hash', 'staff', 'inactive', CURRENT_TIMESTAMP)`);
         actorUserId = Number(actorResult.insertId);
         targetUserId = Number(targetResult.insertId);
 
-        await pool.execute(
-            `INSERT INTO StaffRoles (StaffUserId, RoleId)
-       SELECT ?, Id FROM Roles WHERE Code = 'SuperAdmin'`,
-            [actorUserId]
-        );
-        await pool.execute(
-            `INSERT INTO StaffRoles (StaffUserId, RoleId)
-       SELECT ?, Id FROM Roles WHERE Code = 'UserAdmin'`,
-            [targetUserId]
-        );
-        await pool.execute(
-            `INSERT INTO StaffWebAuthnCredentials
-         (CredentialId, StaffUserId, PublicKey, SignatureCounter, DeviceType, BackedUp, Aaguid)
-       VALUES
-         ('staff-manager-credential', ?, 0x0102, 0, 'singleDevice', FALSE,
-          '00000000-0000-0000-0000-000000000000'),
-         ('managed-staff-credential', ?, 0x0304, 0, 'singleDevice', FALSE,
-          '00000000-0000-0000-0000-000000000000')`,
-            [actorUserId, targetUserId]
-        );
-        await pool.execute(
-            `UPDATE StaffProfiles
-       SET MfaEnrolledAt = CURRENT_TIMESTAMP
-       WHERE UserId IN (?, ?)`,
-            [actorUserId, targetUserId]
-        );
+        await pool.execute(`INSERT INTO StaffRoles (StaffUserId, RoleId) SELECT ?, Id FROM Roles WHERE Code = 'SuperAdmin'`, [actorUserId]);
+        await pool.execute(`INSERT INTO StaffRoles (StaffUserId, RoleId) SELECT ?, Id FROM Roles WHERE Code = 'UserAdmin'`, [targetUserId]);
+        await pool.execute(`INSERT INTO StaffWebAuthnCredentials (CredentialId, StaffUserId, PublicKey, SignatureCounter, DeviceType, BackedUp, Aaguid) VALUES ('staff-manager-credential', ?, 0x0102, 0, 'singleDevice', FALSE, '00000000-0000-0000-0000-000000000000'), ('managed-staff-credential', ?, 0x0304, 0, 'singleDevice', FALSE, '00000000-0000-0000-0000-000000000000')`, [actorUserId, targetUserId]);
+        await pool.execute(`UPDATE StaffProfiles SET MfaEnrolledAt = CURRENT_TIMESTAMP WHERE UserId IN (?, ?)`, [actorUserId, targetUserId]);
         await pool.execute(`UPDATE Users SET Status = 'active' WHERE Id IN (?, ?)`, [actorUserId, targetUserId]);
-        await pool.execute(
-            `INSERT INTO StaffSessions
-         (Id, StaffUserId, WebAuthnCredentialId, MfaVerifiedAt, IpAddress, UserAgent, ExpiresAt)
-       VALUES
-         ('00000000-0000-4000-8000-000000000531', ?, 'managed-staff-credential', CURRENT_TIMESTAMP,
-          '192.0.2.31', 'Managed staff browser one', DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 8 HOUR)),
-         ('00000000-0000-4000-8000-000000000532', ?, 'managed-staff-credential', CURRENT_TIMESTAMP,
-          '192.0.2.32', 'Managed staff browser two', DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 8 HOUR))`,
-            [targetUserId, targetUserId]
-        );
+        await pool.execute(`INSERT INTO StaffSessions (Id, StaffUserId, WebAuthnCredentialId, MfaVerifiedAt, IpAddress, UserAgent, ExpiresAt) VALUES ('00000000-0000-4000-8000-000000000531', ?, 'managed-staff-credential', CURRENT_TIMESTAMP, '192.0.2.31', 'Managed staff browser one', DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 8 HOUR)), ('00000000-0000-4000-8000-000000000532', ?, 'managed-staff-credential', CURRENT_TIMESTAMP, '192.0.2.32', 'Managed staff browser two', DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 8 HOUR))`, [targetUserId, targetUserId]);
 
-        const auditActions = new AdminAuditActionRunnerMysql(
-            pool,
-            (db) => new AdminAuditService(new AdminAuditRepositoryMysql(db), () => '00000000-0000-4000-8000-000000000533')
-        );
+        const auditActions = new AdminAuditActionRunnerMysql(pool, (db) => new AdminAuditService(new AdminAuditRepositoryMysql(db), () => '00000000-0000-4000-8000-000000000533'));
         service = new AdminStaffService(new AdminStaffRepositoryMysql(pool), auditActions);
     });
 
     after(async () => {
-        if (pool) await pool.end();
+        if (pool)
+            await pool.end();
         if (adminConnection) {
             await adminConnection.query(`DROP DATABASE IF EXISTS \`${requireStaffManagementTestDatabaseName()}\``);
             await adminConnection.end();
@@ -133,24 +98,13 @@ describe('staff management MySQL integration', { skip: !mysqlEnabled && 'Set TES
 
     it('applies schema then seed and manages lifecycle, roles, sessions and audits atomically', async () => {
         const accounts = await service.list(actorUserId, testAdminAuditContext);
-        assert.deepEqual(
-            accounts.map((account) => account.id).sort((left, right) => left - right),
-            [actorUserId, targetUserId]
-        );
+        assert.deepEqual(accounts.map((account) => account.id).sort((left, right) => left - right), [actorUserId, targetUserId]);
 
         const details = await service.get(targetUserId, actorUserId, testAdminAuditContext);
         assert.equal(details.activeSessionCount, 2);
-        assert.deepEqual(
-            details.roles.map((role) => role.code),
-            ['UserAdmin']
-        );
+        assert.deepEqual(details.roles.map((role) => role.code), ['UserAdmin']);
 
-        const disabled = await service.disable(
-            targetUserId,
-            actorUserId,
-            'Confirmed departure from the staff team.',
-            testAdminAuditContext
-        );
+        const disabled = await service.disable(targetUserId, actorUserId, 'Confirmed departure from the staff team.', testAdminAuditContext);
         assert.equal(disabled.status, 'disabled');
         assert.equal(disabled.disabledByStaffUserId, actorUserId);
         assert.equal(disabled.disabledReason, 'Confirmed departure from the staff team.');
@@ -169,13 +123,7 @@ describe('staff management MySQL integration', { skip: !mysqlEnabled && 'Set TES
             false
         );
 
-        const [revokedSessions] = await pool.query(
-            `SELECT RevokedByStaffUserId, RevocationType, COUNT(*) AS SessionCount
-       FROM StaffSessions
-       WHERE StaffUserId = ? AND RevokedAt IS NOT NULL
-       GROUP BY RevokedByStaffUserId, RevocationType`,
-            [targetUserId]
-        );
+        const [revokedSessions] = await pool.query(`SELECT RevokedByStaffUserId, RevocationType, COUNT(*) AS SessionCount FROM StaffSessions WHERE StaffUserId = ? AND RevokedAt IS NOT NULL GROUP BY RevokedByStaffUserId, RevocationType`, [targetUserId]);
         assert.deepEqual(revokedSessions, [
             {
                 RevokedByStaffUserId: actorUserId,
@@ -188,35 +136,13 @@ describe('staff management MySQL integration', { skip: !mysqlEnabled && 'Set TES
         assert.equal(enabled.status, 'active');
         assert.equal(enabled.disabledByStaffUserId, null);
 
-        const granted = await service.grantRole(
-            targetUserId,
-            'RecipeModerator',
-            actorUserId,
-            'Temporary recipe moderation coverage.',
-            testAdminAuditContext
-        );
-        assert.deepEqual(
-            granted.roles.map((role) => role.code),
-            ['RecipeModerator', 'UserAdmin']
-        );
+        const granted = await service.grantRole(targetUserId, 'RecipeModerator', actorUserId, 'Temporary recipe moderation coverage.', testAdminAuditContext);
+        assert.deepEqual(granted.roles.map((role) => role.code), ['RecipeModerator', 'UserAdmin']);
 
-        const revoked = await service.revokeRole(
-            targetUserId,
-            'RecipeModerator',
-            actorUserId,
-            'Temporary moderation coverage ended.',
-            testAdminAuditContext
-        );
-        assert.deepEqual(
-            revoked.roles.map((role) => role.code),
-            ['UserAdmin']
-        );
+        const revoked = await service.revokeRole(targetUserId, 'RecipeModerator', actorUserId, 'Temporary moderation coverage ended.', testAdminAuditContext);
+        assert.deepEqual(revoked.roles.map((role) => role.code), ['UserAdmin']);
 
-        const [auditRows] = await pool.query(
-            `SELECT Action, TargetType, Reason
-       FROM AdminAuditLogs
-       ORDER BY Id`
-        );
+        const [auditRows] = await pool.query(`SELECT Action, TargetType, Reason FROM AdminAuditLogs ORDER BY Id`);
         assert.deepEqual(auditRows, [
             { Action: 'staff.list', TargetType: 'staff_collection', Reason: null },
             { Action: 'staff.read', TargetType: 'staff_user', Reason: null },
@@ -226,15 +152,7 @@ describe('staff management MySQL integration', { skip: !mysqlEnabled && 'Set TES
             { Action: 'staff.roles.revoke', TargetType: 'staff_user', Reason: 'Temporary moderation coverage ended.' }
         ]);
 
-        const [moderationRows] = await pool.query(
-            `SELECT log.StaffUserId, audit.Id AS AdminAuditLogId,
-              audit.ActorUserId AS AdminId, audit.Action, audit.Reason,
-              audit.CorrelationId
-       FROM StaffModerationLogs AS log
-       INNER JOIN AdminAuditLogs AS audit ON audit.Id = log.AdminAuditLogId
-       WHERE log.StaffUserId = ?`,
-            [targetUserId]
-        );
+        const [moderationRows] = await pool.query(`SELECT log.StaffUserId, audit.Id AS AdminAuditLogId, audit.ActorUserId AS AdminId, audit.Action, audit.Reason, audit.CorrelationId FROM StaffModerationLogs AS log INNER JOIN AdminAuditLogs AS audit ON audit.Id = log.AdminAuditLogId WHERE log.StaffUserId = ?`, [targetUserId]);
         assert.deepEqual(moderationRows, [
             {
                 StaffUserId: targetUserId,
@@ -248,38 +166,13 @@ describe('staff management MySQL integration', { skip: !mysqlEnabled && 'Set TES
     });
 
     it('rejects both ways of removing the last active SuperAdmin without mutation or audit', async () => {
-        await assert.rejects(
-            () => service.disable(actorUserId, targetUserId, 'Attempt to disable the final active administrator.', testAdminAuditContext),
-            (error) => assertHttpError(error, 409, 'LAST_ACTIVE_SUPER_ADMIN')
-        );
-        await assert.rejects(
-            () =>
-                service.revokeRole(
-                    actorUserId,
-                    'superadmin',
-                    targetUserId,
-                    'Attempt to revoke the final administration role.',
-                    testAdminAuditContext
-                ),
-            (error) => assertHttpError(error, 409, 'LAST_ACTIVE_SUPER_ADMIN')
-        );
+        await assert.rejects(() => service.disable(actorUserId, targetUserId, 'Attempt to disable the final active administrator.', testAdminAuditContext), (error) => assertHttpError(error, 409, 'LAST_ACTIVE_SUPER_ADMIN'));
+        await assert.rejects(() => service.revokeRole(actorUserId, 'superadmin', targetUserId, 'Attempt to revoke the final administration role.', testAdminAuditContext), (error) => assertHttpError(error, 409, 'LAST_ACTIVE_SUPER_ADMIN'));
 
-        const [protectedRows] = await pool.query(
-            `SELECT sp.Status, role.Code
-       FROM StaffProfiles AS sp
-       INNER JOIN StaffRoles AS sr ON sr.StaffUserId = sp.UserId
-       INNER JOIN Roles AS role ON role.Id = sr.RoleId
-       WHERE sp.UserId = ? AND role.Code = 'SuperAdmin'`,
-            [actorUserId]
-        );
+        const [protectedRows] = await pool.query(`SELECT sp.Status, role.Code FROM StaffProfiles AS sp INNER JOIN StaffRoles AS sr ON sr.StaffUserId = sp.UserId INNER JOIN Roles AS role ON role.Id = sr.RoleId WHERE sp.UserId = ? AND role.Code = 'SuperAdmin'`, [actorUserId]);
         assert.deepEqual(protectedRows, [{ Status: 'active', Code: 'SuperAdmin' }]);
 
-        const [rejectedAuditRows] = await pool.query(
-            `SELECT Id
-       FROM AdminAuditLogs
-       WHERE Reason IN (?, ?)`,
-            ['Attempt to disable the final active administrator.', 'Attempt to revoke the final administration role.']
-        );
+        const [rejectedAuditRows] = await pool.query(`SELECT Id FROM AdminAuditLogs WHERE Reason IN (?, ?)`, ['Attempt to disable the final active administrator.', 'Attempt to revoke the final administration role.']);
         assert.deepEqual(rejectedAuditRows, []);
     });
 
@@ -315,19 +208,10 @@ describe('staff management MySQL integration', { skip: !mysqlEnabled && 'Set TES
             }))
         );
 
-        await assert.rejects(
-            () => pool.execute(`DELETE FROM StaffProfiles WHERE UserId = ?`, [targetUserId]),
-            /Staff profiles cannot be physically deleted/
-        );
+        await assert.rejects(() => pool.execute(`DELETE FROM StaffProfiles WHERE UserId = ?`, [targetUserId]), /Staff profiles cannot be physically deleted/);
         await assert.rejects(() => pool.execute(`DELETE FROM Users WHERE Id = ?`, [actorUserId]));
 
-        const [preservedActors] = await pool.query(
-            `SELECT audit.ActorUserId, staff.UserId AS StaffUserId, users.Username, COUNT(*) AS AuditCount
-       FROM AdminAuditLogs AS audit
-       INNER JOIN StaffProfiles AS staff ON staff.UserId = audit.ActorUserId
-       INNER JOIN Users AS users ON users.Id = staff.UserId
-       GROUP BY audit.ActorUserId, staff.UserId, users.Username`
-        );
+        const [preservedActors] = await pool.query(`SELECT audit.ActorUserId, staff.UserId AS StaffUserId, users.Username, COUNT(*) AS AuditCount FROM AdminAuditLogs AS audit INNER JOIN StaffProfiles AS staff ON staff.UserId = audit.ActorUserId INNER JOIN Users AS users ON users.Id = staff.UserId GROUP BY audit.ActorUserId, staff.UserId, users.Username`);
         assert.deepEqual(preservedActors, [
             {
                 ActorUserId: actorUserId,
@@ -345,23 +229,11 @@ describe('staff management MySQL integration', { skip: !mysqlEnabled && 'Set TES
     });
 
     it('serializes concurrent disablement and role revocation so one active SuperAdmin always remains', async () => {
-        await service.grantRole(
-            targetUserId,
-            'SuperAdmin',
-            actorUserId,
-            'Second active SuperAdmin added for concurrency validation.',
-            testAdminAuditContext
-        );
+        await service.grantRole(targetUserId, 'SuperAdmin', actorUserId, 'Second active SuperAdmin added for concurrency validation.', testAdminAuditContext);
 
         const results = await Promise.allSettled([
             service.disable(actorUserId, targetUserId, 'Concurrent SuperAdmin disablement validation.', testAdminAuditContext),
-            service.revokeRole(
-                targetUserId,
-                'SuperAdmin',
-                actorUserId,
-                'Concurrent SuperAdmin role revocation validation.',
-                testAdminAuditContext
-            )
+            service.revokeRole(targetUserId, 'SuperAdmin', actorUserId, 'Concurrent SuperAdmin role revocation validation.', testAdminAuditContext)
         ]);
         const fulfilled = results.filter((result) => result.status === 'fulfilled');
         const rejected = results.filter((result) => result.status === 'rejected');
@@ -370,26 +242,10 @@ describe('staff management MySQL integration', { skip: !mysqlEnabled && 'Set TES
         assert.equal(rejected.length, 1);
         assertHttpError(rejected[0]?.reason, 409, 'LAST_ACTIVE_SUPER_ADMIN');
 
-        const [activeSuperAdmins] = await pool.query(
-            `SELECT sr.StaffUserId
-       FROM StaffRoles AS sr
-       INNER JOIN Roles AS role ON role.Id = sr.RoleId
-       INNER JOIN StaffProfiles AS sp ON sp.UserId = sr.StaffUserId
-       WHERE role.Code = 'SuperAdmin' AND sp.Status = 'active'`
-        );
+        const [activeSuperAdmins] = await pool.query(`SELECT sr.StaffUserId FROM StaffRoles AS sr INNER JOIN Roles AS role ON role.Id = sr.RoleId INNER JOIN StaffProfiles AS sp ON sp.UserId = sr.StaffUserId WHERE role.Code = 'SuperAdmin' AND sp.Status = 'active'`);
         assert.equal((activeSuperAdmins as unknown[]).length, 1);
 
-        const [concurrencyAuditRows] = await pool.query(
-            `SELECT Action, Reason
-       FROM AdminAuditLogs
-       WHERE Reason IN (?, ?, ?)
-       ORDER BY Id`,
-            [
-                'Second active SuperAdmin added for concurrency validation.',
-                'Concurrent SuperAdmin disablement validation.',
-                'Concurrent SuperAdmin role revocation validation.'
-            ]
-        );
+        const [concurrencyAuditRows] = await pool.query(`SELECT Action, Reason FROM AdminAuditLogs WHERE Reason IN (?, ?, ?) ORDER BY Id`, [ 'Second active SuperAdmin added for concurrency validation.', 'Concurrent SuperAdmin disablement validation.', 'Concurrent SuperAdmin role revocation validation.' ]);
         assert.equal((concurrencyAuditRows as unknown[]).length, 2);
         assert.deepEqual((concurrencyAuditRows as Array<{ Action: string }>)[0]?.Action, 'staff.roles.grant');
     });

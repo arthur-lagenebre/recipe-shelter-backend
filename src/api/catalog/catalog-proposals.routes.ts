@@ -9,6 +9,7 @@ import type { RequestHandler } from 'express';
 type CatalogProposalsController = {
     createTagProposal: RequestHandler;
     createIngredientProposal: RequestHandler;
+    createEquipmentProposal: RequestHandler;
 };
 
 export const CATALOG_PROPOSALS_RATE_LIMIT_MAX_ATTEMPTS = 10;
@@ -20,6 +21,7 @@ export function createCatalogProposalsRouter(controller: CatalogProposalsControl
 
     router.post('/tag-proposals', requireCommunityAuth, CommunityOnly, proposalRateLimiter, controller.createTagProposal);
     router.post('/ingredient-proposals', requireCommunityAuth, CommunityOnly, proposalRateLimiter, controller.createIngredientProposal);
+    router.post('/equipment-proposals', requireCommunityAuth, CommunityOnly, proposalRateLimiter, controller.createEquipmentProposal);
 
     return router;
 }

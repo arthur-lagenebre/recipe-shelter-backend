@@ -4,15 +4,7 @@ import { describe, it } from 'node:test';
 import { StaffMfaService } from '../../../src/services/auth/staff-mfa.service.js';
 import { HttpError } from '../../../src/utils/errors.js';
 
-import type {
-    CompleteStaffMfaAuthenticationInput,
-    CompleteStaffMfaEnrollmentInput,
-    CreateStaffWebAuthnChallengeInput,
-    StaffMfaEnrollmentContext,
-    StaffMfaRepository,
-    StaffWebAuthnChallenge,
-    StaffWebAuthnCredential
-} from '../../../src/repositories/auth/staff-mfa.repository.interface.js';
+import type { CompleteStaffMfaAuthenticationInput, CompleteStaffMfaEnrollmentInput, CreateStaffWebAuthnChallengeInput, StaffMfaEnrollmentContext, StaffMfaRepository, StaffWebAuthnChallenge, StaffWebAuthnCredential } from '../../../src/repositories/auth/staff-mfa.repository.interface.js';
 import type { AuthenticationResponseJSON, RegistrationResponseJSON } from '@simplewebauthn/server';
 
 const now = new Date('2026-07-16T12:00:00.000Z');
@@ -55,10 +47,7 @@ class FakeStaffMfaRepository implements StaffMfaRepository {
     }
 
     async findCredential(staffUserId: number, credentialId: string) {
-        return (
-            this.credentials.find((credential) => credential.staffUserId === staffUserId && credential.credentialId === credentialId) ??
-            null
-        );
+        return (this.credentials.find((credential) => credential.staffUserId === staffUserId && credential.credentialId === credentialId) ?? null);
     }
 
     async saveChallenge(input: CreateStaffWebAuthnChallengeInput) {
@@ -131,7 +120,8 @@ function createService(repository: FakeStaffMfaRepository, calls: Record<string,
             },
             async verifyRegistrationResponse(options: unknown) {
                 calls.registrationVerification = options;
-                if (calls.registrationFailure) throw new Error('invalid registration');
+                if (calls.registrationFailure)
+                    throw new Error('invalid registration');
                 return {
                     verified: true,
                     registrationInfo: {
@@ -153,7 +143,8 @@ function createService(repository: FakeStaffMfaRepository, calls: Record<string,
             },
             async verifyAuthenticationResponse(options: unknown) {
                 calls.authenticationVerification = options;
-                if (calls.authenticationFailure) throw new Error('invalid assertion');
+                if (calls.authenticationFailure)
+                    throw new Error('invalid assertion');
                 return {
                     verified: true,
                     authenticationInfo: { newCounter: 5 }
@@ -210,16 +201,10 @@ describe('StaffMfaService WebAuthn enrollment', () => {
         const repository = new FakeStaffMfaRepository();
         const service = createService(repository);
 
-        await assert.rejects(
-            () => service.beginEnrollment(' '),
-            (error) => assertHttpError(error, 'STAFF_MFA_INVITATION_TOKEN_REQUIRED', 400)
-        );
+        await assert.rejects(() => service.beginEnrollment(' '), (error) => assertHttpError(error, 'STAFF_MFA_INVITATION_TOKEN_REQUIRED', 400));
 
         repository.enrollmentContext = null;
-        await assert.rejects(
-            () => service.beginEnrollment('invalid'),
-            (error) => assertHttpError(error, 'STAFF_MFA_INVITATION_INVALID', 400)
-        );
+        await assert.rejects(() => service.beginEnrollment('invalid'), (error) => assertHttpError(error, 'STAFF_MFA_INVITATION_INVALID', 400));
     });
 
     it('activates enrollment only after a user-verified registration response', async () => {
@@ -311,10 +296,7 @@ describe('StaffMfaService WebAuthn authentication', () => {
         const repository = new FakeStaffMfaRepository();
         const service = createService(repository);
 
-        await assert.rejects(
-            () => service.beginAuthentication(42, 3),
-            (error) => assertHttpError(error, 'STAFF_MFA_REQUIRED', 401)
-        );
+        await assert.rejects(() => service.beginAuthentication(42, 3), (error) => assertHttpError(error, 'STAFF_MFA_REQUIRED', 401));
         assert.equal(repository.savedChallenge, null);
     });
 
@@ -383,10 +365,7 @@ describe('StaffMfaService WebAuthn authentication', () => {
         const repository = new FakeStaffMfaRepository();
         const service = createService(repository);
 
-        await assert.rejects(
-            () => service.completeAuthentication('flow-1', authenticationResponse()),
-            (error) => assertHttpError(error, 'AUTH_INVALID_MFA_ASSERTION', 401)
-        );
+        await assert.rejects(() => service.completeAuthentication('flow-1', authenticationResponse()), (error) => assertHttpError(error, 'AUTH_INVALID_MFA_ASSERTION', 401));
 
         repository.authenticationChallenge = {
             id: 'flow-1',
@@ -396,23 +375,14 @@ describe('StaffMfaService WebAuthn authentication', () => {
             challenge: 'authentication-challenge',
             expiresAt: new Date('2026-07-16T12:02:00.000Z')
         };
-        await assert.rejects(
-            () => service.completeAuthentication('flow-1', authenticationResponse('wrong-user-handle')),
-            (error) => assertHttpError(error, 'AUTH_INVALID_MFA_ASSERTION', 401)
-        );
+        await assert.rejects(() => service.completeAuthentication('flow-1', authenticationResponse('wrong-user-handle')), (error) => assertHttpError(error, 'AUTH_INVALID_MFA_ASSERTION', 401));
 
         repository.credentials = [passkey];
         const invalidCalls = { authenticationFailure: true };
         const invalidAssertionService = createService(repository, invalidCalls);
-        await assert.rejects(
-            () => invalidAssertionService.completeAuthentication('flow-1', authenticationResponse()),
-            (error) => assertHttpError(error, 'AUTH_INVALID_MFA_ASSERTION', 401)
-        );
+        await assert.rejects(() => invalidAssertionService.completeAuthentication('flow-1', authenticationResponse()), (error) => assertHttpError(error, 'AUTH_INVALID_MFA_ASSERTION', 401));
 
         repository.authenticationCompleted = false;
-        await assert.rejects(
-            () => service.completeAuthentication('flow-1', authenticationResponse()),
-            (error) => assertHttpError(error, 'AUTH_INVALID_MFA_ASSERTION', 401)
-        );
+        await assert.rejects(() => service.completeAuthentication('flow-1', authenticationResponse()), (error) => assertHttpError(error, 'AUTH_INVALID_MFA_ASSERTION', 401));
     });
 });

@@ -5,12 +5,7 @@ import { CatalogProposalService } from '../../../src/services/catalog/catalog-pr
 import { HttpError } from '../../../src/utils/errors.js';
 
 import type { CatalogProposalRepository } from '../../../src/repositories/catalog/catalog-proposals.repository.interface.js';
-import type {
-    CatalogProposal,
-    CatalogProposalType,
-    CatalogProposalWriteResult,
-    CreateCatalogProposalInput
-} from '../../../src/repositories/catalog/catalog-proposals.types.js';
+import type { CatalogProposal, CatalogProposalType, CatalogProposalWriteResult, CreateCatalogProposalInput } from '../../../src/repositories/catalog/catalog-proposals.types.js';
 
 const proposal: CatalogProposal = {
     id: 91,
@@ -22,6 +17,7 @@ const proposal: CatalogProposal = {
     status: 'pending',
     matchedTagId: null,
     matchedIngredientId: null,
+    matchedEquipmentId: null,
     reviewedByStaffUserId: null,
     reviewReason: null,
     createdAt: new Date('2026-07-20T12:00:00.000Z'),
@@ -100,6 +96,18 @@ describe('CatalogProposalService', () => {
         assert.equal(repository.createInput?.proposalType, 'ingredient');
     });
 
+    it('uses equipment normalization for equipment proposals', async () => {
+        repository.createResult = {
+            status: 'created',
+            proposal: { ...proposal, proposalType: 'equipment', proposedName: 'Coupe-œuf', normalizedName: 'coupe oeuf' }
+        };
+
+        await service.createEquipmentProposal({ authorUserId: 7, recipeId: 42, name: 'Coupe-œuf' });
+
+        assert.deepEqual(repository.catalogLookup, { proposalType: 'equipment', normalizedName: 'coupe oeuf' });
+        assert.equal(repository.createInput?.proposalType, 'equipment');
+    });
+
     it('does not expose recipes that are absent or belong to another author', async () => {
         repository.recipeExists = false;
 
@@ -144,10 +152,7 @@ describe('CatalogProposalService', () => {
         ];
 
         for (const { input, code } of invalidCommands) {
-            await assert.rejects(
-                () => service.createTagProposal(input as never),
-                (error) => assertHttpError(error, 400, code)
-            );
+            await assert.rejects(() => service.createTagProposal(input as never), (error) => assertHttpError(error, 400, code));
         }
         assert.equal(repository.recipeLookup, null);
     });

@@ -7,15 +7,7 @@ import { HttpError } from '../../../src/utils/errors.js';
 
 import type { AuthContext } from '../../../src/api/auth/auth.types.js';
 import type { RecipeRepository } from '../../../src/repositories/recipes/recipe.repository.interface.js';
-import type {
-    Recipe,
-    RecipeDetail,
-    RecipeInput,
-    RecipeListItem,
-    RecipeSearchFilters,
-    RecipeSummary,
-    UpdateRecipeInput
-} from '../../../src/repositories/recipes/recipe.types.js';
+import type { Recipe, RecipeDetail, RecipeInput, RecipeListItem, RecipeSearchFilters, RecipeSummary, UpdateRecipeInput } from '../../../src/repositories/recipes/recipe.types.js';
 import type { PaginatedResult, PaginationOptions } from '../../../src/utils/pagination.js';
 
 const baseRecipe: Recipe = {
@@ -95,11 +87,7 @@ class FakeRecipeRepository implements RecipeRepository {
         return { items: [], pagination: { page: 1, limit: 12, totalItems: 0, totalPages: 0, hasNextPage: false, hasPreviousPage: false } };
     }
 
-    async searchPublished(
-        userId: number | null,
-        filters: RecipeSearchFilters,
-        page: PaginationOptions
-    ): Promise<PaginatedResult<RecipeListItem>> {
+    async searchPublished(userId: number | null, filters: RecipeSearchFilters, page: PaginationOptions): Promise<PaginatedResult<RecipeListItem>> {
         this.publishedFilters = { userId, filters, pagination: page };
         return { items: [], pagination: { page: 1, limit: 12, totalItems: 0, totalPages: 0, hasNextPage: false, hasPreviousPage: false } };
     }
@@ -261,16 +249,10 @@ describe('RecipeService', () => {
 
     it('enforces view and edit permissions', async () => {
         repository.recipe = null;
-        await assert.rejects(
-            () => service.get(10, auth),
-            (error) => assertHttpError(error, 'RECIPES_NOT_FOUND', 404)
-        );
+        await assert.rejects(() => service.get(10, auth), (error) => assertHttpError(error, 'RECIPES_NOT_FOUND', 404));
 
         repository.recipe = { ...baseRecipe, userId: 99, status: 'draft' };
-        await assert.rejects(
-            () => service.get(10, auth),
-            (error) => assertHttpError(error, 'RECIPES_ACCESS_DENIED', 403)
-        );
+        await assert.rejects(() => service.get(10, auth), (error) => assertHttpError(error, 'RECIPES_ACCESS_DENIED', 403));
 
         assert.deepEqual(await service.get(10, adminAuth), repository.recipe);
 
@@ -293,16 +275,10 @@ describe('RecipeService', () => {
         assert.equal(repository.archivedId, 10);
 
         repository.recipe = { ...baseRecipe, userId: 99, status: 'published' };
-        await assert.rejects(
-            () => service.archive(10, auth),
-            (error) => assertHttpError(error, 'RECIPES_ACCESS_DENIED', 403)
-        );
+        await assert.rejects(() => service.archive(10, auth), (error) => assertHttpError(error, 'RECIPES_ACCESS_DENIED', 403));
 
         repository.recipe = { ...baseRecipe, status: 'draft' };
-        await assert.rejects(
-            () => service.archive(10, auth),
-            (error) => assertHttpError(error, 'RECIPES_ARCHIVE_FORBIDDEN', 403)
-        );
+        await assert.rejects(() => service.archive(10, auth), (error) => assertHttpError(error, 'RECIPES_ARCHIVE_FORBIDDEN', 403));
     });
 
     it('delegates published searches', async () => {

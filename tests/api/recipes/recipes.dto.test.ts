@@ -1,14 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import {
-    parseCreateRecipeBody,
-    parseRecipeFeedLimitQuery,
-    parseRecipeIdParam,
-    parseRecipeSearchQuery,
-    parseRecipeSlugParam,
-    parseUpdateRecipeBody
-} from '../../../src/api/recipes/recipes.dto.js';
+import { parseCreateRecipeBody, parseRecipeFeedLimitQuery, parseRecipeIdParam, parseRecipeSearchQuery, parseRecipeSlugParam, parseUpdateRecipeBody } from '../../../src/api/recipes/recipes.dto.js';
 import { HttpError } from '../../../src/utils/errors.js';
 
 function assertHttpError(error: unknown, code: string, status: number): void {

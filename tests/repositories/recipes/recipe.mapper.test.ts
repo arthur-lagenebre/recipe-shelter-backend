@@ -1,35 +1,9 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import {
-    mapRecipe,
-    mapRecipeDetail,
-    mapRecipeDetailComment,
-    mapRecipeDetailComments,
-    mapRecipeDetailEquipment,
-    mapRecipeDetailIngredient,
-    mapRecipeDetailStep,
-    mapRecipeDetailTag,
-    mapRecipeEquipment,
-    mapRecipeIngredient,
-    mapRecipeListItem,
-    mapRecipeStep,
-    mapRecipeSummary
-} from '../../../src/repositories/recipes/recipe.mapper.js';
+import { mapRecipe, mapRecipeDetail, mapRecipeDetailComment, mapRecipeDetailComments, mapRecipeDetailEquipment, mapRecipeDetailIngredient, mapRecipeDetailStep, mapRecipeDetailTag, mapRecipeEquipment, mapRecipeIngredient, mapRecipeListItem, mapRecipeStep, mapRecipeSummary } from '../../../src/repositories/recipes/recipe.mapper.js';
 
-import type {
-    RecipeDetailCommentRow,
-    RecipeDetailEquipmentRow,
-    RecipeDetailIngredientRow,
-    RecipeDetailRow,
-    RecipeDetailStepRow,
-    RecipeDetailTagRow,
-    RecipeEquipmentRow,
-    RecipeIngredientRow,
-    RecipeListItemRow,
-    RecipeRow,
-    RecipeStepRow
-} from '../../../src/repositories/recipes/recipe.types.js';
+import type { RecipeDetailCommentRow, RecipeDetailEquipmentRow, RecipeDetailIngredientRow, RecipeDetailRow, RecipeDetailStepRow, RecipeDetailTagRow, RecipeEquipmentRow, RecipeIngredientRow, RecipeListItemRow, RecipeRow, RecipeStepRow } from '../../../src/repositories/recipes/recipe.types.js';
 
 const listRow = {
     Id: 1,

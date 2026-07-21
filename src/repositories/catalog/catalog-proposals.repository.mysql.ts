@@ -31,7 +31,7 @@ type ProposalWhere = {
 
 const CATALOG_PROPOSAL_SELECT = `cp.Id, cp.AuthorUserId, cp.RecipeId, cp.ProposalType,
                                  cp.ProposedName, cp.NormalizedName, cp.Status,
-                                 cp.MatchedTagId, cp.MatchedIngredientId,
+                                 cp.MatchedTagId, cp.MatchedIngredientId, cp.MatchedEquipmentId,
                                  cp.ReviewedByStaffUserId, cp.ReviewReason,
                                  cp.CreatedAt, cp.ReviewedAt`;
 
@@ -41,10 +41,10 @@ export class CatalogProposalRepositoryMysql implements CatalogProposalRepository
     async recipeExistsForAuthor(recipeId: number, authorUserId: number): Promise<boolean> {
         const [rows] = await this.db.execute<ExistsRow[]>(
             `SELECT EXISTS(
-         SELECT 1
-         FROM Recipes
-         WHERE Id = ? AND UserId = ?
-       ) AS \`Exists\``,
+                SELECT 1
+                FROM Recipes
+                WHERE Id = ? AND UserId = ?
+            ) AS \`Exists\``,
             [recipeId, authorUserId]
         );
 
@@ -53,32 +53,40 @@ export class CatalogProposalRepositoryMysql implements CatalogProposalRepository
 
     async activeCatalogNameExists(proposalType: CatalogProposalType, normalizedName: string, db?: PoolConnection): Promise<boolean> {
         const executor = db ?? this.db;
-        const [rows] =
-            proposalType === 'tag'
-                ? await executor.execute<ExistsRow[]>(
-                      `SELECT EXISTS(
-           SELECT 1
-           FROM Tags
-           WHERE Status = 'active' AND NormalizedName = ?
-         ) AS \`Exists\``,
-                      [normalizedName]
-                  )
-                : await executor.execute<ExistsRow[]>(
-                      `SELECT (
-           EXISTS(
-             SELECT 1
-             FROM Ingredients
-             WHERE Status = 'active' AND NormalizedName = ?
-           )
-           OR EXISTS(
-             SELECT 1
-             FROM IngredientAliases AS alias
-             INNER JOIN Ingredients AS ingredient ON ingredient.Id = alias.IngredientId
-             WHERE ingredient.Status = 'active' AND alias.NormalizedName = ?
-           )
-         ) AS \`Exists\``,
-                      [normalizedName, normalizedName]
-                  );
+
+        if (proposalType === 'tag') {
+            const [rows] = await executor.execute<ExistsRow[]>(
+                `SELECT EXISTS(
+                    SELECT 1
+                    FROM Tags
+                    WHERE Status = 'active' AND NormalizedName = ?
+                ) AS \`Exists\``,
+                [normalizedName]
+            );
+
+            return Boolean(firstOrNull(rows)?.Exists);
+        }
+
+        if (proposalType === 'equipment') {
+            const [rows] = await executor.execute<ExistsRow[]>(
+                `SELECT EXISTS(
+                    SELECT 1
+                    FROM Equipments
+                    WHERE NormalizedName = ?
+                ) AS \`Exists\``,
+                [normalizedName]
+            );
+
+            return Boolean(firstOrNull(rows)?.Exists);
+        }
+
+        const [rows] = await executor.execute<ExistsRow[]>(
+            `SELECT (
+                EXISTS(SELECT 1 FROM Ingredients WHERE Status = 'active' AND NormalizedName = ?)
+                OR EXISTS(SELECT 1 FROM IngredientAliases AS alias INNER JOIN Ingredients AS ingredient ON ingredient.Id = alias.IngredientId WHERE ingredient.Status = 'active' AND alias.NormalizedName = ?)
+            ) AS \`Exists\``,
+            [normalizedName, normalizedName]
+        );
 
         return Boolean(firstOrNull(rows)?.Exists);
     }
@@ -88,9 +96,7 @@ export class CatalogProposalRepositoryMysql implements CatalogProposalRepository
 
         try {
             const [result] = await this.db.execute<ResultSetHeader>(
-                `INSERT INTO CatalogProposals
-           (AuthorUserId, RecipeId, ProposalType, ProposedName, NormalizedName)
-         VALUES (?, ?, ?, ?, ?)`,
+                `INSERT INTO CatalogProposals (AuthorUserId, RecipeId, ProposalType, ProposedName, NormalizedName) VALUES (?, ?, ?, ?, ?)`,
                 [input.authorUserId, input.recipeId, input.proposalType, input.proposedName, input.normalizedName]
             );
             insertId = result.insertId;
@@ -115,16 +121,16 @@ export class CatalogProposalRepositoryMysql implements CatalogProposalRepository
         const where = buildWhere(filters);
         const [countRows] = await executor.execute<CountRow[]>(
             `SELECT COUNT(*) AS Count
-       FROM CatalogProposals AS cp
-       WHERE ${where.clause}`,
+             FROM CatalogProposals AS cp
+             WHERE ${where.clause}`,
             where.params
         );
         const [rows] = await executor.execute<CatalogProposalRow[]>(
             `SELECT ${CATALOG_PROPOSAL_SELECT}
-       FROM CatalogProposals AS cp
-       WHERE ${where.clause}
-       ORDER BY cp.CreatedAt ASC, cp.Id ASC
-       ${formatLimitOffsetClause(pagination)}`,
+             FROM CatalogProposals AS cp
+             WHERE ${where.clause}
+             ORDER BY cp.CreatedAt ASC, cp.Id ASC
+            ${formatLimitOffsetClause(pagination)}`,
             where.params
         );
 
@@ -137,11 +143,16 @@ export class CatalogProposalRepositoryMysql implements CatalogProposalRepository
 
     async review(input: ReviewCatalogProposalInput, db: PoolConnection): Promise<CatalogProposal | null> {
         const [result] = await db.execute<ResultSetHeader>(
-            `UPDATE CatalogProposals
-       SET Status = ?, MatchedTagId = ?, MatchedIngredientId = ?,
-           ReviewedByStaffUserId = ?, ReviewReason = ?, ReviewedAt = CURRENT_TIMESTAMP(6)
-       WHERE Id = ? AND Status = 'pending'`,
-            [input.status, input.matchedTagId, input.matchedIngredientId, input.reviewedByStaffUserId, input.reviewReason, input.proposalId]
+            `UPDATE CatalogProposals SET Status = ?, MatchedTagId = ?, MatchedIngredientId = ?, MatchedEquipmentId = ?, ReviewedByStaffUserId = ?, ReviewReason = ?, ReviewedAt = CURRENT_TIMESTAMP(6) WHERE Id = ? AND Status = 'pending'`,
+            [
+                input.status,
+                input.matchedTagId,
+                input.matchedIngredientId,
+                input.matchedEquipmentId,
+                input.reviewedByStaffUserId,
+                input.reviewReason,
+                input.proposalId
+            ]
         );
 
         if (result.affectedRows === 0) return null;
@@ -152,9 +163,9 @@ export class CatalogProposalRepositoryMysql implements CatalogProposalRepository
     private async findById(id: number, db: Pool | PoolConnection = this.db, forUpdate = false) {
         const [rows] = await db.execute<CatalogProposalRow[]>(
             `SELECT ${CATALOG_PROPOSAL_SELECT}
-       FROM CatalogProposals AS cp
-       WHERE cp.Id = ?
-       ${forUpdate ? 'FOR UPDATE' : ''}`,
+             FROM CatalogProposals AS cp
+             WHERE cp.Id = ?
+            ${forUpdate ? 'FOR UPDATE' : ''}`,
             [id]
         );
         const row = firstOrNull(rows);

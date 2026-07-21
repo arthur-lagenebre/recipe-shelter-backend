@@ -69,9 +69,7 @@ describe('recipes search HTTP integration', () => {
     after(async () => server.close());
 
     it('deduplicates all id lists and preserves the paginated response contract', async () => {
-        const response = await fetch(
-            `${server.baseUrl}/api/v1/recipes/search?q=fixture&categoryId=3&tagIds=1,1,2&excludedTagIds=8,8&ingredientIds=4,5,4&excludedIngredientIds=10,11,10&maxTotalTimeMinutes=60&page=2&limit=12`
-        );
+        const response = await fetch(`${server.baseUrl}/api/v1/recipes/search?q=fixture&categoryId=3&tagIds=1,1,2&excludedTagIds=8,8&ingredientIds=4,5,4&excludedIngredientIds=10,11,10&maxTotalTimeMinutes=60&page=2&limit=12`);
         const body = (await response.json()) as { items: Array<{ id: number }>; pagination: { totalItems: number } };
 
         assert.equal(response.status, 200);

@@ -13,6 +13,8 @@ import type {
     CatalogProposalListFilters,
     CatalogProposalType
 } from '../../repositories/catalog/catalog-proposals.types.js';
+import type { EquipmentRepository, EquipmentWriteResult } from '../../repositories/equipments/equipment.repository.interface.js';
+import type { Equipment } from '../../repositories/equipments/equipment.types.js';
 import type { Ingredient, IngredientAlias } from '../../repositories/ingredients/ingredient.types.js';
 import type { Tag } from '../../repositories/tag/tag.types.js';
 import type { PaginatedResult, PaginationOptions } from '../../utils/pagination.js';
@@ -25,7 +27,7 @@ const ACTION_REASON_MIN_LENGTH = 10;
 const ACTION_REASON_MAX_LENGTH = 1000;
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const LANGUAGE_CODE_PATTERN = /^[a-z]{2,8}(?:-[a-z0-9]{1,8})*$/;
-const PROPOSAL_TYPES = new Set<CatalogProposalType>(['tag', 'ingredient']);
+const PROPOSAL_TYPES = new Set<CatalogProposalType>(['tag', 'ingredient', 'equipment']);
 const PROPOSAL_STATUSES = new Set<CatalogProposal['status']>(['pending', 'accepted', 'rejected', 'merged']);
 
 type ReviewAction = 'accept' | 'reject' | 'associate' | 'alias';
@@ -52,6 +54,15 @@ export type AssociateIngredientCatalogProposalCommand = {
     reason: string;
 };
 
+export type AcceptEquipmentCatalogProposalCommand = {
+    reason: string;
+};
+
+export type AssociateEquipmentCatalogProposalCommand = {
+    targetEquipmentId: number;
+    reason: string;
+};
+
 export type ConvertCatalogProposalToAliasCommand = {
     targetIngredientId: number;
     languageCode: string;
@@ -63,6 +74,7 @@ export class AdminCatalogProposalService {
         private readonly proposals: AdminCatalogProposalRepository,
         private readonly tags: AdminTagRepository,
         private readonly ingredients: AdminIngredientRepository,
+        private readonly equipments: EquipmentRepository,
         private readonly auditActions: AdminAuditActionRunner
     ) {}
 
@@ -179,6 +191,45 @@ export class AdminCatalogProposalService {
         });
     }
 
+    async acceptEquipment(
+        proposalId: number,
+        input: AcceptEquipmentCatalogProposalCommand,
+        actorUserId: number,
+        context: AdminAuditRequestContext
+    ): Promise<CatalogProposal> {
+        requirePositiveId(proposalId, 'Catalog proposal id', 'ADMIN_CATALOG_PROPOSALS_BAD_ID');
+        const command = validateAcceptEquipmentCommand(input);
+
+        return this.auditActions.run(async ({ db, audit }) => {
+            const before = await this.requirePendingProposal(proposalId, 'equipment', db);
+            await this.requireUnusedCatalogName(before, db);
+            const equipment = requireWrittenEquipment(
+                await this.equipments.create(
+                    {
+                        name: before.proposedName,
+                        normalizedName: before.normalizedName,
+                        slug: before.normalizedName.replace(/ /g, '-')
+                    },
+                    db
+                )
+            );
+            const after = await this.reviewProposal(before, 'accepted', equipment.id, actorUserId, command.reason, db);
+
+            await audit.record({
+                actorUserId,
+                eventType: ADMIN_AUDIT_EVENT_TYPES.catalogProposalsAccept,
+                targetType: ADMIN_AUDIT_TARGET_TYPES.catalogProposal,
+                targetId: proposalId,
+                reason: command.reason,
+                beforeValues: snapshotProposal(before),
+                afterValues: { proposal: snapshotProposal(after), createdEquipment: snapshotEquipment(equipment) },
+                ...context
+            });
+
+            return after;
+        });
+    }
+
     async reject(proposalId: number, reason: string, actorUserId: number, context: AdminAuditRequestContext): Promise<CatalogProposal> {
         requirePositiveId(proposalId, 'Catalog proposal id', 'ADMIN_CATALOG_PROPOSALS_BAD_ID');
         const cleanReason = validateActionReason(reason, 'reject');
@@ -255,6 +306,36 @@ export class AdminCatalogProposalService {
                 reason: command.reason,
                 beforeValues: snapshotProposal(before),
                 afterValues: { proposal: snapshotProposal(after), matchedIngredient: snapshotIngredient(ingredient) },
+                ...context
+            });
+
+            return after;
+        });
+    }
+
+    async associateEquipment(
+        proposalId: number,
+        input: AssociateEquipmentCatalogProposalCommand,
+        actorUserId: number,
+        context: AdminAuditRequestContext
+    ): Promise<CatalogProposal> {
+        requirePositiveId(proposalId, 'Catalog proposal id', 'ADMIN_CATALOG_PROPOSALS_BAD_ID');
+        const command = validateAssociateEquipmentCommand(input);
+
+        return this.auditActions.run(async ({ db, audit }) => {
+            const before = await this.requirePendingProposal(proposalId, 'equipment', db);
+            const equipment = (await this.equipments.findByIdsForUpdate([command.targetEquipmentId], db))[0];
+            requireActiveEquipmentTarget(equipment);
+            const after = await this.reviewProposal(before, 'merged', equipment.id, actorUserId, command.reason, db);
+
+            await audit.record({
+                actorUserId,
+                eventType: ADMIN_AUDIT_EVENT_TYPES.catalogProposalsAssociate,
+                targetType: ADMIN_AUDIT_TARGET_TYPES.catalogProposal,
+                targetId: proposalId,
+                reason: command.reason,
+                beforeValues: snapshotProposal(before),
+                afterValues: { proposal: snapshotProposal(after), matchedEquipment: snapshotEquipment(equipment) },
                 ...context
             });
 
@@ -346,6 +427,7 @@ export class AdminCatalogProposalService {
                 status,
                 matchedTagId: proposal.proposalType === 'tag' ? matchedCatalogId : null,
                 matchedIngredientId: proposal.proposalType === 'ingredient' ? matchedCatalogId : null,
+                matchedEquipmentId: proposal.proposalType === 'equipment' ? matchedCatalogId : null,
                 reviewedByStaffUserId: actorUserId,
                 reviewReason: reason
             },
@@ -397,6 +479,27 @@ function validateAcceptIngredientCommand(input: AcceptIngredientCatalogProposalC
     return {
         slug: validateOptionalSlug(input.slug, 'ingredient'),
         reason: validateActionReason(input.reason, 'accept')
+    };
+}
+
+function validateAcceptEquipmentCommand(input: AcceptEquipmentCatalogProposalCommand) {
+    requireCommand(input, 'accept');
+
+    return {
+        reason: validateActionReason(input.reason, 'accept')
+    };
+}
+
+function validateAssociateEquipmentCommand(input: AssociateEquipmentCatalogProposalCommand) {
+    requireCommand(input, 'associate');
+
+    return {
+        targetEquipmentId: requirePositiveId(
+            input.targetEquipmentId,
+            'Target equipment id',
+            'ADMIN_CATALOG_PROPOSALS_BAD_TARGET_EQUIPMENT_ID'
+        ),
+        reason: validateActionReason(input.reason, 'associate')
     };
 }
 
@@ -509,6 +612,15 @@ function requireWrittenIngredient(result: AdminIngredientWriteResult): Ingredien
     return result.ingredient;
 }
 
+function requireWrittenEquipment(result: EquipmentWriteResult): Equipment {
+    if (result.status === 'normalized_name_taken')
+        throw conflict('An equipment already uses this canonical name', 'ADMIN_CATALOG_PROPOSALS_CANONICAL_NAME_TAKEN');
+    if (result.status === 'slug_taken')
+        throw conflict('An equipment already uses this slug', 'ADMIN_CATALOG_PROPOSALS_EQUIPMENT_SLUG_TAKEN');
+
+    return result.equipment;
+}
+
 function requireWrittenAlias(result: AdminIngredientAliasWriteResult): IngredientAlias {
     if (result.status === 'alias_taken')
         throw conflict('This normalized alias already exists for the language', 'ADMIN_CATALOG_PROPOSALS_ALIAS_TAKEN');
@@ -525,6 +637,10 @@ function requireActiveIngredientTarget(ingredient: Ingredient | undefined): asse
     if (!ingredient) throw notFound('Target ingredient not found', 'ADMIN_CATALOG_PROPOSALS_TARGET_INGREDIENT_NOT_FOUND');
     if (ingredient.status !== 'active')
         throw conflict('Target ingredient must be active', 'ADMIN_CATALOG_PROPOSALS_TARGET_INGREDIENT_NOT_ACTIVE');
+}
+
+function requireActiveEquipmentTarget(equipment: Equipment | undefined): asserts equipment is Equipment {
+    if (!equipment) throw notFound('Target equipment not found', 'ADMIN_CATALOG_PROPOSALS_TARGET_EQUIPMENT_NOT_FOUND');
 }
 
 function snapshotFilters(filters: CatalogProposalListFilters) {
@@ -547,6 +663,7 @@ function snapshotProposal(proposal: CatalogProposal) {
         status: proposal.status,
         matchedTagId: proposal.matchedTagId,
         matchedIngredientId: proposal.matchedIngredientId,
+        matchedEquipmentId: proposal.matchedEquipmentId,
         reviewedByStaffUserId: proposal.reviewedByStaffUserId,
         reviewReason: proposal.reviewReason,
         createdAt: proposal.createdAt.toISOString(),
@@ -573,6 +690,15 @@ function snapshotIngredient(ingredient: Ingredient) {
         normalizedName: ingredient.normalizedName,
         slug: ingredient.slug,
         status: ingredient.status
+    };
+}
+
+function snapshotEquipment(equipment: Equipment) {
+    return {
+        id: equipment.id,
+        name: equipment.name,
+        normalizedName: equipment.normalizedName,
+        slug: equipment.slug
     };
 }
 

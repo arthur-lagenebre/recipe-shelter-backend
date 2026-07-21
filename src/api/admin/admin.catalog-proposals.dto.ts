@@ -7,15 +7,17 @@ import type {
     CatalogProposalType
 } from '../../repositories/catalog/catalog-proposals.types.js';
 import type {
+    AcceptEquipmentCatalogProposalCommand,
     AcceptIngredientCatalogProposalCommand,
     AcceptTagCatalogProposalCommand,
+    AssociateEquipmentCatalogProposalCommand,
     AssociateIngredientCatalogProposalCommand,
     AssociateTagCatalogProposalCommand,
     ConvertCatalogProposalToAliasCommand
 } from '../../services/admin/admin.catalog-proposals.service.js';
 
 const PROPOSAL_STATUSES = new Set<CatalogProposalStatus>(['pending', 'accepted', 'rejected', 'merged']);
-const PROPOSAL_TYPES = new Set<CatalogProposalType>(['tag', 'ingredient']);
+const PROPOSAL_TYPES = new Set<CatalogProposalType>(['tag', 'ingredient', 'equipment']);
 const SLUG_MAX_LENGTH = 255;
 const DESCRIPTION_MAX_LENGTH = 1000;
 const SEARCH_MAX_LENGTH = 255;
@@ -82,8 +84,17 @@ export function parseAcceptIngredientCatalogProposalBody(body: unknown): AcceptI
     };
 }
 
+export function parseAcceptEquipmentCatalogProposalBody(body: unknown): AcceptEquipmentCatalogProposalCommand {
+    const record = requireBody(body, 'accept');
+
+    return {
+        reason: parseReason(record.reason, 'accept')
+    };
+}
+
 export function parseRejectCatalogProposalBody(body: unknown): string {
     const record = requireBody(body, 'reject');
+
     return parseReason(record.reason, 'reject');
 }
 
@@ -109,9 +120,19 @@ export function parseAssociateIngredientCatalogProposalBody(body: unknown): Asso
     };
 }
 
+export function parseAssociateEquipmentCatalogProposalBody(body: unknown): AssociateEquipmentCatalogProposalCommand {
+    const record = requireBody(body, 'associate');
+
+    return {
+        targetEquipmentId: parseBodyId(record.targetEquipmentId, 'Target equipment id', 'ADMIN_CATALOG_PROPOSALS_BAD_TARGET_EQUIPMENT_ID'),
+        reason: parseReason(record.reason, 'associate')
+    };
+}
+
 export function parseConvertCatalogProposalToAliasBody(body: unknown): ConvertCatalogProposalToAliasCommand {
     const record = requireBody(body, 'alias');
     const languageCode = typeof record.languageCode === 'string' ? record.languageCode.trim().toLowerCase() : '';
+
     if (!languageCode || languageCode.length > LANGUAGE_CODE_MAX_LENGTH || !LANGUAGE_CODE_PATTERN.test(languageCode))
         throw badRequest('Ingredient alias language code is invalid', 'ADMIN_CATALOG_PROPOSALS_ALIAS_LANGUAGE_CODE_INVALID');
 
@@ -164,6 +185,7 @@ function parseBodyId(value: unknown, label: string, code: string): number {
 
 function parseOptionalSearch(value: unknown): string | undefined {
     if (value === undefined) return undefined;
+
     const q = typeof value === 'string' ? value.trim() : '';
     if (!q || q.length > SEARCH_MAX_LENGTH)
         throw badRequest(
@@ -176,6 +198,7 @@ function parseOptionalSearch(value: unknown): string | undefined {
 
 function parseOptionalSlug(value: unknown, proposalType: CatalogProposalType): string | undefined {
     if (value === undefined) return undefined;
+
     const slug = typeof value === 'string' ? value.trim() : '';
     if (!slug || slug.length > SLUG_MAX_LENGTH || !SLUG_PATTERN.test(slug))
         throw badRequest(
@@ -189,6 +212,7 @@ function parseOptionalSlug(value: unknown, proposalType: CatalogProposalType): s
 function parseOptionalDescription(value: unknown): string | null | undefined {
     if (value === undefined) return undefined;
     if (value === null) return null;
+
     const description = typeof value === 'string' ? value.trim() : '';
     if (!description || description.length > DESCRIPTION_MAX_LENGTH)
         throw badRequest(
@@ -202,6 +226,7 @@ function parseOptionalDescription(value: unknown): string | null | undefined {
 function parseReason(value: unknown, action: ReviewAction): string {
     const reason = typeof value === 'string' ? value.trim() : '';
     const codePrefix = `ADMIN_CATALOG_PROPOSALS_${action.toUpperCase()}`;
+
     if (!reason) throw badRequest('Review reason is required', `${codePrefix}_REASON_REQUIRED`);
     if (reason.length < ACTION_REASON_MIN_LENGTH)
         throw badRequest(`Review reason must be at least ${ACTION_REASON_MIN_LENGTH} characters`, `${codePrefix}_REASON_TOO_SHORT`);

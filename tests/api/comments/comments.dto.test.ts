@@ -1,12 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import {
-    parseCommentIdParam,
-    parseCreateCommentBody,
-    parseRecipeIdParam,
-    parseUpdateCommentBody
-} from '../../../src/api/comments/comments.dto.js';
+import { parseCommentIdParam, parseCreateCommentBody, parseRecipeIdParam, parseUpdateCommentBody } from '../../../src/api/comments/comments.dto.js';
 import { HttpError } from '../../../src/utils/errors.js';
 
 function assertHttpError(error: unknown, code: string, status: number): void {

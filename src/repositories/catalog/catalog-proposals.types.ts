@@ -1,6 +1,6 @@
 import type { RowDataPacket } from 'mysql2';
 
-export const CATALOG_PROPOSAL_TYPES = ['tag', 'ingredient'] as const;
+export const CATALOG_PROPOSAL_TYPES = ['tag', 'ingredient', 'equipment'] as const;
 export const CATALOG_PROPOSAL_STATUSES = ['pending', 'accepted', 'rejected', 'merged'] as const;
 
 export type CatalogProposalType = (typeof CATALOG_PROPOSAL_TYPES)[number];
@@ -16,6 +16,7 @@ export type CatalogProposal = {
     status: CatalogProposalStatus;
     matchedTagId: number | null;
     matchedIngredientId: number | null;
+    matchedEquipmentId: number | null;
     reviewedByStaffUserId: number | null;
     reviewReason: string | null;
     createdAt: Date;
@@ -43,6 +44,7 @@ export type ReviewCatalogProposalInput = {
     status: Exclude<CatalogProposalStatus, 'pending'>;
     matchedTagId: number | null;
     matchedIngredientId: number | null;
+    matchedEquipmentId: number | null;
     reviewedByStaffUserId: number;
     reviewReason: string;
 };
@@ -59,6 +61,7 @@ export type CatalogProposalRow = RowDataPacket & {
     Status: CatalogProposalStatus;
     MatchedTagId: number | null;
     MatchedIngredientId: number | null;
+    MatchedEquipmentId: number | null;
     ReviewedByStaffUserId: number | null;
     ReviewReason: string | null;
     CreatedAt: Date;

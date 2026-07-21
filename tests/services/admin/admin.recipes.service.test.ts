@@ -112,8 +112,7 @@ class FakeAdminRecipeRepository implements AdminRecipeRepository {
                   moderatedByUserId: recipe.moderatedByUserId,
                   rejectionReason: recipe.rejectionReason,
                   archiveReason: null
-              }
-            : null;
+              } : null;
     }
 
     async publish(id: number, adminUserId: number): Promise<boolean> {
@@ -168,10 +167,7 @@ describe('AdminRecipeService', () => {
         assert.deepEqual(await service.getRecipeForAdmin(10), adminRecipe);
 
         adminRecipes.recipeAdmin = null;
-        await assert.rejects(
-            () => service.getRecipeForAdmin(99),
-            (error) => assertHttpError(error, 'RECIPES_NOT_FOUND', 404)
-        );
+        await assert.rejects(() => service.getRecipeForAdmin(99), (error) => assertHttpError(error, 'RECIPES_NOT_FOUND', 404));
     });
 
     it('approves and rejects pending recipes', async () => {
@@ -203,16 +199,10 @@ describe('AdminRecipeService', () => {
 
     it('rejects moderation when recipe is missing or not pending', async () => {
         recipes.recipe = null;
-        await assert.rejects(
-            () => service.approve(10, 1, testAdminAuditContext),
-            (error) => assertHttpError(error, 'RECIPES_NOT_FOUND', 404)
-        );
+        await assert.rejects(() => service.approve(10, 1, testAdminAuditContext), (error) => assertHttpError(error, 'RECIPES_NOT_FOUND', 404));
 
         recipes.recipe = { ...baseRecipe, status: 'draft' };
-        await assert.rejects(
-            () => service.reject(10, 1, 'Valid reason', testAdminAuditContext),
-            (error) => assertHttpError(error, 'RECIPES_MODERATE_FORBIDDEN', 403)
-        );
+        await assert.rejects(() => service.reject(10, 1, 'Valid reason', testAdminAuditContext), (error) => assertHttpError(error, 'RECIPES_MODERATE_FORBIDDEN', 403));
         assert.equal(audit.inputs.length, 0);
     });
 
@@ -222,13 +212,7 @@ describe('AdminRecipeService', () => {
             ['reject', 'short', 'ADMIN_RECIPES_REJECT_REASON_TOO_SHORT'],
             ['archive', 'x'.repeat(1001), 'ADMIN_RECIPES_ARCHIVE_REASON_TOO_LONG']
         ] as const) {
-            await assert.rejects(
-                () =>
-                    action === 'reject'
-                        ? service.reject(10, 1, reason, testAdminAuditContext)
-                        : service.archive(10, 1, reason, testAdminAuditContext),
-                (error) => assertHttpError(error, code, 400)
-            );
+            await assert.rejects(() => action === 'reject' ? service.reject(10, 1, reason, testAdminAuditContext) : service.archive(10, 1, reason, testAdminAuditContext), (error) => assertHttpError(error, code, 400));
         }
 
         assert.equal(adminRecipes.rejectedInput, null);
@@ -258,10 +242,7 @@ describe('AdminRecipeService', () => {
         });
 
         recipes.recipe = { ...baseRecipe, status: 'draft' };
-        await assert.rejects(
-            () => service.archive(10, 1, 'Repeated policy violations.', testAdminAuditContext),
-            (error) => assertHttpError(error, 'RECIPES_ARCHIVE_FORBIDDEN', 403)
-        );
+        await assert.rejects(() => service.archive(10, 1, 'Repeated policy violations.', testAdminAuditContext), (error) => assertHttpError(error, 'RECIPES_ARCHIVE_FORBIDDEN', 403));
 
         recipes.recipe = baseRecipe;
         assert.equal(await service.delete(10, 1, testAdminAuditContext), true);
@@ -270,10 +251,7 @@ describe('AdminRecipeService', () => {
         assert.equal(audit.inputs[1]?.eventType, 'recipes.delete');
 
         recipes.recipe = null;
-        await assert.rejects(
-            () => service.delete(99, 1, testAdminAuditContext),
-            (error) => assertHttpError(error, 'RECIPES_NOT_FOUND', 404)
-        );
+        await assert.rejects(() => service.delete(99, 1, testAdminAuditContext), (error) => assertHttpError(error, 'RECIPES_NOT_FOUND', 404));
         assert.equal(audit.inputs.length, 2);
     });
 

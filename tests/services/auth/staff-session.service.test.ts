@@ -135,13 +135,7 @@ describe('StaffSessionService', () => {
 
     it('records self and administrative revocation actors and scopes', async () => {
         await service.revokeOwn(actor.id, '00000000-0000-4000-8000-000000000001', testAdminAuditContext);
-        await service.revokeManaged(
-            target.id,
-            '00000000-0000-4000-8000-000000000002',
-            actor.id,
-            'Compromised browser session.',
-            testAdminAuditContext
-        );
+        await service.revokeManaged(target.id, '00000000-0000-4000-8000-000000000002', actor.id, 'Compromised browser session.', testAdminAuditContext);
 
         assert.deepEqual(repository.staffRevocations, [
             {
@@ -199,22 +193,10 @@ describe('StaffSessionService', () => {
     });
 
     it('rejects unknown, community-owned, expired and cross-owner sessions', async () => {
-        await assert.rejects(
-            () => service.listManaged(community.id, actor.id, '', testAdminAuditContext),
-            (error) => assertHttpError(error, 'STAFF_USER_NOT_FOUND')
-        );
-        await assert.rejects(
-            () => service.listManaged(999, actor.id, '', testAdminAuditContext),
-            (error) => assertHttpError(error, 'STAFF_USER_NOT_FOUND')
-        );
-        await assert.rejects(
-            () => service.revokeOwn(actor.id, '00000000-0000-4000-8000-000000000002', testAdminAuditContext),
-            (error) => assertHttpError(error, 'STAFF_SESSION_NOT_FOUND')
-        );
-        await assert.rejects(
-            () => service.revokeOwn(actor.id, '00000000-0000-4000-8000-000000000003', testAdminAuditContext),
-            (error) => assertHttpError(error, 'STAFF_SESSION_NOT_FOUND')
-        );
+        await assert.rejects(() => service.listManaged(community.id, actor.id, '', testAdminAuditContext), (error) => assertHttpError(error, 'STAFF_USER_NOT_FOUND'));
+        await assert.rejects(() => service.listManaged(999, actor.id, '', testAdminAuditContext), (error) => assertHttpError(error, 'STAFF_USER_NOT_FOUND'));
+        await assert.rejects(() => service.revokeOwn(actor.id, '00000000-0000-4000-8000-000000000002', testAdminAuditContext), (error) => assertHttpError(error, 'STAFF_SESSION_NOT_FOUND'));
+        await assert.rejects(() => service.revokeOwn(actor.id, '00000000-0000-4000-8000-000000000003', testAdminAuditContext), (error) => assertHttpError(error, 'STAFF_SESSION_NOT_FOUND'));
         assert.equal(audit.inputs.length, 0);
     });
 });

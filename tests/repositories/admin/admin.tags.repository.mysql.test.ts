@@ -142,10 +142,7 @@ describe('AdminTagRepositoryMysql catalog operations', () => {
         });
 
         const unexpected = new Error('database unavailable');
-        await assert.rejects(
-            () => repository.create(writeInput, createConnection([], [throwResponse(unexpected)])),
-            (error: unknown) => error === unexpected
-        );
+        await assert.rejects(() => repository.create(writeInput, createConnection([], [throwResponse(unexpected)])), (error: unknown) => error === unexpected);
     });
 
     it('returns every restore outcome and preserves non-normalization conflicts', async () => {
@@ -153,16 +150,10 @@ describe('AdminTagRepositoryMysql catalog operations', () => {
 
         assert.equal(await repository.restore(42, createConnection([], [[{ affectedRows: 1 }, []]])), 'restored');
         assert.equal(await repository.restore(42, createConnection([], [[{ affectedRows: 0 }, []]])), 'not_updated');
-        assert.equal(
-            await repository.restore(42, createConnection([], [throwResponse(duplicateError('tags_active_normalized_name_UK'))])),
-            'normalized_name_taken'
-        );
+        assert.equal(await repository.restore(42, createConnection([], [throwResponse(duplicateError('tags_active_normalized_name_UK'))])), 'normalized_name_taken');
 
         const slugDuplicate = duplicateError('tags_slug_UK');
-        await assert.rejects(
-            () => repository.restore(42, createConnection([], [throwResponse(slugDuplicate)])),
-            (error: unknown) => error === slugDuplicate
-        );
+        await assert.rejects(() => repository.restore(42, createConnection([], [throwResponse(slugDuplicate)])), (error: unknown) => error === slugDuplicate);
     });
 });
 
@@ -251,8 +242,10 @@ function createConnection(statements: Array<{ sql: string; params: unknown }>, r
             statements.push({ sql, params });
             const response = responses.shift();
 
-            if (!response) throw new Error('Unexpected SQL statement');
-            if (isThrowResponse(response)) throw response.error;
+            if (!response)
+                throw new Error('Unexpected SQL statement');
+            if (isThrowResponse(response))
+                throw response.error;
 
             return response;
         }

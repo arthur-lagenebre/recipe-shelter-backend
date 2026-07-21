@@ -37,7 +37,8 @@ const processor = new RecipeImageProcessor();
 
 const imageService = {
     async replace(_recipeId: number, _auth: unknown, upload: { buffer: Buffer } | undefined, altText: unknown) {
-        if (!upload) throw badRequest('An image file is required', 'IMAGE_REQUIRED');
+        if (!upload)
+            throw badRequest('An image file is required', 'IMAGE_REQUIRED');
 
         const normalizedAltText = normalizeAltText(altText);
         const result = await processor.process(upload.buffer);
@@ -64,7 +65,8 @@ function authenticatedHeaders(): HeadersInit {
 function formWithFile(buffer: Buffer, filename: string, contentType: string, altText?: string): FormData {
     const form = new FormData();
     form.append('image', new Blob([new Uint8Array(buffer)], { type: contentType }), filename);
-    if (altText !== undefined) form.append('altText', altText);
+    if (altText !== undefined)
+        form.append('altText', altText);
     return form;
 }
 

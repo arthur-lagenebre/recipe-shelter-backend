@@ -15,12 +15,16 @@ const reviewerUserId = 712;
 const superAdminRoleId = 5;
 
 function requirePrivilegeRequestsTestDatabaseName(): string {
-    if (!/^[a-zA-Z0-9_]+$/.test(baseTestDatabaseName)) throw new Error('TEST_DB_NAME must contain only letters, numbers and underscores');
-    if (!baseTestDatabaseName.toLowerCase().includes('test')) throw new Error('TEST_DB_NAME must contain "test"');
-    if (baseTestDatabaseName === env.db.name) throw new Error('TEST_DB_NAME must be different from DB_NAME');
+    if (!/^[a-zA-Z0-9_]+$/.test(baseTestDatabaseName))
+        throw new Error('TEST_DB_NAME must contain only letters, numbers and underscores');
+    if (!baseTestDatabaseName.toLowerCase().includes('test'))
+        throw new Error('TEST_DB_NAME must contain "test"');
+    if (baseTestDatabaseName === env.db.name)
+        throw new Error('TEST_DB_NAME must be different from DB_NAME');
 
     const databaseName = `${baseTestDatabaseName}_privilege_requests`;
-    if (databaseName.length > 64) throw new Error('TEST_DB_NAME is too long for the privilege requests integration database suffix');
+    if (databaseName.length > 64)
+        throw new Error('TEST_DB_NAME is too long for the privilege requests integration database suffix');
     return databaseName;
 }
 
@@ -54,15 +58,7 @@ describe(
 
             await connection.query(schema);
             await connection.query(seed);
-            await connection.query(
-                `INSERT INTO Users (Id, Mail, Username, Password, AccountType, Status)
-       VALUES
-         (?, 'privilege-requester@test.local', 'Privilege Requester', 'non-secret-test-hash', 'staff', 'inactive'),
-         (?, 'privilege-target@test.local', 'Privilege Target', 'non-secret-test-hash', 'staff', 'inactive'),
-         (?, 'privilege-reviewer@test.local', 'Privilege Reviewer', 'non-secret-test-hash', 'staff', 'inactive');
-       INSERT INTO StaffRoles (StaffUserId, RoleId) VALUES (?, ?)`,
-                [requesterUserId, targetUserId, reviewerUserId, targetUserId, superAdminRoleId]
-            );
+            await connection.query(`INSERT INTO Users (Id, Mail, Username, Password, AccountType, Status) VALUES (?, 'privilege-requester@test.local', 'Privilege Requester', 'non-secret-test-hash', 'staff', 'inactive'), (?, 'privilege-target@test.local', 'Privilege Target', 'non-secret-test-hash', 'staff', 'inactive'), (?, 'privilege-reviewer@test.local', 'Privilege Reviewer', 'non-secret-test-hash', 'staff', 'inactive'); INSERT INTO StaffRoles (StaffUserId, RoleId) VALUES (?, ?)`, [requesterUserId, targetUserId, reviewerUserId, targetUserId, superAdminRoleId]);
         });
 
         after(async () => {
@@ -74,14 +70,7 @@ describe(
 
         it('applies the final schema then the central seed without activating the workflow', async () => {
             const databaseName = requirePrivilegeRequestsTestDatabaseName();
-            const [columns] = await connection.query(
-                `SELECT COLUMN_NAME AS ColumnName, DATA_TYPE AS DataType, IS_NULLABLE AS IsNullable,
-              COLUMN_DEFAULT AS ColumnDefault
-       FROM information_schema.COLUMNS
-       WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'StaffPrivilegeChangeRequests'
-       ORDER BY ORDINAL_POSITION`,
-                [databaseName]
-            );
+            const [columns] = await connection.query(`SELECT COLUMN_NAME AS ColumnName, DATA_TYPE AS DataType, IS_NULLABLE AS IsNullable, COLUMN_DEFAULT AS ColumnDefault FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'StaffPrivilegeChangeRequests' ORDER BY ORDINAL_POSITION`, [databaseName]);
 
             assert.deepEqual(columns, [
                 { ColumnName: 'Id', DataType: 'bigint', IsNullable: 'NO', ColumnDefault: null },
@@ -102,20 +91,10 @@ describe(
         });
 
         it('supports requested, approved and rejected records without applying role changes', async () => {
-            const [approvedInsert] = await connection.execute<mysql.ResultSetHeader>(
-                `INSERT INTO StaffPrivilegeChangeRequests
-         (TargetStaffUserId, RoleId, ChangeType, RequestedByStaffUserId, RequestReason)
-       VALUES (?, ?, 'revoke', ?, ?)`,
-                [targetUserId, superAdminRoleId, requesterUserId, 'Prepare a two-person review without revoking access yet.']
-            );
+            const [approvedInsert] = await connection.execute<mysql.ResultSetHeader>(`INSERT INTO StaffPrivilegeChangeRequests (TargetStaffUserId, RoleId, ChangeType, RequestedByStaffUserId, RequestReason) VALUES (?, ?, 'revoke', ?, ?)`, [targetUserId, superAdminRoleId, requesterUserId, 'Prepare a two-person review without revoking access yet.']);
             const approvedRequestId = approvedInsert.insertId;
 
-            const [requested] = await connection.query(
-                `SELECT Status, ReviewedByStaffUserId, ReviewReason, ReviewedAt
-       FROM StaffPrivilegeChangeRequests
-       WHERE Id = ?`,
-                [approvedRequestId]
-            );
+            const [requested] = await connection.query(`SELECT Status, ReviewedByStaffUserId, ReviewReason, ReviewedAt FROM StaffPrivilegeChangeRequests WHERE Id = ?`, [approvedRequestId]);
             assert.deepEqual(requested, [
                 {
                     Status: 'requested',
@@ -125,36 +104,11 @@ describe(
                 }
             ]);
 
-            await connection.execute(
-                `UPDATE StaffPrivilegeChangeRequests
-       SET Status = 'approved',
-           ReviewedByStaffUserId = ?,
-           ReviewReason = ?,
-           ReviewedAt = CURRENT_TIMESTAMP(6)
-       WHERE Id = ? AND Status = 'requested'`,
-                [reviewerUserId, 'The independent reviewer approves this prepared request.', approvedRequestId]
-            );
-            const [rejectedInsert] = await connection.execute<mysql.ResultSetHeader>(
-                `INSERT INTO StaffPrivilegeChangeRequests
-         (TargetStaffUserId, RoleId, ChangeType, RequestedByStaffUserId, RequestReason)
-       VALUES (?, ?, 'grant', ?, ?)`,
-                [targetUserId, superAdminRoleId, requesterUserId, 'Prepare a second decision state for rejection coverage.']
-            );
-            await connection.execute(
-                `UPDATE StaffPrivilegeChangeRequests
-       SET Status = 'rejected',
-           ReviewedByStaffUserId = ?,
-           ReviewReason = ?,
-           ReviewedAt = CURRENT_TIMESTAMP(6)
-       WHERE Id = ? AND Status = 'requested'`,
-                [reviewerUserId, 'The independent reviewer rejects this prepared request.', rejectedInsert.insertId]
-            );
+            await connection.execute(`UPDATE StaffPrivilegeChangeRequests SET Status = 'approved', ReviewedByStaffUserId = ?, ReviewReason = ?, ReviewedAt = CURRENT_TIMESTAMP(6) WHERE Id = ? AND Status = 'requested'`, [reviewerUserId, 'The independent reviewer approves this prepared request.', approvedRequestId]);
+            const [rejectedInsert] = await connection.execute<mysql.ResultSetHeader>(`INSERT INTO StaffPrivilegeChangeRequests (TargetStaffUserId, RoleId, ChangeType, RequestedByStaffUserId, RequestReason) VALUES (?, ?, 'grant', ?, ?)`, [targetUserId, superAdminRoleId, requesterUserId, 'Prepare a second decision state for rejection coverage.']);
+            await connection.execute(`UPDATE StaffPrivilegeChangeRequests SET Status = 'rejected', ReviewedByStaffUserId = ?, ReviewReason = ?, ReviewedAt = CURRENT_TIMESTAMP(6) WHERE Id = ? AND Status = 'requested'`, [reviewerUserId, 'The independent reviewer rejects this prepared request.', rejectedInsert.insertId]);
 
-            const [requests] = await connection.query(
-                `SELECT Status, ChangeType, RequestedByStaffUserId, ReviewedByStaffUserId
-       FROM StaffPrivilegeChangeRequests
-       ORDER BY Id`
-            );
+            const [requests] = await connection.query(`SELECT Status, ChangeType, RequestedByStaffUserId, ReviewedByStaffUserId FROM StaffPrivilegeChangeRequests ORDER BY Id`);
             assert.deepEqual(requests, [
                 {
                     Status: 'approved',
@@ -170,13 +124,7 @@ describe(
                 }
             ]);
 
-            const [stillGranted] = await connection.query(
-                `SELECT sr.StaffUserId, role.Code
-       FROM StaffRoles AS sr
-       INNER JOIN Roles AS role ON role.Id = sr.RoleId
-       WHERE sr.StaffUserId = ? AND role.Code = 'SuperAdmin'`,
-                [targetUserId]
-            );
+            const [stillGranted] = await connection.query(`SELECT sr.StaffUserId, role.Code FROM StaffRoles AS sr INNER JOIN Roles AS role ON role.Id = sr.RoleId WHERE sr.StaffUserId = ? AND role.Code = 'SuperAdmin'`, [targetUserId]);
             assert.deepEqual(stillGranted, [{ StaffUserId: targetUserId, Code: 'SuperAdmin' }]);
         });
 
@@ -194,8 +142,7 @@ describe(
                 await assert.rejects(() =>
                     connection.execute(
                         `INSERT INTO StaffPrivilegeChangeRequests
-           (TargetStaffUserId, RoleId, ChangeType, Status, RequestedByStaffUserId,
-            RequestReason, ReviewedByStaffUserId, ReviewReason, ReviewedAt)
+           (TargetStaffUserId, RoleId, ChangeType, Status, RequestedByStaffUserId, RequestReason, ReviewedByStaffUserId, ReviewReason, ReviewedAt)
          VALUES (?, ?, 'grant', 'approved', ?, ?, ?, ?, CURRENT_TIMESTAMP(6))`,
                         [
                             targetUserId,

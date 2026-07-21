@@ -10,10 +10,7 @@ export class IngredientRepositoryMysql implements IngredientRepository {
 
     async findAll(): Promise<Ingredient[]> {
         const [rows] = await this.db.execute(
-            `SELECT Id, Name, NormalizedName, Slug, Status, MergedIntoIngredientId, CreatedAt, UpdatedAt
-             FROM Ingredients
-             WHERE Status = 'active'
-             ORDER BY Name ASC`
+            `SELECT Id, Name, NormalizedName, Slug, Status, MergedIntoIngredientId, CreatedAt, UpdatedAt FROM Ingredients WHERE Status = 'active' ORDER BY Name ASC`
         );
 
         return (rows as IngredientRow[]).map(mapIngredient);
@@ -21,9 +18,7 @@ export class IngredientRepositoryMysql implements IngredientRepository {
 
     async findById(id: number): Promise<Ingredient | null> {
         const [rows] = await this.db.execute(
-            `SELECT Id, Name, NormalizedName, Slug, Status, MergedIntoIngredientId, CreatedAt, UpdatedAt
-             FROM Ingredients
-             WHERE Id = ?`,
+            `SELECT Id, Name, NormalizedName, Slug, Status, MergedIntoIngredientId, CreatedAt, UpdatedAt FROM Ingredients WHERE Id = ?`,
             [id]
         );
 

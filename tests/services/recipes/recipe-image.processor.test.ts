@@ -32,17 +32,7 @@ describe('RecipeImageProcessor', () => {
         it(`accepts a valid ${format.toUpperCase()} image and emits three WebP variants`, async () => {
             const result = await processor.process(await image(format, 2000, 1000));
 
-            assert.deepEqual(
-                [
-                    result.large.width,
-                    result.large.height,
-                    result.medium.width,
-                    result.medium.height,
-                    result.thumbnail.width,
-                    result.thumbnail.height
-                ],
-                [1600, 800, 800, 400, 400, 200]
-            );
+            assert.deepEqual([ result.large.width, result.large.height, result.medium.width, result.medium.height, result.thumbnail.width, result.thumbnail.height ], [1600, 800, 800, 400, 400, 200]);
 
             for (const variant of [result.large, result.medium, result.thumbnail]) {
                 assert.equal(variant.contentType, 'image/webp');
@@ -55,7 +45,8 @@ describe('RecipeImageProcessor', () => {
     it('does not enlarge small images', async () => {
         const result = await processor.process(await image('png', 120, 60));
 
-        for (const variant of [result.large, result.medium, result.thumbnail]) assert.deepEqual([variant.width, variant.height], [120, 60]);
+        for (const variant of [result.large, result.medium, result.thumbnail])
+            assert.deepEqual([variant.width, variant.height], [120, 60]);
     });
 
     it('applies EXIF orientation before resizing', async () => {
@@ -76,21 +67,12 @@ describe('RecipeImageProcessor', () => {
     });
 
     it('rejects oversized payloads, pathological dimensions, invalid content and forbidden formats', async () => {
-        await assert.rejects(
-            () => processor.process(Buffer.alloc(MAX_RECIPE_IMAGE_BYTES + 1)),
-            (error) => assertHttpError(error, 'IMAGE_TOO_LARGE')
-        );
+        await assert.rejects(() => processor.process(Buffer.alloc(MAX_RECIPE_IMAGE_BYTES + 1)), (error) => assertHttpError(error, 'IMAGE_TOO_LARGE'));
 
         const tooWide = await image('png', 10_001, 1);
-        await assert.rejects(
-            () => processor.process(tooWide),
-            (error) => assertHttpError(error, 'IMAGE_DIMENSIONS_TOO_LARGE')
-        );
+        await assert.rejects(() => processor.process(tooWide), (error) => assertHttpError(error, 'IMAGE_DIMENSIONS_TOO_LARGE'));
 
-        await assert.rejects(
-            () => processor.process(Buffer.from('not an image')),
-            (error) => assertHttpError(error, 'IMAGE_INVALID')
-        );
+        await assert.rejects(() => processor.process(Buffer.from('not an image')), (error) => assertHttpError(error, 'IMAGE_INVALID'));
 
         const forbiddenInputs = [
             Buffer.from('GIF89a forbidden'),
@@ -101,10 +83,7 @@ describe('RecipeImageProcessor', () => {
         ];
 
         for (const forbiddenInput of forbiddenInputs) {
-            await assert.rejects(
-                () => processor.process(forbiddenInput),
-                (error) => assertHttpError(error, 'IMAGE_FORMAT_NOT_SUPPORTED')
-            );
+            await assert.rejects(() => processor.process(forbiddenInput), (error) => assertHttpError(error, 'IMAGE_FORMAT_NOT_SUPPORTED'));
         }
     });
 });

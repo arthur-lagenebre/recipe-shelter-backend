@@ -7,14 +7,7 @@ import { HttpError } from '../../../src/utils/errors.js';
 import { TestAdminAuditRecorder, testAdminAuditContext } from '../../helpers/admin-audit.js';
 
 import type { AdminTagRepository } from '../../../src/repositories/admin/admin.tags.repository.interface.js';
-import type {
-    AdminTagListFilters,
-    AdminTagMergeResult,
-    AdminTagRestoreResult,
-    AdminTagUpdateInput,
-    AdminTagWriteInput,
-    AdminTagWriteResult
-} from '../../../src/repositories/admin/admin.tags.types.js';
+import type { AdminTagListFilters, AdminTagMergeResult, AdminTagRestoreResult, AdminTagUpdateInput, AdminTagWriteInput, AdminTagWriteResult } from '../../../src/repositories/admin/admin.tags.types.js';
 import type { Tag } from '../../../src/repositories/tag/tag.types.js';
 import type { PaginationOptions } from '../../../src/utils/pagination.js';
 
@@ -41,12 +34,7 @@ class FakeAdminTagRepository implements AdminTagRepository {
     };
 
     async find(filters: AdminTagListFilters, page: PaginationOptions) {
-        const matching = [...this.tags.values()].filter(
-            (tag) =>
-                (filters.status === undefined || tag.status === filters.status) &&
-                (filters.groupId === undefined || tag.group.id === filters.groupId) &&
-                (filters.q === undefined || tag.name.toLowerCase().includes(filters.q.toLowerCase()))
-        );
+        const matching = [...this.tags.values()].filter((tag) => (filters.status === undefined || tag.status === filters.status) && (filters.groupId === undefined || tag.group.id === filters.groupId) && (filters.q === undefined || tag.name.toLowerCase().includes(filters.q.toLowerCase())));
         const items = matching.slice(page.offset, page.offset + page.limit).map(cloneTag);
         return createPaginatedResult(items, matching.length, page);
     }
@@ -64,7 +52,8 @@ class FakeAdminTagRepository implements AdminTagRepository {
 
     async create(input: AdminTagWriteInput): Promise<AdminTagWriteResult> {
         const duplicate = this.findDuplicate(input.normalizedName, input.slug);
-        if (duplicate) return { status: duplicate };
+        if (duplicate)
+            return { status: duplicate };
 
         const tag = createTag(this.nextId++, input.name, input.normalizedName, input.slug);
         tag.description = input.description;
@@ -75,7 +64,8 @@ class FakeAdminTagRepository implements AdminTagRepository {
 
     async update(input: AdminTagUpdateInput): Promise<AdminTagWriteResult> {
         const duplicate = this.findDuplicate(input.normalizedName, input.slug, input.id);
-        if (duplicate) return { status: duplicate };
+        if (duplicate)
+            return { status: duplicate };
 
         const tag = this.tags.get(input.id)!;
         Object.assign(tag, {
@@ -95,7 +85,8 @@ class FakeAdminTagRepository implements AdminTagRepository {
 
     async deprecate(tagId: number): Promise<boolean> {
         const tag = this.tags.get(tagId);
-        if (!tag || tag.status !== 'active') return false;
+        if (!tag || tag.status !== 'active')
+            return false;
 
         tag.status = 'deprecated';
         tag.mergedIntoTagId = null;
@@ -105,7 +96,8 @@ class FakeAdminTagRepository implements AdminTagRepository {
 
     async restore(tagId: number): Promise<AdminTagRestoreResult> {
         const tag = this.tags.get(tagId);
-        if (!tag || tag.status !== 'deprecated') return 'not_updated';
+        if (!tag || tag.status !== 'deprecated')
+            return 'not_updated';
         if (
             [...this.tags.values()].some(
                 (candidate) => candidate.id !== tagId && candidate.status === 'active' && candidate.normalizedName === tag.normalizedName
@@ -119,10 +111,12 @@ class FakeAdminTagRepository implements AdminTagRepository {
     }
 
     async merge(sourceTagId: number, targetTagId: number): Promise<AdminTagMergeResult> {
-        if (!this.mergeCounts.merged) return this.mergeCounts;
+        if (!this.mergeCounts.merged)
+            return this.mergeCounts;
 
         for (const tag of this.tags.values()) {
-            if (tag.mergedIntoTagId === sourceTagId) tag.mergedIntoTagId = targetTagId;
+            if (tag.mergedIntoTagId === sourceTagId)
+                tag.mergedIntoTagId = targetTagId;
         }
         const source = this.tags.get(sourceTagId)!;
         source.status = 'merged';
@@ -134,8 +128,10 @@ class FakeAdminTagRepository implements AdminTagRepository {
     private findDuplicate(normalizedName: string, slug: string, excludedId?: number): 'normalized_name_taken' | 'slug_taken' | null {
         const candidates = [...this.tags.values()].filter((tag) => tag.id !== excludedId);
 
-        if (candidates.some((tag) => tag.status === 'active' && tag.normalizedName === normalizedName)) return 'normalized_name_taken';
-        if (candidates.some((tag) => tag.slug === slug)) return 'slug_taken';
+        if (candidates.some((tag) => tag.status === 'active' && tag.normalizedName === normalizedName))
+            return 'normalized_name_taken';
+        if (candidates.some((tag) => tag.slug === slug))
+            return 'slug_taken';
         return null;
     }
 }
@@ -154,10 +150,7 @@ describe('AdminTagService', () => {
     it('returns a paginated filtered list and audits the read', async () => {
         const result = await service.list({ status: 'active', q: 'rap' }, pagination, actorUserId, testAdminAuditContext);
 
-        assert.deepEqual(
-            result.items.map((tag) => tag.id),
-            [1]
-        );
+        assert.deepEqual(result.items.map((tag) => tag.id), [1]);
         assert.equal(result.pagination.totalItems, 1);
         assert.deepEqual(
             audit.inputs.map((input) => ({
@@ -264,10 +257,7 @@ describe('AdminTagService', () => {
         ];
 
         for (const { input, code } of invalidCreateCommands) {
-            await assert.rejects(
-                () => service.create(input as never, actorUserId, testAdminAuditContext),
-                (error) => assertHttpError(error, 400, code)
-            );
+            await assert.rejects(() => service.create(input as never, actorUserId, testAdminAuditContext), (error) => assertHttpError(error, 400, code));
         }
 
         const invalidUpdateCommands: Array<{ input: unknown; code: string }> = [
@@ -283,10 +273,7 @@ describe('AdminTagService', () => {
         ];
 
         for (const { input, code } of invalidUpdateCommands) {
-            await assert.rejects(
-                () => service.update(2, input as never, actorUserId, testAdminAuditContext),
-                (error) => assertHttpError(error, 400, code)
-            );
+            await assert.rejects(() => service.update(2, input as never, actorUserId, testAdminAuditContext), (error) => assertHttpError(error, 400, code));
         }
 
         assert.equal(repository.tags.size, 4);
@@ -388,40 +375,22 @@ describe('AdminTagService', () => {
     });
 
     it('rejects invalid lifecycle transitions and canonical targets without audit', async () => {
-        await assert.rejects(
-            () => service.deprecate(1, 'Cible encore utilisée.', actorUserId, testAdminAuditContext),
-            (error) => assertHttpError(error, 409, 'ADMIN_TAGS_DEPRECATE_CANONICAL_TARGET')
-        );
-        await assert.rejects(
-            () => service.restore(1, 'Tentative de restauration.', actorUserId, testAdminAuditContext),
-            (error) => assertHttpError(error, 409, 'ADMIN_TAGS_RESTORE_INVALID_STATUS')
-        );
+        await assert.rejects(() => service.deprecate(1, 'Cible encore utilisée.', actorUserId, testAdminAuditContext), (error) => assertHttpError(error, 409, 'ADMIN_TAGS_DEPRECATE_CANONICAL_TARGET'));
+        await assert.rejects(() => service.restore(1, 'Tentative de restauration.', actorUserId, testAdminAuditContext), (error) => assertHttpError(error, 409, 'ADMIN_TAGS_RESTORE_INVALID_STATUS'));
 
         repository.tags.set(5, createTag(5, 'Ancien rapide', 'rapide', 'ancien-rapide', 'deprecated'));
-        await assert.rejects(
-            () => service.restore(5, 'Collision canonique active.', actorUserId, testAdminAuditContext),
-            (error) => assertHttpError(error, 409, 'ADMIN_TAGS_NORMALIZED_NAME_TAKEN')
-        );
+        await assert.rejects(() => service.restore(5, 'Collision canonique active.', actorUserId, testAdminAuditContext), (error) => assertHttpError(error, 409, 'ADMIN_TAGS_NORMALIZED_NAME_TAKEN'));
         assert.equal(audit.inputs.length, 0);
     });
 
     it('rejects malformed lifecycle commands and concurrent status changes without audit', async () => {
-        await assert.rejects(
-            () => service.deprecate(3, 'Tag deja obsolete.', actorUserId, testAdminAuditContext),
-            (error) => assertHttpError(error, 409, 'ADMIN_TAGS_DEPRECATE_INVALID_STATUS')
-        );
+        await assert.rejects(() => service.deprecate(3, 'Tag deja obsolete.', actorUserId, testAdminAuditContext), (error) => assertHttpError(error, 409, 'ADMIN_TAGS_DEPRECATE_INVALID_STATUS'));
         await assert.rejects(
             () => service.update(1.5, { name: 'Invalid id' }, actorUserId, testAdminAuditContext),
             (error) => assertHttpError(error, 400, 'ADMIN_TAGS_BAD_ID')
         );
-        await assert.rejects(
-            () => service.restore(3, null as never, actorUserId, testAdminAuditContext),
-            (error) => assertHttpError(error, 400, 'ADMIN_TAGS_RESTORE_REASON_REQUIRED')
-        );
-        await assert.rejects(
-            () => service.restore(3, 'court', actorUserId, testAdminAuditContext),
-            (error) => assertHttpError(error, 400, 'ADMIN_TAGS_RESTORE_REASON_TOO_SHORT')
-        );
+        await assert.rejects(() => service.restore(3, null as never, actorUserId, testAdminAuditContext), (error) => assertHttpError(error, 400, 'ADMIN_TAGS_RESTORE_REASON_REQUIRED'));
+        await assert.rejects(() => service.restore(3, 'court', actorUserId, testAdminAuditContext), (error) => assertHttpError(error, 400, 'ADMIN_TAGS_RESTORE_REASON_TOO_SHORT'));
         await assert.rejects(
             () =>
                 service.merge(
@@ -437,16 +406,10 @@ describe('AdminTagService', () => {
         );
 
         repository.deprecate = async () => false;
-        await assert.rejects(
-            () => service.deprecate(2, 'Conflit de statut concurrent.', actorUserId, testAdminAuditContext),
-            (error) => assertHttpError(error, 409, 'ADMIN_TAGS_STATUS_CONFLICT')
-        );
+        await assert.rejects(() => service.deprecate(2, 'Conflit de statut concurrent.', actorUserId, testAdminAuditContext), (error) => assertHttpError(error, 409, 'ADMIN_TAGS_STATUS_CONFLICT'));
 
         repository.restore = async () => 'not_updated';
-        await assert.rejects(
-            () => service.restore(3, 'Conflit de statut concurrent.', actorUserId, testAdminAuditContext),
-            (error) => assertHttpError(error, 409, 'ADMIN_TAGS_STATUS_CONFLICT')
-        );
+        await assert.rejects(() => service.restore(3, 'Conflit de statut concurrent.', actorUserId, testAdminAuditContext), (error) => assertHttpError(error, 409, 'ADMIN_TAGS_STATUS_CONFLICT'));
         assert.equal(audit.inputs.length, 0);
     });
 
@@ -544,10 +507,7 @@ describe('AdminTagService', () => {
     });
 
     it('rejects self-merges, missing targets, invalid statuses and concurrent changes without audit', async () => {
-        await assert.rejects(
-            () => service.merge(1, null as never, actorUserId, testAdminAuditContext),
-            (error) => assertHttpError(error, 400, 'ADMIN_TAGS_MERGE_BAD_BODY')
-        );
+        await assert.rejects(() => service.merge(1, null as never, actorUserId, testAdminAuditContext), (error) => assertHttpError(error, 400, 'ADMIN_TAGS_MERGE_BAD_BODY'));
         await assert.rejects(
             () => service.merge(1, { targetTagId: 0, reason: 'Identifiant de cible invalide.' }, actorUserId, testAdminAuditContext),
             (error) => assertHttpError(error, 400, 'ADMIN_TAGS_MERGE_BAD_TARGET_ID')
@@ -582,14 +542,7 @@ describe('AdminTagService', () => {
     });
 });
 
-function createTag(
-    id: number,
-    name: string,
-    normalizedName: string,
-    slug: string,
-    status: Tag['status'] = 'active',
-    mergedIntoTagId: number | null = null
-): Tag {
+function createTag(id: number, name: string, normalizedName: string, slug: string, status: Tag['status'] = 'active', mergedIntoTagId: number | null = null): Tag {
     return {
         id,
         name,

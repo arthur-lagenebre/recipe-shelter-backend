@@ -12,7 +12,8 @@ function createPool(active = true) {
     const pool = {
         async execute(sql: string, params: unknown[]) {
             statements.push({ sql, params });
-            if (/^SELECT 1/.test(sql.trim())) return [active ? [{ One: 1 }] : [], []];
+            if (/^SELECT 1/.test(sql.trim()))
+                return [active ? [{ One: 1 }] : [], []];
             if (/^SELECT session\.Id/.test(sql.trim())) {
                 return [
                     [
@@ -74,10 +75,7 @@ describe('SessionRepositoryMysql', () => {
             1,
             7
         ]);
-        assert.match(
-            fake.statements[1]?.sql ?? '',
-            /FROM StaffProfiles[\s\S]+Status = 'active'[\s\S]+SessionVersion = \?[\s\S]+FROM StaffRoles/
-        );
+        assert.match(fake.statements[1]?.sql ?? '', /FROM StaffProfiles[\s\S]+Status = 'active'[\s\S]+SessionVersion = \?[\s\S]+FROM StaffRoles/);
     });
 
     it('lists only active MFA-backed staff sessions without selecting credential secrets', async () => {
@@ -121,10 +119,7 @@ describe('SessionRepositoryMysql', () => {
 
         assert.equal(await repository.isStaffSessionRecentlyAuthenticated('staff-id', 1, authenticatedAfter), true);
         assert.deepEqual(fake.statements[0]?.params, ['staff-id', 1, authenticatedAfter]);
-        assert.match(
-            fake.statements[0]?.sql ?? '',
-            /FROM StaffSessions[\s\S]+RevokedAt IS NULL[\s\S]+ExpiresAt > CURRENT_TIMESTAMP[\s\S]+MfaVerifiedAt >= \?[\s\S]+MfaMethod = 'webauthn'/
-        );
+        assert.match(fake.statements[0]?.sql ?? '', /FROM StaffSessions[\s\S]+RevokedAt IS NULL[\s\S]+ExpiresAt > CURRENT_TIMESTAMP[\s\S]+MfaVerifiedAt >= \?[\s\S]+MfaMethod = 'webauthn'/);
     });
 
     it('revokes only the id and owner in the selected session table', async () => {
@@ -158,10 +153,7 @@ describe('SessionRepositoryMysql', () => {
         assert.match(fake.statements[0]?.sql ?? '', /UPDATE CommunitySessions/);
         assert.match(fake.statements[0]?.sql ?? '', /RevokedAt = CURRENT_TIMESTAMP/);
         assert.match(fake.statements[0]?.sql ?? '', /RevocationType = \?/);
-        assert.match(
-            fake.statements[0]?.sql ?? '',
-            /CommunityUserId = \?[\s\S]+RevokedAt IS NULL[\s\S]+ExpiresAt > CURRENT_TIMESTAMP[\s\S]+\(\? IS NULL OR Id <> \?\)/
-        );
+        assert.match(fake.statements[0]?.sql ?? '', /CommunityUserId = \?[\s\S]+RevokedAt IS NULL[\s\S]+ExpiresAt > CURRENT_TIMESTAMP[\s\S]+\(\? IS NULL OR Id <> \?\)/);
         assert.deepEqual(fake.statements[0]?.params, ['password_changed', 2, 'current-session-id', 'current-session-id']);
 
         const emptyFake = createPool(false);

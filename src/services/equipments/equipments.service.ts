@@ -3,6 +3,8 @@ import { notFound } from '../../utils/errors.js';
 import type { EquipmentRepository } from '../../repositories/equipments/equipment.repository.interface.js';
 import type { Equipment } from '../../repositories/equipments/equipment.types.js';
 
+export { normalizeCatalogName as normalizeEquipmentName } from '../../utils/catalog-name-normalizer.js';
+
 export class EquipmentService {
     constructor(private readonly equipmentRepository: EquipmentRepository) {}
 

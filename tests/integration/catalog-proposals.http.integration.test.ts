@@ -8,21 +8,13 @@ import { createCatalogProposalsController } from '../../src/api/catalog/catalog-
 import { CATALOG_PROPOSALS_RATE_LIMIT_MAX_ATTEMPTS, createCatalogProposalsRouter } from '../../src/api/catalog/catalog-proposals.routes.js';
 import { errorHandler } from '../../src/middlewares/error-handler.js';
 import { notFound } from '../../src/middlewares/not-found.js';
-import {
-    configureAuthRbacRepository,
-    configureAuthSessionRepository,
-    configureAuthUserRepository
-} from '../../src/middlewares/require-auth.js';
+import { configureAuthRbacRepository, configureAuthSessionRepository, configureAuthUserRepository } from '../../src/middlewares/require-auth.js';
 import { CatalogProposalService } from '../../src/services/catalog/catalog-proposals.service.js';
 import { TestSessionRepository } from '../helpers/auth-session.js';
 import { startHttpTestServer } from '../helpers/http-test-server.js';
 
 import type { CatalogProposalRepository } from '../../src/repositories/catalog/catalog-proposals.repository.interface.js';
-import type {
-    CatalogProposalType,
-    CatalogProposalWriteResult,
-    CreateCatalogProposalInput
-} from '../../src/repositories/catalog/catalog-proposals.types.js';
+import type { CatalogProposalType, CatalogProposalWriteResult, CreateCatalogProposalInput } from '../../src/repositories/catalog/catalog-proposals.types.js';
 import type { User } from '../../src/repositories/users/user.types.js';
 
 const now = new Date('2026-07-20T12:00:00.000Z');
@@ -71,7 +63,8 @@ class InMemoryCatalogProposalRepository implements CatalogProposalRepository {
     async create(input: CreateCatalogProposalInput): Promise<CatalogProposalWriteResult> {
         this.createCalls += 1;
         const key = `${input.recipeId}:${input.proposalType}:${input.normalizedName}`;
-        if (this.pendingNames.has(key)) return { status: 'pending_duplicate' };
+        if (this.pendingNames.has(key))
+            return { status: 'pending_duplicate' };
 
         this.pendingNames.add(key);
         return {
@@ -82,6 +75,7 @@ class InMemoryCatalogProposalRepository implements CatalogProposalRepository {
                 status: 'pending',
                 matchedTagId: null,
                 matchedIngredientId: null,
+                matchedEquipmentId: null,
                 reviewedByStaffUserId: null,
                 reviewReason: null,
                 createdAt: now,
@@ -128,12 +122,7 @@ async function createCatalogProposalTestApp() {
     };
 }
 
-function postProposal(
-    baseUrl: string,
-    endpoint: 'tag-proposals' | 'ingredient-proposals',
-    cookie: string | undefined,
-    body: unknown
-): Promise<Response> {
+function postProposal(baseUrl: string, endpoint: 'tag-proposals' | 'ingredient-proposals' | 'equipment-proposals', cookie: string | undefined, body: unknown): Promise<Response> {
     return fetch(`${baseUrl}/api/v1/catalog/${endpoint}`, {
         method: 'POST',
         headers: {
@@ -164,6 +153,7 @@ describe('catalog proposal HTTP integration', () => {
             status: 'pending',
             matchedTagId: null,
             matchedIngredientId: null,
+            matchedEquipmentId: null,
             reviewedByStaffUserId: null,
             reviewReason: null,
             createdAt: now.toISOString(),
@@ -176,6 +166,14 @@ describe('catalog proposal HTTP integration', () => {
         });
         assert.equal(ingredientResponse.status, 201);
         assert.equal(((await ingredientResponse.json()) as { proposalType: string }).proposalType, 'ingredient');
+
+        const equipmentResponse = await postProposal(server.baseUrl, 'equipment-proposals', activeCookie, {
+            recipeId: 42,
+            name: 'Chinois futuriste'
+        });
+        assert.equal(equipmentResponse.status, 201);
+        assert.equal(((await equipmentResponse.json()) as { proposalType: string }).proposalType, 'equipment');
+
         assert.deepEqual([...repository.ownedRecipes], ['7:42']);
         assert.equal(repository.canonicalNames.size, 0);
     });

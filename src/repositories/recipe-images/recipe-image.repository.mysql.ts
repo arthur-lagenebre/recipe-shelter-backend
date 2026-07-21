@@ -12,12 +12,7 @@ export class RecipeImageRepositoryMysql implements RecipeImageRepository {
     constructor(private readonly db: Pool) {}
 
     async findByRecipeId(recipeId: number): Promise<RecipeImage | null> {
-        const [rows] = await this.db.execute(
-            `SELECT ${RECIPE_IMAGE_COLUMNS}
-             FROM RecipeImages
-             WHERE RecipeId = ?`,
-            [recipeId]
-        );
+        const [rows] = await this.db.execute(`SELECT ${RECIPE_IMAGE_COLUMNS} FROM RecipeImages WHERE RecipeId = ?`, [recipeId]);
 
         return mapFirst(rows);
     }
@@ -27,8 +22,7 @@ export class RecipeImageRepositoryMysql implements RecipeImageRepository {
             const previous = await this.findByRecipeIdForUpdate(input.recipeId, connection);
 
             await connection.execute(
-                `INSERT INTO RecipeImages (Id, RecipeId, LargeStorageKey, MediumStorageKey, ThumbnailStorageKey,
-                    OriginalWidth, OriginalHeight, LargeWidth, LargeHeight, LargeSizeBytes, AltText)
+                `INSERT INTO RecipeImages (Id, RecipeId, LargeStorageKey, MediumStorageKey, ThumbnailStorageKey, OriginalWidth, OriginalHeight, LargeWidth, LargeHeight, LargeSizeBytes, AltText)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                  AS new_image
                  ON DUPLICATE KEY UPDATE
@@ -68,11 +62,7 @@ export class RecipeImageRepositoryMysql implements RecipeImageRepository {
             const previous = await this.findByRecipeIdForUpdate(recipeId, connection);
 
             if (previous) {
-                await connection.execute(
-                    `DELETE FROM RecipeImages
-                     WHERE RecipeId = ?`,
-                    [recipeId]
-                );
+                await connection.execute(`DELETE FROM RecipeImages WHERE RecipeId = ?`, [recipeId]);
             }
 
             return previous;
@@ -80,13 +70,9 @@ export class RecipeImageRepositoryMysql implements RecipeImageRepository {
     }
 
     private async findByRecipeIdForUpdate(recipeId: number, connection: PoolConnection): Promise<RecipeImage | null> {
-        const [rows] = await connection.execute(
-            `SELECT ${RECIPE_IMAGE_COLUMNS}
-             FROM RecipeImages
-             WHERE RecipeId = ?
-             FOR UPDATE`,
-            [recipeId]
-        );
+        const [rows] = await connection.execute(`SELECT ${RECIPE_IMAGE_COLUMNS} FROM RecipeImages WHERE RecipeId = ? FOR UPDATE`, [
+            recipeId
+        ]);
 
         return mapFirst(rows);
     }

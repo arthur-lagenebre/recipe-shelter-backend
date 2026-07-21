@@ -1,14 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import {
-    parseAdminTagActionReasonBody,
-    parseAdminTagIdParam,
-    parseAdminTagListFilters,
-    parseCreateAdminTagBody,
-    parseMergeAdminTagBody,
-    parseUpdateAdminTagBody
-} from '../../../src/api/admin/admin.tags.dto.js';
+import { parseAdminTagActionReasonBody, parseAdminTagIdParam, parseAdminTagListFilters, parseCreateAdminTagBody, parseMergeAdminTagBody, parseUpdateAdminTagBody } from '../../../src/api/admin/admin.tags.dto.js';
 import { HttpError } from '../../../src/utils/errors.js';
 
 describe('admin tags DTO validation', () => {
@@ -32,18 +25,9 @@ describe('admin tags DTO validation', () => {
     });
 
     it('rejects malformed identifiers and filters with stable errors', () => {
-        assert.throws(
-            () => parseAdminTagIdParam('1.5'),
-            (error) => assertHttpError(error, 'ADMIN_TAGS_BAD_ID')
-        );
-        assert.throws(
-            () => parseAdminTagIdParam('9007199254740992'),
-            (error) => assertHttpError(error, 'ADMIN_TAGS_BAD_ID')
-        );
-        assert.throws(
-            () => parseAdminTagListFilters([]),
-            (error) => assertHttpError(error, 'ADMIN_TAGS_BAD_QUERY')
-        );
+        assert.throws(() => parseAdminTagIdParam('1.5'), (error) => assertHttpError(error, 'ADMIN_TAGS_BAD_ID'));
+        assert.throws(() => parseAdminTagIdParam('9007199254740992'), (error) => assertHttpError(error, 'ADMIN_TAGS_BAD_ID'));
+        assert.throws(() => parseAdminTagListFilters([]), (error) => assertHttpError(error, 'ADMIN_TAGS_BAD_QUERY'));
         assert.throws(
             () => parseAdminTagListFilters({ status: 'deleted' }),
             (error) => assertHttpError(error, 'ADMIN_TAGS_BAD_STATUS')
@@ -101,10 +85,7 @@ describe('admin tags DTO validation', () => {
     });
 
     it('rejects empty, oversized and structurally invalid tag payloads', () => {
-        assert.throws(
-            () => parseCreateAdminTagBody([]),
-            (error) => assertHttpError(error, 'ADMIN_TAGS_CREATE_BAD_BODY')
-        );
+        assert.throws(() => parseCreateAdminTagBody([]), (error) => assertHttpError(error, 'ADMIN_TAGS_CREATE_BAD_BODY'));
         assert.throws(
             () => parseCreateAdminTagBody({ groupId: 0, name: 'Valid' }),
             (error) => assertHttpError(error, 'ADMIN_TAGS_BAD_GROUP_ID')
@@ -137,10 +118,7 @@ describe('admin tags DTO validation', () => {
             () => parseCreateAdminTagBody({ groupId: 1, name: 'Valid', description: ' ' }),
             (error) => assertHttpError(error, 'ADMIN_TAGS_DESCRIPTION_INVALID')
         );
-        assert.throws(
-            () => parseUpdateAdminTagBody([]),
-            (error) => assertHttpError(error, 'ADMIN_TAGS_UPDATE_BAD_BODY')
-        );
+        assert.throws(() => parseUpdateAdminTagBody([]), (error) => assertHttpError(error, 'ADMIN_TAGS_UPDATE_BAD_BODY'));
         assert.throws(
             () => parseUpdateAdminTagBody({}),
             (error) => assertHttpError(error, 'ADMIN_TAGS_UPDATE_EMPTY')
@@ -168,10 +146,7 @@ describe('admin tags DTO validation', () => {
             () => parseAdminTagActionReasonBody({ reason: 'court' }, 'restore'),
             (error) => assertHttpError(error, 'ADMIN_TAGS_RESTORE_REASON_TOO_SHORT')
         );
-        assert.throws(
-            () => parseAdminTagActionReasonBody([], 'deprecate'),
-            (error) => assertHttpError(error, 'ADMIN_TAGS_DEPRECATE_BAD_BODY')
-        );
+        assert.throws(() => parseAdminTagActionReasonBody([], 'deprecate'), (error) => assertHttpError(error, 'ADMIN_TAGS_DEPRECATE_BAD_BODY'));
         assert.throws(
             () => parseAdminTagActionReasonBody({ reason: 'x'.repeat(1001) }, 'deprecate'),
             (error) => assertHttpError(error, 'ADMIN_TAGS_DEPRECATE_REASON_TOO_LONG')
@@ -180,10 +155,7 @@ describe('admin tags DTO validation', () => {
             () => parseMergeAdminTagBody({ targetTagId: 0, reason: 'Motif suffisamment long.' }),
             (error) => assertHttpError(error, 'ADMIN_TAGS_MERGE_BAD_TARGET_ID')
         );
-        assert.throws(
-            () => parseMergeAdminTagBody([]),
-            (error) => assertHttpError(error, 'ADMIN_TAGS_MERGE_BAD_BODY')
-        );
+        assert.throws(() => parseMergeAdminTagBody([]), (error) => assertHttpError(error, 'ADMIN_TAGS_MERGE_BAD_BODY'));
         assert.throws(
             () => parseMergeAdminTagBody({ targetTagId: 2 }),
             (error) => assertHttpError(error, 'ADMIN_TAGS_MERGE_REASON_REQUIRED')

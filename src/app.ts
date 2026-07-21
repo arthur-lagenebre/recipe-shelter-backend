@@ -192,6 +192,7 @@ function createDefaultDependencies(): AppDependencies {
             catalogProposalRepository,
             adminTagRepository,
             adminIngredientRepository,
+            equipmentRepository,
             adminAuditActions
         ),
         adminCommentService: new AdminCommentService(adminCommentRepository, adminAuditActions),

@@ -27,11 +27,7 @@ const STAFF_ACCOUNT_SELECT = `u.Id,
                               disabledBy.Username AS DisabledByDisplayName,
                               sp.DisabledReason,
                               sp.DisabledAt,
-                              (SELECT COUNT(*)
-                               FROM StaffSessions AS session
-                               WHERE session.StaffUserId = u.Id
-                                 AND session.RevokedAt IS NULL
-                                 AND session.ExpiresAt > CURRENT_TIMESTAMP) AS ActiveSessionCount,
+                              (SELECT COUNT(*) FROM StaffSessions AS session WHERE session.StaffUserId = u.Id AND session.RevokedAt IS NULL AND session.ExpiresAt > CURRENT_TIMESTAMP) AS ActiveSessionCount,
                               sp.CreatedAt,
                               sp.UpdatedAt`;
 
@@ -41,11 +37,7 @@ export class AdminStaffRepositoryMysql implements AdminStaffRepository {
     async findAll(db?: PoolConnection): Promise<AdminStaffAccount[]> {
         const executor = db ?? this.db;
         const [rows] = await executor.execute<AdminStaffAccountRow[]>(
-            `SELECT ${STAFF_ACCOUNT_SELECT}
-       FROM StaffProfiles AS sp
-       INNER JOIN Users AS u ON u.Id = sp.UserId
-       LEFT JOIN Users AS disabledBy ON disabledBy.Id = sp.DisabledByStaffUserId
-       ORDER BY sp.CreatedAt DESC, u.Id DESC`
+            `SELECT ${STAFF_ACCOUNT_SELECT} FROM StaffProfiles AS sp INNER JOIN Users AS u ON u.Id = sp.UserId LEFT JOIN Users AS disabledBy ON disabledBy.Id = sp.DisabledByStaffUserId ORDER BY sp.CreatedAt DESC, u.Id DESC`
         );
         const rolesByStaffUserId = await this.findRolesByStaffUserIds(
             rows.map((row) => Number(row.Id)),
@@ -76,9 +68,7 @@ export class AdminStaffRepositoryMysql implements AdminStaffRepository {
 
     async findRoleByCode(roleCode: string, db?: PoolConnection): Promise<AdminStaffRole | null> {
         const [rows] = await (db ?? this.db).execute<AdminStaffRoleRow[]>(
-            `SELECT 0 AS StaffUserId, Id, Code, Name
-       FROM Roles
-       WHERE Code = ?`,
+            `SELECT 0 AS StaffUserId, Id, Code, Name FROM Roles WHERE Code = ?`,
             [roleCode]
         );
         const row = firstOrNull(rows);
@@ -87,24 +77,15 @@ export class AdminStaffRepositoryMysql implements AdminStaffRepository {
     }
 
     async lockAndCheckLastActiveSuperAdmin(staffUserId: number, db: PoolConnection): Promise<boolean> {
-        const [roleRows] = await db.execute<SuperAdminRoleIdRow[]>(
-            `SELECT Id
-       FROM Roles
-       WHERE Code = ?
-       FOR UPDATE`,
-            [SUPER_ADMIN_ROLE_CODE]
-        );
+        const [roleRows] = await db.execute<SuperAdminRoleIdRow[]>(`SELECT Id FROM Roles WHERE Code = ? FOR UPDATE`, [
+            SUPER_ADMIN_ROLE_CODE
+        ]);
         const role = firstOrNull(roleRows);
 
         if (!role) return false;
 
         const [activeSuperAdmins] = await db.execute<ActiveSuperAdminRow[]>(
-            `SELECT sr.StaffUserId
-       FROM StaffRoles AS sr
-       INNER JOIN StaffProfiles AS sp ON sp.UserId = sr.StaffUserId
-       WHERE sr.RoleId = ? AND sp.Status = 'active'
-       ORDER BY sr.StaffUserId
-       FOR UPDATE`,
+            `SELECT sr.StaffUserId FROM StaffRoles AS sr INNER JOIN StaffProfiles AS sp ON sp.UserId = sr.StaffUserId WHERE sr.RoleId = ? AND sp.Status = 'active' ORDER BY sr.StaffUserId FOR UPDATE`,
             [role.Id]
         );
 
@@ -113,21 +94,12 @@ export class AdminStaffRepositoryMysql implements AdminStaffRepository {
 
     async disable(staffUserId: number, actorStaffUserId: number, reason: string, db: PoolConnection): Promise<number | null> {
         const [sessionCountRows] = await db.execute<ActiveSessionCountRow[]>(
-            `SELECT COUNT(*) AS ActiveSessionCount
-       FROM StaffSessions
-       WHERE StaffUserId = ?
-         AND RevokedAt IS NULL
-         AND ExpiresAt > CURRENT_TIMESTAMP`,
+            `SELECT COUNT(*) AS ActiveSessionCount FROM StaffSessions WHERE StaffUserId = ? AND RevokedAt IS NULL AND ExpiresAt > CURRENT_TIMESTAMP`,
             [staffUserId]
         );
         const activeSessionCount = Number(sessionCountRows[0]?.ActiveSessionCount ?? 0);
         const [profileResult] = await db.execute<ResultSetHeader>(
-            `UPDATE StaffProfiles
-       SET Status = 'disabled',
-           DisabledByStaffUserId = ?,
-           DisabledReason = ?,
-           DisabledAt = CURRENT_TIMESTAMP
-       WHERE UserId = ? AND Status = 'active'`,
+            `UPDATE StaffProfiles SET Status = 'disabled', DisabledByStaffUserId = ?, DisabledReason = ?, DisabledAt = CURRENT_TIMESTAMP WHERE UserId = ? AND Status = 'active'`,
             [actorStaffUserId, reason, staffUserId]
         );
 
@@ -138,14 +110,7 @@ export class AdminStaffRepositoryMysql implements AdminStaffRepository {
 
     async createModerationLog(auditLogId: number, staffUserId: number, db: PoolConnection): Promise<void> {
         const [result] = await db.execute<ResultSetHeader>(
-            `INSERT INTO StaffModerationLogs (AdminAuditLogId, StaffUserId)
-       SELECT audit.Id, ?
-       FROM AdminAuditLogs AS audit
-       WHERE audit.Id = ?
-         AND audit.Action = 'staff.disable'
-         AND audit.TargetType = 'staff_user'
-         AND audit.Reason IS NOT NULL
-         AND BINARY audit.TargetId = BINARY CAST(? AS CHAR)`,
+            `INSERT INTO StaffModerationLogs (AdminAuditLogId, StaffUserId) SELECT audit.Id, ? FROM AdminAuditLogs AS audit WHERE audit.Id = ? AND audit.Action = 'staff.disable' AND audit.TargetType = 'staff_user' AND audit.Reason IS NOT NULL AND BINARY audit.TargetId = BINARY CAST(? AS CHAR)`,
             [staffUserId, auditLogId, staffUserId]
         );
 
@@ -154,12 +119,7 @@ export class AdminStaffRepositoryMysql implements AdminStaffRepository {
 
     async enable(staffUserId: number, db: PoolConnection): Promise<boolean> {
         const [result] = await db.execute<ResultSetHeader>(
-            `UPDATE StaffProfiles
-       SET Status = 'active',
-           DisabledByStaffUserId = NULL,
-           DisabledReason = NULL,
-           DisabledAt = NULL
-       WHERE UserId = ? AND Status = 'disabled'`,
+            `UPDATE StaffProfiles SET Status = 'active', DisabledByStaffUserId = NULL, DisabledReason = NULL, DisabledAt = NULL WHERE UserId = ? AND Status = 'disabled'`,
             [staffUserId]
         );
 
@@ -167,21 +127,19 @@ export class AdminStaffRepositoryMysql implements AdminStaffRepository {
     }
 
     async grantRole(staffUserId: number, roleId: number, db: PoolConnection): Promise<boolean> {
-        const [result] = await db.execute<ResultSetHeader>(
-            `INSERT INTO StaffRoles (StaffUserId, RoleId)
-       VALUES (?, ?)`,
-            [staffUserId, roleId]
-        );
+        const [result] = await db.execute<ResultSetHeader>(`INSERT INTO StaffRoles (StaffUserId, RoleId) VALUES (?, ?)`, [
+            staffUserId,
+            roleId
+        ]);
 
         return result.affectedRows > 0;
     }
 
     async revokeRole(staffUserId: number, roleId: number, db: PoolConnection): Promise<boolean> {
-        const [result] = await db.execute<ResultSetHeader>(
-            `DELETE FROM StaffRoles
-       WHERE StaffUserId = ? AND RoleId = ?`,
-            [staffUserId, roleId]
-        );
+        const [result] = await db.execute<ResultSetHeader>(`DELETE FROM StaffRoles WHERE StaffUserId = ? AND RoleId = ?`, [
+            staffUserId,
+            roleId
+        ]);
 
         return result.affectedRows > 0;
     }

@@ -52,13 +52,7 @@ describe('AdminStaffRepositoryMysql defensive branches', () => {
             ['SuperAdmin', 'CatalogManager']
         );
 
-        const withoutRoles = createConnection(
-            [],
-            [
-                [[staffRow], []],
-                [[], []]
-            ]
-        );
+        const withoutRoles = createConnection([], [ [[staffRow], []], [[], []] ]);
         const account = await repository.findById(42, withoutRoles);
         assert.deepEqual(account?.roles, []);
     });
@@ -162,7 +156,8 @@ function createConnection(statements: Array<{ sql: string; params: unknown }>, r
             statements.push({ sql, params });
             const response = responses.shift();
 
-            if (!response) throw new Error('Unexpected SQL statement');
+            if (!response)
+                throw new Error('Unexpected SQL statement');
 
             return response;
         }

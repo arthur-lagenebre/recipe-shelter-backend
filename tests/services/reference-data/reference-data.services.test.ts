@@ -24,7 +24,7 @@ const category: Category = {
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     updatedAt: new Date('2026-01-01T00:00:00.000Z')
 };
-const equipment: Equipment = { id: 2, name: 'Whisk', slug: 'whisk' };
+const equipment: Equipment = { id: 2, name: 'Whisk', normalizedName: 'whisk', slug: 'whisk' };
 const ingredient: Ingredient = {
     id: 3,
     name: 'Flour',
@@ -86,33 +86,24 @@ describe('reference data services', () => {
         } as unknown as CategoryRepository;
         const service = new CategoryService(repository);
 
-        await assert.rejects(
-            () => service.getCategories(),
-            (error) => assertNotFound(error, 'CATEGORIES_NOT_FOUND')
-        );
-        await assert.rejects(
-            () => service.getCategory(99),
-            (error) => assertNotFound(error, 'CATEGORY_NOT_FOUND')
-        );
+        await assert.rejects(() => service.getCategories(), (error) => assertNotFound(error, 'CATEGORIES_NOT_FOUND'));
+        await assert.rejects(() => service.getCategory(99), (error) => assertNotFound(error, 'CATEGORY_NOT_FOUND'));
     });
 
     it('returns equipments and reports missing equipment data', async () => {
-        const repository: EquipmentRepository = {
+        const repository = {
             async findAll() {
                 return [equipment];
             },
-            async findById(id) {
+            async findById(id: number) {
                 return id === equipment.id ? equipment : null;
             }
-        };
+        } as unknown as EquipmentRepository;
         const service = new EquipmentService(repository);
 
         assert.deepEqual(await service.getEquipments(), [equipment]);
         assert.deepEqual(await service.getEquipment(2), equipment);
-        await assert.rejects(
-            () => service.getEquipment(99),
-            (error) => assertNotFound(error, 'EQUIPMENT_NOT_FOUND')
-        );
+        await assert.rejects(() => service.getEquipment(99), (error) => assertNotFound(error, 'EQUIPMENT_NOT_FOUND'));
     });
 
     it('returns ingredients and reports missing ingredient data', async () => {
@@ -128,10 +119,7 @@ describe('reference data services', () => {
 
         assert.deepEqual(await service.getIngredients(), [ingredient]);
         assert.deepEqual(await service.getIngredient(3), ingredient);
-        await assert.rejects(
-            () => service.getIngredient(99),
-            (error) => assertNotFound(error, 'INGREDIENT_NOT_FOUND')
-        );
+        await assert.rejects(() => service.getIngredient(99), (error) => assertNotFound(error, 'INGREDIENT_NOT_FOUND'));
     });
 
     it('returns tags and reports missing tag data', async () => {
@@ -147,10 +135,7 @@ describe('reference data services', () => {
 
         assert.deepEqual(await service.getTags(), [tag]);
         assert.deepEqual(await service.getTag(4), tag);
-        await assert.rejects(
-            () => service.getTag(99),
-            (error) => assertNotFound(error, 'TAG_NOT_FOUND')
-        );
+        await assert.rejects(() => service.getTag(99), (error) => assertNotFound(error, 'TAG_NOT_FOUND'));
     });
 
     it('accepts empty reference lists as valid results', async () => {

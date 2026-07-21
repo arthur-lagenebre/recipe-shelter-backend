@@ -9,12 +9,7 @@ import { createAdminAuditLogsRouter } from '../../src/api/admin/admin.audit-logs
 import { adminAuthorizationPolicies } from '../../src/api/admin/admin.authorization.js';
 import { EnforceAuthorizationPolicies } from '../../src/middlewares/authorization.js';
 import { errorHandler } from '../../src/middlewares/error-handler.js';
-import {
-    configureAuthRbacRepository,
-    configureAuthSessionRepository,
-    configureAuthUserRepository,
-    requireStaffAuth
-} from '../../src/middlewares/require-auth.js';
+import { configureAuthRbacRepository, configureAuthSessionRepository, configureAuthUserRepository, requireStaffAuth } from '../../src/middlewares/require-auth.js';
 import { PERMISSIONS } from '../../src/security/permissions.js';
 import { createPaginatedResult } from '../../src/utils/pagination.js';
 import { TestSessionRepository } from '../helpers/auth-session.js';

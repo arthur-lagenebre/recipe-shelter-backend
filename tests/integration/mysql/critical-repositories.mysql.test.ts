@@ -26,9 +26,12 @@ const testDatabaseName = process.env.TEST_DB_NAME?.trim() ?? '';
 const mysqlEnabled = Boolean(testDatabaseName);
 
 function requireSafeTestDatabaseName(): string {
-    if (!/^[a-zA-Z0-9_]+$/.test(testDatabaseName)) throw new Error('TEST_DB_NAME must contain only letters, numbers and underscores');
-    if (!testDatabaseName.toLowerCase().includes('test')) throw new Error('TEST_DB_NAME must contain "test"');
-    if (testDatabaseName === env.db.name) throw new Error('TEST_DB_NAME must be different from DB_NAME');
+    if (!/^[a-zA-Z0-9_]+$/.test(testDatabaseName))
+        throw new Error('TEST_DB_NAME must contain only letters, numbers and underscores');
+    if (!testDatabaseName.toLowerCase().includes('test'))
+        throw new Error('TEST_DB_NAME must contain "test"');
+    if (testDatabaseName === env.db.name)
+        throw new Error('TEST_DB_NAME must be different from DB_NAME');
     return testDatabaseName;
 }
 
@@ -76,8 +79,7 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
                 (4, 'banned-community@test.local', 'banned-community', 'hash', 'community', 'banned', CURRENT_TIMESTAMP, 1, 'Pre-migration moderation', CURRENT_TIMESTAMP);
             INSERT INTO StaffWebAuthnCredentials
                 (CredentialId, StaffUserId, PublicKey, SignatureCounter, DeviceType, BackedUp, Aaguid)
-            VALUES ('critical-admin-credential', 1, 0x0102, 0, 'singleDevice', FALSE,
-                    '00000000-0000-0000-0000-000000000000');
+            VALUES ('critical-admin-credential', 1, 0x0102, 0, 'singleDevice', FALSE, '00000000-0000-0000-0000-000000000000');
             UPDATE StaffProfiles
             SET MfaEnrolledAt = CURRENT_TIMESTAMP
             WHERE UserId = 1;
@@ -106,7 +108,7 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
                 (11, 'Search required', 'search required', 'search-required'),
                 (12, 'Search blocked', 'search blocked', 'search-blocked'),
                 (13, 'Search other blocked', 'search other blocked', 'search-other-blocked');
-            INSERT INTO Equipments (Id, Name, Slug) VALUES (1, 'Pot', 'pot');
+            INSERT INTO Equipments (Id, Name, NormalizedName, Slug) VALUES (1, 'Pot', 'pot', 'pot');
             INSERT INTO TagGroups (Id, Name, Slug, SortOrder) VALUES (1, 'Time', 'time', 1);
             INSERT INTO Tags (Id, GroupId, Name, NormalizedName, Slug) VALUES
                 (1, 1, 'Quick', 'quick', 'quick'),
@@ -145,7 +147,8 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
     });
 
     after(async () => {
-        if (pool) await pool.end();
+        if (pool)
+            await pool.end();
         if (adminConnection) {
             await adminConnection.query(`DROP DATABASE IF EXISTS \`${requireSafeTestDatabaseName()}\``);
             await adminConnection.end();
@@ -193,23 +196,13 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
         assert.equal(await users.findStaffProfileByUserId(2), null);
         assert.equal((await users.findCommunityProfileByUserId(2))?.status, 'active');
 
-        await assert.rejects(() =>
-            pool.query(`INSERT INTO CommunityProfiles (UserId, AccountType, Status) VALUES (1, 'community', 'active')`)
-        );
+        await assert.rejects(() => pool.query(`INSERT INTO CommunityProfiles (UserId, AccountType, Status) VALUES (1, 'community', 'active')`));
         assert.equal(await users.findCommunityProfileByUserId(1), null);
 
-        const [legacyInsert] = await pool.query(
-            `INSERT INTO Users (Mail, Username, Password, AccountType, Status)
-             VALUES ('rolling-community@test.local', 'rolling-community', 'hash', 'community', 'inactive')`
-        );
+        const [legacyInsert] = await pool.query(`INSERT INTO Users (Mail, Username, Password, AccountType, Status) VALUES ('rolling-community@test.local', 'rolling-community', 'hash', 'community', 'inactive')`);
         const rollingCommunityId = Number((legacyInsert as { insertId: number }).insertId);
         assert.equal((await users.findCommunityProfileByUserId(rollingCommunityId))?.status, 'inactive');
-        await pool.query(
-            `UPDATE Users
-             SET Status = 'banned', BannedByUserId = 1, BannedReason = 'Rolling deployment moderation', BannedAt = CURRENT_TIMESTAMP
-             WHERE Id = ?`,
-            [rollingCommunityId]
-        );
+        await pool.query(`UPDATE Users SET Status = 'banned', BannedByUserId = 1, BannedReason = 'Rolling deployment moderation', BannedAt = CURRENT_TIMESTAMP WHERE Id = ?`, [rollingCommunityId]);
         assert.equal((await users.findCommunityProfileByUserId(rollingCommunityId))?.status, 'banned');
         const staff = await users.create({
             mail: 'staff@test.local',
@@ -238,9 +231,7 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
         await assert.rejects(() => pool.query(`INSERT INTO StaffRoles (StaffUserId, RoleId) VALUES (?, 999999)`, [staff.id]));
         await assert.rejects(() => pool.query(`INSERT INTO RolePermissions (RoleId, PermissionId) VALUES (1, 1)`));
         await assert.rejects(() => pool.query(`INSERT INTO RolePermissions (RoleId, PermissionId) VALUES (1, 999999)`));
-        await assert.rejects(() =>
-            pool.query(`INSERT INTO Roles (Code, Name, Description) VALUES ('SUPERADMIN', 'Other administrator', 'Duplicate')`)
-        );
+        await assert.rejects(() => pool.query(`INSERT INTO Roles (Code, Name, Description) VALUES ('SUPERADMIN', 'Other administrator', 'Duplicate')`));
         await assert.rejects(() => pool.query(`INSERT INTO Permissions (Code, Description) VALUES ('USER.READ', 'Duplicate')`));
         const author = await users.create({
             mail: 'author@test.local',
@@ -343,13 +334,7 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
         const moderatedComments = await adminComments.findModeratedForAdmin();
         assert.equal(moderatedComments.length, 1);
         assert.equal(moderatedComments[0]?.moderationReason, 'Repeated personal attacks.');
-        const [commentModerationLogs] = await pool.query(
-            `SELECT audit.Action, audit.Reason
-             FROM CommentModerationLogs AS log
-             INNER JOIN AdminAuditLogs AS audit ON audit.Id = log.AdminAuditLogId
-             WHERE log.CommentId = ?`,
-            [rootComment.id]
-        );
+        const [commentModerationLogs] = await pool.query(`SELECT audit.Action, audit.Reason FROM CommentModerationLogs AS log INNER JOIN AdminAuditLogs AS audit ON audit.Id = log.AdminAuditLogId WHERE log.CommentId = ?`, [rootComment.id]);
         assert.deepEqual(commentModerationLogs, [{ Action: 'comments.hide', Reason: 'Repeated personal attacks.' }]);
         assert.equal(await adminComments.unmoderate(rootComment.id), true);
         assert.equal((await adminComments.findByIdForAdmin(rootComment.id))?.moderationReason, null);
@@ -363,14 +348,7 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
         const archivedRecipe = await adminRecipes.findByIdForAdmin(recipe.id);
         assert.equal(archivedRecipe?.status, 'archived');
         assert.equal(archivedRecipe?.archiveReason, 'Editorial policy violation.');
-        const [recipeModerationLogs] = await pool.query(
-            `SELECT audit.Action, audit.Reason
-             FROM RecipeModerationLogs AS log
-             INNER JOIN AdminAuditLogs AS audit ON audit.Id = log.AdminAuditLogId
-             WHERE log.RecipeId = ?
-             ORDER BY audit.Id`,
-            [recipe.id]
-        );
+        const [recipeModerationLogs] = await pool.query(`SELECT audit.Action, audit.Reason FROM RecipeModerationLogs AS log INNER JOIN AdminAuditLogs AS audit ON audit.Id = log.AdminAuditLogId WHERE log.RecipeId = ? ORDER BY audit.Id`, [recipe.id]);
         assert.deepEqual(recipeModerationLogs, [
             { Action: 'recipes.reject', Reason: 'Missing editorial details.' },
             { Action: 'recipes.archive', Reason: 'Editorial policy violation.' }
@@ -516,47 +494,22 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
     });
 
     it('keeps linked community content after specialized profile state changes', async () => {
-        await pool.query(
-            `UPDATE StaffProfiles
-             SET Status = 'disabled',
-                 DisabledByStaffUserId = 3,
-                 DisabledReason = 'MySQL specialized profile lifecycle test',
-                 DisabledAt = CURRENT_TIMESTAMP
-             WHERE UserId = 3`
-        );
+        await pool.query(`UPDATE StaffProfiles SET Status = 'disabled', DisabledByStaffUserId = 3, DisabledReason = 'MySQL specialized profile lifecycle test', DisabledAt = CURRENT_TIMESTAMP WHERE UserId = 3`);
 
-        const [profileTables] = await pool.query(
-            `SELECT TABLE_NAME AS TableName
-             FROM information_schema.TABLES
-             WHERE TABLE_SCHEMA = ? AND TABLE_NAME IN ('CommunityProfiles', 'StaffProfiles')
-             ORDER BY TABLE_NAME`,
-            [requireSafeTestDatabaseName()]
-        );
+        const [profileTables] = await pool.query(`SELECT TABLE_NAME AS TableName FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME IN ('CommunityProfiles', 'StaffProfiles') ORDER BY TABLE_NAME`, [requireSafeTestDatabaseName()]);
         assert.deepEqual(
             (profileTables as Array<{ TableName: string }>).map((row) => row.TableName.toLowerCase()),
             ['communityprofiles', 'staffprofiles']
         );
 
-        const [profileStatuses] = await pool.query(
-            `SELECT u.Id, COALESCE(cp.Status, sp.Status) AS Status
-             FROM Users AS u
-             LEFT JOIN CommunityProfiles AS cp ON cp.UserId = u.Id
-             LEFT JOIN StaffProfiles AS sp ON sp.UserId = u.Id
-             WHERE u.Id IN (2, 3, 4)
-             ORDER BY u.Id`
-        );
+        const [profileStatuses] = await pool.query(`SELECT u.Id, COALESCE(cp.Status, sp.Status) AS Status FROM Users AS u LEFT JOIN CommunityProfiles AS cp ON cp.UserId = u.Id LEFT JOIN StaffProfiles AS sp ON sp.UserId = u.Id WHERE u.Id IN (2, 3, 4) ORDER BY u.Id`);
         assert.deepEqual(profileStatuses, [
             { Id: 2, Status: 'active' },
             { Id: 3, Status: 'disabled' },
             { Id: 4, Status: 'banned' }
         ]);
 
-        const [contentCounts] = await pool.query(
-            `SELECT
-                (SELECT COUNT(*) FROM Recipes) AS RecipesCount,
-                (SELECT COUNT(*) FROM Comments) AS CommentsCount,
-                (SELECT COUNT(*) FROM Favorites) AS FavoritesCount`
-        );
+        const [contentCounts] = await pool.query(`SELECT (SELECT COUNT(*) FROM Recipes) AS RecipesCount, (SELECT COUNT(*) FROM Comments) AS CommentsCount, (SELECT COUNT(*) FROM Favorites) AS FavoritesCount`);
         assert.deepEqual(contentCounts, [{ RecipesCount: 8, CommentsCount: 2, FavoritesCount: 0 }]);
     });
 });

@@ -1,12 +1,9 @@
 import { notFound } from '../../utils/errors.js';
-import { normalizeDisplayName } from '../../utils/string.js';
 
 import type { TagRepository } from '../../repositories/tag/tag.repository.interface.js';
 import type { Tag } from '../../repositories/tag/tag.types.js';
 
-export function normalizeTagName(name: string): string {
-    return normalizeDisplayName(name);
-}
+export { normalizeCatalogName as normalizeTagName } from '../../utils/catalog-name-normalizer.js';
 
 export class TagService {
     constructor(private readonly tagRepository: TagRepository) {}

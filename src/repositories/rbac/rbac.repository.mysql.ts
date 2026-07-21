@@ -14,12 +14,7 @@ export class RbacRepositoryMysql implements RbacRepository {
 
     async findPermissionCodesByStaffUserId(staffUserId: number): Promise<PermissionCode[]> {
         const [rows] = await this.db.execute<PermissionCodeRow[]>(
-            `SELECT DISTINCT p.Code
-       FROM StaffRoles AS sr
-       INNER JOIN RolePermissions AS rp ON rp.RoleId = sr.RoleId
-       INNER JOIN Permissions AS p ON p.Id = rp.PermissionId
-       WHERE sr.StaffUserId = ?
-       ORDER BY p.Code`,
+            `SELECT DISTINCT p.Code FROM StaffRoles AS sr INNER JOIN RolePermissions AS rp ON rp.RoleId = sr.RoleId INNER JOIN Permissions AS p ON p.Id = rp.PermissionId WHERE sr.StaffUserId = ? ORDER BY p.Code`,
             [staffUserId]
         );
 

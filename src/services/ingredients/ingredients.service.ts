@@ -1,12 +1,9 @@
 import { notFound } from '../../utils/errors.js';
-import { normalizeDisplayName } from '../../utils/string.js';
 
 import type { IngredientRepository } from '../../repositories/ingredients/ingredient.repository.interface.js';
 import type { Ingredient } from '../../repositories/ingredients/ingredient.types.js';
 
-export function normalizeIngredientName(name: string): string {
-    return normalizeDisplayName(name);
-}
+export { normalizeCatalogName as normalizeIngredientName } from '../../utils/catalog-name-normalizer.js';
 
 export class IngredientService {
     constructor(private readonly ingredientRepository: IngredientRepository) {}

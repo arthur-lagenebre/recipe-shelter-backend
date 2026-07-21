@@ -75,12 +75,7 @@ export class AdminTagRepositoryMysql implements AdminTagRepository {
     }
 
     async groupExists(groupId: number, db: PoolConnection): Promise<boolean> {
-        const [rows] = await db.execute<RowDataPacket[]>(
-            `SELECT 1
-       FROM TagGroups
-       WHERE Id = ?`,
-            [groupId]
-        );
+        const [rows] = await db.execute<RowDataPacket[]>(`SELECT 1 FROM TagGroups WHERE Id = ?`, [groupId]);
 
         return rows.length > 0;
     }
@@ -88,8 +83,7 @@ export class AdminTagRepositoryMysql implements AdminTagRepository {
     async create(input: AdminTagWriteInput, db: PoolConnection): Promise<AdminTagWriteResult> {
         try {
             const [result] = await db.execute<ResultSetHeader>(
-                `INSERT INTO Tags (GroupId, Name, NormalizedName, Slug, Description)
-         VALUES (?, ?, ?, ?, ?)`,
+                `INSERT INTO Tags (GroupId, Name, NormalizedName, Slug, Description) VALUES (?, ?, ?, ?, ?)`,
                 [input.groupId, input.name, input.normalizedName, input.slug, input.description]
             );
             const tag = await this.findById(Number(result.insertId), db);
@@ -108,9 +102,7 @@ export class AdminTagRepositoryMysql implements AdminTagRepository {
     async update(input: AdminTagUpdateInput, db: PoolConnection): Promise<AdminTagWriteResult> {
         try {
             await db.execute<ResultSetHeader>(
-                `UPDATE Tags
-         SET GroupId = ?, Name = ?, NormalizedName = ?, Slug = ?, Description = ?
-         WHERE Id = ?`,
+                `UPDATE Tags SET GroupId = ?, Name = ?, NormalizedName = ?, Slug = ?, Description = ? WHERE Id = ?`,
                 [input.groupId, input.name, input.normalizedName, input.slug, input.description, input.id]
             );
             const tag = await this.findById(input.id, db);
@@ -127,22 +119,14 @@ export class AdminTagRepositoryMysql implements AdminTagRepository {
     }
 
     async hasMergedAliases(tagId: number, db: PoolConnection): Promise<boolean> {
-        const [rows] = await db.execute<RowDataPacket[]>(
-            `SELECT 1
-       FROM Tags
-       WHERE MergedIntoTagId = ?
-       LIMIT 1`,
-            [tagId]
-        );
+        const [rows] = await db.execute<RowDataPacket[]>(`SELECT 1 FROM Tags WHERE MergedIntoTagId = ? LIMIT 1`, [tagId]);
 
         return rows.length > 0;
     }
 
     async deprecate(tagId: number, db: PoolConnection): Promise<boolean> {
         const [result] = await db.execute<ResultSetHeader>(
-            `UPDATE Tags
-       SET Status = 'deprecated', MergedIntoTagId = NULL
-       WHERE Id = ? AND Status = 'active'`,
+            `UPDATE Tags SET Status = 'deprecated', MergedIntoTagId = NULL WHERE Id = ? AND Status = 'active'`,
             [tagId]
         );
 
@@ -152,9 +136,7 @@ export class AdminTagRepositoryMysql implements AdminTagRepository {
     async restore(tagId: number, db: PoolConnection): Promise<AdminTagRestoreResult> {
         try {
             const [result] = await db.execute<ResultSetHeader>(
-                `UPDATE Tags
-         SET Status = 'active', MergedIntoTagId = NULL
-         WHERE Id = ? AND Status = 'deprecated'`,
+                `UPDATE Tags SET Status = 'active', MergedIntoTagId = NULL WHERE Id = ? AND Status = 'deprecated'`,
                 [tagId]
             );
 
@@ -168,11 +150,7 @@ export class AdminTagRepositoryMysql implements AdminTagRepository {
 
     async merge(sourceTagId: number, targetTagId: number, db: PoolConnection): Promise<AdminTagMergeResult> {
         const [associationRows] = await db.execute<RecipeTagAssociationRow[]>(
-            `SELECT RecipeId, TagId
-       FROM RecipeTags
-       WHERE TagId IN (?, ?)
-       ORDER BY TagId ASC, RecipeId ASC
-       FOR UPDATE`,
+            `SELECT RecipeId, TagId FROM RecipeTags WHERE TagId IN (?, ?) ORDER BY TagId ASC, RecipeId ASC FOR UPDATE`,
             [sourceTagId, targetTagId]
         );
         const sourceRecipeIds = new Set(
@@ -185,37 +163,20 @@ export class AdminTagRepositoryMysql implements AdminTagRepository {
         const expectedTransferredRecipeCount = sourceRecipeIds.size - deduplicatedRecipeCount;
 
         const [transferResult] = await db.execute<ResultSetHeader>(
-            `INSERT INTO RecipeTags (RecipeId, TagId)
-       SELECT source.RecipeId, ?
-       FROM RecipeTags AS source
-       WHERE source.TagId = ?
-         AND NOT EXISTS (
-           SELECT 1
-           FROM RecipeTags AS target
-           WHERE target.RecipeId = source.RecipeId
-             AND target.TagId = ?
-         )`,
+            `INSERT INTO RecipeTags (RecipeId, TagId) SELECT source.RecipeId, ? FROM RecipeTags AS source WHERE source.TagId = ? AND NOT EXISTS (SELECT 1 FROM RecipeTags AS target WHERE target.RecipeId = source.RecipeId AND target.TagId = ?)`,
             [targetTagId, sourceTagId, targetTagId]
         );
-        const [recipeResult] = await db.execute<ResultSetHeader>(
-            `DELETE FROM RecipeTags
-       WHERE TagId = ?`,
-            [sourceTagId]
-        );
+        const [recipeResult] = await db.execute<ResultSetHeader>(`DELETE FROM RecipeTags WHERE TagId = ?`, [sourceTagId]);
 
         if (transferResult.affectedRows !== expectedTransferredRecipeCount || recipeResult.affectedRows !== sourceRecipeIds.size)
             throw new Error('Tag recipe associations changed during merge');
 
-        const [aliasesResult] = await db.execute<ResultSetHeader>(
-            `UPDATE Tags
-       SET MergedIntoTagId = ?
-       WHERE MergedIntoTagId = ?`,
-            [targetTagId, sourceTagId]
-        );
+        const [aliasesResult] = await db.execute<ResultSetHeader>(`UPDATE Tags SET MergedIntoTagId = ? WHERE MergedIntoTagId = ?`, [
+            targetTagId,
+            sourceTagId
+        ]);
         const [tagResult] = await db.execute<ResultSetHeader>(
-            `UPDATE Tags
-       SET Status = 'merged', MergedIntoTagId = ?
-       WHERE Id = ? AND Status IN ('active', 'deprecated')`,
+            `UPDATE Tags SET Status = 'merged', MergedIntoTagId = ? WHERE Id = ? AND Status IN ('active', 'deprecated')`,
             [targetTagId, sourceTagId]
         );
 
@@ -232,10 +193,7 @@ export class AdminTagRepositoryMysql implements AdminTagRepository {
 
     private async findById(tagId: number, db: PoolConnection): Promise<Tag | null> {
         const [rows] = await db.execute<TagRow[]>(
-            `SELECT ${TAG_SELECT}
-       FROM Tags AS t
-       INNER JOIN TagGroups AS tg ON tg.Id = t.GroupId
-       WHERE t.Id = ?`,
+            `SELECT ${TAG_SELECT} FROM Tags AS t INNER JOIN TagGroups AS tg ON tg.Id = t.GroupId WHERE t.Id = ?`,
             [tagId]
         );
         const row = firstOrNull(rows);

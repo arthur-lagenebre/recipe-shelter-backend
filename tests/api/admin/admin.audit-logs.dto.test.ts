@@ -44,10 +44,7 @@ describe('admin audit logs DTO', () => {
         ];
 
         for (const [query, code] of invalidFilters) {
-            assert.throws(
-                () => parseAdminAuditLogFilters(query),
-                (error) => assertHttpError(error, code)
-            );
+            assert.throws(() => parseAdminAuditLogFilters(query), (error) => assertHttpError(error, code));
         }
     });
 

@@ -60,12 +60,9 @@ export class AdminIngredientRepositoryMysql implements AdminIngredientRepository
     }
 
     async findById(ingredientId: number, db?: PoolConnection): Promise<Ingredient | null> {
-        const [rows] = await (db ?? this.db).execute<IngredientRow[]>(
-            `SELECT ${INGREDIENT_SELECT}
-       FROM Ingredients AS i
-       WHERE i.Id = ?`,
-            [ingredientId]
-        );
+        const [rows] = await (db ?? this.db).execute<IngredientRow[]>(`SELECT ${INGREDIENT_SELECT} FROM Ingredients AS i WHERE i.Id = ?`, [
+            ingredientId
+        ]);
         const row = firstOrNull(rows);
 
         return row ? mapIngredient(row) : null;
@@ -89,11 +86,11 @@ export class AdminIngredientRepositoryMysql implements AdminIngredientRepository
 
     async create(input: AdminIngredientWriteInput, db: PoolConnection): Promise<AdminIngredientWriteResult> {
         try {
-            const [result] = await db.execute<ResultSetHeader>(
-                `INSERT INTO Ingredients (Name, NormalizedName, Slug)
-         VALUES (?, ?, ?)`,
-                [input.name, input.normalizedName, input.slug]
-            );
+            const [result] = await db.execute<ResultSetHeader>(`INSERT INTO Ingredients (Name, NormalizedName, Slug) VALUES (?, ?, ?)`, [
+                input.name,
+                input.normalizedName,
+                input.slug
+            ]);
             const ingredient = await this.findById(Number(result.insertId), db);
 
             if (!ingredient) throw new Error('Ingredient created but cannot be reloaded');
@@ -109,12 +106,12 @@ export class AdminIngredientRepositoryMysql implements AdminIngredientRepository
 
     async update(input: AdminIngredientUpdateInput, db: PoolConnection): Promise<AdminIngredientWriteResult> {
         try {
-            await db.execute<ResultSetHeader>(
-                `UPDATE Ingredients
-         SET Name = ?, NormalizedName = ?, Slug = ?
-         WHERE Id = ?`,
-                [input.name, input.normalizedName, input.slug, input.id]
-            );
+            await db.execute<ResultSetHeader>(`UPDATE Ingredients SET Name = ?, NormalizedName = ?, Slug = ? WHERE Id = ?`, [
+                input.name,
+                input.normalizedName,
+                input.slug,
+                input.id
+            ]);
             const ingredient = await this.findById(input.id, db);
 
             if (!ingredient) throw new Error('Ingredient updated but cannot be reloaded');
@@ -144,9 +141,7 @@ export class AdminIngredientRepositoryMysql implements AdminIngredientRepository
 
     async deprecate(ingredientId: number, db: PoolConnection): Promise<boolean> {
         const [result] = await db.execute<ResultSetHeader>(
-            `UPDATE Ingredients
-       SET Status = 'deprecated', MergedIntoIngredientId = NULL
-       WHERE Id = ? AND Status = 'active'`,
+            `UPDATE Ingredients SET Status = 'deprecated', MergedIntoIngredientId = NULL WHERE Id = ? AND Status = 'active'`,
             [ingredientId]
         );
 
@@ -156,9 +151,7 @@ export class AdminIngredientRepositoryMysql implements AdminIngredientRepository
     async restore(ingredientId: number, db: PoolConnection): Promise<AdminIngredientRestoreResult> {
         try {
             const [result] = await db.execute<ResultSetHeader>(
-                `UPDATE Ingredients
-         SET Status = 'active', MergedIntoIngredientId = NULL
-         WHERE Id = ? AND Status = 'deprecated'`,
+                `UPDATE Ingredients SET Status = 'active', MergedIntoIngredientId = NULL WHERE Id = ? AND Status = 'deprecated'`,
                 [ingredientId]
             );
 
@@ -173,20 +166,11 @@ export class AdminIngredientRepositoryMysql implements AdminIngredientRepository
     async merge(input: AdminIngredientMergeInput, db: PoolConnection): Promise<AdminIngredientMergeResult> {
         const { sourceIngredientId, targetIngredientId, sourceName, sourceNormalizedName, sourceNameLanguageCode } = input;
         const [mergedRows] = await db.execute<IdRow[]>(
-            `SELECT Id
-       FROM Ingredients
-       WHERE MergedIntoIngredientId = ?
-       ORDER BY Id ASC
-       FOR UPDATE`,
+            `SELECT Id FROM Ingredients WHERE MergedIntoIngredientId = ? ORDER BY Id ASC FOR UPDATE`,
             [sourceIngredientId]
         );
         const [aliasRows] = await db.execute<MergeAliasRow[]>(
-            `SELECT Id, IngredientId, NormalizedName, LanguageCode
-       FROM IngredientAliases
-       WHERE IngredientId IN (?, ?)
-          OR (LanguageCode = ? AND NormalizedName = ?)
-       ORDER BY Id ASC
-       FOR UPDATE`,
+            `SELECT Id, IngredientId, NormalizedName, LanguageCode FROM IngredientAliases WHERE IngredientId IN (?, ?) OR (LanguageCode = ? AND NormalizedName = ?) ORDER BY Id ASC FOR UPDATE`,
             [sourceIngredientId, targetIngredientId, sourceNameLanguageCode, sourceNormalizedName]
         );
         const sourceNameAlias = aliasRows.find(
@@ -217,8 +201,7 @@ export class AdminIngredientRepositoryMysql implements AdminIngredientRepository
         if (sourceNameAliasResolution === 'created') {
             try {
                 await db.execute<ResultSetHeader>(
-                    `INSERT INTO IngredientAliases (IngredientId, Name, NormalizedName, LanguageCode)
-           VALUES (?, ?, ?, ?)`,
+                    `INSERT INTO IngredientAliases (IngredientId, Name, NormalizedName, LanguageCode) VALUES (?, ?, ?, ?)`,
                     [targetIngredientId, sourceName, sourceNormalizedName, sourceNameLanguageCode]
                 );
             } catch (error) {
@@ -234,46 +217,34 @@ export class AdminIngredientRepositoryMysql implements AdminIngredientRepository
         }
 
         const [recipeRows] = await db.execute<IdRow[]>(
-            `SELECT Id, IngredientId
-       FROM RecipeIngredients
-       WHERE IngredientId IN (?, ?)
-       ORDER BY Id ASC
-       FOR UPDATE`,
+            `SELECT Id, IngredientId FROM RecipeIngredients WHERE IngredientId IN (?, ?) ORDER BY Id ASC FOR UPDATE`,
             [sourceIngredientId, targetIngredientId]
         );
         const sourceRecipeCount = countIngredientRows(recipeRows, sourceIngredientId);
         const targetRecipeCount = countIngredientRows(recipeRows, targetIngredientId);
-        const [recipeResult] = await db.execute<ResultSetHeader>(
-            `UPDATE RecipeIngredients
-       SET IngredientId = ?
-       WHERE IngredientId = ?`,
-            [targetIngredientId, sourceIngredientId]
-        );
+        const [recipeResult] = await db.execute<ResultSetHeader>(`UPDATE RecipeIngredients SET IngredientId = ? WHERE IngredientId = ?`, [
+            targetIngredientId,
+            sourceIngredientId
+        ]);
 
         if (recipeResult.affectedRows !== sourceRecipeCount) throw new Error('Ingredient recipe associations changed during merge');
 
         const [redirectResult] = await db.execute<ResultSetHeader>(
-            `UPDATE Ingredients
-       SET MergedIntoIngredientId = ?
-       WHERE MergedIntoIngredientId = ?`,
+            `UPDATE Ingredients SET MergedIntoIngredientId = ? WHERE MergedIntoIngredientId = ?`,
             [targetIngredientId, sourceIngredientId]
         );
 
         if (redirectResult.affectedRows !== mergedRows.length) throw new Error('Merged ingredient references changed during merge');
 
-        const [aliasResult] = await db.execute<ResultSetHeader>(
-            `UPDATE IngredientAliases
-       SET IngredientId = ?
-       WHERE IngredientId = ?`,
-            [targetIngredientId, sourceIngredientId]
-        );
+        const [aliasResult] = await db.execute<ResultSetHeader>(`UPDATE IngredientAliases SET IngredientId = ? WHERE IngredientId = ?`, [
+            targetIngredientId,
+            sourceIngredientId
+        ]);
 
         if (aliasResult.affectedRows !== sourceAliasCount) throw new Error('Ingredient aliases changed during merge');
 
         const [ingredientResult] = await db.execute<ResultSetHeader>(
-            `UPDATE Ingredients
-       SET Status = 'merged', MergedIntoIngredientId = ?
-       WHERE Id = ? AND Status IN ('active', 'deprecated')`,
+            `UPDATE Ingredients SET Status = 'merged', MergedIntoIngredientId = ? WHERE Id = ? AND Status IN ('active', 'deprecated')`,
             [targetIngredientId, sourceIngredientId]
         );
 
@@ -322,10 +293,7 @@ export class AdminIngredientRepositoryMysql implements AdminIngredientRepository
 
     async findAliasForUpdate(ingredientId: number, aliasId: number, db: PoolConnection): Promise<IngredientAlias | null> {
         const [rows] = await db.execute<IngredientAliasRow[]>(
-            `SELECT ${ALIAS_SELECT}
-       FROM IngredientAliases AS ia
-       WHERE ia.Id = ? AND ia.IngredientId = ?
-       FOR UPDATE`,
+            `SELECT ${ALIAS_SELECT} FROM IngredientAliases AS ia WHERE ia.Id = ? AND ia.IngredientId = ? FOR UPDATE`,
             [aliasId, ingredientId]
         );
         const row = firstOrNull(rows);
@@ -335,16 +303,7 @@ export class AdminIngredientRepositoryMysql implements AdminIngredientRepository
 
     async isMergeSourceNameAlias(ingredientId: number, aliasId: number, db: PoolConnection): Promise<boolean> {
         const [rows] = await db.execute<RowDataPacket[]>(
-            `SELECT 1
-       FROM IngredientAliases AS ia
-       INNER JOIN Ingredients AS merged_source
-         ON merged_source.Status = 'merged'
-        AND merged_source.MergedIntoIngredientId = ia.IngredientId
-        AND merged_source.NormalizedName = ia.NormalizedName
-       WHERE ia.Id = ?
-         AND ia.IngredientId = ?
-         AND ia.LanguageCode = 'fr'
-       LIMIT 1`,
+            `SELECT 1 FROM IngredientAliases AS ia INNER JOIN Ingredients AS merged_source ON merged_source.Status = 'merged' AND merged_source.MergedIntoIngredientId = ia.IngredientId AND merged_source.NormalizedName = ia.NormalizedName WHERE ia.Id = ? AND ia.IngredientId = ? AND ia.LanguageCode = 'fr' LIMIT 1`,
             [aliasId, ingredientId]
         );
 
@@ -354,8 +313,7 @@ export class AdminIngredientRepositoryMysql implements AdminIngredientRepository
     async createAlias(input: AdminIngredientAliasWriteInput, db: PoolConnection): Promise<AdminIngredientAliasWriteResult> {
         try {
             const [result] = await db.execute<ResultSetHeader>(
-                `INSERT INTO IngredientAliases (IngredientId, Name, NormalizedName, LanguageCode)
-         VALUES (?, ?, ?, ?)`,
+                `INSERT INTO IngredientAliases (IngredientId, Name, NormalizedName, LanguageCode) VALUES (?, ?, ?, ?)`,
                 [input.ingredientId, input.name, input.normalizedName, input.languageCode]
             );
             const alias = await this.findAliasForUpdate(input.ingredientId, Number(result.insertId), db);
@@ -373,9 +331,7 @@ export class AdminIngredientRepositoryMysql implements AdminIngredientRepository
     async updateAlias(input: AdminIngredientAliasUpdateInput, db: PoolConnection): Promise<AdminIngredientAliasWriteResult> {
         try {
             await db.execute<ResultSetHeader>(
-                `UPDATE IngredientAliases
-         SET Name = ?, NormalizedName = ?, LanguageCode = ?
-         WHERE Id = ? AND IngredientId = ?`,
+                `UPDATE IngredientAliases SET Name = ?, NormalizedName = ?, LanguageCode = ? WHERE Id = ? AND IngredientId = ?`,
                 [input.name, input.normalizedName, input.languageCode, input.id, input.ingredientId]
             );
             const alias = await this.findAliasForUpdate(input.ingredientId, input.id, db);
@@ -391,11 +347,10 @@ export class AdminIngredientRepositoryMysql implements AdminIngredientRepository
     }
 
     async deleteAlias(ingredientId: number, aliasId: number, db: PoolConnection): Promise<boolean> {
-        const [result] = await db.execute<ResultSetHeader>(
-            `DELETE FROM IngredientAliases
-       WHERE Id = ? AND IngredientId = ?`,
-            [aliasId, ingredientId]
-        );
+        const [result] = await db.execute<ResultSetHeader>(`DELETE FROM IngredientAliases WHERE Id = ? AND IngredientId = ?`, [
+            aliasId,
+            ingredientId
+        ]);
 
         return result.affectedRows > 0;
     }
@@ -410,15 +365,9 @@ function buildIngredientWhere(filters: AdminIngredientListFilters): Where {
         params.push(filters.status);
     }
     if (filters.q !== undefined) {
-        clauses.push(`(
-      INSTR(i.Name, ?) > 0
-      OR INSTR(i.NormalizedName, ?) > 0
-      OR INSTR(i.Slug, ?) > 0
-      OR EXISTS (
-        SELECT 1 FROM IngredientAliases AS search_alias
-        WHERE search_alias.IngredientId = i.Id AND INSTR(search_alias.Name, ?) > 0
-      )
-    )`);
+        clauses.push(
+            `(INSTR(i.Name, ?) > 0 OR INSTR(i.NormalizedName, ?) > 0 OR INSTR(i.Slug, ?) > 0 OR EXISTS (SELECT 1 FROM IngredientAliases AS search_alias WHERE search_alias.IngredientId = i.Id AND INSTR(search_alias.Name, ?) > 0))`
+        );
         params.push(filters.q, filters.q, filters.q, filters.q);
     }
 
@@ -447,10 +396,7 @@ function countIngredientRows(rows: IdRow[], ingredientId: number): number {
 
 async function findAliasIngredientId(db: PoolConnection, languageCode: string, normalizedName: string): Promise<number | null> {
     const [rows] = await db.execute<IngredientIdRow[]>(
-        `SELECT IngredientId
-     FROM IngredientAliases
-     WHERE LanguageCode = ? AND NormalizedName = ?
-     FOR UPDATE`,
+        `SELECT IngredientId FROM IngredientAliases WHERE LanguageCode = ? AND NormalizedName = ? FOR UPDATE`,
         [languageCode, normalizedName]
     );
     const ingredientId = firstOrNull(rows)?.IngredientId;

@@ -13,12 +13,16 @@ const baseTestDatabaseName = process.env.TEST_DB_NAME?.trim() ?? '';
 const mysqlEnabled = Boolean(baseTestDatabaseName);
 
 function requireTestDatabaseName(): string {
-    if (!/^[a-zA-Z0-9_]+$/.test(baseTestDatabaseName)) throw new Error('TEST_DB_NAME must contain only letters, numbers and underscores');
-    if (!baseTestDatabaseName.toLowerCase().includes('test')) throw new Error('TEST_DB_NAME must contain "test"');
-    if (baseTestDatabaseName === env.db.name) throw new Error('TEST_DB_NAME must be different from DB_NAME');
+    if (!/^[a-zA-Z0-9_]+$/.test(baseTestDatabaseName))
+        throw new Error('TEST_DB_NAME must contain only letters, numbers and underscores');
+    if (!baseTestDatabaseName.toLowerCase().includes('test'))
+        throw new Error('TEST_DB_NAME must contain "test"');
+    if (baseTestDatabaseName === env.db.name)
+        throw new Error('TEST_DB_NAME must be different from DB_NAME');
 
     const databaseName = `${baseTestDatabaseName}_staff_session_revocation`;
-    if (databaseName.length > 64) throw new Error('TEST_DB_NAME is too long for the staff session revocation suffix');
+    if (databaseName.length > 64)
+        throw new Error('TEST_DB_NAME is too long for the staff session revocation suffix');
     return databaseName;
 }
 
@@ -67,7 +71,8 @@ describe(
         });
 
         after(async () => {
-            if (pool) await pool.end();
+            if (pool)
+                await pool.end();
             if (adminConnection) {
                 await adminConnection.query(`DROP DATABASE IF EXISTS \`${requireTestDatabaseName()}\``);
                 await adminConnection.end();
@@ -96,11 +101,7 @@ describe(
             await pool.execute(`UPDATE Users SET Password = Password WHERE Id = ?`, [staff.userId]);
             assert.equal(await sessions.isStaffSessionActive(staff.sessionId, staff.userId), true);
 
-            await pool.execute(
-                `INSERT INTO CommunitySessions (Id, CommunityUserId, ExpiresAt)
-       VALUES (?, ?, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 1 HOUR))`,
-                [otherCommunitySessionId, community.userId]
-            );
+            await pool.execute(`INSERT INTO CommunitySessions (Id, CommunityUserId, ExpiresAt) VALUES (?, ?, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 1 HOUR))`, [otherCommunitySessionId, community.userId]);
 
             await pool.execute(`UPDATE Users SET Password = 'new-community-password-hash' WHERE Id = ?`, [community.userId]);
             await sessions.revokeAllCommunitySessions(community.userId, 'password_changed', community.sessionId);
@@ -158,35 +159,16 @@ describe(
             const locked = await createStaffIdentity('locked-target', ['RecipeModerator']);
             const mfaReset = await createStaffIdentity('mfa-reset-target', ['RecipeModerator']);
 
-            await pool.execute(
-                `UPDATE StaffProfiles
-       SET Status = 'disabled',
-           DisabledByStaffUserId = ?,
-           DisabledReason = 'Confirmed staff access deactivation.',
-           DisabledAt = CURRENT_TIMESTAMP
-       WHERE UserId = ?`,
-                [actor.userId, disabled.userId]
-            );
+            await pool.execute(`UPDATE StaffProfiles SET Status = 'disabled', DisabledByStaffUserId = ?, DisabledReason = 'Confirmed staff access deactivation.', DisabledAt = CURRENT_TIMESTAMP WHERE UserId = ?`, [actor.userId, disabled.userId]);
             await pool.execute(`UPDATE StaffProfiles SET Status = 'locked' WHERE UserId = ?`, [locked.userId]);
-            await pool.execute(
-                `UPDATE StaffProfiles
-       SET Status = 'locked', MfaEnrolledAt = NULL
-       WHERE UserId = ?`,
-                [mfaReset.userId]
-            );
+            await pool.execute(`UPDATE StaffProfiles SET Status = 'locked', MfaEnrolledAt = NULL WHERE UserId = ?`, [mfaReset.userId]);
 
             assert.equal(await sessions.isStaffSessionActive(disabled.sessionId, disabled.userId), false);
             assert.equal(await sessions.isStaffSessionActive(locked.sessionId, locked.userId), false);
             assert.equal(await sessions.isStaffSessionActive(mfaReset.sessionId, mfaReset.userId), false);
             assert.equal(await sessions.isStaffSessionActive(actor.sessionId, actor.userId), true);
 
-            const [revocations] = await pool.query(
-                `SELECT StaffUserId, RevokedByStaffUserId, RevocationType
-       FROM StaffSessions
-       WHERE StaffUserId IN (?, ?, ?)
-       ORDER BY StaffUserId`,
-                [disabled.userId, locked.userId, mfaReset.userId]
-            );
+            const [revocations] = await pool.query(`SELECT StaffUserId, RevokedByStaffUserId, RevocationType FROM StaffSessions WHERE StaffUserId IN (?, ?, ?) ORDER BY StaffUserId`, [disabled.userId, locked.userId, mfaReset.userId]);
             assert.deepEqual(revocations, [
                 {
                     StaffUserId: disabled.userId,
@@ -209,13 +191,7 @@ describe(
         it('keeps sessions while a role remains and revokes them when the last role is removed', async () => {
             const staff = await createStaffIdentity('roles-target', ['RecipeModerator', 'UserAdmin']);
 
-            await pool.execute(
-                `DELETE sr
-       FROM StaffRoles AS sr
-       INNER JOIN Roles AS role ON role.Id = sr.RoleId
-       WHERE sr.StaffUserId = ? AND role.Code = 'RecipeModerator'`,
-                [staff.userId]
-            );
+            await pool.execute(`DELETE sr FROM StaffRoles AS sr INNER JOIN Roles AS role ON role.Id = sr.RoleId WHERE sr.StaffUserId = ? AND role.Code = 'RecipeModerator'`, [staff.userId]);
             assert.equal(await sessions.isStaffSessionActive(staff.sessionId, staff.userId), true);
 
             await pool.execute(`DELETE FROM StaffRoles WHERE StaffUserId = ?`, [staff.userId]);
@@ -262,56 +238,28 @@ describe(
 
         async function createCommunityIdentity(label: string) {
             identitySequence += 1;
-            const [result] = await pool.execute<mysql.ResultSetHeader>(
-                `INSERT INTO Users (Mail, Username, Password, AccountType, Status, EmailValidatedAt)
-       VALUES (?, ?, 'community-password-hash', 'community', 'active', CURRENT_TIMESTAMP)`,
-                [`${label}-${identitySequence}@test.local`, `${label}-${identitySequence}`]
-            );
+            const [result] = await pool.execute<mysql.ResultSetHeader>(`INSERT INTO Users (Mail, Username, Password, AccountType, Status, EmailValidatedAt) VALUES (?, ?, 'community-password-hash', 'community', 'active', CURRENT_TIMESTAMP)`, [`${label}-${identitySequence}@test.local`, `${label}-${identitySequence}`]);
             const userId = Number(result.insertId);
             const sessionId = randomUUID();
-            await pool.execute(
-                `INSERT INTO CommunitySessions (Id, CommunityUserId, ExpiresAt)
-       VALUES (?, ?, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 1 HOUR))`,
-                [sessionId, userId]
-            );
+            await pool.execute(`INSERT INTO CommunitySessions (Id, CommunityUserId, ExpiresAt) VALUES (?, ?, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 1 HOUR))`, [sessionId, userId]);
             return { userId, sessionId };
         }
 
         async function createStaffIdentity(label: string, roleCodes: string[]) {
             identitySequence += 1;
             const suffix = identitySequence;
-            const [result] = await pool.execute<mysql.ResultSetHeader>(
-                `INSERT INTO Users (Mail, Username, Password, AccountType, Status, EmailValidatedAt)
-       VALUES (?, ?, 'staff-password-hash', 'staff', 'inactive', CURRENT_TIMESTAMP)`,
-                [`${label}-${suffix}@test.local`, `${label}-${suffix}`]
-            );
+            const [result] = await pool.execute<mysql.ResultSetHeader>(`INSERT INTO Users (Mail, Username, Password, AccountType, Status, EmailValidatedAt) VALUES (?, ?, 'staff-password-hash', 'staff', 'inactive', CURRENT_TIMESTAMP)`, [`${label}-${suffix}@test.local`, `${label}-${suffix}`]);
             const userId = Number(result.insertId);
             const credentialId = `${label}-${suffix}-credential`;
             const sessionId = randomUUID();
 
             for (const roleCode of roleCodes) {
-                await pool.execute(
-                    `INSERT INTO StaffRoles (StaffUserId, RoleId)
-         SELECT ?, Id FROM Roles WHERE Code = ?`,
-                    [userId, roleCode]
-                );
+                await pool.execute(`INSERT INTO StaffRoles (StaffUserId, RoleId) SELECT ?, Id FROM Roles WHERE Code = ?`, [userId, roleCode]);
             }
-            await pool.execute(
-                `INSERT INTO StaffWebAuthnCredentials
-         (CredentialId, StaffUserId, PublicKey, SignatureCounter, DeviceType, BackedUp, Aaguid)
-       VALUES (?, ?, 0x0102, 0, 'singleDevice', FALSE,
-               '00000000-0000-0000-0000-000000000000')`,
-                [credentialId, userId]
-            );
+            await pool.execute(`INSERT INTO StaffWebAuthnCredentials (CredentialId, StaffUserId, PublicKey, SignatureCounter, DeviceType, BackedUp, Aaguid) VALUES (?, ?, 0x0102, 0, 'singleDevice', FALSE, '00000000-0000-0000-0000-000000000000')`, [credentialId, userId]);
             await pool.execute(`UPDATE StaffProfiles SET MfaEnrolledAt = CURRENT_TIMESTAMP WHERE UserId = ?`, [userId]);
             await pool.execute(`UPDATE Users SET Status = 'active' WHERE Id = ?`, [userId]);
-            await pool.execute(
-                `INSERT INTO StaffSessions
-         (Id, StaffUserId, WebAuthnCredentialId, MfaVerifiedAt, IpAddress, UserAgent, ExpiresAt)
-       VALUES (?, ?, ?, CURRENT_TIMESTAMP, '192.0.2.10', 'Automatic revocation integration test',
-               DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 1 HOUR))`,
-                [sessionId, userId, credentialId]
-            );
+            await pool.execute(`INSERT INTO StaffSessions (Id, StaffUserId, WebAuthnCredentialId, MfaVerifiedAt, IpAddress, UserAgent, ExpiresAt) VALUES (?, ?, ?, CURRENT_TIMESTAMP, '192.0.2.10', 'Automatic revocation integration test', DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 1 HOUR))`, [sessionId, userId, credentialId]);
             return { userId, sessionId, credentialId };
         }
     }

@@ -17,12 +17,16 @@ const baseTestDatabaseName = process.env.TEST_DB_NAME?.trim() ?? '';
 const mysqlEnabled = Boolean(baseTestDatabaseName);
 
 function requireBootstrapTestDatabaseName(): string {
-    if (!/^[a-zA-Z0-9_]+$/.test(baseTestDatabaseName)) throw new Error('TEST_DB_NAME must contain only letters, numbers and underscores');
-    if (!baseTestDatabaseName.toLowerCase().includes('test')) throw new Error('TEST_DB_NAME must contain "test"');
-    if (baseTestDatabaseName === env.db.name) throw new Error('TEST_DB_NAME must be different from DB_NAME');
+    if (!/^[a-zA-Z0-9_]+$/.test(baseTestDatabaseName))
+        throw new Error('TEST_DB_NAME must contain only letters, numbers and underscores');
+    if (!baseTestDatabaseName.toLowerCase().includes('test'))
+        throw new Error('TEST_DB_NAME must contain "test"');
+    if (baseTestDatabaseName === env.db.name)
+        throw new Error('TEST_DB_NAME must be different from DB_NAME');
 
     const databaseName = `${baseTestDatabaseName}_bootstrap`;
-    if (databaseName.length > 64) throw new Error('TEST_DB_NAME is too long for the bootstrap integration database suffix');
+    if (databaseName.length > 64)
+        throw new Error('TEST_DB_NAME is too long for the bootstrap integration database suffix');
     return databaseName;
 }
 
@@ -76,7 +80,8 @@ describe('SuperAdmin bootstrap MySQL integration', { skip: !mysqlEnabled && 'Set
     });
 
     after(async () => {
-        if (pool) await pool.end();
+        if (pool)
+            await pool.end();
         if (adminConnection) {
             await adminConnection.query(`DROP DATABASE IF EXISTS \`${requireBootstrapTestDatabaseName()}\``);
             await adminConnection.end();
@@ -84,12 +89,7 @@ describe('SuperAdmin bootstrap MySQL integration', { skip: !mysqlEnabled && 'Set
     });
 
     it('applies schema then seed and serializes the only first SuperAdmin invitation', async () => {
-        const [initialAssignments] = await pool.query(
-            `SELECT COUNT(*) AS AssignmentCount
-             FROM StaffRoles AS sr
-             INNER JOIN Roles AS r ON r.Id = sr.RoleId
-             WHERE r.Code = 'SuperAdmin'`
-        );
+        const [initialAssignments] = await pool.query(`SELECT COUNT(*) AS AssignmentCount FROM StaffRoles AS sr INNER JOIN Roles AS r ON r.Id = sr.RoleId WHERE r.Code = 'SuperAdmin'`);
         assert.deepEqual(initialAssignments, [{ AssignmentCount: 0 }]);
 
         const [initialAccounts] = await pool.query(`SELECT COUNT(*) AS AccountCount FROM Users`);
@@ -113,12 +113,7 @@ describe('SuperAdmin bootstrap MySQL integration', { skip: !mysqlEnabled && 'Set
                 }),
             /SMTP unavailable/
         );
-        const [persistedAfterDeliveryFailure] = await pool.query(
-            `SELECT
-                (SELECT COUNT(*) FROM Users) AS UserCount,
-                (SELECT COUNT(*) FROM StaffInvitations) AS InvitationCount,
-                (SELECT COUNT(*) FROM StaffRoles) AS AssignmentCount`
-        );
+        const [persistedAfterDeliveryFailure] = await pool.query(`SELECT (SELECT COUNT(*) FROM Users) AS UserCount, (SELECT COUNT(*) FROM StaffInvitations) AS InvitationCount, (SELECT COUNT(*) FROM StaffRoles) AS AssignmentCount`);
         assert.deepEqual(persistedAfterDeliveryFailure, [{ UserCount: 0, InvitationCount: 0, AssignmentCount: 0 }]);
 
         const firstToken = 'first-bootstrap-raw-token';
@@ -162,15 +157,7 @@ describe('SuperAdmin bootstrap MySQL integration', { skip: !mysqlEnabled && 'Set
         assert.ok(deliveredToken === firstToken || deliveredToken === secondToken);
         assert.equal(deliveredMessage.expiresInMinutes, 30);
 
-        const [createdAccounts] = await pool.query(
-            `SELECT u.Id, u.Mail, u.Username, u.Password, u.AccountType, u.EmailValidatedAt,
-                    sp.Status, r.Code AS RoleCode
-             FROM Users AS u
-             INNER JOIN StaffProfiles AS sp ON sp.UserId = u.Id
-             INNER JOIN StaffRoles AS sr ON sr.StaffUserId = u.Id
-             INNER JOIN Roles AS r ON r.Id = sr.RoleId
-             WHERE r.Code = 'SuperAdmin'`
-        );
+        const [createdAccounts] = await pool.query(`SELECT u.Id, u.Mail, u.Username, u.Password, u.AccountType, u.EmailValidatedAt, sp.Status, r.Code AS RoleCode FROM Users AS u INNER JOIN StaffProfiles AS sp ON sp.UserId = u.Id INNER JOIN StaffRoles AS sr ON sr.StaffUserId = u.Id INNER JOIN Roles AS r ON r.Id = sr.RoleId WHERE r.Code = 'SuperAdmin'`);
         assert.equal((createdAccounts as unknown[]).length, 1);
         const createdAccount = (
             createdAccounts as Array<{
@@ -196,13 +183,7 @@ describe('SuperAdmin bootstrap MySQL integration', { skip: !mysqlEnabled && 'Set
         const [passwordColumns] = await pool.query(`SHOW COLUMNS FROM Users WHERE Field = 'Password'`);
         assert.equal((passwordColumns as Array<{ Null: string }>)[0]?.Null, 'YES');
 
-        const [invitationRows] = await pool.query(
-            `SELECT StaffUserId, TokenHash, ExpiresAt, UsedAt, RequiresMfa,
-                    TIMESTAMPDIFF(SECOND, CURRENT_TIMESTAMP, ExpiresAt) AS RemainingTtlSeconds
-             FROM StaffInvitations
-             WHERE StaffUserId = ?`,
-            [createdAccount.Id]
-        );
+        const [invitationRows] = await pool.query(`SELECT StaffUserId, TokenHash, ExpiresAt, UsedAt, RequiresMfa, TIMESTAMPDIFF(SECOND, CURRENT_TIMESTAMP, ExpiresAt) AS RemainingTtlSeconds FROM StaffInvitations WHERE StaffUserId = ?`, [createdAccount.Id]);
         const invitation = (
             invitationRows as Array<{
                 StaffUserId: number;
@@ -226,15 +207,7 @@ describe('SuperAdmin bootstrap MySQL integration', { skip: !mysqlEnabled && 'Set
         );
 
         await adminConnection.query(seed);
-        const [replayedAccountRows] = await pool.query(
-            `SELECT u.Password, sp.Status,
-                    (SELECT COUNT(*) FROM StaffRoles AS sr WHERE sr.StaffUserId = u.Id) AS RoleCount,
-                    (SELECT COUNT(*) FROM StaffInvitations AS si WHERE si.StaffUserId = u.Id) AS InvitationCount
-             FROM Users AS u
-             INNER JOIN StaffProfiles AS sp ON sp.UserId = u.Id
-             WHERE u.Id = ?`,
-            [createdAccount.Id]
-        );
+        const [replayedAccountRows] = await pool.query(`SELECT u.Password, sp.Status, (SELECT COUNT(*) FROM StaffRoles AS sr WHERE sr.StaffUserId = u.Id) AS RoleCount, (SELECT COUNT(*) FROM StaffInvitations AS si WHERE si.StaffUserId = u.Id) AS InvitationCount FROM Users AS u INNER JOIN StaffProfiles AS sp ON sp.UserId = u.Id WHERE u.Id = ?`, [createdAccount.Id]);
         assert.deepEqual(replayedAccountRows, [
             {
                 Password: null,
@@ -247,13 +220,7 @@ describe('SuperAdmin bootstrap MySQL integration', { skip: !mysqlEnabled && 'Set
         const [stillInvitedRows] = await pool.query(`SELECT Status FROM StaffProfiles WHERE UserId = ?`, [createdAccount.Id]);
         assert.deepEqual(stillInvitedRows, [{ Status: 'invited' }]);
 
-        await pool.query(
-            `INSERT INTO StaffWebAuthnCredentials
-               (CredentialId, StaffUserId, PublicKey, SignatureCounter, DeviceType, BackedUp, Aaguid)
-             VALUES ('bootstrap-credential', ?, 0x0102, 0, 'singleDevice', FALSE,
-                     '00000000-0000-0000-0000-000000000000')`,
-            [createdAccount.Id]
-        );
+        await pool.query(`INSERT INTO StaffWebAuthnCredentials (CredentialId, StaffUserId, PublicKey, SignatureCounter, DeviceType, BackedUp, Aaguid) VALUES ('bootstrap-credential', ?, 0x0102, 0, 'singleDevice', FALSE, '00000000-0000-0000-0000-000000000000')`, [createdAccount.Id]);
         await pool.query(`UPDATE StaffProfiles SET MfaEnrolledAt = CURRENT_TIMESTAMP WHERE UserId = ?`, [createdAccount.Id]);
         await pool.query(`UPDATE Users SET Password = 'password-hash', Status = 'active' WHERE Id = ?`, [createdAccount.Id]);
         await pool.query(`UPDATE StaffInvitations SET UsedAt = CURRENT_TIMESTAMP WHERE StaffUserId = ?`, [createdAccount.Id]);
@@ -270,26 +237,11 @@ describe('SuperAdmin bootstrap MySQL integration', { skip: !mysqlEnabled && 'Set
                 return true;
             }
         );
-        const [accountsAfterActiveRetry] = await pool.query(
-            `SELECT
-                (SELECT COUNT(*) FROM Users) AS UserCount,
-                (SELECT COUNT(*)
-                 FROM StaffRoles AS sr
-                 INNER JOIN Roles AS r ON r.Id = sr.RoleId
-                 WHERE r.Code = 'SuperAdmin') AS SuperAdminCount`
-        );
+        const [accountsAfterActiveRetry] = await pool.query(`SELECT (SELECT COUNT(*) FROM Users) AS UserCount, (SELECT COUNT(*) FROM StaffRoles AS sr INNER JOIN Roles AS r ON r.Id = sr.RoleId WHERE r.Code = 'SuperAdmin') AS SuperAdminCount`);
         assert.deepEqual(accountsAfterActiveRetry, [{ UserCount: 1, SuperAdminCount: 1 }]);
         assert.equal(firstMailer.messages.length + secondMailer.messages.length, 1);
 
-        await pool.query(
-            `UPDATE StaffProfiles
-             SET Status = 'disabled',
-                 DisabledByStaffUserId = ?,
-                 DisabledReason = 'Bootstrap remains closed after staff disablement',
-                 DisabledAt = CURRENT_TIMESTAMP
-             WHERE UserId = ?`,
-            [createdAccount.Id, createdAccount.Id]
-        );
+        await pool.query(`UPDATE StaffProfiles SET Status = 'disabled', DisabledByStaffUserId = ?, DisabledReason = 'Bootstrap remains closed after staff disablement', DisabledAt = CURRENT_TIMESTAMP WHERE UserId = ?`, [createdAccount.Id, createdAccount.Id]);
         await assert.rejects(
             () =>
                 firstService.bootstrap({

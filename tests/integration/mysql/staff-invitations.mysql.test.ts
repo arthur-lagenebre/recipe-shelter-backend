@@ -19,12 +19,16 @@ const baseTestDatabaseName = process.env.TEST_DB_NAME?.trim() ?? '';
 const mysqlEnabled = Boolean(baseTestDatabaseName);
 
 function requireStaffInvitationsTestDatabaseName(): string {
-    if (!/^[a-zA-Z0-9_]+$/.test(baseTestDatabaseName)) throw new Error('TEST_DB_NAME must contain only letters, numbers and underscores');
-    if (!baseTestDatabaseName.toLowerCase().includes('test')) throw new Error('TEST_DB_NAME must contain "test"');
-    if (baseTestDatabaseName === env.db.name) throw new Error('TEST_DB_NAME must be different from DB_NAME');
+    if (!/^[a-zA-Z0-9_]+$/.test(baseTestDatabaseName))
+        throw new Error('TEST_DB_NAME must contain only letters, numbers and underscores');
+    if (!baseTestDatabaseName.toLowerCase().includes('test'))
+        throw new Error('TEST_DB_NAME must contain "test"');
+    if (baseTestDatabaseName === env.db.name)
+        throw new Error('TEST_DB_NAME must be different from DB_NAME');
 
     const databaseName = `${baseTestDatabaseName}_staff_invites`;
-    if (databaseName.length > 64) throw new Error('TEST_DB_NAME is too long for the staff invitation integration database suffix');
+    if (databaseName.length > 64)
+        throw new Error('TEST_DB_NAME is too long for the staff invitation integration database suffix');
     return databaseName;
 }
 
@@ -69,30 +73,14 @@ describe('staff invitation MySQL integration', { skip: !mysqlEnabled && 'Set TES
             timezone: 'Z'
         });
 
-        const [actorResult] = await pool.execute<mysql.ResultSetHeader>(
-            `INSERT INTO Users (Mail, Username, Password, AccountType, Status, EmailValidatedAt)
-       VALUES ('actor@test.local', 'Staff Actor', 'password-hash', 'staff', 'inactive', CURRENT_TIMESTAMP)`
-        );
+        const [actorResult] = await pool.execute<mysql.ResultSetHeader>(`INSERT INTO Users (Mail, Username, Password, AccountType, Status, EmailValidatedAt) VALUES ('actor@test.local', 'Staff Actor', 'password-hash', 'staff', 'inactive', CURRENT_TIMESTAMP)`);
         actorUserId = Number(actorResult.insertId);
-        await pool.execute(
-            `INSERT INTO StaffRoles (StaffUserId, RoleId)
-       SELECT ?, Id FROM Roles WHERE Code = 'SuperAdmin'`,
-            [actorUserId]
-        );
-        await pool.execute(
-            `INSERT INTO StaffWebAuthnCredentials
-         (CredentialId, StaffUserId, PublicKey, SignatureCounter, DeviceType, BackedUp, Aaguid)
-       VALUES ('staff-invitation-actor-credential', ?, 0x0102, 0, 'singleDevice', FALSE,
-               '00000000-0000-0000-0000-000000000000')`,
-            [actorUserId]
-        );
+        await pool.execute(`INSERT INTO StaffRoles (StaffUserId, RoleId) SELECT ?, Id FROM Roles WHERE Code = 'SuperAdmin'`, [actorUserId]);
+        await pool.execute(`INSERT INTO StaffWebAuthnCredentials (CredentialId, StaffUserId, PublicKey, SignatureCounter, DeviceType, BackedUp, Aaguid) VALUES ('staff-invitation-actor-credential', ?, 0x0102, 0, 'singleDevice', FALSE, '00000000-0000-0000-0000-000000000000')`, [actorUserId]);
         await pool.execute(`UPDATE StaffProfiles SET MfaEnrolledAt = CURRENT_TIMESTAMP WHERE UserId = ?`, [actorUserId]);
         await pool.execute(`UPDATE Users SET Status = 'active' WHERE Id = ?`, [actorUserId]);
 
-        const auditActions = new AdminAuditActionRunnerMysql(
-            pool,
-            (db) => new AdminAuditService(new AdminAuditRepositoryMysql(db), () => '00000000-0000-4000-8000-000000000551')
-        );
+        const auditActions = new AdminAuditActionRunnerMysql(pool, (db) => new AdminAuditService(new AdminAuditRepositoryMysql(db), () => '00000000-0000-4000-8000-000000000551'));
         messages = [];
         service = new StaffInvitationService(
             new StaffInvitationRepositoryMysql(pool),
@@ -108,7 +96,8 @@ describe('staff invitation MySQL integration', { skip: !mysqlEnabled && 'Set TES
     });
 
     after(async () => {
-        if (pool) await pool.end();
+        if (pool)
+            await pool.end();
         if (adminConnection) {
             await adminConnection.query(`DROP DATABASE IF EXISTS \`${requireStaffInvitationsTestDatabaseName()}\``);
             await adminConnection.end();
@@ -116,13 +105,7 @@ describe('staff invitation MySQL integration', { skip: !mysqlEnabled && 'Set TES
     });
 
     it('applies the final schema then central seed and creates one expiring audited invitation', async () => {
-        const [permissionRows] = await pool.query(
-            `SELECT p.Code
-       FROM RolePermissions AS rp
-       INNER JOIN Roles AS r ON r.Id = rp.RoleId
-       INNER JOIN Permissions AS p ON p.Id = rp.PermissionId
-       WHERE r.Code = 'SuperAdmin' AND p.Code = 'staff.create'`
-        );
+        const [permissionRows] = await pool.query(`SELECT p.Code FROM RolePermissions AS rp INNER JOIN Roles AS r ON r.Id = rp.RoleId INNER JOIN Permissions AS p ON p.Id = rp.PermissionId WHERE r.Code = 'SuperAdmin' AND p.Code = 'staff.create'`);
         assert.deepEqual(permissionRows, [{ Code: 'staff.create' }]);
 
         const invitation = await service.create(
@@ -141,23 +124,7 @@ describe('staff invitation MySQL integration', { skip: !mysqlEnabled && 'Set TES
         assert.equal(messages.length, 1);
         assert.equal(new URL(messages[0]!.invitationUrl).searchParams.get('token'), 'mysql-raw-invitation-token');
 
-        const [rows] = await pool.query(
-            `SELECT u.Id AS StaffUserId, u.Mail, u.Username, u.Password, u.AccountType,
-              sp.Status, si.Id AS InvitationId, si.CreatedByStaffUserId, si.TokenHash,
-              si.UsedAt, si.RequiresMfa,
-              TIMESTAMPDIFF(SECOND, si.CreatedAt, si.ExpiresAt) AS TtlSeconds,
-              GROUP_CONCAT(r.Code ORDER BY r.Code) AS RoleCodes
-       FROM Users AS u
-       INNER JOIN StaffProfiles AS sp ON sp.UserId = u.Id
-       INNER JOIN StaffInvitations AS si ON si.StaffUserId = u.Id
-       INNER JOIN StaffRoles AS sr ON sr.StaffUserId = u.Id
-       INNER JOIN Roles AS r ON r.Id = sr.RoleId
-       WHERE u.Id = ?
-       GROUP BY u.Id, u.Mail, u.Username, u.Password, u.AccountType, sp.Status,
-                si.Id, si.CreatedByStaffUserId, si.TokenHash, si.UsedAt, si.RequiresMfa,
-                si.CreatedAt, si.ExpiresAt`,
-            [invitation.staffUserId]
-        );
+        const [rows] = await pool.query(`SELECT u.Id AS StaffUserId, u.Mail, u.Username, u.Password, u.AccountType, sp.Status, si.Id AS InvitationId, si.CreatedByStaffUserId, si.TokenHash, si.UsedAt, si.RequiresMfa, TIMESTAMPDIFF(SECOND, si.CreatedAt, si.ExpiresAt) AS TtlSeconds, GROUP_CONCAT(r.Code ORDER BY r.Code) AS RoleCodes FROM Users AS u INNER JOIN StaffProfiles AS sp ON sp.UserId = u.Id INNER JOIN StaffInvitations AS si ON si.StaffUserId = u.Id INNER JOIN StaffRoles AS sr ON sr.StaffUserId = u.Id INNER JOIN Roles AS r ON r.Id = sr.RoleId WHERE u.Id = ? GROUP BY u.Id, u.Mail, u.Username, u.Password, u.AccountType, sp.Status, si.Id, si.CreatedByStaffUserId, si.TokenHash, si.UsedAt, si.RequiresMfa, si.CreatedAt, si.ExpiresAt`, [invitation.staffUserId]);
         assert.deepEqual(rows, [
             {
                 StaffUserId: invitation.staffUserId,
@@ -176,12 +143,7 @@ describe('staff invitation MySQL integration', { skip: !mysqlEnabled && 'Set TES
             }
         ]);
 
-        const [auditRows] = await pool.query(
-            `SELECT ActorUserId, Action, TargetType, TargetId, AfterValues,
-              IpAddress, UserAgent, CorrelationId
-       FROM AdminAuditLogs
-       WHERE Action = 'staff.invitations.create'`
-        );
+        const [auditRows] = await pool.query(`SELECT ActorUserId, Action, TargetType, TargetId, AfterValues, IpAddress, UserAgent, CorrelationId FROM AdminAuditLogs WHERE Action = 'staff.invitations.create'`);
         assert.equal((auditRows as unknown[]).length, 1);
         const audit = (auditRows as Array<Record<string, unknown>>)[0]!;
         assert.equal(audit.ActorUserId, actorUserId);
@@ -214,10 +176,7 @@ describe('staff invitation MySQL integration', { skip: !mysqlEnabled && 'Set TES
             (error) => assertHttpError(error, 'STAFF_INVITATION_ALREADY_EXISTS')
         );
 
-        await pool.execute(
-            `INSERT INTO Users (Mail, Username, Password, AccountType, Status)
-       VALUES ('community@test.local', 'Community Member', 'password-hash', 'community', 'active')`
-        );
+        await pool.execute(`INSERT INTO Users (Mail, Username, Password, AccountType, Status) VALUES ('community@test.local', 'Community Member', 'password-hash', 'community', 'active')`);
         await assert.rejects(
             () =>
                 service.create(
@@ -259,14 +218,7 @@ describe('staff invitation MySQL integration', { skip: !mysqlEnabled && 'Set TES
                 ),
             /SMTP unavailable/
         );
-        const [counts] = await pool.query(
-            `SELECT
-         (SELECT COUNT(*) FROM Users WHERE Mail = 'failed.delivery@test.local') AS UserCount,
-         (SELECT COUNT(*)
-          FROM AdminAuditLogs
-          WHERE Action = 'staff.invitations.create'
-            AND JSON_UNQUOTE(JSON_EXTRACT(AfterValues, '$.displayName')) = 'Failed Delivery') AS AuditCount`
-        );
+        const [counts] = await pool.query(`SELECT (SELECT COUNT(*) FROM Users WHERE Mail = 'failed.delivery@test.local') AS UserCount, (SELECT COUNT(*) FROM AdminAuditLogs WHERE Action = 'staff.invitations.create' AND JSON_UNQUOTE(JSON_EXTRACT(AfterValues, '$.displayName')) = 'Failed Delivery') AS AuditCount`);
         assert.deepEqual(counts, [{ UserCount: 0, AuditCount: 0 }]);
     });
 });

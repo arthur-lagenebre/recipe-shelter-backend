@@ -20,12 +20,16 @@ const baseTestDatabaseName = process.env.TEST_DB_NAME?.trim() ?? '';
 const mysqlEnabled = Boolean(baseTestDatabaseName);
 
 function requireAuditTestDatabaseName(): string {
-    if (!/^[a-zA-Z0-9_]+$/.test(baseTestDatabaseName)) throw new Error('TEST_DB_NAME must contain only letters, numbers and underscores');
-    if (!baseTestDatabaseName.toLowerCase().includes('test')) throw new Error('TEST_DB_NAME must contain "test"');
-    if (baseTestDatabaseName === env.db.name) throw new Error('TEST_DB_NAME must be different from DB_NAME');
+    if (!/^[a-zA-Z0-9_]+$/.test(baseTestDatabaseName))
+        throw new Error('TEST_DB_NAME must contain only letters, numbers and underscores');
+    if (!baseTestDatabaseName.toLowerCase().includes('test'))
+        throw new Error('TEST_DB_NAME must contain "test"');
+    if (baseTestDatabaseName === env.db.name)
+        throw new Error('TEST_DB_NAME must be different from DB_NAME');
 
     const databaseName = `${baseTestDatabaseName}_audit`;
-    if (databaseName.length > 64) throw new Error('TEST_DB_NAME is too long for the audit integration database suffix');
+    if (databaseName.length > 64)
+        throw new Error('TEST_DB_NAME is too long for the audit integration database suffix');
     return databaseName;
 }
 
@@ -78,12 +82,7 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
 
         await connection.query(schema);
         await connection.query(seed);
-        await connection.query(
-            `INSERT INTO Users (Id, Mail, Username, Password, AccountType, Status)
-             VALUES
-               (900, 'audit-staff@test.local', 'audit-staff', 'non-secret-test-hash', 'staff', 'inactive'),
-               (901, 'audit-community@test.local', 'audit-community', 'non-secret-test-hash', 'community', 'active')`
-        );
+        await connection.query(`INSERT INTO Users (Id, Mail, Username, Password, AccountType, Status) VALUES (900, 'audit-staff@test.local', 'audit-staff', 'non-secret-test-hash', 'staff', 'inactive'), (901, 'audit-community@test.local', 'audit-community', 'non-secret-test-hash', 'community', 'active')`);
         pool = mysql.createPool({
             host: env.db.host,
             port: env.db.port,
@@ -95,7 +94,8 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
     });
 
     after(async () => {
-        if (pool) await pool.end();
+        if (pool)
+            await pool.end();
         if (connection) {
             await connection.query(`DROP DATABASE IF EXISTS \`${requireAuditTestDatabaseName()}\``);
             await connection.end();
@@ -104,13 +104,7 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
 
     it('creates the complete investigation model from an empty database and the central seed', async () => {
         const databaseName = requireAuditTestDatabaseName();
-        const [columns] = await connection.query(
-            `SELECT COLUMN_NAME AS ColumnName, DATA_TYPE AS DataType, IS_NULLABLE AS IsNullable
-             FROM information_schema.COLUMNS
-             WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'AdminAuditLogs'
-             ORDER BY ORDINAL_POSITION`,
-            [databaseName]
-        );
+        const [columns] = await connection.query(`SELECT COLUMN_NAME AS ColumnName, DATA_TYPE AS DataType, IS_NULLABLE AS IsNullable FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'AdminAuditLogs' ORDER BY ORDINAL_POSITION`, [databaseName]);
 
         assert.deepEqual(columns, [
             { ColumnName: 'Id', DataType: 'bigint', IsNullable: 'NO' },
@@ -127,13 +121,7 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
             { ColumnName: 'CreatedAt', DataType: 'datetime', IsNullable: 'NO' }
         ]);
 
-        const [indexes] = await connection.query(
-            `SELECT DISTINCT INDEX_NAME AS IndexName
-             FROM information_schema.STATISTICS
-             WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'AdminAuditLogs'
-             ORDER BY INDEX_NAME`,
-            [databaseName]
-        );
+        const [indexes] = await connection.query(`SELECT DISTINCT INDEX_NAME AS IndexName FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'AdminAuditLogs' ORDER BY INDEX_NAME`, [databaseName]);
         assert.deepEqual(
             (indexes as Array<{ IndexName: string }>).map(({ IndexName }) => IndexName),
             [
@@ -146,15 +134,7 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
             ]
         );
 
-        const [indexColumns] = await connection.query(
-            `SELECT INDEX_NAME AS IndexName,
-                    GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX SEPARATOR ',') AS ColumnNames
-             FROM information_schema.STATISTICS
-             WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'AdminAuditLogs'
-             GROUP BY INDEX_NAME
-             ORDER BY INDEX_NAME`,
-            [databaseName]
-        );
+        const [indexColumns] = await connection.query(`SELECT INDEX_NAME AS IndexName, GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX SEPARATOR ',') AS ColumnNames FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'AdminAuditLogs' GROUP BY INDEX_NAME ORDER BY INDEX_NAME`, [databaseName]);
         assert.deepEqual(indexColumns, [
             { IndexName: 'idx_admin_audit_logs_action_created_at', ColumnNames: 'Action,CreatedAt,Id' },
             { IndexName: 'idx_admin_audit_logs_actor_created_at', ColumnNames: 'ActorUserId,CreatedAt,Id' },
@@ -164,15 +144,7 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
             { IndexName: 'PRIMARY', ColumnNames: 'Id' }
         ]);
 
-        const [immutabilityTriggers] = await connection.query(
-            `SELECT TRIGGER_NAME AS TriggerName,
-                    ACTION_TIMING AS ActionTiming,
-                    EVENT_MANIPULATION AS EventManipulation
-             FROM information_schema.TRIGGERS
-             WHERE TRIGGER_SCHEMA = ? AND EVENT_OBJECT_TABLE = 'AdminAuditLogs'
-             ORDER BY TRIGGER_NAME`,
-            [databaseName]
-        );
+        const [immutabilityTriggers] = await connection.query(`SELECT TRIGGER_NAME AS TriggerName, ACTION_TIMING AS ActionTiming, EVENT_MANIPULATION AS EventManipulation FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA = ? AND EVENT_OBJECT_TABLE = 'AdminAuditLogs' ORDER BY TRIGGER_NAME`, [databaseName]);
         assert.deepEqual(immutabilityTriggers, [
             {
                 TriggerName: 'admin_audit_logs_immutable_BD',
@@ -189,16 +161,7 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
         const [seededLogs] = await connection.query('SELECT COUNT(*) AS LogCount FROM AdminAuditLogs');
         assert.deepEqual(seededLogs, [{ LogCount: 0 }]);
 
-        const [moderationColumns] = await connection.query(
-            `SELECT LOWER(TABLE_NAME) AS TableName,
-                    GROUP_CONCAT(COLUMN_NAME ORDER BY ORDINAL_POSITION SEPARATOR ',') AS ColumnNames
-             FROM information_schema.COLUMNS
-             WHERE TABLE_SCHEMA = ?
-               AND TABLE_NAME IN ('CommentModerationLogs', 'RecipeModerationLogs', 'StaffModerationLogs', 'UserModerationLogs')
-             GROUP BY TABLE_NAME
-             ORDER BY TABLE_NAME`,
-            [databaseName]
-        );
+        const [moderationColumns] = await connection.query(`SELECT LOWER(TABLE_NAME) AS TableName, GROUP_CONCAT(COLUMN_NAME ORDER BY ORDINAL_POSITION SEPARATOR ',') AS ColumnNames FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME IN ('CommentModerationLogs', 'RecipeModerationLogs', 'StaffModerationLogs', 'UserModerationLogs') GROUP BY TABLE_NAME ORDER BY TABLE_NAME`, [databaseName]);
         assert.deepEqual(moderationColumns, [
             { TableName: 'commentmoderationlogs', ColumnNames: 'AdminAuditLogId,CommentId' },
             { TableName: 'recipemoderationlogs', ColumnNames: 'AdminAuditLogId,RecipeId' },
@@ -206,16 +169,7 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
             { TableName: 'usermoderationlogs', ColumnNames: 'AdminAuditLogId,UserId' }
         ]);
 
-        const [moderationAuditForeignKeys] = await connection.query(
-            `SELECT LOWER(TABLE_NAME) AS TableName, COLUMN_NAME AS ColumnName,
-                    LOWER(REFERENCED_TABLE_NAME) AS ReferencedTableName,
-                    REFERENCED_COLUMN_NAME AS ReferencedColumnName
-             FROM information_schema.KEY_COLUMN_USAGE
-             WHERE CONSTRAINT_SCHEMA = ?
-               AND CONSTRAINT_NAME LIKE '%moderation_logs_audit_log_FK'
-             ORDER BY TABLE_NAME`,
-            [databaseName]
-        );
+        const [moderationAuditForeignKeys] = await connection.query(`SELECT LOWER(TABLE_NAME) AS TableName, COLUMN_NAME AS ColumnName, LOWER(REFERENCED_TABLE_NAME) AS ReferencedTableName, REFERENCED_COLUMN_NAME AS ReferencedColumnName FROM information_schema.KEY_COLUMN_USAGE WHERE CONSTRAINT_SCHEMA = ? AND CONSTRAINT_NAME LIKE '%moderation_logs_audit_log_FK' ORDER BY TABLE_NAME`, [databaseName]);
         assert.deepEqual(moderationAuditForeignKeys, [
             {
                 TableName: 'commentmoderationlogs',
@@ -243,14 +197,7 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
             }
         ]);
 
-        const [moderationTriggers] = await connection.query(
-            `SELECT LOWER(EVENT_OBJECT_TABLE) AS TableName, EVENT_MANIPULATION AS EventManipulation
-             FROM information_schema.TRIGGERS
-             WHERE TRIGGER_SCHEMA = ?
-               AND EVENT_OBJECT_TABLE IN ('CommentModerationLogs', 'RecipeModerationLogs', 'StaffModerationLogs', 'UserModerationLogs')
-             ORDER BY LOWER(EVENT_OBJECT_TABLE), FIELD(EVENT_MANIPULATION, 'DELETE', 'UPDATE')`,
-            [databaseName]
-        );
+        const [moderationTriggers] = await connection.query(`SELECT LOWER(EVENT_OBJECT_TABLE) AS TableName, EVENT_MANIPULATION AS EventManipulation FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA = ? AND EVENT_OBJECT_TABLE IN ('CommentModerationLogs', 'RecipeModerationLogs', 'StaffModerationLogs', 'UserModerationLogs') ORDER BY LOWER(EVENT_OBJECT_TABLE), FIELD(EVENT_MANIPULATION, 'DELETE', 'UPDATE')`, [databaseName]);
         assert.deepEqual(moderationTriggers, [
             { TableName: 'commentmoderationlogs', EventManipulation: 'DELETE' },
             { TableName: 'commentmoderationlogs', EventManipulation: 'UPDATE' },
@@ -278,15 +225,7 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
             correlationId: '00000000-0000-4000-8000-000000000900'
         });
 
-        const [logs] = await connection.query(
-            `SELECT Id, ActorUserId, Action, TargetType, TargetId, Reason,
-                    JSON_UNQUOTE(JSON_EXTRACT(BeforeValues, '$.status')) AS BeforeStatus,
-                    JSON_UNQUOTE(JSON_EXTRACT(BeforeValues, '$.passwordHash')) AS BeforePasswordHash,
-                    JSON_UNQUOTE(JSON_EXTRACT(AfterValues, '$.status')) AS AfterStatus,
-                    IpAddress, UserAgent, CorrelationId, CreatedAt
-             FROM AdminAuditLogs
-             WHERE CorrelationId = '00000000-0000-4000-8000-000000000900'`
-        );
+        const [logs] = await connection.query(`SELECT Id, ActorUserId, Action, TargetType, TargetId, Reason, JSON_UNQUOTE(JSON_EXTRACT(BeforeValues, '$.status')) AS BeforeStatus, JSON_UNQUOTE(JSON_EXTRACT(BeforeValues, '$.passwordHash')) AS BeforePasswordHash, JSON_UNQUOTE(JSON_EXTRACT(AfterValues, '$.status')) AS AfterStatus, IpAddress, UserAgent, CorrelationId, CreatedAt FROM AdminAuditLogs WHERE CorrelationId = '00000000-0000-4000-8000-000000000900'`);
         const log = (logs as Array<Record<string, unknown>>)[0];
 
         assert.deepEqual(
@@ -393,25 +332,13 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
             correlationId: '00000000-0000-4000-8000-000000000905'
         });
 
-        const [committed] = await connection.query(
-            `SELECT cp.Status,
-                    (SELECT COUNT(*) FROM AdminAuditLogs WHERE CorrelationId = ?) AS AuditCount
-             FROM CommunityProfiles AS cp
-             WHERE cp.UserId = 901`,
-            ['00000000-0000-4000-8000-000000000905']
-        );
+        const [committed] = await connection.query(`SELECT cp.Status, (SELECT COUNT(*) FROM AdminAuditLogs WHERE CorrelationId = ?) AS AuditCount FROM CommunityProfiles AS cp WHERE cp.UserId = 901`, ['00000000-0000-4000-8000-000000000905']);
         assert.deepEqual(committed, [{ Status: 'banned', AuditCount: 1 }]);
 
         await service.unban(901, 900, 'Integration test restores the account after review.', {
             correlationId: '00000000-0000-4000-8000-000000000906'
         });
-        const [businessLogs] = await connection.query(
-            `SELECT audit.Id AS AdminAuditLogId, audit.Action, audit.Reason, audit.CorrelationId
-             FROM UserModerationLogs AS log
-             INNER JOIN AdminAuditLogs AS audit ON audit.Id = log.AdminAuditLogId
-             WHERE log.UserId = 901
-             ORDER BY audit.Id`
-        );
+        const [businessLogs] = await connection.query(`SELECT audit.Id AS AdminAuditLogId, audit.Action, audit.Reason, audit.CorrelationId FROM UserModerationLogs AS log INNER JOIN AdminAuditLogs AS audit ON audit.Id = log.AdminAuditLogId WHERE log.UserId = 901 ORDER BY audit.Id`);
         assert.deepEqual(
             (businessLogs as Array<Record<string, unknown>>).map(({ Action, Reason, CorrelationId }) => ({
                 Action,
@@ -449,12 +376,7 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
             /forced audit failure/
         );
 
-        const [rolledBack] = await connection.query(
-            `SELECT cp.Status,
-                    (SELECT COUNT(*) FROM UserModerationLogs WHERE UserId = 901) AS ModerationLogCount
-             FROM CommunityProfiles AS cp
-             WHERE cp.UserId = 901`
-        );
+        const [rolledBack] = await connection.query(`SELECT cp.Status, (SELECT COUNT(*) FROM UserModerationLogs WHERE UserId = 901) AS ModerationLogCount FROM CommunityProfiles AS cp WHERE cp.UserId = 901`);
         assert.deepEqual(rolledBack, [
             {
                 Status: 'active',
@@ -462,11 +384,7 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
             }
         ]);
 
-        const failingModerationLogService = new AdminUserService(
-            new UserRepositoryMysql(pool),
-            new FailingModerationLogAdminUserRepository(pool),
-            auditActions
-        );
+        const failingModerationLogService = new AdminUserService(new UserRepositoryMysql(pool), new FailingModerationLogAdminUserRepository(pool), auditActions);
         await assert.rejects(
             () =>
                 failingModerationLogService.ban(901, 900, 'This moderation must be rolled back with its specialized log.', {
@@ -474,14 +392,7 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
                 }),
             /forced specialized moderation log failure/
         );
-        const [specializedLogRollback] = await connection.query(
-            `SELECT cp.Status,
-                    (SELECT COUNT(*) FROM AdminAuditLogs WHERE CorrelationId = ?) AS AuditCount,
-                    (SELECT COUNT(*) FROM UserModerationLogs WHERE UserId = 901) AS ModerationLogCount
-             FROM CommunityProfiles AS cp
-             WHERE cp.UserId = 901`,
-            ['00000000-0000-4000-8000-000000000907']
-        );
+        const [specializedLogRollback] = await connection.query(`SELECT cp.Status, (SELECT COUNT(*) FROM AdminAuditLogs WHERE CorrelationId = ?) AS AuditCount, (SELECT COUNT(*) FROM UserModerationLogs WHERE UserId = 901) AS ModerationLogCount FROM CommunityProfiles AS cp WHERE cp.UserId = 901`, ['00000000-0000-4000-8000-000000000907']);
         assert.deepEqual(specializedLogRollback, [
             {
                 Status: 'active',
@@ -511,107 +422,27 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
              VALUES (999999, ${validValues})`
             )
         );
-        await assert.rejects(() =>
-            connection.query(
-                `INSERT INTO AdminAuditLogs
-               (ActorUserId, Action, TargetType, TargetId, BeforeValues, AfterValues, CorrelationId)
-             VALUES
-               (900, ' ', 'community_user', '901', JSON_OBJECT(), JSON_OBJECT(),
-                '00000000-0000-4000-8000-000000000902')`
-            )
-        );
-        await assert.rejects(() =>
-            connection.query(
-                `INSERT INTO AdminAuditLogs
-               (ActorUserId, Action, TargetType, TargetId, BeforeValues, AfterValues, CorrelationId)
-             VALUES
-               (900, 'users.ban', 'community_user', '901', JSON_ARRAY('active'), JSON_OBJECT(),
-                '00000000-0000-4000-8000-000000000903')`
-            )
-        );
-        await assert.rejects(() =>
-            connection.query(
-                `INSERT INTO AdminAuditLogs
-               (ActorUserId, Action, TargetType, TargetId, BeforeValues, AfterValues, CorrelationId)
-             VALUES
-               (900, 'users.ban', 'community_user', '901', JSON_OBJECT(), JSON_OBJECT(), 'too-short')`
-            )
-        );
+        await assert.rejects(() => connection.query(`INSERT INTO AdminAuditLogs (ActorUserId, Action, TargetType, TargetId, BeforeValues, AfterValues, CorrelationId) VALUES (900, ' ', 'community_user', '901', JSON_OBJECT(), JSON_OBJECT(), '00000000-0000-4000-8000-000000000902')`));
+        await assert.rejects(() => connection.query(`INSERT INTO AdminAuditLogs (ActorUserId, Action, TargetType, TargetId, BeforeValues, AfterValues, CorrelationId) VALUES (900, 'users.ban', 'community_user', '901', JSON_ARRAY('active'), JSON_OBJECT(), '00000000-0000-4000-8000-000000000903')`));
+        await assert.rejects(() => connection.query(`INSERT INTO AdminAuditLogs (ActorUserId, Action, TargetType, TargetId, BeforeValues, AfterValues, CorrelationId) VALUES (900, 'users.ban', 'community_user', '901', JSON_OBJECT(), JSON_OBJECT(), 'too-short')`));
     });
 
     it('keeps audit records immutable and preserves their actor', async () => {
-        await assert.rejects(
-            () =>
-                connection.query(
-                    `UPDATE AdminAuditLogs
-             SET Reason = 'A rewritten reason.'
-             WHERE CorrelationId = '00000000-0000-4000-8000-000000000900'`
-                ),
-            (error) => assertImmutableAuditError(error, 'UPDATE')
-        );
-        await assert.rejects(
-            () =>
-                connection.query(
-                    `DELETE FROM AdminAuditLogs
-             WHERE CorrelationId = '00000000-0000-4000-8000-000000000900'`
-                ),
-            (error) => assertImmutableAuditError(error, 'DELETE')
-        );
+        await assert.rejects(() => connection.query(`UPDATE AdminAuditLogs SET Reason = 'A rewritten reason.' WHERE CorrelationId = '00000000-0000-4000-8000-000000000900'`), (error) => assertImmutableAuditError(error, 'UPDATE'));
+        await assert.rejects(() => connection.query(`DELETE FROM AdminAuditLogs WHERE CorrelationId = '00000000-0000-4000-8000-000000000900'`), (error) => assertImmutableAuditError(error, 'DELETE'));
         await assert.rejects(() => connection.query('DELETE FROM Users WHERE Id = 900'));
 
-        const [remainingLogs] = await connection.query(
-            `SELECT Reason
-             FROM AdminAuditLogs
-             WHERE CorrelationId = '00000000-0000-4000-8000-000000000900'`
-        );
+        const [remainingLogs] = await connection.query(`SELECT Reason FROM AdminAuditLogs WHERE CorrelationId = '00000000-0000-4000-8000-000000000900'`);
         assert.deepEqual(remainingLogs, [{ Reason: 'Repeated violation of the test policy.' }]);
     });
 
     it('keeps specialized moderation histories immutable and rejects orphan links', async () => {
-        const [auditRows] = await connection.query(
-            `SELECT Id
-             FROM AdminAuditLogs
-             WHERE CorrelationId = '00000000-0000-4000-8000-000000000900'`
-        );
+        const [auditRows] = await connection.query(`SELECT Id FROM AdminAuditLogs WHERE CorrelationId = '00000000-0000-4000-8000-000000000900'`);
         const auditLogId = (auditRows as Array<{ Id: number }>)[0]?.Id;
         assert.ok(auditLogId);
-        await assert.rejects(
-            () =>
-                new AdminUserRepositoryMysql(pool).createModerationLog(
-                    auditLogId,
-                    999,
-                    connection as unknown as Parameters<AdminUserRepositoryMysql['createModerationLog']>[2]
-                ),
-            /does not match its administrative audit entry/
-        );
-        await assert.rejects(() =>
-            connection.query(
-                `INSERT INTO UserModerationLogs (AdminAuditLogId, UserId)
-             VALUES (999999, 901)`
-            )
-        );
-        await assert.rejects(
-            () =>
-                connection.query(
-                    `UPDATE UserModerationLogs
-             SET UserId = 901
-             WHERE AdminAuditLogId = (
-               SELECT Id FROM AdminAuditLogs
-               WHERE CorrelationId = '00000000-0000-4000-8000-000000000905'
-             )`
-                ),
-            /User moderation logs are append-only: UPDATE is forbidden/
-        );
-        await assert.rejects(
-            () =>
-                connection.query(
-                    `DELETE FROM UserModerationLogs
-             WHERE AdminAuditLogId = (
-               SELECT Id FROM AdminAuditLogs
-               WHERE CorrelationId = '00000000-0000-4000-8000-000000000905'
-             )`
-                ),
-            /User moderation logs are append-only: DELETE is forbidden/
-        );
+        await assert.rejects(() => new AdminUserRepositoryMysql(pool).createModerationLog(auditLogId, 999, connection as unknown as Parameters<AdminUserRepositoryMysql['createModerationLog']>[2]), /does not match its administrative audit entry/);
+        await assert.rejects(() => connection.query(`INSERT INTO UserModerationLogs (AdminAuditLogId, UserId) VALUES (999999, 901)`));
+        await assert.rejects(() => connection.query(`UPDATE UserModerationLogs SET UserId = 901 WHERE AdminAuditLogId = (SELECT Id FROM AdminAuditLogs WHERE CorrelationId = '00000000-0000-4000-8000-000000000905')`), /User moderation logs are append-only: UPDATE is forbidden/);
+        await assert.rejects(() => connection.query(`DELETE FROM UserModerationLogs WHERE AdminAuditLogId = (SELECT Id FROM AdminAuditLogs WHERE CorrelationId = '00000000-0000-4000-8000-000000000905')`), /User moderation logs are append-only: DELETE is forbidden/);
     });
 });

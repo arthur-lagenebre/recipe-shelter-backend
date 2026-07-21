@@ -7,10 +7,7 @@ export class AdminAuditRepositoryMysql implements AdminAuditRepository {
 
     async create(input: CreateAdminAuditLogInput): Promise<number> {
         const [result] = await this.db.execute<ResultSetHeader>(
-            `INSERT INTO AdminAuditLogs
-         (ActorUserId, Action, TargetType, TargetId, Reason, BeforeValues, AfterValues,
-          IpAddress, UserAgent, CorrelationId)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO AdminAuditLogs (ActorUserId, Action, TargetType, TargetId, Reason, BeforeValues, AfterValues, IpAddress, UserAgent, CorrelationId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 input.actorUserId,
                 input.action,

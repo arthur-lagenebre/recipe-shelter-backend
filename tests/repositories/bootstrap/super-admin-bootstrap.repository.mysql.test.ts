@@ -30,11 +30,15 @@ function createPool(options: FakeOptions = {}) {
         async execute(sql: string, params: unknown) {
             statements.push({ sql, params });
 
-            if (/FROM Roles/.test(sql)) return [options.roleRows ?? [{ Id: 5 }]];
-            if (/FROM StaffRoles/.test(sql)) return [options.superAdminRows ?? []];
-            if (/FROM Users/.test(sql)) return [options.identityRows ?? []];
+            if (/FROM Roles/.test(sql))
+                return [options.roleRows ?? [{ Id: 5 }]];
+            if (/FROM StaffRoles/.test(sql))
+                return [options.superAdminRows ?? []];
+            if (/FROM Users/.test(sql))
+                return [options.identityRows ?? []];
             if (/INSERT INTO Users/.test(sql)) {
-                if (options.userInsertError) throw options.userInsertError;
+                if (options.userInsertError)
+                    throw options.userInsertError;
                 return [{ insertId: 42, affectedRows: 1 }];
             }
 
@@ -212,10 +216,7 @@ describe('SuperAdminBootstrapRepositoryMysql', () => {
 
         for (const error of [unknownConstraint, noMessage]) {
             const fake = createPool({ userInsertError: error });
-            await assert.rejects(
-                () => new SuperAdminBootstrapRepositoryMysql(fake.pool).createFirst(input, completeCreation),
-                (caught) => caught === error
-            );
+            await assert.rejects(() => new SuperAdminBootstrapRepositoryMysql(fake.pool).createFirst(input, completeCreation), (caught) => caught === error);
             assert.deepEqual(fake.counts(), { commits: 0, rollbacks: 1, releases: 1 });
         }
     });
@@ -224,10 +225,7 @@ describe('SuperAdminBootstrapRepositoryMysql', () => {
         const primitiveError = 'database unavailable';
         const fake = createPool({ userInsertError: primitiveError });
 
-        await assert.rejects(
-            () => new SuperAdminBootstrapRepositoryMysql(fake.pool).createFirst(input, completeCreation),
-            (caught) => caught === primitiveError
-        );
+        await assert.rejects(() => new SuperAdminBootstrapRepositoryMysql(fake.pool).createFirst(input, completeCreation), (caught) => caught === primitiveError);
         assert.deepEqual(fake.counts(), { commits: 0, rollbacks: 1, releases: 1 });
     });
 

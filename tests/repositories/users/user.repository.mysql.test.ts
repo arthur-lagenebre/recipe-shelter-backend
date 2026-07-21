@@ -34,7 +34,8 @@ function createTransactionalPool(profileInsertError?: Error) {
         },
         async execute(sql: string, params: unknown) {
             statements.push({ sql, params });
-            if (profileInsertError && /Profiles/.test(sql)) throw profileInsertError;
+            if (profileInsertError && /Profiles/.test(sql))
+                throw profileInsertError;
             return [/INSERT INTO Users/.test(sql) ? { insertId: 42, affectedRows: 1 } : { affectedRows: 1 }];
         },
         async commit() {

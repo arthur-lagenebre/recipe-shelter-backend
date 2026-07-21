@@ -57,8 +57,8 @@ const EXPECTED_TABLES = [
 
 const EXPECTED_SEED_COUNTS: Record<string, number> = {
     roles: 5,
-    permissions: 35,
-    rolepermissions: 59,
+    permissions: 36,
+    rolepermissions: 61,
     recipecategories: 6,
     ingredients: 277,
     taggroups: 8,
@@ -68,9 +68,9 @@ const EXPECTED_SEED_COUNTS: Record<string, number> = {
 
 const EXPECTED_ROLE_CODES = ['CatalogManager', 'CommentModerator', 'RecipeModerator', 'SuperAdmin', 'UserAdmin'];
 
-const EXPECTED_CONSTRAINT_COUNT = 175;
-const EXPECTED_DECLARED_INDEX_COUNT = 128;
-const EXPECTED_EFFECTIVE_INDEX_COUNT = 132;
+const EXPECTED_CONSTRAINT_COUNT = 178;
+const EXPECTED_DECLARED_INDEX_COUNT = 130;
+const EXPECTED_EFFECTIVE_INDEX_COUNT = 134;
 const EXPECTED_TRIGGER_COUNT = 40;
 
 type SchemaInventory = {
@@ -81,12 +81,16 @@ type SchemaInventory = {
 };
 
 function requireInitializationTestDatabaseName(): string {
-    if (!/^[a-zA-Z0-9_]+$/.test(baseTestDatabaseName)) throw new Error('TEST_DB_NAME must contain only letters, numbers and underscores');
-    if (!baseTestDatabaseName.toLowerCase().includes('test')) throw new Error('TEST_DB_NAME must contain "test"');
-    if (baseTestDatabaseName === env.db.name) throw new Error('TEST_DB_NAME must be different from DB_NAME');
+    if (!/^[a-zA-Z0-9_]+$/.test(baseTestDatabaseName))
+        throw new Error('TEST_DB_NAME must contain only letters, numbers and underscores');
+    if (!baseTestDatabaseName.toLowerCase().includes('test'))
+        throw new Error('TEST_DB_NAME must contain "test"');
+    if (baseTestDatabaseName === env.db.name)
+        throw new Error('TEST_DB_NAME must be different from DB_NAME');
 
     const databaseName = `${baseTestDatabaseName}_initialization`;
-    if (databaseName.length > 64) throw new Error('TEST_DB_NAME is too long for the initialization integration database suffix');
+    if (databaseName.length > 64)
+        throw new Error('TEST_DB_NAME is too long for the initialization integration database suffix');
     return databaseName;
 }
 
@@ -109,7 +113,8 @@ function extractSchemaInventory(schema: string): SchemaInventory {
     for (const match of schema.matchAll(/CREATE\s+TABLE\s+`?([a-zA-Z0-9_]+)`?\s*\(([\s\S]*?)\)\s*ENGINE=/gi)) {
         const tableName = match[1];
         const tableBody = match[2];
-        if (!tableName || tableBody === undefined) throw new Error('Unable to read a CREATE TABLE statement from the structural schema');
+        if (!tableName || tableBody === undefined)
+            throw new Error('Unable to read a CREATE TABLE statement from the structural schema');
 
         inventory.tables.push(tableName);
 
@@ -120,26 +125,30 @@ function extractSchemaInventory(schema: string): SchemaInventory {
 
         for (const uniqueKey of tableBody.matchAll(/(?:^|,)\s*UNIQUE\s+(?:KEY|INDEX)\s+`?([a-zA-Z0-9_]+)`?/gim)) {
             const name = uniqueKey[1];
-            if (!name) throw new Error(`Unable to read a unique key declared on ${tableName}`);
+            if (!name)
+                throw new Error(`Unable to read a unique key declared on ${tableName}`);
             inventory.constraints.push(schemaObjectKey(tableName, name));
         }
 
         for (const constraint of tableBody.matchAll(/\bCONSTRAINT\s+`?([a-zA-Z0-9_]+)`?/gi)) {
             const name = constraint[1];
-            if (!name) throw new Error(`Unable to read a constraint declared on ${tableName}`);
+            if (!name)
+                throw new Error(`Unable to read a constraint declared on ${tableName}`);
             inventory.constraints.push(schemaObjectKey(tableName, name));
         }
 
         for (const index of tableBody.matchAll(/(?:^|,)\s*(?:UNIQUE\s+|FULLTEXT\s+)?(?:KEY|INDEX)\s+`?([a-zA-Z0-9_]+)`?/gim)) {
             const name = index[1];
-            if (!name) throw new Error(`Unable to read an index declared on ${tableName}`);
+            if (!name)
+                throw new Error(`Unable to read an index declared on ${tableName}`);
             inventory.indexes.push(schemaObjectKey(tableName, name));
         }
     }
 
     for (const trigger of schema.matchAll(/CREATE\s+TRIGGER\s+`?([a-zA-Z0-9_]+)`?/gi)) {
         const name = trigger[1];
-        if (!name) throw new Error('Unable to read a trigger declared in the structural schema');
+        if (!name)
+            throw new Error('Unable to read a trigger declared in the structural schema');
         inventory.triggers.push(name.toLowerCase());
     }
 
@@ -156,7 +165,8 @@ async function readTableCounts(connection: mysql.Connection, tableNames: string[
     const counts: Record<string, number> = {};
 
     for (const tableName of tableNames) {
-        if (!/^[a-zA-Z0-9_]+$/.test(tableName)) throw new Error(`Unsafe schema table name: ${tableName}`);
+        if (!/^[a-zA-Z0-9_]+$/.test(tableName))
+            throw new Error(`Unsafe schema table name: ${tableName}`);
         const [rows] = await connection.query(`SELECT COUNT(*) AS RowCount FROM \`${tableName}\``);
         const row = (rows as Array<{ RowCount: number | string }>)[0];
         counts[tableName.toLowerCase()] = Number(row?.RowCount ?? 0);
@@ -176,7 +186,7 @@ async function readSeedState(connection: mysql.Connection): Promise<Record<strin
         TagGroups: 'SELECT Id, Name, Slug, SortOrder FROM TagGroups ORDER BY Id',
         Tags: `SELECT Id, GroupId, Name, NormalizedName, Slug, Description, Status, MergedIntoTagId
                FROM Tags ORDER BY Id`,
-        Equipments: 'SELECT Id, Name, Slug FROM Equipments ORDER BY Id'
+        Equipments: 'SELECT Id, Name, NormalizedName, Slug FROM Equipments ORDER BY Id'
     };
     const state: Record<string, unknown[]> = {};
 
@@ -231,7 +241,8 @@ describe(
 
         after(async () => {
             if (connection) {
-                if (pool) await pool.end();
+                if (pool)
+                    await pool.end();
                 await connection.query(`DROP DATABASE IF EXISTS \`${requireInitializationTestDatabaseName()}\``);
                 await connection.end();
             }
@@ -239,13 +250,7 @@ describe(
 
         it('creates only the complete final structure on an empty database', async () => {
             const databaseName = requireInitializationTestDatabaseName();
-            const [tableRows] = await connection.query(
-                `SELECT TABLE_NAME AS TableName, ENGINE AS Engine, TABLE_COLLATION AS TableCollation
-                 FROM information_schema.TABLES
-                 WHERE TABLE_SCHEMA = ? AND TABLE_TYPE = 'BASE TABLE'
-                 ORDER BY TABLE_NAME`,
-                [databaseName]
-            );
+            const [tableRows] = await connection.query(`SELECT TABLE_NAME AS TableName, ENGINE AS Engine, TABLE_COLLATION AS TableCollation FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_NAME`, [databaseName]);
             const tables = tableRows as Array<{
                 TableName: string;
                 Engine: string;
@@ -260,14 +265,7 @@ describe(
             const emptyCounts = await readTableCounts(connection, inventory.tables);
             assert.deepEqual(emptyCounts, Object.fromEntries(EXPECTED_TABLES.map((tableName) => [tableName, 0])));
 
-            const [constraintRows] = await connection.query(
-                `SELECT TABLE_NAME AS TableName, CONSTRAINT_NAME AS ConstraintName,
-                        CONSTRAINT_TYPE AS ConstraintType
-                 FROM information_schema.TABLE_CONSTRAINTS
-                 WHERE CONSTRAINT_SCHEMA = ?
-                 ORDER BY TABLE_NAME, CONSTRAINT_NAME`,
-                [databaseName]
-            );
+            const [constraintRows] = await connection.query(`SELECT TABLE_NAME AS TableName, CONSTRAINT_NAME AS ConstraintName, CONSTRAINT_TYPE AS ConstraintType FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = ? ORDER BY TABLE_NAME, CONSTRAINT_NAME`, [databaseName]);
             const constraints = constraintRows as Array<{
                 TableName: string;
                 ConstraintName: string;
@@ -279,14 +277,7 @@ describe(
             assert.equal(new Set(inventory.constraints).size, inventory.constraints.length);
             assert.deepEqual(actualConstraints, [...inventory.constraints].sort());
 
-            const [indexRows] = await connection.query(
-                `SELECT TABLE_NAME AS TableName, INDEX_NAME AS IndexName
-                 FROM information_schema.STATISTICS
-                 WHERE TABLE_SCHEMA = ?
-                 GROUP BY TABLE_NAME, INDEX_NAME
-                 ORDER BY TABLE_NAME, INDEX_NAME`,
-                [databaseName]
-            );
+            const [indexRows] = await connection.query(`SELECT TABLE_NAME AS TableName, INDEX_NAME AS IndexName FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = ? GROUP BY TABLE_NAME, INDEX_NAME ORDER BY TABLE_NAME, INDEX_NAME`, [databaseName]);
             const actualIndexes = (indexRows as Array<{ TableName: string; IndexName: string }>)
                 .map(({ TableName, IndexName }) => schemaObjectKey(TableName, IndexName))
                 .sort();
@@ -304,13 +295,7 @@ describe(
             assert.equal(actualIndexes.length, EXPECTED_EFFECTIVE_INDEX_COUNT);
             assert.ok(implicitIndexes.every((index) => foreignKeys.has(index)));
 
-            const [triggerRows] = await connection.query(
-                `SELECT TRIGGER_NAME AS TriggerName
-                 FROM information_schema.TRIGGERS
-                 WHERE TRIGGER_SCHEMA = ?
-                 ORDER BY TRIGGER_NAME`,
-                [databaseName]
-            );
+            const [triggerRows] = await connection.query(`SELECT TRIGGER_NAME AS TriggerName FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA = ? ORDER BY TRIGGER_NAME`, [databaseName]);
             const actualTriggers = (triggerRows as Array<{ TriggerName: string }>)
                 .map(({ TriggerName }) => TriggerName.toLowerCase())
                 .sort();
@@ -328,9 +313,7 @@ describe(
             await connection.query(targetDatabase(seed, requireInitializationTestDatabaseName()));
 
             const seededCounts = await readTableCounts(connection, inventory.tables);
-            const expectedCounts = Object.fromEntries(
-                EXPECTED_TABLES.map((tableName) => [tableName, EXPECTED_SEED_COUNTS[tableName] ?? 0])
-            );
+            const expectedCounts = Object.fromEntries(EXPECTED_TABLES.map((tableName) => [tableName, EXPECTED_SEED_COUNTS[tableName] ?? 0]));
             assert.deepEqual(seededCounts, expectedCounts);
 
             const [roleRows] = await connection.query('SELECT Code FROM Roles ORDER BY Code');
@@ -345,29 +328,7 @@ describe(
                 [...Object.values(PERMISSIONS)].sort()
             );
 
-            const [coherenceRows] = await connection.query(
-                `SELECT
-                    (SELECT COUNT(*) FROM Roles
-                     WHERE TRIM(Code) = '' OR TRIM(Name) = '' OR TRIM(Description) = '') AS InvalidRoles,
-                    (SELECT COUNT(*) FROM Permissions
-                     WHERE TRIM(Code) = '' OR TRIM(Description) = '') AS InvalidPermissions,
-                    (SELECT COUNT(*) FROM Ingredients
-                     WHERE Status <> 'active' OR MergedIntoIngredientId IS NOT NULL
-                        OR TRIM(Name) = '' OR TRIM(NormalizedName) = '' OR TRIM(Slug) = '') AS InvalidIngredients,
-                    (SELECT COUNT(*) FROM Tags
-                     WHERE Status <> 'active' OR MergedIntoTagId IS NOT NULL
-                        OR TRIM(Name) = '' OR TRIM(NormalizedName) = '' OR TRIM(Slug) = '') AS InvalidTags,
-                    (SELECT COUNT(*) FROM RolePermissions AS rp
-                     LEFT JOIN Roles AS r ON r.Id = rp.RoleId
-                     LEFT JOIN Permissions AS p ON p.Id = rp.PermissionId
-                     WHERE r.Id IS NULL OR p.Id IS NULL) AS InvalidRolePermissions,
-                    (SELECT COUNT(*) FROM Tags AS t
-                     LEFT JOIN TagGroups AS tg ON tg.Id = t.GroupId
-                     WHERE tg.Id IS NULL) AS InvalidTagGroups,
-                    (SELECT COUNT(*) FROM RolePermissions AS rp
-                     INNER JOIN Roles AS r ON r.Id = rp.RoleId
-                     WHERE r.Code = 'SuperAdmin') AS SuperAdminPermissions`
-            );
+            const [coherenceRows] = await connection.query(`SELECT (SELECT COUNT(*) FROM Roles WHERE TRIM(Code) = '' OR TRIM(Name) = '' OR TRIM(Description) = '') AS InvalidRoles, (SELECT COUNT(*) FROM Permissions WHERE TRIM(Code) = '' OR TRIM(Description) = '') AS InvalidPermissions, (SELECT COUNT(*) FROM Ingredients WHERE Status <> 'active' OR MergedIntoIngredientId IS NOT NULL OR TRIM(Name) = '' OR TRIM(NormalizedName) = '' OR TRIM(Slug) = '') AS InvalidIngredients, (SELECT COUNT(*) FROM Tags WHERE Status <> 'active' OR MergedIntoTagId IS NOT NULL OR TRIM(Name) = '' OR TRIM(NormalizedName) = '' OR TRIM(Slug) = '') AS InvalidTags, (SELECT COUNT(*) FROM RolePermissions AS rp LEFT JOIN Roles AS r ON r.Id = rp.RoleId LEFT JOIN Permissions AS p ON p.Id = rp.PermissionId WHERE r.Id IS NULL OR p.Id IS NULL) AS InvalidRolePermissions, (SELECT COUNT(*) FROM Tags AS t LEFT JOIN TagGroups AS tg ON tg.Id = t.GroupId WHERE tg.Id IS NULL) AS InvalidTagGroups, (SELECT COUNT(*) FROM RolePermissions AS rp INNER JOIN Roles AS r ON r.Id = rp.RoleId WHERE r.Code = 'SuperAdmin') AS SuperAdminPermissions`);
             assert.deepEqual(coherenceRows, [
                 {
                     InvalidRoles: 0,
@@ -410,26 +371,10 @@ describe(
             assert.deepEqual(await readSeedState(connection), seedState);
             assert.deepEqual(await readTableCounts(connection, inventory.tables), expectedCounts);
 
-            await connection.query(
-                `INSERT INTO Users (Id, Mail, Username, Password, AccountType, Status)
-                 VALUES (999001, 'isolated-staff@test.local', 'isolated-staff', 'test-hash', 'staff', 'inactive')`
-            );
+            await connection.query(`INSERT INTO Users (Id, Mail, Username, Password, AccountType, Status) VALUES (999001, 'isolated-staff@test.local', 'isolated-staff', 'test-hash', 'staff', 'inactive')`);
             await assert.rejects(() => connection.query(`UPDATE Users SET Status = 'active' WHERE Id = 999001`));
-            await assert.rejects(() =>
-                connection.query(
-                    `INSERT INTO Recipes
-                    (Id, UserId, CategoryId, Title, Slug, Description, PrepTimeMinutes, Servings)
-                 SELECT 999001, 999001, MIN(Id), 'Forbidden staff recipe', 'forbidden-staff-recipe',
-                        'Staff accounts cannot own community recipes', 5, 2
-                 FROM RecipeCategories`
-                )
-            );
-            await assert.rejects(() =>
-                connection.query(
-                    `INSERT INTO RolePermissions (RoleId, PermissionId)
-                 SELECT RoleId, PermissionId FROM RolePermissions LIMIT 1`
-                )
-            );
+            await assert.rejects(() => connection.query(`INSERT INTO Recipes (Id, UserId, CategoryId, Title, Slug, Description, PrepTimeMinutes, Servings) SELECT 999001, 999001, MIN(Id), 'Forbidden staff recipe', 'forbidden-staff-recipe', 'Staff accounts cannot own community recipes', 5, 2 FROM RecipeCategories`));
+            await assert.rejects(() => connection.query(`INSERT INTO RolePermissions (RoleId, PermissionId) SELECT RoleId, PermissionId FROM RolePermissions LIMIT 1`));
         });
     }
 );

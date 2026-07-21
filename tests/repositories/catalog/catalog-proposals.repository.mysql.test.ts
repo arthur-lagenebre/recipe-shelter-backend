@@ -18,6 +18,7 @@ const proposalRow = {
     Status: 'pending',
     MatchedTagId: null,
     MatchedIngredientId: null,
+    MatchedEquipmentId: null,
     ReviewedByStaffUserId: null,
     ReviewReason: null,
     CreatedAt: createdAt,
@@ -33,8 +34,10 @@ function createPool(statements: Statement[], responses: Response[]): Pool {
             statements.push({ sql, params });
             const response = responses.shift();
 
-            if (response && typeof response === 'object' && 'error' in response) throw response.error;
-            if (response === undefined) throw new Error('Missing fake database response');
+            if (response && typeof response === 'object' && 'error' in response)
+                throw response.error;
+            if (response === undefined)
+                throw new Error('Missing fake database response');
 
             return response;
         }
@@ -61,22 +64,26 @@ describe('CatalogProposalRepositoryMysql', () => {
         assert.deepEqual(statements[0]?.params, [42, 7]);
     });
 
-    it('checks active tag names and both canonical and alias ingredient names', async () => {
+    it('checks active tag names, both canonical and alias ingredient names, and equipment names', async () => {
         const statements: Statement[] = [];
         const repository = new CatalogProposalRepositoryMysql(
             createPool(statements, [
                 [[{ Exists: 1 }], []],
-                [[{ Exists: 0 }], []]
+                [[{ Exists: 0 }], []],
+                [[{ Exists: 1 }], []]
             ])
         );
 
         assert.equal(await repository.activeCatalogNameExists('tag', 'known tag'), true);
         assert.equal(await repository.activeCatalogNameExists('ingredient', 'known alias'), false);
+        assert.equal(await repository.activeCatalogNameExists('equipment', 'known equipment'), true);
         assert.match(statements[0]?.sql ?? '', /FROM Tags/);
         assert.deepEqual(statements[0]?.params, ['known tag']);
         assert.match(statements[1]?.sql ?? '', /FROM IngredientAliases/);
         assert.match(statements[1]?.sql ?? '', /ingredient\.Status = 'active'/);
         assert.deepEqual(statements[1]?.params, ['known alias', 'known alias']);
+        assert.match(statements[2]?.sql ?? '', /FROM Equipments/);
+        assert.deepEqual(statements[2]?.params, ['known equipment']);
     });
 
     it('creates and reloads a pending proposal', async () => {
@@ -117,10 +124,7 @@ describe('CatalogProposalRepositoryMysql', () => {
 
         const unexpected = duplicateError('another_index');
         const unexpectedRepository = new CatalogProposalRepositoryMysql(createPool([], [{ error: unexpected }]));
-        await assert.rejects(
-            () => unexpectedRepository.create(input),
-            (error) => error === unexpected
-        );
+        await assert.rejects(() => unexpectedRepository.create(input), (error) => error === unexpected);
     });
 
     it('fails defensively when a created proposal cannot be reloaded', async () => {
@@ -168,6 +172,7 @@ describe('CatalogProposalRepositoryMysql', () => {
             status: 'accepted',
             matchedTagId: 12,
             matchedIngredientId: null,
+            matchedEquipmentId: null,
             reviewedByStaffUserId: 2,
             reviewReason: 'Accepted by catalogue staff.',
             createdAt,
@@ -185,6 +190,19 @@ describe('CatalogProposalRepositoryMysql', () => {
         } as CatalogProposalRow);
         assert.equal(reviewedIngredient.matchedTagId, null);
         assert.equal(reviewedIngredient.matchedIngredientId, 13);
+
+        const reviewedEquipment = mapCatalogProposal({
+            ...proposalRow,
+            ProposalType: 'equipment',
+            Status: 'accepted',
+            MatchedEquipmentId: 14,
+            ReviewedByStaffUserId: 2,
+            ReviewReason: 'Accepted by catalogue staff.',
+            ReviewedAt: reviewedAt
+        } as CatalogProposalRow);
+        assert.equal(reviewedEquipment.matchedTagId, null);
+        assert.equal(reviewedEquipment.matchedIngredientId, null);
+        assert.equal(reviewedEquipment.matchedEquipmentId, 14);
     });
 
     it('lists the filtered staff queue with stable pagination', async () => {
@@ -248,6 +266,7 @@ describe('CatalogProposalRepositoryMysql', () => {
                     status: 'merged',
                     matchedTagId: 12,
                     matchedIngredientId: null,
+                    matchedEquipmentId: null,
                     reviewedByStaffUserId: 91,
                     reviewReason: 'Correspond au tag canonique existant.'
                 },
@@ -258,7 +277,7 @@ describe('CatalogProposalRepositoryMysql', () => {
 
         assert.match(statements[0]?.sql ?? '', /FOR UPDATE/);
         assert.match(statements[1]?.sql ?? '', /WHERE Id = \? AND Status = 'pending'/);
-        assert.deepEqual(statements[1]?.params, ['merged', 12, null, 91, 'Correspond au tag canonique existant.', 91]);
+        assert.deepEqual(statements[1]?.params, ['merged', 12, null, null, 91, 'Correspond au tag canonique existant.', 91]);
     });
 
     it('reports a concurrent review without reloading the proposal', async () => {
@@ -273,6 +292,7 @@ describe('CatalogProposalRepositoryMysql', () => {
                     status: 'rejected',
                     matchedTagId: null,
                     matchedIngredientId: null,
+                    matchedEquipmentId: null,
                     reviewedByStaffUserId: 91,
                     reviewReason: 'Proposition refusée après examen.'
                 },

@@ -40,10 +40,7 @@ describe('staff invitation DTO', () => {
         ];
 
         for (const testCase of cases)
-            assert.throws(
-                () => parseCreateStaffInvitationBody(testCase.body),
-                (error) => assertHttpError(error, testCase.code)
-            );
+            assert.throws(() => parseCreateStaffInvitationBody(testCase.body), (error) => assertHttpError(error, testCase.code));
     });
 
     it('requires a bounded, non-empty and unique role code list', () => {

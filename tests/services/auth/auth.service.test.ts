@@ -95,7 +95,8 @@ class FakeStaffMfa implements StaffMfaManager {
     }
 
     async completeAuthentication() {
-        if (!this.authenticationCompleted) throw new HttpError(401, 'Invalid MFA assertion', 'AUTH_INVALID_MFA_ASSERTION');
+        if (!this.authenticationCompleted)
+            throw new HttpError(401, 'Invalid MFA assertion', 'AUTH_INVALID_MFA_ASSERTION');
 
         return {
             staffUserId: 2,
@@ -150,12 +151,7 @@ describe('AuthService', () => {
         emailValidation = new FakeEmailValidationService();
         sessions = new TestSessionRepository();
         staffMfa = new FakeStaffMfa();
-        service = new AuthService(
-            users as unknown as UserRepository,
-            emailValidation as unknown as EmailValidationService,
-            sessions,
-            staffMfa
-        );
+        service = new AuthService(users as unknown as UserRepository, emailValidation as unknown as EmailValidationService, sessions, staffMfa);
     });
 
     it('registers inactive community users and sends a validation email', async () => {

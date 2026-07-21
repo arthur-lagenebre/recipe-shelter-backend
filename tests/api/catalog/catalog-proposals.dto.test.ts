@@ -26,10 +26,7 @@ describe('catalog-proposals.dto', () => {
     });
 
     it('rejects malformed bodies and recipe ids', () => {
-        assert.throws(
-            () => parseCreateCatalogProposalBody([]),
-            (error) => assertBadRequest(error, 'CATALOG_PROPOSALS_BAD_BODY')
-        );
+        assert.throws(() => parseCreateCatalogProposalBody([]), (error) => assertBadRequest(error, 'CATALOG_PROPOSALS_BAD_BODY'));
         assert.throws(
             () => parseCreateCatalogProposalBody({ recipeId: 0, name: 'Valid name' }),
             (error) => assertBadRequest(error, 'CATALOG_PROPOSALS_BAD_RECIPE_ID')

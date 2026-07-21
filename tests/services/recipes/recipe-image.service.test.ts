@@ -70,7 +70,8 @@ class FakeRecipeImageRepository implements RecipeImageRepository {
 
     async replace(input: SaveRecipeImageInput): Promise<RecipeImage | null> {
         this.events.push('db:replace');
-        if (this.failReplace) throw new Error('SQL failed');
+        if (this.failReplace)
+            throw new Error('SQL failed');
 
         const previous = this.image;
         this.image = toRecipeImage(input);
@@ -94,7 +95,8 @@ class FakeStorage implements ImageStorage {
 
     async put(input: PutImageInput): Promise<void> {
         this.events.push(`put:${input.key}`);
-        if (input.key === this.failPutKey) throw new Error('Storage put failed');
+        if (input.key === this.failPutKey)
+            throw new Error('Storage put failed');
         this.objects.set(input.key, input.body);
         assert.equal(input.contentType, 'image/webp');
     }
@@ -103,7 +105,8 @@ class FakeStorage implements ImageStorage {
         this.events.push(`delete:${key}`);
         this.deletedKeys.push(key);
         this.objects.delete(key);
-        if (this.failDeletes) throw new Error('Storage delete failed');
+        if (this.failDeletes)
+            throw new Error('Storage delete failed');
     }
 
     getPublicUrl(key: string): string {
@@ -154,42 +157,24 @@ describe('RecipeImageService', () => {
 
     it('enforces missing recipe, ownership, editable statuses and existing admin rules', async () => {
         recipes.recipe = null;
-        await assert.rejects(
-            () => service.replace(10, owner, upload(), null),
-            (error) => assertHttpError(error, 'RECIPE_NOT_FOUND', 404)
-        );
+        await assert.rejects(() => service.replace(10, owner, upload(), null), (error) => assertHttpError(error, 'RECIPE_NOT_FOUND', 404));
 
         recipes.recipe = baseRecipe;
-        await assert.rejects(
-            () => service.replace(10, otherUser, upload(), null),
-            (error) => assertHttpError(error, 'RECIPE_IMAGE_UPDATE_FORBIDDEN', 403)
-        );
-        await assert.rejects(
-            () => service.replace(10, admin, upload(), null),
-            (error) => assertHttpError(error, 'RECIPE_IMAGE_UPDATE_FORBIDDEN', 403)
-        );
+        await assert.rejects(() => service.replace(10, otherUser, upload(), null), (error) => assertHttpError(error, 'RECIPE_IMAGE_UPDATE_FORBIDDEN', 403));
+        await assert.rejects(() => service.replace(10, admin, upload(), null), (error) => assertHttpError(error, 'RECIPE_IMAGE_UPDATE_FORBIDDEN', 403));
 
         recipes.recipe = { ...baseRecipe, status: 'published' };
-        await assert.rejects(
-            () => service.replace(10, owner, upload(), null),
-            (error) => assertHttpError(error, 'RECIPE_IMAGE_UPDATE_FORBIDDEN', 403)
-        );
+        await assert.rejects(() => service.replace(10, owner, upload(), null), (error) => assertHttpError(error, 'RECIPE_IMAGE_UPDATE_FORBIDDEN', 403));
 
         recipes.recipe = baseRecipe;
-        await assert.rejects(
-            () => service.replace(10, owner, undefined, null),
-            (error) => assertHttpError(error, 'IMAGE_REQUIRED', 400)
-        );
+        await assert.rejects(() => service.replace(10, owner, undefined, null), (error) => assertHttpError(error, 'IMAGE_REQUIRED', 400));
     });
 
     it('stores a first image with server-generated keys and returns only public URLs', async () => {
         const result = await service.replace(10, owner, upload(), '  Cake maison  ');
 
         assert.equal(images.image?.id, 'new-id');
-        assert.deepEqual(
-            [...storage.objects.keys()],
-            ['recipes/10/new-id/large.webp', 'recipes/10/new-id/medium.webp', 'recipes/10/new-id/thumbnail.webp']
-        );
+        assert.deepEqual([...storage.objects.keys()], ['recipes/10/new-id/large.webp', 'recipes/10/new-id/medium.webp', 'recipes/10/new-id/thumbnail.webp']);
         assert.deepEqual(result, {
             id: 'new-id',
             largeUrl: 'https://images.example.test/recipes/10/new-id/large.webp',
@@ -214,10 +199,7 @@ describe('RecipeImageService', () => {
             'recipes/10/old-id/thumbnail.webp'
         ]);
         assert.equal(images.events[0], 'db:replace');
-        assert.ok(
-            storage.events.findIndex((event) => event.startsWith('delete:recipes/10/old-id')) >
-                storage.events.findIndex((event) => event.startsWith('put:recipes/10/new-id'))
-        );
+        assert.ok(storage.events.findIndex((event) => event.startsWith('delete:recipes/10/old-id')) > storage.events.findIndex((event) => event.startsWith('put:recipes/10/new-id')));
     });
 
     it('cleans all new objects and preserves the old image when SQL replacement fails', async () => {
@@ -255,10 +237,7 @@ describe('RecipeImageService', () => {
         assert.equal(images.events[0], 'db:delete');
         assert.equal(storage.deletedKeys.length, 3);
 
-        await assert.rejects(
-            () => service.delete(10, owner),
-            (error) => assertHttpError(error, 'RECIPE_IMAGE_NOT_FOUND', 404)
-        );
+        await assert.rejects(() => service.delete(10, owner), (error) => assertHttpError(error, 'RECIPE_IMAGE_NOT_FOUND', 404));
     });
 
     it('keeps a committed replacement or deletion successful when physical cleanup fails', async () => {
@@ -282,14 +261,8 @@ describe('RecipeImageService', () => {
     it('normalizes optional alt text and rejects excessive or HTML values', () => {
         assert.equal(normalizeAltText('   '), null);
         assert.equal(normalizeAltText('  Description  '), 'Description');
-        assert.throws(
-            () => normalizeAltText('x'.repeat(256)),
-            (error) => assertHttpError(error, 'IMAGE_ALT_TEXT_TOO_LONG', 400)
-        );
-        assert.throws(
-            () => normalizeAltText('<b>Cake</b>'),
-            (error) => assertHttpError(error, 'IMAGE_ALT_TEXT_INVALID', 400)
-        );
+        assert.throws(() => normalizeAltText('x'.repeat(256)), (error) => assertHttpError(error, 'IMAGE_ALT_TEXT_TOO_LONG', 400));
+        assert.throws(() => normalizeAltText('<b>Cake</b>'), (error) => assertHttpError(error, 'IMAGE_ALT_TEXT_INVALID', 400));
     });
 });
 

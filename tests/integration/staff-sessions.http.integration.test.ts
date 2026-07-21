@@ -10,12 +10,7 @@ import { createAdminStaffSessionsRouter } from '../../src/api/admin/admin.staff-
 import { createStaffAuthRouter } from '../../src/api/auth/auth.routes.js';
 import { EnforceAuthorizationPolicies } from '../../src/middlewares/authorization.js';
 import { errorHandler } from '../../src/middlewares/error-handler.js';
-import {
-    configureAuthRbacRepository,
-    configureAuthSessionRepository,
-    configureAuthUserRepository,
-    requireStaffAuth
-} from '../../src/middlewares/require-auth.js';
+import { configureAuthRbacRepository, configureAuthSessionRepository, configureAuthUserRepository, requireStaffAuth } from '../../src/middlewares/require-auth.js';
 import { PERMISSIONS } from '../../src/security/permissions.js';
 import { StaffSessionService } from '../../src/services/auth/staff-session.service.js';
 import { TestAdminAuditRecorder } from '../helpers/admin-audit.js';

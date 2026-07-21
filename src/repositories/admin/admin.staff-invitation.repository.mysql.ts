@@ -63,12 +63,7 @@ export class StaffInvitationRepositoryMysql implements StaffInvitationRepository
     }
 
     private async createWithinTransaction(input: CreateStaffInvitationInput, db: PoolConnection): Promise<CreateStaffInvitationResult> {
-        const [roleRows] = await db.execute<RoleRow[]>(
-            `SELECT Id, Code, Name
-       FROM Roles
-       ORDER BY Id
-       FOR UPDATE`
-        );
+        const [roleRows] = await db.execute<RoleRow[]>(`SELECT Id, Code, Name FROM Roles ORDER BY Id FOR UPDATE`);
         const requestedRoleCodes = new Set(input.roleCodes);
         const selectedRoles = roleRows.filter((row) => requestedRoleCodes.has(row.Code));
         const selectedRoleCodes = new Set(selectedRoles.map((role) => role.Code));
@@ -77,17 +72,7 @@ export class StaffInvitationRepositoryMysql implements StaffInvitationRepository
         if (input.roleCodes.length === 0 || missingRoleCodes.length > 0) return { status: 'roles_missing', roleCodes: missingRoleCodes };
 
         const [identityRows] = await db.execute<ExistingIdentityRow[]>(
-            `SELECT u.AccountType,
-              sp.Status AS StaffStatus,
-              si.Id AS InvitationId,
-              si.UsedAt AS InvitationUsedAt,
-              u.Mail = ? AS EmailMatches,
-              u.Username = ? AS DisplayNameMatches
-       FROM Users AS u
-       LEFT JOIN StaffProfiles AS sp ON sp.UserId = u.Id
-       LEFT JOIN StaffInvitations AS si ON si.StaffUserId = u.Id
-       WHERE u.Mail = ? OR u.Username = ?
-       FOR UPDATE`,
+            `SELECT u.AccountType, sp.Status AS StaffStatus, si.Id AS InvitationId, si.UsedAt AS InvitationUsedAt, u.Mail = ? AS EmailMatches, u.Username = ? AS DisplayNameMatches FROM Users AS u LEFT JOIN StaffProfiles AS sp ON sp.UserId = u.Id LEFT JOIN StaffInvitations AS si ON si.StaffUserId = u.Id WHERE u.Mail = ? OR u.Username = ? FOR UPDATE`,
             [input.email, input.displayName, input.email, input.displayName]
         );
         const emailIdentity = identityRows.find((row) => Boolean(row.EmailMatches));
@@ -111,8 +96,7 @@ export class StaffInvitationRepositoryMysql implements StaffInvitationRepository
         if (identityRows.some((row) => Boolean(row.DisplayNameMatches))) return { status: 'display_name_taken' };
 
         const [userResult] = await db.execute<ResultSetHeader>(
-            `INSERT INTO Users (Mail, Username, Password, AccountType, Status, EmailValidatedAt)
-       VALUES (?, ?, NULL, 'staff', 'inactive', NULL)`,
+            `INSERT INTO Users (Mail, Username, Password, AccountType, Status, EmailValidatedAt) VALUES (?, ?, NULL, 'staff', 'inactive', NULL)`,
             [input.email, input.displayName]
         );
         const staffUserId = Number(userResult.insertId);
@@ -126,16 +110,12 @@ export class StaffInvitationRepositoryMysql implements StaffInvitationRepository
         );
 
         const [invitationResult] = await db.execute<ResultSetHeader>(
-            `INSERT INTO StaffInvitations
-         (StaffUserId, CreatedByStaffUserId, TokenHash, ExpiresAt, RequiresMfa)
-       VALUES (?, ?, ?, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL ? MINUTE), TRUE)`,
+            `INSERT INTO StaffInvitations (StaffUserId, CreatedByStaffUserId, TokenHash, ExpiresAt, RequiresMfa) VALUES (?, ?, ?, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL ? MINUTE), TRUE)`,
             [staffUserId, input.createdByStaffUserId, input.tokenHash, input.invitationTtlMinutes]
         );
         const invitationId = Number(invitationResult.insertId);
         const [invitationRows] = await db.execute<InvitationRow[]>(
-            `SELECT Id, StaffUserId, ExpiresAt, CreatedAt
-       FROM StaffInvitations
-       WHERE Id = ?`,
+            `SELECT Id, StaffUserId, ExpiresAt, CreatedAt FROM StaffInvitations WHERE Id = ?`,
             [invitationId]
         );
         const invitation = invitationRows[0];

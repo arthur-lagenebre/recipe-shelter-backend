@@ -130,11 +130,7 @@ describe('UserService', () => {
         users = new FakeUserRepository();
         recipes = new FakeRecipeRepository();
         sessions = new FakeSessionRepository();
-        service = new UserService(
-            users as unknown as UserRepository,
-            recipes as unknown as RecipeRepository,
-            sessions as unknown as SessionRepository
-        );
+        service = new UserService(users as unknown as UserRepository, recipes as unknown as RecipeRepository, sessions as unknown as SessionRepository);
     });
 
     it('gets a public user profile with published recipes', async () => {

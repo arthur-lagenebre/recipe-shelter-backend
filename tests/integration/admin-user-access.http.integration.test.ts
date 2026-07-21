@@ -9,13 +9,7 @@ import { createAdminUsersController } from '../../src/api/admin/admin.users.cont
 import { createAdminUsersRouter } from '../../src/api/admin/admin.users.routes.js';
 import { CommunityOnly, EnforceAuthorizationPolicies, StaffOnly } from '../../src/middlewares/authorization.js';
 import { errorHandler } from '../../src/middlewares/error-handler.js';
-import {
-    configureAuthRbacRepository,
-    configureAuthSessionRepository,
-    configureAuthUserRepository,
-    requireCommunityAuth,
-    requireStaffAuth
-} from '../../src/middlewares/require-auth.js';
+import { configureAuthRbacRepository, configureAuthSessionRepository, configureAuthUserRepository, requireCommunityAuth, requireStaffAuth } from '../../src/middlewares/require-auth.js';
 import { PERMISSIONS } from '../../src/security/permissions.js';
 import { AdminUserService } from '../../src/services/admin/admin.users.service.js';
 import { TestAdminAuditRecorder } from '../helpers/admin-audit.js';
@@ -63,7 +57,8 @@ describe('admin user access HTTP integration', () => {
         const adminRepository = {
             async ban(userId: number, adminUserId: number, reason: string) {
                 const user = users.get(userId);
-                if (!user) return false;
+                if (!user)
+                    return false;
                 users.set(userId, {
                     ...user,
                     status: 'banned',
@@ -75,7 +70,8 @@ describe('admin user access HTTP integration', () => {
             },
             async unban(userId: number) {
                 const user = users.get(userId);
-                if (!user) return false;
+                if (!user)
+                    return false;
                 users.set(userId, {
                     ...user,
                     status: 'active',

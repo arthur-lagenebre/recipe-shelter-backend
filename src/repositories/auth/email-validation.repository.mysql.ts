@@ -19,29 +19,20 @@ export class EmailValidationRepositoryMysql implements EmailValidationRepository
 
     async create(input: EmailValidationCreateInput): Promise<void> {
         await this.db.execute(
-            `INSERT INTO EmailValidations (UserId, TokenHash, ExpiresAt)
-             VALUES (?, ?, DATE_ADD(NOW(), INTERVAL ? MINUTE))`,
+            `INSERT INTO EmailValidations (UserId, TokenHash, ExpiresAt) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL ? MINUTE))`,
             [input.userId, input.tokenHash, input.expiresInMinutes]
         );
     }
 
     async invalidateAllForUser(userId: number): Promise<void> {
-        await this.db.execute(
-            `UPDATE EmailValidations
-             SET UsedAt = NOW()
-             WHERE UserId = ?
-                AND UsedAt IS NULL
-                AND ExpiresAt > NOW()`,
-            [userId]
-        );
+        await this.db.execute(`UPDATE EmailValidations SET UsedAt = NOW() WHERE UserId = ? AND UsedAt IS NULL AND ExpiresAt > NOW()`, [
+            userId
+        ]);
     }
 
     async findByTokenHash(tokenHash: string): Promise<EmailValidationRecord | null> {
         const [rows] = await this.db.execute(
-            `SELECT Id, UserId, TokenHash, ExpiresAt, UsedAt, CreatedAt
-             FROM EmailValidations
-             WHERE TokenHash = ?
-             LIMIT 1`,
+            `SELECT Id, UserId, TokenHash, ExpiresAt, UsedAt, CreatedAt FROM EmailValidations WHERE TokenHash = ? LIMIT 1`,
             [tokenHash]
         );
 
@@ -51,11 +42,6 @@ export class EmailValidationRepositoryMysql implements EmailValidationRepository
     }
 
     async markUsed(id: number): Promise<void> {
-        await this.db.execute(
-            `UPDATE EmailValidations
-             SET UsedAt = NOW()
-             WHERE Id = ?`,
-            [id]
-        );
+        await this.db.execute(`UPDATE EmailValidations SET UsedAt = NOW() WHERE Id = ?`, [id]);
     }
 }

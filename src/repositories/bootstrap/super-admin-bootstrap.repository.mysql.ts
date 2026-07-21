@@ -33,13 +33,7 @@ export class SuperAdminBootstrapRepositoryMysql implements SuperAdminBootstrapRe
         try {
             await conn.beginTransaction();
 
-            const [roleRows] = await conn.execute<RoleRow[]>(
-                `SELECT Id
-                 FROM Roles
-                 WHERE Code = ?
-                 FOR UPDATE`,
-                [SUPER_ADMIN_ROLE_CODE]
-            );
+            const [roleRows] = await conn.execute<RoleRow[]>(`SELECT Id FROM Roles WHERE Code = ? FOR UPDATE`, [SUPER_ADMIN_ROLE_CODE]);
             const role = firstOrNull(roleRows);
 
             if (!role) {
@@ -48,11 +42,7 @@ export class SuperAdminBootstrapRepositoryMysql implements SuperAdminBootstrapRe
             }
 
             const [superAdminRows] = await conn.execute<ExistingSuperAdminRow[]>(
-                `SELECT COUNT(*) AS SuperAdminCount,
-                        SUM(sp.Status = 'active') AS ActiveSuperAdminCount
-                 FROM StaffRoles AS sr
-                 INNER JOIN StaffProfiles AS sp ON sp.UserId = sr.StaffUserId
-                 WHERE sr.RoleId = ?`,
+                `SELECT COUNT(*) AS SuperAdminCount, SUM(sp.Status = 'active') AS ActiveSuperAdminCount FROM StaffRoles AS sr INNER JOIN StaffProfiles AS sp ON sp.UserId = sr.StaffUserId WHERE sr.RoleId = ?`,
                 [role.Id]
             );
             const existingSuperAdmin = firstOrNull(superAdminRows);
@@ -66,10 +56,7 @@ export class SuperAdminBootstrapRepositoryMysql implements SuperAdminBootstrapRe
             }
 
             const [identityRows] = await conn.execute<ExistingIdentityRow[]>(
-                `SELECT Mail, Username
-                 FROM Users
-                 WHERE Mail = ? OR Username = ?
-                 FOR UPDATE`,
+                `SELECT Mail, Username FROM Users WHERE Mail = ? OR Username = ? FOR UPDATE`,
                 [input.mail, input.username]
             );
 
@@ -84,28 +71,18 @@ export class SuperAdminBootstrapRepositoryMysql implements SuperAdminBootstrapRe
             }
 
             const [userResult] = await conn.execute<ResultSetHeader>(
-                `INSERT INTO Users (Mail, Username, Password, AccountType, Status, EmailValidatedAt)
-                 VALUES (?, ?, NULL, 'staff', 'inactive', NULL)`,
+                `INSERT INTO Users (Mail, Username, Password, AccountType, Status, EmailValidatedAt) VALUES (?, ?, NULL, 'staff', 'inactive', NULL)`,
                 [input.mail, input.username]
             );
             const userId = Number(userResult.insertId);
 
             await conn.execute(
-                `INSERT INTO StaffProfiles (UserId, AccountType, Status)
-                 VALUES (?, 'staff', 'invited') AS new_staff
-                 ON DUPLICATE KEY UPDATE
-                   AccountType = new_staff.AccountType,
-                   Status = new_staff.Status`,
+                `INSERT INTO StaffProfiles (UserId, AccountType, Status) VALUES (?, 'staff', 'invited') AS new_staff ON DUPLICATE KEY UPDATE AccountType = new_staff.AccountType, Status = new_staff.Status`,
                 [userId]
             );
+            await conn.execute(`INSERT INTO StaffRoles (StaffUserId, RoleId) VALUES (?, ?)`, [userId, role.Id]);
             await conn.execute(
-                `INSERT INTO StaffRoles (StaffUserId, RoleId)
-                 VALUES (?, ?)`,
-                [userId, role.Id]
-            );
-            await conn.execute(
-                `INSERT INTO StaffInvitations (StaffUserId, TokenHash, ExpiresAt, RequiresMfa)
-                 VALUES (?, ?, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL ? MINUTE), TRUE)`,
+                `INSERT INTO StaffInvitations (StaffUserId, TokenHash, ExpiresAt, RequiresMfa) VALUES (?, ?, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL ? MINUTE), TRUE)`,
                 [userId, input.invitationTokenHash, input.invitationTtlMinutes]
             );
 

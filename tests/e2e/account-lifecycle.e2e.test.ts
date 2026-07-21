@@ -10,25 +10,12 @@ import { env } from '../../src/utils/env.js';
 import { startHttpTestServer } from '../helpers/http-test-server.js';
 import { TestSessionRepository } from '../helpers/auth-session.js';
 
-import type {
-    EmailValidationCreateInput,
-    EmailValidationRecord,
-    EmailValidationRepository
-} from '../../src/repositories/auth/email-validation.repository.interface.js';
-import type {
-    PasswordResetCreateInput,
-    PasswordResetRecord,
-    PasswordResetRepository
-} from '../../src/repositories/auth/password-reset.repository.interface.js';
+import type { EmailValidationCreateInput, EmailValidationRecord, EmailValidationRepository } from '../../src/repositories/auth/email-validation.repository.interface.js';
+import type { PasswordResetCreateInput, PasswordResetRecord, PasswordResetRepository } from '../../src/repositories/auth/password-reset.repository.interface.js';
 import type { UserRepository } from '../../src/repositories/users/user.repository.interface.js';
 import type { CommunityProfile, CreateUserInput, StaffProfile, User, UserWithPassword } from '../../src/repositories/users/user.types.js';
 import type { RecipeRepository } from '../../src/repositories/recipes/recipe.repository.interface.js';
-import type {
-    EmailValidationMailInput,
-    Mailer,
-    PasswordChangedMailInput,
-    PasswordResetMailInput
-} from '../../src/services/mail/mail.types.js';
+import type { EmailValidationMailInput, Mailer, PasswordChangedMailInput, PasswordResetMailInput } from '../../src/services/mail/mail.types.js';
 import type { StaffMfaManager } from '../../src/services/auth/staff-mfa.service.js';
 import type { HttpTestServer } from '../helpers/http-test-server.js';
 
@@ -73,7 +60,8 @@ class AccountUserRepository implements UserRepository {
 
     async findCommunityProfileByUserId(userId: number): Promise<CommunityProfile | null> {
         const user = this.users.get(userId);
-        if (!user || user.accountType !== 'community') return null;
+        if (!user || user.accountType !== 'community')
+            return null;
         return {
             userId,
             status: user.status === 'inactive' || user.status === 'active' || user.status === 'banned' ? user.status : 'inactive',
@@ -87,13 +75,12 @@ class AccountUserRepository implements UserRepository {
 
     async findStaffProfileByUserId(userId: number): Promise<StaffProfile | null> {
         const user = this.users.get(userId);
-        if (!user || user.accountType !== 'staff') return null;
+        if (!user || user.accountType !== 'staff')
+            return null;
         return {
             userId,
             status:
-                user.status === 'invited' || user.status === 'active' || user.status === 'locked' || user.status === 'disabled'
-                    ? user.status
-                    : 'invited',
+                user.status === 'invited' || user.status === 'active' || user.status === 'locked' || user.status === 'disabled' ? user.status : 'invited',
             mfaEnrolledAt: null,
             disabledByStaffUserId: null,
             disabledReason: null,
@@ -113,7 +100,8 @@ class AccountUserRepository implements UserRepository {
 
     async markEmailValidated(userId: number): Promise<boolean> {
         const user = this.users.get(userId);
-        if (!user) return false;
+        if (!user)
+            return false;
 
         this.users.set(userId, { ...user, status: 'active', emailValidatedAt: new Date() });
         return true;
@@ -148,7 +136,8 @@ class AccountUserRepository implements UserRepository {
 
     private requireUser(id: number): UserWithPassword {
         const user = this.users.get(id);
-        if (!user) throw new Error(`User ${id} not found`);
+        if (!user)
+            throw new Error(`User ${id} not found`);
         return user;
     }
 
@@ -173,7 +162,8 @@ class AccountValidationRepository implements EmailValidationRepository {
 
     async invalidateAllForUser(userId: number): Promise<void> {
         for (const [hash, record] of this.records) {
-            if (record.UserId === userId) this.records.set(hash, { ...record, UsedAt: new Date() });
+            if (record.UserId === userId)
+                this.records.set(hash, { ...record, UsedAt: new Date() });
         }
     }
 
@@ -183,7 +173,8 @@ class AccountValidationRepository implements EmailValidationRepository {
 
     async markUsed(id: number): Promise<void> {
         for (const [hash, record] of this.records) {
-            if (record.Id === id) this.records.set(hash, { ...record, UsedAt: new Date() });
+            if (record.Id === id)
+                this.records.set(hash, { ...record, UsedAt: new Date() });
         }
     }
 }
@@ -203,7 +194,8 @@ class AccountResetRepository implements PasswordResetRepository {
 
     async invalidateAllForUser(userId: number): Promise<void> {
         for (const record of this.records.values()) {
-            if (record.UserId === userId) record.used = true;
+            if (record.UserId === userId)
+                record.used = true;
         }
     }
 
@@ -214,7 +206,8 @@ class AccountResetRepository implements PasswordResetRepository {
 
     async markUsed(id: number): Promise<void> {
         for (const record of this.records.values()) {
-            if (record.Id === id) record.used = true;
+            if (record.Id === id)
+                record.used = true;
         }
     }
 }

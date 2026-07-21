@@ -1,11 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import {
-    parseAdminStaffRoleCodeParam,
-    parseAdminStaffUserIdParam,
-    parseStaffActionReasonBody
-} from '../../../src/api/admin/admin.staff.dto.js';
+import { parseAdminStaffRoleCodeParam, parseAdminStaffUserIdParam, parseStaffActionReasonBody } from '../../../src/api/admin/admin.staff.dto.js';
 import { HttpError } from '../../../src/utils/errors.js';
 
 describe('admin staff DTO', () => {
@@ -17,16 +13,10 @@ describe('admin staff DTO', () => {
 
     it('rejects malformed identifiers and role codes', () => {
         for (const value of ['', '0', '-1', '1.5', '9007199254740992'])
-            assert.throws(
-                () => parseAdminStaffUserIdParam(value),
-                (error) => assertHttpError(error, 'ADMIN_STAFF_BAD_USER_ID')
-            );
+            assert.throws(() => parseAdminStaffUserIdParam(value), (error) => assertHttpError(error, 'ADMIN_STAFF_BAD_USER_ID'));
 
         for (const value of ['', 'bad role', '.hidden', 'x'.repeat(65)])
-            assert.throws(
-                () => parseAdminStaffRoleCodeParam(value),
-                (error) => assertHttpError(error, 'ADMIN_STAFF_BAD_ROLE_CODE')
-            );
+            assert.throws(() => parseAdminStaffRoleCodeParam(value), (error) => assertHttpError(error, 'ADMIN_STAFF_BAD_ROLE_CODE'));
     });
 
     it('requires a meaningful reason for every sensitive mutation', () => {

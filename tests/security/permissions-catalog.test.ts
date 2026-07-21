@@ -11,6 +11,7 @@ const EXPECTED_ROLE_PERMISSIONS: Record<string, string[]> = {
     CatalogManager: [
         PERMISSIONS.catalogManage,
         PERMISSIONS.catalogRead,
+        PERMISSIONS.equipmentCreate,
         PERMISSIONS.ingredientAliasManage,
         PERMISSIONS.ingredientCreate,
         PERMISSIONS.ingredientDeprecate,
@@ -51,6 +52,7 @@ describe('RBAC seed catalog', () => {
             'catalog',
             'comment',
             'comments',
+            'equipment',
             'ingredient',
             'recipe',
             'recipes',
@@ -62,11 +64,7 @@ describe('RBAC seed catalog', () => {
         assert.ok(applicationCodes.every((code) => isPermissionCode(code)));
         assert.equal(isPermissionCode('unknown.permission'), false);
         assert.equal(isPermissionCode(null), false);
-        assert.deepEqual(
-            applicationCodes.filter((code) => code.startsWith('audit.')),
-            [PERMISSIONS.auditRead],
-            'The audit domain must expose read access only'
-        );
+        assert.deepEqual(applicationCodes.filter((code) => code.startsWith('audit.')), [PERMISSIONS.auditRead], 'The audit domain must expose read access only');
     });
 
     it('defines the validated role-permission matrix with no duplicate or unknown association', async () => {
@@ -84,8 +82,10 @@ describe('RBAC seed catalog', () => {
         const knownPermissionCodes = new Set<string>(Object.values(PERMISSIONS));
         const permissionsByRole: Record<string, string[]> = {};
 
-        for (const { roleCode, permissionCode } of associations) (permissionsByRole[roleCode] ??= []).push(permissionCode);
-        for (const permissionCodes of Object.values(permissionsByRole)) permissionCodes.sort();
+        for (const { roleCode, permissionCode } of associations)
+            (permissionsByRole[roleCode] ??= []).push(permissionCode);
+        for (const permissionCodes of Object.values(permissionsByRole))
+            permissionCodes.sort();
 
         assert.deepEqual(permissionsByRole, EXPECTED_ROLE_PERMISSIONS);
         assert.equal(new Set(associationKeys).size, associationKeys.length);

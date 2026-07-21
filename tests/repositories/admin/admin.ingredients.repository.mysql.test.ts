@@ -280,8 +280,10 @@ function createConnection(statements: Array<{ sql: string; params: unknown }>, r
         async execute(sql: string, params: unknown) {
             statements.push({ sql, params });
             const response = responses.shift();
-            if (!response) throw new Error('Unexpected SQL statement');
-            if (response instanceof Error) throw response;
+            if (!response)
+                throw new Error('Unexpected SQL statement');
+            if (response instanceof Error)
+                throw response;
 
             return response;
         }

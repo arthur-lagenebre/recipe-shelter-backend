@@ -1100,10 +1100,21 @@ SIGNAL SQLSTATE '45000'
 CREATE TABLE Equipments (
   Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   Name VARCHAR(255) NOT NULL,
+  NormalizedName VARCHAR(255) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   Slug VARCHAR(255) NOT NULL,
   PRIMARY KEY (Id),
   UNIQUE KEY equipments_name_UK (Name),
-  UNIQUE KEY equipments_slug_UK (Slug)
+  UNIQUE KEY equipments_normalized_name_UK (NormalizedName),
+  UNIQUE KEY equipments_slug_UK (Slug),
+  CONSTRAINT equipments_normalized_name_CK
+    CHECK (
+      CHAR_LENGTH(NormalizedName) = CHAR_LENGTH(TRIM(NormalizedName))
+      AND CHAR_LENGTH(TRIM(NormalizedName)) > 0
+      AND BINARY NormalizedName = BINARY LOWER(NormalizedName)
+      AND NormalizedName REGEXP '^[a-z0-9]+( [a-z0-9]+)*$'
+      AND CONVERT(NormalizedName USING utf8mb4) COLLATE utf8mb4_0900_ai_ci
+        = TRIM(REGEXP_REPLACE(LOWER(Name), '[^[:alnum:]]+', ' ')) COLLATE utf8mb4_0900_ai_ci
+    )
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------- Tag catalogue ----------
@@ -1249,12 +1260,13 @@ CREATE TABLE CatalogProposals (
   Id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   AuthorUserId BIGINT UNSIGNED NOT NULL,
   RecipeId BIGINT UNSIGNED NOT NULL,
-  ProposalType ENUM('tag', 'ingredient') NOT NULL,
+  ProposalType ENUM('tag', 'ingredient', 'equipment') NOT NULL,
   ProposedName VARCHAR(255) NOT NULL,
   NormalizedName VARCHAR(255) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   Status ENUM('pending', 'accepted', 'rejected', 'merged') NOT NULL DEFAULT 'pending',
   MatchedTagId BIGINT UNSIGNED NULL,
   MatchedIngredientId BIGINT UNSIGNED NULL,
+  MatchedEquipmentId BIGINT UNSIGNED NULL,
   ReviewedByStaffUserId BIGINT UNSIGNED NULL,
   ReviewReason TEXT NULL,
   CreatedAt DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
@@ -1272,6 +1284,7 @@ CREATE TABLE CatalogProposals (
   KEY idx_catalog_proposals_reviewer_history (ReviewedByStaffUserId, ReviewedAt, Id),
   KEY idx_catalog_proposals_matched_tag_id (MatchedTagId),
   KEY idx_catalog_proposals_matched_ingredient_id (MatchedIngredientId),
+  KEY idx_catalog_proposals_matched_equipment_id (MatchedEquipmentId),
   CONSTRAINT catalog_proposals_proposed_name_CK
     CHECK (
       CHAR_LENGTH(ProposedName) = CHAR_LENGTH(TRIM(ProposedName))
@@ -1291,12 +1304,14 @@ CREATE TABLE CatalogProposals (
       (Status = 'pending'
         AND MatchedTagId IS NULL
         AND MatchedIngredientId IS NULL
+        AND MatchedEquipmentId IS NULL
         AND ReviewedByStaffUserId IS NULL
         AND ReviewReason IS NULL
         AND ReviewedAt IS NULL)
       OR (Status = 'rejected'
         AND MatchedTagId IS NULL
         AND MatchedIngredientId IS NULL
+        AND MatchedEquipmentId IS NULL
         AND ReviewedByStaffUserId IS NOT NULL
         AND ReviewReason IS NOT NULL
         AND CHAR_LENGTH(TRIM(ReviewReason)) >= 10
@@ -1312,10 +1327,16 @@ CREATE TABLE CatalogProposals (
         AND ReviewedAt >= CreatedAt
         AND ((ProposalType = 'tag'
               AND MatchedTagId IS NOT NULL
-              AND MatchedIngredientId IS NULL)
+              AND MatchedIngredientId IS NULL
+              AND MatchedEquipmentId IS NULL)
           OR (ProposalType = 'ingredient'
               AND MatchedTagId IS NULL
-              AND MatchedIngredientId IS NOT NULL)))
+              AND MatchedIngredientId IS NOT NULL
+              AND MatchedEquipmentId IS NULL)
+          OR (ProposalType = 'equipment'
+              AND MatchedTagId IS NULL
+              AND MatchedIngredientId IS NULL
+              AND MatchedEquipmentId IS NOT NULL)))
     ),
   CONSTRAINT catalog_proposals_author_FK
     FOREIGN KEY (AuthorUserId) REFERENCES CommunityProfiles(UserId)
@@ -1331,6 +1352,10 @@ CREATE TABLE CatalogProposals (
     ON DELETE RESTRICT,
   CONSTRAINT catalog_proposals_matched_ingredient_FK
     FOREIGN KEY (MatchedIngredientId) REFERENCES Ingredients(Id)
+    ON UPDATE RESTRICT
+    ON DELETE RESTRICT,
+  CONSTRAINT catalog_proposals_matched_equipment_FK
+    FOREIGN KEY (MatchedEquipmentId) REFERENCES Equipments(Id)
     ON UPDATE RESTRICT
     ON DELETE RESTRICT,
   CONSTRAINT catalog_proposals_reviewer_FK
@@ -1396,6 +1421,18 @@ BEGIN
       SIGNAL SQLSTATE '45000'
         SET MYSQL_ERRNO = 1644,
             MESSAGE_TEXT = 'A reviewed ingredient proposal must match an active canonical ingredient';
+    END IF;
+  ELSEIF NEW.Status IN ('accepted', 'merged') AND NEW.ProposalType = 'equipment' THEN
+    SELECT 'active'
+    INTO matched_catalog_status
+    FROM Equipments
+    WHERE Id = NEW.MatchedEquipmentId
+    FOR SHARE;
+
+    IF matched_catalog_status IS NULL THEN
+      SIGNAL SQLSTATE '45000'
+        SET MYSQL_ERRNO = 1644,
+            MESSAGE_TEXT = 'A reviewed equipment proposal must match an existing canonical equipment';
     END IF;
   END IF;
 END;

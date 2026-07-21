@@ -18,12 +18,7 @@ import { createAdminStaffSessionsRouter } from '../../src/api/admin/admin.staff-
 import { createHealthRouter } from '../../src/api/health/health.routes.js';
 import { EnforceAuthorizationPolicies } from '../../src/middlewares/authorization.js';
 import { errorHandler } from '../../src/middlewares/error-handler.js';
-import {
-    configureAuthRbacRepository,
-    configureAuthSessionRepository,
-    configureAuthUserRepository,
-    requireStaffAuth
-} from '../../src/middlewares/require-auth.js';
+import { configureAuthRbacRepository, configureAuthSessionRepository, configureAuthUserRepository, requireStaffAuth } from '../../src/middlewares/require-auth.js';
 import { PERMISSIONS } from '../../src/security/permissions.js';
 import { logger } from '../../src/utils/logger.js';
 import { TestSessionRepository } from '../helpers/auth-session.js';
@@ -56,9 +51,16 @@ const ADMIN_POLICIES: AdminPolicy[] = [
         permission: PERMISSIONS.catalogManage,
         additionalPermissions: [PERMISSIONS.ingredientCreate]
     },
+    {
+        method: 'POST',
+        path: '/api/v1/admin/catalog-proposals/equipments/1/accept',
+        permission: PERMISSIONS.catalogManage,
+        additionalPermissions: [PERMISSIONS.equipmentCreate]
+    },
     { method: 'POST', path: '/api/v1/admin/catalog-proposals/1/reject', permission: PERMISSIONS.catalogManage },
     { method: 'POST', path: '/api/v1/admin/catalog-proposals/tags/1/associate', permission: PERMISSIONS.catalogManage },
     { method: 'POST', path: '/api/v1/admin/catalog-proposals/ingredients/1/associate', permission: PERMISSIONS.catalogManage },
+    { method: 'POST', path: '/api/v1/admin/catalog-proposals/equipments/1/associate', permission: PERMISSIONS.catalogManage },
     {
         method: 'POST',
         path: '/api/v1/admin/catalog-proposals/ingredients/1/alias',
@@ -183,9 +185,11 @@ describe('administrative endpoint authorization policies', () => {
                 list: endpointHandler,
                 acceptTag: endpointHandler,
                 acceptIngredient: endpointHandler,
+                acceptEquipment: endpointHandler,
                 reject: endpointHandler,
                 associateTag: endpointHandler,
                 associateIngredient: endpointHandler,
+                associateEquipment: endpointHandler,
                 convertIngredientToAlias: endpointHandler
             })
         );

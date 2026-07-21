@@ -88,7 +88,8 @@ class FakeAdminCommentRepository implements AdminCommentRepository {
     async update(input: AdminUpdateCommentInput): Promise<AdminComment | null> {
         this.updatedInput = input;
 
-        if (!this.comment) return null;
+        if (!this.comment)
+            return null;
 
         return { ...this.comment, ...input };
     }

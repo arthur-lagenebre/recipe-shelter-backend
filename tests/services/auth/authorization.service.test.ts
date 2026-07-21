@@ -31,12 +31,7 @@ type AccessMatrixCase = Readonly<{
     allowedPermissions: readonly PermissionCode[];
 }>;
 
-function createStaffAuth(
-    userId: number,
-    username: string,
-    permissions: readonly PermissionCode[],
-    status: AuthContext['status'] = 'active'
-): AuthContext {
+function createStaffAuth(userId: number, username: string, permissions: readonly PermissionCode[], status: AuthContext['status'] = 'active'): AuthContext {
     return {
         userId,
         username,
@@ -135,16 +130,8 @@ describe('authorization service', () => {
                 const allowedPermissions = ALL_PERMISSIONS.filter((permission) => hasPermission(matrixCase.auth, permission));
                 const deniedPermissions = ALL_PERMISSIONS.filter((permission) => !hasPermission(matrixCase.auth, permission));
 
-                assert.deepEqual(
-                    allowedPermissions,
-                    matrixCase.allowedPermissions,
-                    `${matrixCase.name} must receive exactly its declared permissions`
-                );
-                assert.deepEqual(
-                    deniedPermissions,
-                    ALL_PERMISSIONS.filter((permission) => !expectedPermissions.has(permission)),
-                    `${matrixCase.name} must be denied every other permission`
-                );
+                assert.deepEqual(allowedPermissions, matrixCase.allowedPermissions, `${matrixCase.name} must receive exactly its declared permissions`);
+                assert.deepEqual(deniedPermissions, ALL_PERMISSIONS.filter((permission) => !expectedPermissions.has(permission)), `${matrixCase.name} must be denied every other permission`);
             }
         });
 

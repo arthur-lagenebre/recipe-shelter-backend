@@ -1,4 +1,5 @@
 import { badRequest, conflict, notFound } from '../../utils/errors.js';
+import { normalizeEquipmentName } from '../equipments/equipments.service.js';
 import { normalizeIngredientName } from '../ingredients/ingredients.service.js';
 import { normalizeTagName } from '../tags/tags.service.js';
 
@@ -22,6 +23,10 @@ export class CatalogProposalService {
 
     createIngredientProposal(input: CreateCatalogProposalCommand): Promise<CatalogProposal> {
         return this.create('ingredient', input);
+    }
+
+    createEquipmentProposal(input: CreateCatalogProposalCommand): Promise<CatalogProposal> {
+        return this.create('equipment', input);
     }
 
     private async create(proposalType: CatalogProposalType, input: CreateCatalogProposalCommand): Promise<CatalogProposal> {
@@ -52,7 +57,12 @@ function validateCommand(proposalType: CatalogProposalType, input: CreateCatalog
     if (proposedName.length > PROPOSAL_NAME_MAX_LENGTH)
         throw badRequest(`Proposal name must be at most ${PROPOSAL_NAME_MAX_LENGTH} characters`, 'CATALOG_PROPOSALS_NAME_TOO_LONG');
 
-    const normalizedName = proposalType === 'tag' ? normalizeTagName(proposedName) : normalizeIngredientName(proposedName);
+    const normalizedName =
+        proposalType === 'tag'
+            ? normalizeTagName(proposedName)
+            : proposalType === 'ingredient'
+              ? normalizeIngredientName(proposedName)
+              : normalizeEquipmentName(proposedName);
 
     if (!normalizedName) throw badRequest('Proposal name must contain canonical letters or numbers', 'CATALOG_PROPOSALS_NAME_INVALID');
     if (normalizedName.length > PROPOSAL_NAME_MAX_LENGTH)
