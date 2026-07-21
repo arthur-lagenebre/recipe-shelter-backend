@@ -68,7 +68,7 @@ const EXPECTED_SEED_COUNTS: Record<string, number> = {
 
 const EXPECTED_ROLE_CODES = ['CatalogManager', 'CommentModerator', 'RecipeModerator', 'SuperAdmin', 'UserAdmin'];
 
-const EXPECTED_CONSTRAINT_COUNT = 178;
+const EXPECTED_CONSTRAINT_COUNT = 179;
 const EXPECTED_DECLARED_INDEX_COUNT = 130;
 const EXPECTED_EFFECTIVE_INDEX_COUNT = 134;
 const EXPECTED_TRIGGER_COUNT = 40;

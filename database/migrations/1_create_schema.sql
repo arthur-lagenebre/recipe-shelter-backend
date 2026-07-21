@@ -1699,8 +1699,8 @@ CREATE TABLE Comments (
     ON DELETE CASCADE,
   CONSTRAINT comments_parent_FK
     FOREIGN KEY (ParentCommentId) REFERENCES Comments(Id)
-    ON UPDATE CASCADE
-    ON DELETE SET NULL,
+    ON UPDATE RESTRICT
+    ON DELETE RESTRICT,
   CONSTRAINT comments_moderated_by_FK
     FOREIGN KEY (ModeratedByUserId) REFERENCES StaffProfiles(UserId)
     ON UPDATE RESTRICT
