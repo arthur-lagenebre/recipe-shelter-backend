@@ -26,7 +26,8 @@ export class FavoriteRepositoryMysql implements FavoriteRepository {
 
         const created = await this.findById(userId, recipeId);
 
-        if (!created) throw new Error('User created but cannot be reloaded');
+        if (!created)
+            throw new Error('User created but cannot be reloaded');
 
         return created;
     }

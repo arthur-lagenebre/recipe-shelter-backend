@@ -34,13 +34,15 @@ export function parseAdminCatalogProposalIdParam(value: unknown): number {
         throw badRequest('Catalog proposal id must be a positive integer', 'ADMIN_CATALOG_PROPOSALS_BAD_ID');
 
     const id = Number(value);
-    if (!Number.isSafeInteger(id)) throw badRequest('Catalog proposal id must be a positive integer', 'ADMIN_CATALOG_PROPOSALS_BAD_ID');
+    if (!Number.isSafeInteger(id))
+        throw badRequest('Catalog proposal id must be a positive integer', 'ADMIN_CATALOG_PROPOSALS_BAD_ID');
 
     return id;
 }
 
 export function parseAdminCatalogProposalListFilters(query: unknown): CatalogProposalListFilters {
-    if (!isRecord(query) || Array.isArray(query)) throw badRequest('Invalid catalog proposal query', 'ADMIN_CATALOG_PROPOSALS_BAD_QUERY');
+    if (!isRecord(query) || Array.isArray(query))
+        throw badRequest('Invalid catalog proposal query', 'ADMIN_CATALOG_PROPOSALS_BAD_QUERY');
 
     const status = query.status === undefined ? 'pending' : parseStatus(query.status);
     const proposalType = query.proposalType === undefined ? undefined : parseProposalType(query.proposalType);
@@ -169,22 +171,26 @@ function parseProposalType(value: unknown): CatalogProposalType {
 }
 
 function parseQueryId(value: unknown, label: string, code: string): number {
-    if (typeof value !== 'string' || !/^[1-9]\d*$/.test(value)) throw badRequest(`${label} must be a positive integer`, code);
+    if (typeof value !== 'string' || !/^[1-9]\d*$/.test(value))
+        throw badRequest(`${label} must be a positive integer`, code);
 
     const id = Number(value);
-    if (!Number.isSafeInteger(id)) throw badRequest(`${label} must be a positive integer`, code);
+    if (!Number.isSafeInteger(id))
+        throw badRequest(`${label} must be a positive integer`, code);
 
     return id;
 }
 
 function parseBodyId(value: unknown, label: string, code: string): number {
-    if (!Number.isSafeInteger(value) || Number(value) <= 0) throw badRequest(`${label} must be a positive integer`, code);
+    if (!Number.isSafeInteger(value) || Number(value) <= 0)
+        throw badRequest(`${label} must be a positive integer`, code);
 
     return Number(value);
 }
 
 function parseOptionalSearch(value: unknown): string | undefined {
-    if (value === undefined) return undefined;
+    if (value === undefined)
+        return undefined;
 
     const q = typeof value === 'string' ? value.trim() : '';
     if (!q || q.length > SEARCH_MAX_LENGTH)
@@ -197,7 +203,8 @@ function parseOptionalSearch(value: unknown): string | undefined {
 }
 
 function parseOptionalSlug(value: unknown, proposalType: CatalogProposalType): string | undefined {
-    if (value === undefined) return undefined;
+    if (value === undefined)
+        return undefined;
 
     const slug = typeof value === 'string' ? value.trim() : '';
     if (!slug || slug.length > SLUG_MAX_LENGTH || !SLUG_PATTERN.test(slug))
@@ -210,8 +217,10 @@ function parseOptionalSlug(value: unknown, proposalType: CatalogProposalType): s
 }
 
 function parseOptionalDescription(value: unknown): string | null | undefined {
-    if (value === undefined) return undefined;
-    if (value === null) return null;
+    if (value === undefined)
+        return undefined;
+    if (value === null)
+        return null;
 
     const description = typeof value === 'string' ? value.trim() : '';
     if (!description || description.length > DESCRIPTION_MAX_LENGTH)
@@ -227,7 +236,8 @@ function parseReason(value: unknown, action: ReviewAction): string {
     const reason = typeof value === 'string' ? value.trim() : '';
     const codePrefix = `ADMIN_CATALOG_PROPOSALS_${action.toUpperCase()}`;
 
-    if (!reason) throw badRequest('Review reason is required', `${codePrefix}_REASON_REQUIRED`);
+    if (!reason)
+        throw badRequest('Review reason is required', `${codePrefix}_REASON_REQUIRED`);
     if (reason.length < ACTION_REASON_MIN_LENGTH)
         throw badRequest(`Review reason must be at least ${ACTION_REASON_MIN_LENGTH} characters`, `${codePrefix}_REASON_TOO_SHORT`);
     if (reason.length > ACTION_REASON_MAX_LENGTH)

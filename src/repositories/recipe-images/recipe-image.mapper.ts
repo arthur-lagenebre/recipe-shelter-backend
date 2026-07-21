@@ -25,7 +25,8 @@ export function mapRecipeImage(row: RecipeImageRow): RecipeImage {
 }
 
 export function mapJoinedRecipeCoverImage(row: RecipeImageJoinedRow, getPublicUrl: PublicImageUrlBuilder): RecipeCoverImageDto | null {
-    if (!row.CoverImageId) return null;
+    if (!row.CoverImageId)
+        return null;
 
     if (
         !row.CoverImageLargeStorageKey ||

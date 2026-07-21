@@ -12,13 +12,15 @@ export type AdminUpdateCommentBody = {
 export function parseAdminCommentIdParam(value: unknown): number {
     const id = typeof value === 'string' ? Number(value) : NaN;
 
-    if (!Number.isInteger(id) || id <= 0) throw badRequest('Comment id must be a positive integer', 'ADMIN_COMMENTS_BAD_ID');
+    if (!Number.isInteger(id) || id <= 0)
+        throw badRequest('Comment id must be a positive integer', 'ADMIN_COMMENTS_BAD_ID');
 
     return id;
 }
 
 export function parseHideCommentBody(body: unknown): string {
-    if (!isRecord(body)) throw badRequest('Invalid body', 'ADMIN_COMMENTS_HIDE_BAD_BODY');
+    if (!isRecord(body))
+        throw badRequest('Invalid body', 'ADMIN_COMMENTS_HIDE_BAD_BODY');
 
     const reason = getRequiredString(body.reason, 'Hide reason is required', 'ADMIN_COMMENTS_HIDE_MISSING_REASON');
 
@@ -31,7 +33,8 @@ export function parseHideCommentBody(body: unknown): string {
 }
 
 export function parseAdminUpdateCommentBody(body: unknown): AdminUpdateCommentBody {
-    if (!isRecord(body)) throw badRequest('Invalid body', 'ADMIN_COMMENTS_UPDATE_BAD_BODY');
+    if (!isRecord(body))
+        throw badRequest('Invalid body', 'ADMIN_COMMENTS_UPDATE_BAD_BODY');
 
     const comment = getRequiredString(body.comment, 'Comment is required', 'ADMIN_COMMENTS_UPDATE_MISSING_COMMENT');
     const rating = getOptionalNullableNumber(body.rating, 'Rating must be a number or null', 'ADMIN_COMMENTS_UPDATE_BAD_RATING');

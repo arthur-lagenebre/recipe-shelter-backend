@@ -8,7 +8,8 @@ const REVOCATION_REASON_MAX_LENGTH = 1000;
 export function parseStaffUserIdParam(value: unknown): number {
     const id = typeof value === 'string' && /^\d+$/.test(value) ? Number(value) : Number.NaN;
 
-    if (!Number.isSafeInteger(id) || id <= 0) throw badRequest('Staff user ID must be a positive integer', 'STAFF_SESSION_BAD_USER_ID');
+    if (!Number.isSafeInteger(id) || id <= 0)
+        throw badRequest('Staff user ID must be a positive integer', 'STAFF_SESSION_BAD_USER_ID');
 
     return id;
 }
@@ -16,13 +17,15 @@ export function parseStaffUserIdParam(value: unknown): number {
 export function parseStaffSessionIdParam(value: unknown): string {
     const sessionId = typeof value === 'string' ? value.trim().toLowerCase() : '';
 
-    if (!UUID_PATTERN.test(sessionId)) throw badRequest('Staff session ID must be a UUID', 'STAFF_SESSION_BAD_ID');
+    if (!UUID_PATTERN.test(sessionId))
+        throw badRequest('Staff session ID must be a UUID', 'STAFF_SESSION_BAD_ID');
 
     return sessionId;
 }
 
 export function parseManagedStaffSessionRevocationBody(body: unknown): string {
-    if (!isRecord(body)) throw badRequest('Invalid body', 'STAFF_SESSION_REVOKE_BAD_BODY');
+    if (!isRecord(body))
+        throw badRequest('Invalid body', 'STAFF_SESSION_REVOKE_BAD_BODY');
 
     const reason = getRequiredString(body.reason, 'Session revocation reason is required', 'STAFF_SESSION_REVOKE_MISSING_REASON');
 

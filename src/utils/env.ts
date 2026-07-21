@@ -2,7 +2,8 @@ import 'dotenv/config';
 import path from 'node:path';
 
 function readNumber(value: string | undefined, fallback: number): number {
-    if (!value?.trim()) return fallback;
+    if (!value?.trim())
+        return fallback;
 
     const number = Number(value);
 
@@ -16,7 +17,8 @@ function readPositiveInteger(value: string | undefined, fallback: number): numbe
 }
 
 function readBoundedPositiveInteger(value: string | undefined, fallback: number, maximum: number, name: string): number {
-    if (!value?.trim()) return fallback;
+    if (!value?.trim())
+        return fallback;
 
     const number = Number(value);
 
@@ -29,11 +31,14 @@ function readBoundedPositiveInteger(value: string | undefined, fallback: number,
 function readBoolean(value: string | undefined, fallback: boolean): boolean {
     const normalizedValue = value?.trim().toLowerCase();
 
-    if (!normalizedValue) return fallback;
+    if (!normalizedValue)
+        return fallback;
 
-    if (['1', 'true', 'yes', 'on'].includes(normalizedValue)) return true;
+    if (['1', 'true', 'yes', 'on'].includes(normalizedValue))
+        return true;
 
-    if (['0', 'false', 'no', 'off'].includes(normalizedValue)) return false;
+    if (['0', 'false', 'no', 'off'].includes(normalizedValue))
+        return false;
 
     return fallback;
 }
@@ -49,7 +54,8 @@ function readOptionalString(value: string | undefined): string | undefined {
 function readImageStorageDriver(value: string | undefined): 'local' | 's3' {
     const driver = readString(value, 'local').toLowerCase();
 
-    if (driver === 'local' || driver === 's3') return driver;
+    if (driver === 'local' || driver === 's3')
+        return driver;
 
     throw new Error(`Unknown IMAGE_STORAGE_DRIVER: ${driver}`);
 }
@@ -57,7 +63,8 @@ function readImageStorageDriver(value: string | undefined): 'local' | 's3' {
 function requireImageStorageValue(name: string, value: string | undefined, driver: 'local' | 's3'): string {
     const normalized = value?.trim();
 
-    if (driver === 's3' && !normalized) throw new Error(`${name} is required when IMAGE_STORAGE_DRIVER=s3`);
+    if (driver === 's3' && !normalized)
+        throw new Error(`${name} is required when IMAGE_STORAGE_DRIVER=s3`);
 
     return normalized ?? '';
 }
@@ -65,7 +72,8 @@ function requireImageStorageValue(name: string, value: string | undefined, drive
 function readSameSite(value: string | undefined, fallback: 'strict' | 'lax' | 'none'): 'strict' | 'lax' | 'none' {
     const normalizedValue = value?.trim().toLowerCase();
 
-    if (normalizedValue === 'strict' || normalizedValue === 'lax' || normalizedValue === 'none') return normalizedValue;
+    if (normalizedValue === 'strict' || normalizedValue === 'lax' || normalizedValue === 'none')
+        return normalizedValue;
 
     return fallback;
 }
@@ -73,7 +81,8 @@ function readSameSite(value: string | undefined, fallback: 'strict' | 'lax' | 'n
 export function readDurationMs(value: string, fallback: number): number {
     const match = value.trim().match(/^(\d+)(ms|s|m|h|d)?$/i);
 
-    if (!match) return fallback;
+    if (!match)
+        return fallback;
 
     const amount = Number(match[1]);
     const unit = match[2]?.toLowerCase() ?? 's';
@@ -86,7 +95,8 @@ export function readDurationMs(value: string, fallback: number): number {
     };
     const multiplier = multipliers[unit];
 
-    if (!Number.isFinite(amount) || amount <= 0 || !multiplier) return fallback;
+    if (!Number.isFinite(amount) || amount <= 0 || !multiplier)
+        return fallback;
 
     return amount * multiplier;
 }
@@ -120,9 +130,12 @@ if (webAuthnOriginUrl.protocol !== 'https:' && !['localhost', '127.0.0.1', '::1'
 if (webAuthnHostname !== webAuthnRpId && !webAuthnHostname.endsWith(`.${webAuthnRpId}`))
     throw new Error('Staff WebAuthn RP ID must match the origin hostname or one of its parent domains');
 
-if (appJwtAudience === adminJwtAudience) throw new Error('App and admin JWT audiences must be different');
-if (appSessionCookieName === adminSessionCookieName) throw new Error('App and admin session cookie names must be different');
-if (adminJwtExpiresInMs >= appJwtExpiresInMs) throw new Error('Admin JWT lifetime must be shorter than app JWT lifetime');
+if (appJwtAudience === adminJwtAudience)
+    throw new Error('App and admin JWT audiences must be different');
+if (appSessionCookieName === adminSessionCookieName)
+    throw new Error('App and admin session cookie names must be different');
+if (adminJwtExpiresInMs >= appJwtExpiresInMs)
+    throw new Error('Admin JWT lifetime must be shorter than app JWT lifetime');
 if (adminSessionCookieMaxAgeMs >= appSessionCookieMaxAgeMs)
     throw new Error('Admin session cookie lifetime must be shorter than app session cookie lifetime');
 

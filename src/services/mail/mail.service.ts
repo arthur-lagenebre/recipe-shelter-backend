@@ -149,7 +149,8 @@ export class SmtpMailService implements Mailer, StaffInvitationMailer, SuperAdmi
             .filter(([, value]) => !value)
             .map(([name]) => name);
 
-        if (this.config.port <= 0) missingFields.push('SMTP_PORT');
+        if (this.config.port <= 0)
+            missingFields.push('SMTP_PORT');
 
         return missingFields;
     }

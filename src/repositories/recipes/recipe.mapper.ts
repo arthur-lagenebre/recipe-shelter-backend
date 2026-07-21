@@ -218,16 +218,19 @@ export function mapRecipeDetailComments(rows: RecipeDetailCommentRow[]): RecipeD
         }
 
         const parent = commentsById.get(comment.parentCommentId);
-        if (parent) parent.children.push(comment);
+        if (parent)
+            parent.children.push(comment);
     }
 
     return rootComments;
 }
 
 function mapRecipeDetailCommentText(row: RecipeDetailCommentRow): string {
-    if (row.DeletedAt !== null) return 'Commentaire supprimé par son auteur.';
+    if (row.DeletedAt !== null)
+        return 'Commentaire supprimé par son auteur.';
 
-    if (row.ModeratedAt !== null) return 'Ce commentaire a été masqué par la modération.';
+    if (row.ModeratedAt !== null)
+        return 'Ce commentaire a été masqué par la modération.';
 
     return row.Comment;
 }

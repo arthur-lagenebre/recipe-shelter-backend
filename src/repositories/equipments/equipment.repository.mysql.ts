@@ -26,7 +26,8 @@ export class EquipmentRepositoryMysql implements EquipmentRepository {
     }
 
     async findByIdsForUpdate(ids: number[], db: PoolConnection): Promise<Equipment[]> {
-        if (ids.length === 0) return [];
+        if (ids.length === 0)
+            return [];
 
         const placeholders = ids.map(() => '?').join(', ');
         const [rows] = await db.execute<EquipmentRow[]>(
@@ -50,12 +51,14 @@ export class EquipmentRepositoryMysql implements EquipmentRepository {
             ]);
             const equipment = await this.findByIdForUpdate(Number(result.insertId), db);
 
-            if (!equipment) throw new Error('Equipment created but cannot be reloaded');
+            if (!equipment)
+                throw new Error('Equipment created but cannot be reloaded');
 
             return { status: 'written', equipment };
         } catch (error) {
             const duplicateStatus = getDuplicateEquipmentStatus(error);
-            if (duplicateStatus) return { status: duplicateStatus };
+            if (duplicateStatus)
+                return { status: duplicateStatus };
 
             throw error;
         }
@@ -76,13 +79,17 @@ export class EquipmentRepositoryMysql implements EquipmentRepository {
 }
 
 function getDuplicateEquipmentStatus(error: unknown): 'normalized_name_taken' | 'slug_taken' | null {
-    if (!error || typeof error !== 'object' || !('code' in error) || error.code !== 'ER_DUP_ENTRY') return null;
+    if (!error || typeof error !== 'object' || !('code' in error) || error.code !== 'ER_DUP_ENTRY')
+        return null;
 
     const message = 'message' in error ? String(error.message) : '';
 
-    if (message.includes('equipments_normalized_name_UK')) return 'normalized_name_taken';
-    if (message.includes('equipments_name_UK')) return 'normalized_name_taken';
-    if (message.includes('equipments_slug_UK')) return 'slug_taken';
+    if (message.includes('equipments_normalized_name_UK'))
+        return 'normalized_name_taken';
+    if (message.includes('equipments_name_UK'))
+        return 'normalized_name_taken';
+    if (message.includes('equipments_slug_UK'))
+        return 'slug_taken';
 
     return null;
 }

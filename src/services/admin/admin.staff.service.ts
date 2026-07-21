@@ -61,20 +61,25 @@ export class AdminStaffService {
     ): Promise<AdminStaffAccount> {
         const cleanReason = validateActionReason(reason, 'disable');
 
-        if (staffUserId === actorStaffUserId) throw forbidden('Staff users cannot disable themselves', 'STAFF_DISABLE_SELF_FORBIDDEN');
+        if (staffUserId === actorStaffUserId)
+            throw forbidden('Staff users cannot disable themselves', 'STAFF_DISABLE_SELF_FORBIDDEN');
 
         return this.auditActions.run(async ({ db, audit }) => {
             const isLastActiveSuperAdmin = await this.staff.lockAndCheckLastActiveSuperAdmin(staffUserId, db);
 
-            if (isLastActiveSuperAdmin) throw lastActiveSuperAdminConflict();
+            if (isLastActiveSuperAdmin)
+                throw lastActiveSuperAdminConflict();
 
             const before = await this.requireStaff(staffUserId, db);
 
-            if (before.status === 'disabled') throw conflict('Staff account is already disabled', 'STAFF_ALREADY_DISABLED');
-            if (before.status !== 'active') throw conflict('Only an active staff account can be disabled', 'STAFF_DISABLE_INVALID_STATUS');
+            if (before.status === 'disabled')
+                throw conflict('Staff account is already disabled', 'STAFF_ALREADY_DISABLED');
+            if (before.status !== 'active')
+                throw conflict('Only an active staff account can be disabled', 'STAFF_DISABLE_INVALID_STATUS');
 
             const revokedSessionCount = await this.staff.disable(staffUserId, actorStaffUserId, cleanReason, db);
-            if (revokedSessionCount === null) throw conflict('Staff account status changed concurrently', 'STAFF_STATUS_CONFLICT');
+            if (revokedSessionCount === null)
+                throw conflict('Staff account status changed concurrently', 'STAFF_STATUS_CONFLICT');
 
             const after = await this.requireStaff(staffUserId, db);
             const auditReceipt = await this.recordLifecycleAudit(
@@ -104,7 +109,8 @@ export class AdminStaffService {
         return this.auditActions.run(async ({ db, audit }) => {
             const before = await this.requireStaff(staffUserId, db);
 
-            if (before.status !== 'disabled') throw conflict('Only a disabled staff account can be enabled', 'STAFF_ENABLE_INVALID_STATUS');
+            if (before.status !== 'disabled')
+                throw conflict('Only a disabled staff account can be enabled', 'STAFF_ENABLE_INVALID_STATUS');
             if (!before.mfaEnrolledAt)
                 throw conflict('Staff account must have MFA enrolled before it can be enabled', 'STAFF_ENABLE_MFA_REQUIRED');
 
@@ -169,15 +175,19 @@ export class AdminStaffService {
             const role = await this.requireRole(roleCode, db);
             const hasRole = before.roles.some((candidate) => candidate.id === role.id);
 
-            if (action === 'revoke' && role.code === SUPER_ADMIN_ROLE_CODE && isLastActiveSuperAdmin) throw lastActiveSuperAdminConflict();
-            if (action === 'grant' && hasRole) throw conflict('Staff role is already granted', 'STAFF_ROLE_ALREADY_GRANTED');
-            if (action === 'revoke' && !hasRole) throw conflict('Staff role is not granted', 'STAFF_ROLE_NOT_GRANTED');
+            if (action === 'revoke' && role.code === SUPER_ADMIN_ROLE_CODE && isLastActiveSuperAdmin)
+                throw lastActiveSuperAdminConflict();
+            if (action === 'grant' && hasRole)
+                throw conflict('Staff role is already granted', 'STAFF_ROLE_ALREADY_GRANTED');
+            if (action === 'revoke' && !hasRole)
+                throw conflict('Staff role is not granted', 'STAFF_ROLE_NOT_GRANTED');
 
             const changed =
                 action === 'grant'
                     ? await this.staff.grantRole(staffUserId, role.id, db)
                     : await this.staff.revokeRole(staffUserId, role.id, db);
-            if (!changed) throw conflict('Staff role assignment changed concurrently', 'STAFF_ROLE_CONFLICT');
+            if (!changed)
+                throw conflict('Staff role assignment changed concurrently', 'STAFF_ROLE_CONFLICT');
 
             const after = await this.requireStaff(staffUserId, db);
             await audit.record({
@@ -201,7 +211,8 @@ export class AdminStaffService {
     private async requireStaff(staffUserId: number, db: Parameters<AdminStaffRepository['findById']>[1]): Promise<AdminStaffAccount> {
         const account = await this.staff.findById(staffUserId, db);
 
-        if (!account) throw notFound('Staff user not found', 'STAFF_USER_NOT_FOUND');
+        if (!account)
+            throw notFound('Staff user not found', 'STAFF_USER_NOT_FOUND');
 
         return account;
     }
@@ -209,7 +220,8 @@ export class AdminStaffService {
     private async requireRole(roleCode: string, db: Parameters<AdminStaffRepository['findRoleByCode']>[1]): Promise<AdminStaffRole> {
         const role = await this.staff.findRoleByCode(roleCode, db);
 
-        if (!role) throw notFound('Staff role not found', 'STAFF_ROLE_NOT_FOUND');
+        if (!role)
+            throw notFound('Staff role not found', 'STAFF_ROLE_NOT_FOUND');
 
         return role;
     }
@@ -262,7 +274,8 @@ function validateActionReason(reason: string, action: StaffLifecycleAction | 'ro
         .join(' ');
     const codePrefix = `STAFF_${action.replace(' ', '_').toUpperCase()}`;
 
-    if (!cleanReason) throw badRequest(`${label} reason is required`, `${codePrefix}_MISSING_REASON`);
+    if (!cleanReason)
+        throw badRequest(`${label} reason is required`, `${codePrefix}_MISSING_REASON`);
     if (cleanReason.length < ACTION_REASON_MIN_LENGTH)
         throw badRequest(`${label} reason must be at least ${ACTION_REASON_MIN_LENGTH} characters`, `${codePrefix}_REASON_TOO_SHORT`);
     if (cleanReason.length > ACTION_REASON_MAX_LENGTH)

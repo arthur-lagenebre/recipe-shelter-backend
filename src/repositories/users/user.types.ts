@@ -12,15 +12,18 @@ export const ACCOUNT_TYPES = ['community', 'staff'] as const;
 export type AccountType = (typeof ACCOUNT_TYPES)[number];
 
 export function assertAccountType(value: unknown): asserts value is AccountType {
-    if (!ACCOUNT_TYPES.includes(value as AccountType)) throw new TypeError(`Invalid account type: ${String(value)}`);
+    if (!ACCOUNT_TYPES.includes(value as AccountType))
+        throw new TypeError(`Invalid account type: ${String(value)}`);
 }
 
 export function assertCommunityStatus(value: unknown): asserts value is CommunityStatus {
-    if (!COMMUNITY_STATUSES.includes(value as CommunityStatus)) throw new TypeError(`Invalid community status: ${String(value)}`);
+    if (!COMMUNITY_STATUSES.includes(value as CommunityStatus))
+        throw new TypeError(`Invalid community status: ${String(value)}`);
 }
 
 export function assertStaffStatus(value: unknown): asserts value is StaffStatus {
-    if (!STAFF_STATUSES.includes(value as StaffStatus)) throw new TypeError(`Invalid staff status: ${String(value)}`);
+    if (!STAFF_STATUSES.includes(value as StaffStatus))
+        throw new TypeError(`Invalid staff status: ${String(value)}`);
 }
 
 export type CommunityProfile = {

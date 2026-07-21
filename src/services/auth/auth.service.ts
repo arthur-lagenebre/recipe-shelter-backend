@@ -29,15 +29,20 @@ export class AuthService {
         const username = input.username.trim();
         const password = input.password;
 
-        if (!mail || !username || !password) throw badRequest('Missing fields', 'AUTH_MISSING_FIELDS');
+        if (!mail || !username || !password)
+            throw badRequest('Missing fields', 'AUTH_MISSING_FIELDS');
 
         const passwordError = validatePassword(password);
-        if (passwordError) throw badRequest(passwordError, 'AUTH_WEAK_PASSWORD');
+        if (passwordError)
+            throw badRequest(passwordError, 'AUTH_WEAK_PASSWORD');
 
-        if (await this.users.isEmailTaken(mail)) throw conflict('Email already used', 'AUTH_EMAIL_TAKEN');
+        if (await this.users.isEmailTaken(mail))
+            throw conflict('Email already used', 'AUTH_EMAIL_TAKEN');
 
-        if (username.length < 3) throw badRequest('Username too short', 'AUTH_WEAK_USERNAME');
-        if (await this.users.isUsernameTaken(username)) throw conflict('Username already used', 'AUTH_USERNAME_TAKEN');
+        if (username.length < 3)
+            throw badRequest('Username too short', 'AUTH_WEAK_USERNAME');
+        if (await this.users.isUsernameTaken(username))
+            throw conflict('Username already used', 'AUTH_USERNAME_TAKEN');
 
         const passwordHash = await bcrypt.hash(password, env.auth.bcryptCost);
         const user = await this.users.create({ mail, username, passwordHash, accountType: 'community', status: 'inactive' });
@@ -49,9 +54,12 @@ export class AuthService {
     async loginCommunity(input: { mail: string; password: string }): Promise<{ user: User; token: string }> {
         const authUser = await this.authenticatePassword(input);
 
-        if (authUser.accountType !== 'community') throw unauthorized('Invalid credentials', 'AUTH_INVALID_CREDENTIALS');
-        if (authUser.status === 'inactive') throw unauthorized('Email is not validated', 'EMAIL_NOT_VALIDATED');
-        if (authUser.status === 'banned') throw unauthorized('User is banned', 'USER_BANNED');
+        if (authUser.accountType !== 'community')
+            throw unauthorized('Invalid credentials', 'AUTH_INVALID_CREDENTIALS');
+        if (authUser.status === 'inactive')
+            throw unauthorized('Email is not validated', 'EMAIL_NOT_VALIDATED');
+        if (authUser.status === 'banned')
+            throw unauthorized('User is banned', 'USER_BANNED');
 
         const user = this.withoutPassword(authUser);
         const token = await this.createSession(user, 'app');
@@ -80,7 +88,8 @@ export class AuthService {
         const mfa = await this.staffMfa.completeAuthentication(input.flowId, input.credential);
         const user = await this.users.findById(mfa.staffUserId);
 
-        if (!user || user.accountType !== 'staff') throw unauthorized('Invalid MFA assertion', 'AUTH_INVALID_MFA_ASSERTION');
+        if (!user || user.accountType !== 'staff')
+            throw unauthorized('Invalid MFA assertion', 'AUTH_INVALID_MFA_ASSERTION');
 
         this.assertStaffCanAuthenticate(user);
         const token = await this.createSession(user, 'admin', {
@@ -106,7 +115,8 @@ export class AuthService {
     }
 
     async logout(token: string | null, realm: SessionRealm): Promise<void> {
-        if (!token) return;
+        if (!token)
+            return;
 
         let session;
         try {
@@ -115,9 +125,11 @@ export class AuthService {
             return;
         }
 
-        if (!session) return;
+        if (!session)
+            return;
 
-        if (realm === 'app') await this.sessions.revokeCommunitySession(session.sessionId, session.userId);
+        if (realm === 'app')
+            await this.sessions.revokeCommunitySession(session.sessionId, session.userId);
         else
             await this.sessions.revokeStaffSession({
                 id: session.sessionId,
@@ -131,15 +143,19 @@ export class AuthService {
         const mail = normalizeEmail(input.mail);
         const password = input.password;
 
-        if (!mail || !password) throw badRequest('Missing fields', 'AUTH_MISSING_FIELDS');
+        if (!mail || !password)
+            throw badRequest('Missing fields', 'AUTH_MISSING_FIELDS');
 
         const authUser = await this.users.findAuthByEmail(mail);
-        if (!authUser) throw unauthorized('Invalid credentials', 'AUTH_INVALID_CREDENTIALS');
+        if (!authUser)
+            throw unauthorized('Invalid credentials', 'AUTH_INVALID_CREDENTIALS');
 
-        if (!authUser.passwordHash) throw unauthorized('Invalid credentials', 'AUTH_INVALID_CREDENTIALS');
+        if (!authUser.passwordHash)
+            throw unauthorized('Invalid credentials', 'AUTH_INVALID_CREDENTIALS');
 
         const ok = await bcrypt.compare(password, authUser.passwordHash);
-        if (!ok) throw unauthorized('Invalid credentials', 'AUTH_INVALID_CREDENTIALS');
+        if (!ok)
+            throw unauthorized('Invalid credentials', 'AUTH_INVALID_CREDENTIALS');
 
         return authUser;
     }
@@ -150,10 +166,14 @@ export class AuthService {
     }
 
     private assertStaffCanAuthenticate(user: User): void {
-        if (user.accountType !== 'staff') throw unauthorized('Invalid credentials', 'AUTH_INVALID_CREDENTIALS');
-        if (user.status === 'invited') throw unauthorized('Staff invitation is not active', 'STAFF_INVITED');
-        if (user.status === 'locked') throw unauthorized('Staff account is locked', 'STAFF_LOCKED');
-        if (user.status === 'disabled') throw unauthorized('Staff account is disabled', 'STAFF_DISABLED');
+        if (user.accountType !== 'staff')
+            throw unauthorized('Invalid credentials', 'AUTH_INVALID_CREDENTIALS');
+        if (user.status === 'invited')
+            throw unauthorized('Staff invitation is not active', 'STAFF_INVITED');
+        if (user.status === 'locked')
+            throw unauthorized('Staff account is locked', 'STAFF_LOCKED');
+        if (user.status === 'disabled')
+            throw unauthorized('Staff account is disabled', 'STAFF_DISABLED');
     }
 
     private async createSession(
@@ -168,7 +188,8 @@ export class AuthService {
         if (realm === 'app') {
             await this.sessions.createCommunitySession({ id: sessionId, userId: user.id, expiresAt });
         } else {
-            if (!mfa) throw new TypeError('MFA verification is required for a staff session');
+            if (!mfa)
+                throw new TypeError('MFA verification is required for a staff session');
             const created = await this.sessions.createStaffSession({
                 id: sessionId,
                 userId: user.id,
@@ -179,7 +200,8 @@ export class AuthService {
                 ipAddress: mfa.ipAddress,
                 userAgent: mfa.userAgent
             });
-            if (!created) throw unauthorized('Staff account is no longer active', 'STAFF_SESSION_CREATION_FORBIDDEN');
+            if (!created)
+                throw unauthorized('Staff account is no longer active', 'STAFF_SESSION_CREATION_FORBIDDEN');
         }
 
         return signSessionToken(user, realm, sessionId);

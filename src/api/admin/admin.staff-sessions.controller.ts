@@ -22,7 +22,8 @@ export function createStaffSessionsController(staffSessions: StaffSessionService
             const sessionId = parseStaffSessionIdParam(req.params.sessionId);
 
             await staffSessions.revokeOwn(req.auth!.userId, sessionId, getAdminAuditRequestContext(req));
-            if (sessionId === currentSessionId) clearSessionCookie(res, 'admin');
+            if (sessionId === currentSessionId)
+                clearSessionCookie(res, 'admin');
 
             res.status(204).send();
         }),
@@ -48,7 +49,8 @@ export function createStaffSessionsController(staffSessions: StaffSessionService
 
             await staffSessions.revokeManaged(staffUserId, sessionId, req.auth!.userId, reason, getAdminAuditRequestContext(req));
 
-            if (staffUserId === req.auth!.userId && sessionId === currentSessionId) clearSessionCookie(res, 'admin');
+            if (staffUserId === req.auth!.userId && sessionId === currentSessionId)
+                clearSessionCookie(res, 'admin');
 
             res.status(204).send();
         })
@@ -61,7 +63,8 @@ function getCurrentStaffSessionId(req: Parameters<Handler>[0]): string {
     try {
         const session = token ? verifySessionToken(token, 'admin') : null;
 
-        if (session) return session.sessionId;
+        if (session)
+            return session.sessionId;
     } catch {
         // The authentication middleware normally rejects this state first.
     }

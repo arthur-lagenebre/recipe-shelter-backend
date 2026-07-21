@@ -52,16 +52,19 @@ export function mapPublicComments(rows: PublicCommentRow[]): PublicComment[] {
         }
 
         const parent = commentsById.get(comment.parentCommentId);
-        if (parent?.children) parent.children.push(comment);
+        if (parent?.children)
+            parent.children.push(comment);
     }
 
     return rootComments;
 }
 
 function mapPublicCommentText(row: Pick<CommentRow, 'Comment' | 'DeletedAt' | 'ModeratedAt'>): string {
-    if (row.DeletedAt !== null) return DELETED_COMMENT_TEXT;
+    if (row.DeletedAt !== null)
+        return DELETED_COMMENT_TEXT;
 
-    if (row.ModeratedAt !== null) return MODERATED_COMMENT_TEXT;
+    if (row.ModeratedAt !== null)
+        return MODERATED_COMMENT_TEXT;
 
     return row.Comment;
 }

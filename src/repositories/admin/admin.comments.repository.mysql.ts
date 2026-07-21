@@ -56,6 +56,13 @@ export class AdminCommentRepositoryMysql implements AdminCommentRepository {
         return row ? mapAdminComment(row) : null;
     }
 
+    async countReplies(commentId: number, db?: PoolConnection): Promise<number> {
+        const [rows] = await (db ?? this.db).execute(`SELECT COUNT(*) AS Count FROM Comments WHERE ParentCommentId = ?`, [commentId]);
+
+        const row = firstOrNull(rows as { Count: number }[]);
+        return row?.Count ?? 0;
+    }
+
     async hide(id: number, moderatedByUserId: number, moderationReason: string, db?: PoolConnection): Promise<boolean> {
         const [result] = await (db ?? this.db).execute<ResultSetHeader>(
             `UPDATE Comments SET ModeratedAt = CURRENT_TIMESTAMP, ModeratedByUserId = ?, ModerationReason = ? WHERE Id = ?`,
@@ -71,7 +78,8 @@ export class AdminCommentRepositoryMysql implements AdminCommentRepository {
             [commentId, auditLogId, commentId]
         );
 
-        if (result.affectedRows !== 1) throw new Error('Comment moderation log does not match its administrative audit entry');
+        if (result.affectedRows !== 1)
+            throw new Error('Comment moderation log does not match its administrative audit entry');
     }
 
     async unmoderate(id: number, db?: PoolConnection): Promise<boolean> {
@@ -99,7 +107,8 @@ export class AdminCommentRepositoryMysql implements AdminCommentRepository {
             input.id
         ]);
 
-        if (result.affectedRows === 0) return null;
+        if (result.affectedRows === 0)
+            return null;
 
         return this.findByIdForAdmin(input.id, db);
     }

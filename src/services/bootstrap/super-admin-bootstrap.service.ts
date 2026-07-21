@@ -40,13 +40,17 @@ export class SuperAdminBootstrapService {
         const mail = normalizeEmail(input.mail);
         const username = input.username.trim();
 
-        if (!mail) throw badRequest('Email is required', 'BOOTSTRAP_SUPER_ADMIN_MISSING_EMAIL');
+        if (!mail)
+            throw badRequest('Email is required', 'BOOTSTRAP_SUPER_ADMIN_MISSING_EMAIL');
         if (mail.length > MAX_EMAIL_LENGTH || !EMAIL_PATTERN.test(mail))
             throw badRequest('Invalid email', 'BOOTSTRAP_SUPER_ADMIN_INVALID_EMAIL');
 
-        if (!username) throw badRequest('Username is required', 'BOOTSTRAP_SUPER_ADMIN_MISSING_USERNAME');
-        if (username.length < MIN_USERNAME_LENGTH) throw badRequest('Username too short', 'BOOTSTRAP_SUPER_ADMIN_WEAK_USERNAME');
-        if (username.length > MAX_USERNAME_LENGTH) throw badRequest('Username too long', 'BOOTSTRAP_SUPER_ADMIN_USERNAME_TOO_LONG');
+        if (!username)
+            throw badRequest('Username is required', 'BOOTSTRAP_SUPER_ADMIN_MISSING_USERNAME');
+        if (username.length < MIN_USERNAME_LENGTH)
+            throw badRequest('Username too short', 'BOOTSTRAP_SUPER_ADMIN_WEAK_USERNAME');
+        if (username.length > MAX_USERNAME_LENGTH)
+            throw badRequest('Username too long', 'BOOTSTRAP_SUPER_ADMIN_USERNAME_TOO_LONG');
 
         const invitationToken = this.generateToken();
         const invitationTokenHash = this.hashToken(invitationToken);
@@ -72,7 +76,8 @@ export class SuperAdminBootstrapService {
             case 'created':
                 return { userId: result.userId };
             case 'super_admin_exists':
-                if (result.active) throw conflict('An active SuperAdmin already exists', 'SUPER_ADMIN_ALREADY_EXISTS');
+                if (result.active)
+                    throw conflict('An active SuperAdmin already exists', 'SUPER_ADMIN_ALREADY_EXISTS');
                 throw conflict('The first SuperAdmin has already been bootstrapped', 'BOOTSTRAP_SUPER_ADMIN_ALREADY_COMPLETED');
             case 'email_taken':
                 throw conflict('Email already used', 'BOOTSTRAP_SUPER_ADMIN_EMAIL_TAKEN');

@@ -1,5 +1,5 @@
 import { ADMIN_AUDIT_EVENT_TYPES, ADMIN_AUDIT_TARGET_TYPES } from './admin.audit.events.js';
-import { badRequest, notFound } from '../../utils/errors.js';
+import { badRequest, conflict, notFound } from '../../utils/errors.js';
 
 import type { AdminAuditActionRunner } from './admin.audit-action.runner.js';
 import type { AdminAuditRequestContext } from './admin.audit.service.js';
@@ -37,12 +37,14 @@ export class AdminCommentService {
         return this.auditActions.run(async ({ db, audit }) => {
             const comment = await this.adminCommentRepository.findByIdForAdmin(commentId, db);
 
-            if (!comment) throw notFound('Comment not found', 'COMMENTS_NOT_FOUND');
+            if (!comment)
+                throw notFound('Comment not found', 'COMMENTS_NOT_FOUND');
 
             const beforeValues = snapshotComment(comment);
             const hidden = await this.adminCommentRepository.hide(commentId, adminUserId, cleanReason, db);
 
-            if (!hidden) throw notFound('Comment not found', 'COMMENTS_NOT_FOUND');
+            if (!hidden)
+                throw notFound('Comment not found', 'COMMENTS_NOT_FOUND');
 
             const auditReceipt = await audit.record({
                 actorUserId: adminUserId,
@@ -69,12 +71,14 @@ export class AdminCommentService {
         return this.auditActions.run(async ({ db, audit }) => {
             const comment = await this.adminCommentRepository.findByIdForAdmin(commentId, db);
 
-            if (!comment) throw notFound('Comment not found', 'COMMENTS_NOT_FOUND');
+            if (!comment)
+                throw notFound('Comment not found', 'COMMENTS_NOT_FOUND');
 
             const beforeValues = snapshotComment(comment);
             const unmoderated = await this.adminCommentRepository.unmoderate(commentId, db);
 
-            if (!unmoderated) throw notFound('Comment not found', 'COMMENTS_NOT_FOUND');
+            if (!unmoderated)
+                throw notFound('Comment not found', 'COMMENTS_NOT_FOUND');
 
             await audit.record({
                 actorUserId: adminUserId,
@@ -99,12 +103,14 @@ export class AdminCommentService {
         return this.auditActions.run(async ({ db, audit }) => {
             const comment = await this.adminCommentRepository.findByIdForAdmin(commentId, db);
 
-            if (!comment) throw notFound('Comment not found', 'COMMENTS_NOT_FOUND');
+            if (!comment)
+                throw notFound('Comment not found', 'COMMENTS_NOT_FOUND');
 
             const beforeValues = snapshotComment(comment);
             const restored = await this.adminCommentRepository.restore(commentId, db);
 
-            if (!restored) throw notFound('Comment not found', 'COMMENTS_NOT_FOUND');
+            if (!restored)
+                throw notFound('Comment not found', 'COMMENTS_NOT_FOUND');
 
             await audit.record({
                 actorUserId: adminUserId,
@@ -128,11 +134,13 @@ export class AdminCommentService {
         return this.auditActions.run(async ({ db, audit }) => {
             const previousComment = await this.adminCommentRepository.findByIdForAdmin(input.id, db);
 
-            if (!previousComment) throw notFound('Comment not found', 'COMMENTS_NOT_FOUND');
+            if (!previousComment)
+                throw notFound('Comment not found', 'COMMENTS_NOT_FOUND');
 
             const comment = await this.adminCommentRepository.update(input, db);
 
-            if (!comment) throw notFound('Comment not found', 'COMMENTS_NOT_FOUND');
+            if (!comment)
+                throw notFound('Comment not found', 'COMMENTS_NOT_FOUND');
 
             await audit.record({
                 actorUserId: adminUserId,
@@ -152,11 +160,21 @@ export class AdminCommentService {
         return this.auditActions.run(async ({ db, audit }) => {
             const comment = await this.adminCommentRepository.findByIdForAdmin(commentId, db);
 
-            if (!comment) throw notFound('Comment not found', 'COMMENTS_NOT_FOUND');
+            if (!comment)
+                throw notFound('Comment not found', 'COMMENTS_NOT_FOUND');
+
+            const replyCount = await this.adminCommentRepository.countReplies(commentId, db);
+
+            if (replyCount > 0)
+                throw conflict(
+                    'This comment has replies and cannot be permanently deleted; delete its replies first',
+                    'ADMIN_COMMENTS_DELETE_HAS_REPLIES'
+                );
 
             const deleted = await this.adminCommentRepository.delete(commentId, db);
 
-            if (!deleted) throw notFound('Comment not found', 'COMMENTS_NOT_FOUND');
+            if (!deleted)
+                throw notFound('Comment not found', 'COMMENTS_NOT_FOUND');
 
             await audit.record({
                 actorUserId: adminUserId,
@@ -191,7 +209,8 @@ function snapshotComment(comment: AdminComment) {
 function validateHideReason(reason: string): string {
     const cleanReason = typeof reason === 'string' ? reason.trim() : '';
 
-    if (!cleanReason) throw badRequest('Hide reason is required', 'ADMIN_COMMENTS_HIDE_MISSING_REASON');
+    if (!cleanReason)
+        throw badRequest('Hide reason is required', 'ADMIN_COMMENTS_HIDE_MISSING_REASON');
     if (cleanReason.length < MODERATION_REASON_MIN_LENGTH)
         throw badRequest(`Hide reason must be at least ${MODERATION_REASON_MIN_LENGTH} characters`, 'ADMIN_COMMENTS_HIDE_REASON_TOO_SHORT');
     if (cleanReason.length > MODERATION_REASON_MAX_LENGTH)

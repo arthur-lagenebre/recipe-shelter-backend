@@ -101,13 +101,15 @@ export class CatalogProposalRepositoryMysql implements CatalogProposalRepository
             );
             insertId = result.insertId;
         } catch (error) {
-            if (isPendingDuplicate(error)) return { status: 'pending_duplicate' };
+            if (isPendingDuplicate(error))
+                return { status: 'pending_duplicate' };
 
             throw error;
         }
 
         const proposal = await this.findById(insertId);
-        if (!proposal) throw new Error('Catalog proposal created but cannot be reloaded');
+        if (!proposal)
+            throw new Error('Catalog proposal created but cannot be reloaded');
 
         return { status: 'created', proposal };
     }
@@ -155,7 +157,8 @@ export class CatalogProposalRepositoryMysql implements CatalogProposalRepository
             ]
         );
 
-        if (result.affectedRows === 0) return null;
+        if (result.affectedRows === 0)
+            return null;
 
         return this.findById(input.proposalId, db);
     }

@@ -45,7 +45,8 @@ export class StaffSessionService {
                 db
             );
 
-            if (!revoked) throw notFound('Active staff session not found', 'STAFF_SESSION_NOT_FOUND');
+            if (!revoked)
+                throw notFound('Active staff session not found', 'STAFF_SESSION_NOT_FOUND');
 
             await this.recordRevocation(audit, sessionId, staffUserId, staffUserId, 'self', context);
         });
@@ -102,7 +103,8 @@ export class StaffSessionService {
                 db
             );
 
-            if (!revoked) throw notFound('Active staff session not found', 'STAFF_SESSION_NOT_FOUND');
+            if (!revoked)
+                throw notFound('Active staff session not found', 'STAFF_SESSION_NOT_FOUND');
 
             await this.recordRevocation(
                 audit,
@@ -128,7 +130,8 @@ export class StaffSessionService {
     private async requireStaffUser(staffUserId: number, db?: PoolConnection) {
         const user = await this.users.findById(staffUserId, db);
 
-        if (!user || user.accountType !== 'staff') throw notFound('Staff user not found', 'STAFF_USER_NOT_FOUND');
+        if (!user || user.accountType !== 'staff')
+            throw notFound('Staff user not found', 'STAFF_USER_NOT_FOUND');
 
         return user;
     }
@@ -166,7 +169,8 @@ export class StaffSessionService {
 function validateManagedRevocationReason(reason: string): string {
     const cleanReason = typeof reason === 'string' ? reason.trim() : '';
 
-    if (!cleanReason) throw badRequest('Session revocation reason is required', 'STAFF_SESSION_REVOKE_MISSING_REASON');
+    if (!cleanReason)
+        throw badRequest('Session revocation reason is required', 'STAFF_SESSION_REVOKE_MISSING_REASON');
     if (cleanReason.length < MANAGED_REVOCATION_REASON_MIN_LENGTH)
         throw badRequest(
             `Session revocation reason must be at least ${MANAGED_REVOCATION_REASON_MIN_LENGTH} characters`,

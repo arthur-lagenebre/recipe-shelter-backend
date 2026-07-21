@@ -396,7 +396,8 @@ export class AdminCatalogProposalService {
     ): Promise<CatalogProposal> {
         const proposal = await this.proposals.findByIdForUpdate(proposalId, db);
 
-        if (!proposal) throw notFound('Catalog proposal not found', 'ADMIN_CATALOG_PROPOSALS_NOT_FOUND');
+        if (!proposal)
+            throw notFound('Catalog proposal not found', 'ADMIN_CATALOG_PROPOSALS_NOT_FOUND');
         if (proposal.status !== 'pending')
             throw conflict('Catalog proposal has already been reviewed', 'ADMIN_CATALOG_PROPOSALS_ALREADY_REVIEWED');
         if (expectedType !== undefined && proposal.proposalType !== expectedType)
@@ -434,7 +435,8 @@ export class AdminCatalogProposalService {
             db
         );
 
-        if (!reviewed) throw conflict('Catalog proposal status changed concurrently', 'ADMIN_CATALOG_PROPOSALS_STATUS_CONFLICT');
+        if (!reviewed)
+            throw conflict('Catalog proposal status changed concurrently', 'ADMIN_CATALOG_PROPOSALS_STATUS_CONFLICT');
 
         return reviewed;
     }
@@ -447,7 +449,8 @@ function validateListFilters(filters: CatalogProposalListFilters): CatalogPropos
         throw badRequest('Catalog proposal status is invalid', 'ADMIN_CATALOG_PROPOSALS_BAD_STATUS');
     if (filters.proposalType !== undefined && !PROPOSAL_TYPES.has(filters.proposalType))
         throw badRequest('Catalog proposal type is invalid', 'ADMIN_CATALOG_PROPOSALS_BAD_TYPE');
-    if (filters.recipeId !== undefined) requirePositiveId(filters.recipeId, 'Recipe id', 'ADMIN_CATALOG_PROPOSALS_BAD_RECIPE_ID');
+    if (filters.recipeId !== undefined)
+        requirePositiveId(filters.recipeId, 'Recipe id', 'ADMIN_CATALOG_PROPOSALS_BAD_RECIPE_ID');
     if (filters.authorUserId !== undefined)
         requirePositiveId(filters.authorUserId, 'Author user id', 'ADMIN_CATALOG_PROPOSALS_BAD_AUTHOR_ID');
     if (filters.q !== undefined && (typeof filters.q !== 'string' || !filters.q.trim() || filters.q.trim().length > SEARCH_MAX_LENGTH))
@@ -549,7 +552,8 @@ function requireCommand(input: unknown, action: ReviewAction): asserts input is 
 }
 
 function validateOptionalSlug(value: unknown, proposalType: CatalogProposalType): string | undefined {
-    if (value === undefined) return undefined;
+    if (value === undefined)
+        return undefined;
 
     const slug = typeof value === 'string' ? value.trim() : '';
     if (!slug || slug.length > SLUG_MAX_LENGTH || !SLUG_PATTERN.test(slug))
@@ -562,7 +566,8 @@ function validateOptionalSlug(value: unknown, proposalType: CatalogProposalType)
 }
 
 function validateOptionalDescription(value: unknown): string | null {
-    if (value === undefined || value === null) return null;
+    if (value === undefined || value === null)
+        return null;
     if (typeof value !== 'string')
         throw badRequest('Tag description must be a string or null', 'ADMIN_CATALOG_PROPOSALS_TAG_DESCRIPTION_INVALID');
 
@@ -580,7 +585,8 @@ function validateActionReason(value: unknown, action: ReviewAction): string {
     const reason = typeof value === 'string' ? value.trim() : '';
     const codePrefix = `ADMIN_CATALOG_PROPOSALS_${action.toUpperCase()}`;
 
-    if (!reason) throw badRequest('Review reason is required', `${codePrefix}_REASON_REQUIRED`);
+    if (!reason)
+        throw badRequest('Review reason is required', `${codePrefix}_REASON_REQUIRED`);
     if (reason.length < ACTION_REASON_MIN_LENGTH)
         throw badRequest(`Review reason must be at least ${ACTION_REASON_MIN_LENGTH} characters`, `${codePrefix}_REASON_TOO_SHORT`);
     if (reason.length > ACTION_REASON_MAX_LENGTH)
@@ -590,7 +596,8 @@ function validateActionReason(value: unknown, action: ReviewAction): string {
 }
 
 function requirePositiveId(value: unknown, label: string, code: string): number {
-    if (!Number.isSafeInteger(value) || Number(value) <= 0) throw badRequest(`${label} must be a positive integer`, code);
+    if (!Number.isSafeInteger(value) || Number(value) <= 0)
+        throw badRequest(`${label} must be a positive integer`, code);
 
     return Number(value);
 }
@@ -598,7 +605,8 @@ function requirePositiveId(value: unknown, label: string, code: string): number 
 function requireWrittenTag(result: AdminTagWriteResult): Tag {
     if (result.status === 'normalized_name_taken')
         throw conflict('An active tag already uses this canonical name', 'ADMIN_CATALOG_PROPOSALS_CANONICAL_NAME_TAKEN');
-    if (result.status === 'slug_taken') throw conflict('A tag already uses this slug', 'ADMIN_CATALOG_PROPOSALS_TAG_SLUG_TAKEN');
+    if (result.status === 'slug_taken')
+        throw conflict('A tag already uses this slug', 'ADMIN_CATALOG_PROPOSALS_TAG_SLUG_TAKEN');
 
     return result.tag;
 }
@@ -629,18 +637,22 @@ function requireWrittenAlias(result: AdminIngredientAliasWriteResult): Ingredien
 }
 
 function requireActiveTagTarget(tag: Tag | undefined): asserts tag is Tag {
-    if (!tag) throw notFound('Target tag not found', 'ADMIN_CATALOG_PROPOSALS_TARGET_TAG_NOT_FOUND');
-    if (tag.status !== 'active') throw conflict('Target tag must be active', 'ADMIN_CATALOG_PROPOSALS_TARGET_TAG_NOT_ACTIVE');
+    if (!tag)
+        throw notFound('Target tag not found', 'ADMIN_CATALOG_PROPOSALS_TARGET_TAG_NOT_FOUND');
+    if (tag.status !== 'active')
+        throw conflict('Target tag must be active', 'ADMIN_CATALOG_PROPOSALS_TARGET_TAG_NOT_ACTIVE');
 }
 
 function requireActiveIngredientTarget(ingredient: Ingredient | undefined): asserts ingredient is Ingredient {
-    if (!ingredient) throw notFound('Target ingredient not found', 'ADMIN_CATALOG_PROPOSALS_TARGET_INGREDIENT_NOT_FOUND');
+    if (!ingredient)
+        throw notFound('Target ingredient not found', 'ADMIN_CATALOG_PROPOSALS_TARGET_INGREDIENT_NOT_FOUND');
     if (ingredient.status !== 'active')
         throw conflict('Target ingredient must be active', 'ADMIN_CATALOG_PROPOSALS_TARGET_INGREDIENT_NOT_ACTIVE');
 }
 
 function requireActiveEquipmentTarget(equipment: Equipment | undefined): asserts equipment is Equipment {
-    if (!equipment) throw notFound('Target equipment not found', 'ADMIN_CATALOG_PROPOSALS_TARGET_EQUIPMENT_NOT_FOUND');
+    if (!equipment)
+        throw notFound('Target equipment not found', 'ADMIN_CATALOG_PROPOSALS_TARGET_EQUIPMENT_NOT_FOUND');
 }
 
 function snapshotFilters(filters: CatalogProposalListFilters) {

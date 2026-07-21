@@ -63,7 +63,8 @@ export class S3ImageStorage implements ImageStorage {
             );
             return true;
         } catch (error) {
-            if (isNotFound(error)) return false;
+            if (isNotFound(error))
+                return false;
 
             throw error;
         }
@@ -75,7 +76,8 @@ export class S3ImageStorage implements ImageStorage {
 }
 
 function isNotFound(error: unknown): boolean {
-    if (!error || typeof error !== 'object') return false;
+    if (!error || typeof error !== 'object')
+        return false;
 
     const value = error as { name?: unknown; $metadata?: { httpStatusCode?: unknown } };
 

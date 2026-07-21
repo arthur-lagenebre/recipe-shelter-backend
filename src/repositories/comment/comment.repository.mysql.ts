@@ -18,7 +18,8 @@ export class CommentRepositoryMysql implements CommentRepository {
         const insertId = Number((result as { insertId: number }).insertId);
         const created = await this.findPublicById(insertId);
 
-        if (!created) throw new Error('Comment created but cannot be reloaded');
+        if (!created)
+            throw new Error('Comment created but cannot be reloaded');
 
         return created;
     }
@@ -29,11 +30,13 @@ export class CommentRepositoryMysql implements CommentRepository {
             [input.comment, input.rating ?? null, input.id, input.userId]
         );
 
-        if (result.affectedRows === 0) return null;
+        if (result.affectedRows === 0)
+            return null;
 
         const updated = await this.findPublicById(input.id);
 
-        if (!updated) throw new Error('Comment updated but cannot be reloaded');
+        if (!updated)
+            throw new Error('Comment updated but cannot be reloaded');
 
         return updated;
     }

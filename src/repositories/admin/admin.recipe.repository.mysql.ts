@@ -47,7 +47,8 @@ export class AdminRecipeRepositoryMysql implements AdminRecipeRepository {
         );
 
         const row = firstOrNull(rows as RecipeAdminRow[]);
-        if (!row) return null;
+        if (!row)
+            return null;
 
         const recipe = mapRecipe(row, this.getPublicImageUrl);
         const [ingredientRows, stepRows, equipmentRows, tagRows] = await Promise.all([
@@ -126,7 +127,8 @@ export class AdminRecipeRepositoryMysql implements AdminRecipeRepository {
             [recipeId, auditLogId, recipeId]
         );
 
-        if (result.affectedRows !== 1) throw new Error('Recipe moderation log does not match its administrative audit entry');
+        if (result.affectedRows !== 1)
+            throw new Error('Recipe moderation log does not match its administrative audit entry');
     }
 
     async delete(id: number, db?: PoolConnection): Promise<boolean> {

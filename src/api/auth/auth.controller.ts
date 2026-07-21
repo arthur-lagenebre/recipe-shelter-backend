@@ -72,7 +72,8 @@ export function createAuthController(
     });
 
     const me: Handler = (req, res) => {
-        if (!req.auth) throw unauthorized('Unauthorized', 'AUTH_UNAUTHORIZED');
+        if (!req.auth)
+            throw unauthorized('Unauthorized', 'AUTH_UNAUTHORIZED');
 
         res.status(200).json({ auth: req.auth });
     };

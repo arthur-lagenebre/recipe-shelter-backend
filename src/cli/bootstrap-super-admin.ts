@@ -18,7 +18,8 @@ async function main(): Promise<void> {
     } catch (error) {
         process.stderr.write(`${formatCommandError(error)}\n`);
 
-        if (error instanceof CommandUsageError) process.stderr.write(`${BOOTSTRAP_SUPER_ADMIN_USAGE}\n`);
+        if (error instanceof CommandUsageError)
+            process.stderr.write(`${BOOTSTRAP_SUPER_ADMIN_USAGE}\n`);
 
         process.exitCode = 1;
     } finally {
@@ -27,9 +28,11 @@ async function main(): Promise<void> {
 }
 
 export function formatCommandError(error: unknown): string {
-    if (error instanceof HttpError) return `${error.code ?? 'BOOTSTRAP_SUPER_ADMIN_FAILED'}: ${error.message}`;
+    if (error instanceof HttpError)
+        return `${error.code ?? 'BOOTSTRAP_SUPER_ADMIN_FAILED'}: ${error.message}`;
 
-    if (error instanceof CommandUsageError) return `BOOTSTRAP_SUPER_ADMIN_INVALID_ARGUMENTS: ${error.message}`;
+    if (error instanceof CommandUsageError)
+        return `BOOTSTRAP_SUPER_ADMIN_INVALID_ARGUMENTS: ${error.message}`;
 
     return 'BOOTSTRAP_SUPER_ADMIN_FAILED: The SuperAdmin could not be created.';
 }

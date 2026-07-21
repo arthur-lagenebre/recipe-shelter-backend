@@ -15,16 +15,19 @@ const ACTION_REASON_MAX_LENGTH = 1000;
 const TAG_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 export function parseAdminTagIdParam(value: unknown): number {
-    if (typeof value !== 'string' || !/^[1-9]\d*$/.test(value)) throw badRequest('Tag id must be a positive integer', 'ADMIN_TAGS_BAD_ID');
+    if (typeof value !== 'string' || !/^[1-9]\d*$/.test(value))
+        throw badRequest('Tag id must be a positive integer', 'ADMIN_TAGS_BAD_ID');
 
     const id = Number(value);
-    if (!Number.isSafeInteger(id)) throw badRequest('Tag id must be a positive integer', 'ADMIN_TAGS_BAD_ID');
+    if (!Number.isSafeInteger(id))
+        throw badRequest('Tag id must be a positive integer', 'ADMIN_TAGS_BAD_ID');
 
     return id;
 }
 
 export function parseAdminTagListFilters(query: unknown): AdminTagListFilters {
-    if (!isRecord(query) || Array.isArray(query)) throw badRequest('Invalid tag query', 'ADMIN_TAGS_BAD_QUERY');
+    if (!isRecord(query) || Array.isArray(query))
+        throw badRequest('Invalid tag query', 'ADMIN_TAGS_BAD_QUERY');
 
     const status = parseOptionalStatus(query.status);
     const groupId = parseOptionalQueryId(query.groupId);
@@ -38,7 +41,8 @@ export function parseAdminTagListFilters(query: unknown): AdminTagListFilters {
 }
 
 export function parseCreateAdminTagBody(body: unknown): AdminCreateTagCommand {
-    if (!isRecord(body) || Array.isArray(body)) throw badRequest('Invalid tag body', 'ADMIN_TAGS_CREATE_BAD_BODY');
+    if (!isRecord(body) || Array.isArray(body))
+        throw badRequest('Invalid tag body', 'ADMIN_TAGS_CREATE_BAD_BODY');
 
     const groupId = parseBodyId(body.groupId, 'Tag group id', 'ADMIN_TAGS_BAD_GROUP_ID');
     const name = parseRequiredName(body.name);
@@ -54,7 +58,8 @@ export function parseCreateAdminTagBody(body: unknown): AdminCreateTagCommand {
 }
 
 export function parseUpdateAdminTagBody(body: unknown): AdminUpdateTagCommand {
-    if (!isRecord(body) || Array.isArray(body)) throw badRequest('Invalid tag body', 'ADMIN_TAGS_UPDATE_BAD_BODY');
+    if (!isRecord(body) || Array.isArray(body))
+        throw badRequest('Invalid tag body', 'ADMIN_TAGS_UPDATE_BAD_BODY');
 
     const groupId = body.groupId === undefined ? undefined : parseBodyId(body.groupId, 'Tag group id', 'ADMIN_TAGS_BAD_GROUP_ID');
     const name = body.name === undefined ? undefined : parseRequiredName(body.name);
@@ -73,13 +78,15 @@ export function parseUpdateAdminTagBody(body: unknown): AdminUpdateTagCommand {
 }
 
 export function parseAdminTagActionReasonBody(body: unknown, action: 'deprecate' | 'restore'): string {
-    if (!isRecord(body) || Array.isArray(body)) throw badRequest('Invalid tag action body', `ADMIN_TAGS_${action.toUpperCase()}_BAD_BODY`);
+    if (!isRecord(body) || Array.isArray(body))
+        throw badRequest('Invalid tag action body', `ADMIN_TAGS_${action.toUpperCase()}_BAD_BODY`);
 
     return parseReason(body.reason, action);
 }
 
 export function parseMergeAdminTagBody(body: unknown): AdminMergeTagCommand {
-    if (!isRecord(body) || Array.isArray(body)) throw badRequest('Invalid tag merge body', 'ADMIN_TAGS_MERGE_BAD_BODY');
+    if (!isRecord(body) || Array.isArray(body))
+        throw badRequest('Invalid tag merge body', 'ADMIN_TAGS_MERGE_BAD_BODY');
 
     return {
         targetTagId: parseBodyId(body.targetTagId, 'Merge target tag id', 'ADMIN_TAGS_MERGE_BAD_TARGET_ID'),
@@ -88,7 +95,8 @@ export function parseMergeAdminTagBody(body: unknown): AdminMergeTagCommand {
 }
 
 function parseOptionalStatus(value: unknown): TagStatus | undefined {
-    if (value === undefined) return undefined;
+    if (value === undefined)
+        return undefined;
     if (typeof value !== 'string' || !TAG_STATUSES.has(value as TagStatus))
         throw badRequest('Tag status must be active, deprecated or merged', 'ADMIN_TAGS_BAD_STATUS');
 
@@ -96,19 +104,23 @@ function parseOptionalStatus(value: unknown): TagStatus | undefined {
 }
 
 function parseOptionalQueryId(value: unknown): number | undefined {
-    if (value === undefined) return undefined;
+    if (value === undefined)
+        return undefined;
     if (typeof value !== 'string' || !/^[1-9]\d*$/.test(value))
         throw badRequest('Tag group id must be a positive integer', 'ADMIN_TAGS_BAD_GROUP_ID');
 
     const id = Number(value);
-    if (!Number.isSafeInteger(id)) throw badRequest('Tag group id must be a positive integer', 'ADMIN_TAGS_BAD_GROUP_ID');
+    if (!Number.isSafeInteger(id))
+        throw badRequest('Tag group id must be a positive integer', 'ADMIN_TAGS_BAD_GROUP_ID');
 
     return id;
 }
 
 function parseOptionalSearch(value: unknown): string | undefined {
-    if (value === undefined) return undefined;
-    if (typeof value !== 'string') throw badRequest('Tag search must be a non-empty string', 'ADMIN_TAGS_BAD_SEARCH');
+    if (value === undefined)
+        return undefined;
+    if (typeof value !== 'string')
+        throw badRequest('Tag search must be a non-empty string', 'ADMIN_TAGS_BAD_SEARCH');
 
     const q = value.trim();
     if (!q || q.length > TAG_SEARCH_MAX_LENGTH)
@@ -118,7 +130,8 @@ function parseOptionalSearch(value: unknown): string | undefined {
 }
 
 function parseBodyId(value: unknown, label: string, code: string): number {
-    if (!Number.isSafeInteger(value) || Number(value) <= 0) throw badRequest(`${label} must be a positive integer`, code);
+    if (!Number.isSafeInteger(value) || Number(value) <= 0)
+        throw badRequest(`${label} must be a positive integer`, code);
 
     return Number(value);
 }
@@ -126,7 +139,8 @@ function parseBodyId(value: unknown, label: string, code: string): number {
 function parseRequiredName(value: unknown): string {
     const name = typeof value === 'string' ? value.trim() : '';
 
-    if (!name) throw badRequest('Tag name is required', 'ADMIN_TAGS_NAME_REQUIRED');
+    if (!name)
+        throw badRequest('Tag name is required', 'ADMIN_TAGS_NAME_REQUIRED');
     if (name.length > TAG_NAME_MAX_LENGTH)
         throw badRequest(`Tag name must be at most ${TAG_NAME_MAX_LENGTH} characters`, 'ADMIN_TAGS_NAME_TOO_LONG');
 
@@ -134,8 +148,10 @@ function parseRequiredName(value: unknown): string {
 }
 
 function parseOptionalSlug(value: unknown): string | undefined {
-    if (value === undefined) return undefined;
-    if (typeof value !== 'string') throw badRequest('Tag slug is invalid', 'ADMIN_TAGS_SLUG_INVALID');
+    if (value === undefined)
+        return undefined;
+    if (typeof value !== 'string')
+        throw badRequest('Tag slug is invalid', 'ADMIN_TAGS_SLUG_INVALID');
 
     const slug = value.trim();
     if (!slug || slug.length > TAG_SLUG_MAX_LENGTH || !TAG_SLUG_PATTERN.test(slug))
@@ -145,12 +161,16 @@ function parseOptionalSlug(value: unknown): string | undefined {
 }
 
 function parseOptionalDescription(value: unknown): string | null | undefined {
-    if (value === undefined) return undefined;
-    if (value === null) return null;
-    if (typeof value !== 'string') throw badRequest('Tag description must be a string or null', 'ADMIN_TAGS_DESCRIPTION_INVALID');
+    if (value === undefined)
+        return undefined;
+    if (value === null)
+        return null;
+    if (typeof value !== 'string')
+        throw badRequest('Tag description must be a string or null', 'ADMIN_TAGS_DESCRIPTION_INVALID');
 
     const description = value.trim();
-    if (!description) throw badRequest('Tag description cannot be blank', 'ADMIN_TAGS_DESCRIPTION_INVALID');
+    if (!description)
+        throw badRequest('Tag description cannot be blank', 'ADMIN_TAGS_DESCRIPTION_INVALID');
     if (description.length > TAG_DESCRIPTION_MAX_LENGTH)
         throw badRequest(`Tag description must be at most ${TAG_DESCRIPTION_MAX_LENGTH} characters`, 'ADMIN_TAGS_DESCRIPTION_TOO_LONG');
 
@@ -161,7 +181,8 @@ function parseReason(value: unknown, action: 'deprecate' | 'restore' | 'merge'):
     const reason = typeof value === 'string' ? value.trim() : '';
     const codePrefix = `ADMIN_TAGS_${action.toUpperCase()}`;
 
-    if (!reason) throw badRequest('Action reason is required', `${codePrefix}_REASON_REQUIRED`);
+    if (!reason)
+        throw badRequest('Action reason is required', `${codePrefix}_REASON_REQUIRED`);
     if (reason.length < ACTION_REASON_MIN_LENGTH)
         throw badRequest(`Action reason must be at least ${ACTION_REASON_MIN_LENGTH} characters`, `${codePrefix}_REASON_TOO_SHORT`);
     if (reason.length > ACTION_REASON_MAX_LENGTH)

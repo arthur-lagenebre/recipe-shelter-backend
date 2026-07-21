@@ -101,10 +101,12 @@ export class StaffMfaService implements StaffMfaManager {
 
     async beginEnrollment(invitationToken: string): Promise<StaffMfaOptionsResult<PublicKeyCredentialCreationOptionsJSON>> {
         const cleanToken = invitationToken.trim();
-        if (!cleanToken) throw badRequest('Invitation token is required', 'STAFF_MFA_INVITATION_TOKEN_REQUIRED');
+        if (!cleanToken)
+            throw badRequest('Invitation token is required', 'STAFF_MFA_INVITATION_TOKEN_REQUIRED');
 
         const context = await this.repository.findEnrollmentContext(this.hashInvitationToken(cleanToken));
-        if (!context) throw badRequest('Invalid, expired or already used invitation token', 'STAFF_MFA_INVITATION_INVALID');
+        if (!context)
+            throw badRequest('Invalid, expired or already used invitation token', 'STAFF_MFA_INVITATION_INVALID');
 
         const credentials = await this.repository.findCredentialsByStaffUserId(context.staffUserId);
         const publicKey = await this.webAuthn.generateRegistrationOptions({
@@ -134,7 +136,8 @@ export class StaffMfaService implements StaffMfaManager {
             challenge: publicKey.challenge,
             ttlMs: this.challengeTtlMs
         });
-        if (!saved) throw badRequest('Invalid or expired staff invitation', 'STAFF_MFA_INVITATION_INVALID');
+        if (!saved)
+            throw badRequest('Invalid or expired staff invitation', 'STAFF_MFA_INVITATION_INVALID');
 
         return { flowId, publicKey };
     }
@@ -146,11 +149,13 @@ export class StaffMfaService implements StaffMfaManager {
         credential: RegistrationResponseJSON;
     }): Promise<{ userId: number; status: 'active'; mfaEnrolled: true }> {
         const passwordError = validatePassword(input.password);
-        if (passwordError) throw badRequest(passwordError, 'AUTH_WEAK_PASSWORD');
+        if (passwordError)
+            throw badRequest(passwordError, 'AUTH_WEAK_PASSWORD');
 
         const invitationTokenHash = this.hashInvitationToken(input.invitationToken.trim());
         const challenge = await this.repository.findRegistrationChallenge(input.flowId, invitationTokenHash);
-        if (!challenge) throw badRequest('Invalid or expired MFA enrollment flow', 'STAFF_MFA_ENROLLMENT_INVALID');
+        if (!challenge)
+            throw badRequest('Invalid or expired MFA enrollment flow', 'STAFF_MFA_ENROLLMENT_INVALID');
 
         let verification;
         try {
@@ -188,9 +193,11 @@ export class StaffMfaService implements StaffMfaManager {
                 }
             });
 
-            if (!completed) throw badRequest('Invalid or expired MFA enrollment flow', 'STAFF_MFA_ENROLLMENT_INVALID');
+            if (!completed)
+                throw badRequest('Invalid or expired MFA enrollment flow', 'STAFF_MFA_ENROLLMENT_INVALID');
         } catch (error) {
-            if (isDuplicateEntry(error)) throw conflict('This WebAuthn credential is already enrolled', 'STAFF_MFA_CREDENTIAL_EXISTS');
+            if (isDuplicateEntry(error))
+                throw conflict('This WebAuthn credential is already enrolled', 'STAFF_MFA_CREDENTIAL_EXISTS');
             throw error;
         }
 
@@ -202,7 +209,8 @@ export class StaffMfaService implements StaffMfaManager {
         expectedSessionVersion: number
     ): Promise<StaffMfaOptionsResult<PublicKeyCredentialRequestOptionsJSON>> {
         const credentials = await this.repository.findCredentialsByStaffUserId(staffUserId);
-        if (!credentials.length) throw unauthorized('Staff MFA enrollment is required', 'STAFF_MFA_REQUIRED');
+        if (!credentials.length)
+            throw unauthorized('Staff MFA enrollment is required', 'STAFF_MFA_REQUIRED');
 
         const publicKey = await this.webAuthn.generateAuthenticationOptions({
             rpID: this.webAuthnRpId,
@@ -223,7 +231,8 @@ export class StaffMfaService implements StaffMfaManager {
             challenge: publicKey.challenge,
             ttlMs: this.challengeTtlMs
         });
-        if (!saved) throw unauthorized('Staff security state changed', 'STAFF_SESSION_CREATION_FORBIDDEN');
+        if (!saved)
+            throw unauthorized('Staff security state changed', 'STAFF_SESSION_CREATION_FORBIDDEN');
 
         return { flowId, publicKey };
     }
@@ -233,13 +242,15 @@ export class StaffMfaService implements StaffMfaManager {
         response: AuthenticationResponseJSON
     ): Promise<{ staffUserId: number; sessionVersion: number; credentialId: string; verifiedAt: Date }> {
         const challenge = await this.repository.findAuthenticationChallenge(flowId);
-        if (!challenge) throw unauthorized('Invalid or expired MFA authentication flow', 'AUTH_INVALID_MFA_ASSERTION');
+        if (!challenge)
+            throw unauthorized('Invalid or expired MFA authentication flow', 'AUTH_INVALID_MFA_ASSERTION');
 
         if (response.response.userHandle && response.response.userHandle !== staffUserIdHandle(challenge.staffUserId))
             throw unauthorized('Invalid MFA assertion', 'AUTH_INVALID_MFA_ASSERTION');
 
         const credential = await this.repository.findCredential(challenge.staffUserId, response.id);
-        if (!credential) throw unauthorized('Invalid MFA assertion', 'AUTH_INVALID_MFA_ASSERTION');
+        if (!credential)
+            throw unauthorized('Invalid MFA assertion', 'AUTH_INVALID_MFA_ASSERTION');
 
         let verification;
         try {
@@ -260,7 +271,8 @@ export class StaffMfaService implements StaffMfaManager {
             throw unauthorized('Invalid MFA assertion', 'AUTH_INVALID_MFA_ASSERTION');
         }
 
-        if (!verification.verified) throw unauthorized('Invalid MFA assertion', 'AUTH_INVALID_MFA_ASSERTION');
+        if (!verification.verified)
+            throw unauthorized('Invalid MFA assertion', 'AUTH_INVALID_MFA_ASSERTION');
 
         const completed = await this.repository.completeAuthentication({
             challengeId: challenge.id,
@@ -270,7 +282,8 @@ export class StaffMfaService implements StaffMfaManager {
             newCounter: verification.authenticationInfo.newCounter
         });
 
-        if (!completed) throw unauthorized('MFA assertion has already been used', 'AUTH_INVALID_MFA_ASSERTION');
+        if (!completed)
+            throw unauthorized('MFA assertion has already been used', 'AUTH_INVALID_MFA_ASSERTION');
 
         return {
             staffUserId: challenge.staffUserId,
@@ -282,7 +295,8 @@ export class StaffMfaService implements StaffMfaManager {
 }
 
 function staffUserIdBytes(userId: number): Uint8Array<ArrayBuffer> {
-    if (!Number.isSafeInteger(userId) || userId <= 0) throw new TypeError('Staff user ID must be a positive safe integer');
+    if (!Number.isSafeInteger(userId) || userId <= 0)
+        throw new TypeError('Staff user ID must be a positive safe integer');
 
     const value = new Uint8Array(8);
     new DataView(value.buffer).setBigUint64(0, BigInt(userId));

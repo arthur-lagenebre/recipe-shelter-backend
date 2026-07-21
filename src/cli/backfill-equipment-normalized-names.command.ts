@@ -24,7 +24,8 @@ export async function runBackfillEquipmentNormalizedNamesCommand(dependencies: C
         const normalizedName = normalizeEquipmentName(equipment.name);
         const group = byNormalizedName.get(normalizedName);
 
-        if (group) group.push(equipment);
+        if (group)
+            group.push(equipment);
         else byNormalizedName.set(normalizedName, [equipment]);
     }
 

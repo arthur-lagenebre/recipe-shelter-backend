@@ -7,7 +7,8 @@ const MODERATION_REASON_MAX_LENGTH = 1000;
 export function parseAdminUserIdParam(value: unknown): number {
     const id = typeof value === 'string' ? Number(value) : NaN;
 
-    if (!Number.isInteger(id) || id <= 0) throw badRequest('User id must be a positive integer', 'ADMIN_USERS_BAD_ID');
+    if (!Number.isInteger(id) || id <= 0)
+        throw badRequest('User id must be a positive integer', 'ADMIN_USERS_BAD_ID');
 
     return id;
 }
@@ -32,7 +33,8 @@ function parseModerationReasonBody(
     body: unknown,
     options: { invalidBodyCode: string; missingReasonCode: string; reasonLabel: string }
 ): string {
-    if (!isRecord(body)) throw badRequest('Invalid body', options.invalidBodyCode);
+    if (!isRecord(body))
+        throw badRequest('Invalid body', options.invalidBodyCode);
 
     const reason = getRequiredString(body.reason, `${options.reasonLabel} is required`, options.missingReasonCode);
 

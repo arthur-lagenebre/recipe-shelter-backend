@@ -239,13 +239,15 @@ export function createApp(overrides: Partial<AppDependencies> = {}) {
         .map((origin) => origin.trim())
         .filter(Boolean);
 
-    if (origins.includes('*')) throw new Error('CORS_ALLOWED_ORIGINS must list explicit origins when credentials are enabled');
+    if (origins.includes('*'))
+        throw new Error('CORS_ALLOWED_ORIGINS must list explicit origins when credentials are enabled');
 
     app.use(cors({ credentials: true, origin: origins }));
     app.use(cookieParser());
 
     const localMediaMiddleware = createLocalMediaMiddleware(dependencies.imageStorage);
-    if (localMediaMiddleware) app.use('/media', localMediaMiddleware);
+    if (localMediaMiddleware)
+        app.use('/media', localMediaMiddleware);
 
     app.use(express.json());
 

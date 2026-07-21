@@ -5,8 +5,7 @@
     "main": "dist/server.js",
     "lint-staged": {
         "src/**/*.ts": [
-            "eslint --fix",
-            "prettier --write"
+            "eslint --fix"
         ]
     },
     "scripts": {

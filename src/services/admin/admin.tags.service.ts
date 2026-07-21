@@ -97,10 +97,12 @@ export class AdminTagService {
         return this.auditActions.run(async ({ db, audit }) => {
             const before = await this.requireTagForUpdate(tagId, db);
 
-            if (before.status !== 'active') throw conflict('Only an active tag can be modified', 'ADMIN_TAGS_UPDATE_INVALID_STATUS');
+            if (before.status !== 'active')
+                throw conflict('Only an active tag can be modified', 'ADMIN_TAGS_UPDATE_INVALID_STATUS');
 
             const groupId = command.groupId ?? before.group.id;
-            if (groupId !== before.group.id) await this.requireGroup(groupId, db);
+            if (groupId !== before.group.id)
+                await this.requireGroup(groupId, db);
 
             const name = command.name ?? before.name;
             const normalizedName = command.name === undefined ? before.normalizedName : normalizeAndValidateName(name);
@@ -138,10 +140,12 @@ export class AdminTagService {
         return this.auditActions.run(async ({ db, audit }) => {
             const before = await this.requireTagForUpdate(tagId, db);
 
-            if (before.status !== 'active') throw conflict('Only an active tag can be deprecated', 'ADMIN_TAGS_DEPRECATE_INVALID_STATUS');
+            if (before.status !== 'active')
+                throw conflict('Only an active tag can be deprecated', 'ADMIN_TAGS_DEPRECATE_INVALID_STATUS');
             if (await this.tags.hasMergedAliases(tagId, db))
                 throw conflict('A canonical merge target cannot be deprecated', 'ADMIN_TAGS_DEPRECATE_CANONICAL_TARGET');
-            if (!(await this.tags.deprecate(tagId, db))) throw conflict('Tag status changed concurrently', 'ADMIN_TAGS_STATUS_CONFLICT');
+            if (!(await this.tags.deprecate(tagId, db)))
+                throw conflict('Tag status changed concurrently', 'ADMIN_TAGS_STATUS_CONFLICT');
 
             const after = await this.requireTagForUpdate(tagId, db);
             await audit.record({
@@ -172,7 +176,8 @@ export class AdminTagService {
             const result = await this.tags.restore(tagId, db);
             if (result === 'normalized_name_taken')
                 throw conflict('An active tag already uses this canonical name', 'ADMIN_TAGS_NORMALIZED_NAME_TAKEN');
-            if (result !== 'restored') throw conflict('Tag status changed concurrently', 'ADMIN_TAGS_STATUS_CONFLICT');
+            if (result !== 'restored')
+                throw conflict('Tag status changed concurrently', 'ADMIN_TAGS_STATUS_CONFLICT');
 
             const after = await this.requireTagForUpdate(tagId, db);
             await audit.record({
@@ -192,11 +197,13 @@ export class AdminTagService {
 
     async merge(sourceTagId: number, input: AdminMergeTagCommand, actorUserId: number, context: AdminAuditRequestContext): Promise<Tag> {
         requirePositiveId(sourceTagId, 'Tag id', 'ADMIN_TAGS_BAD_ID');
-        if (!input || typeof input !== 'object') throw badRequest('Invalid tag merge', 'ADMIN_TAGS_MERGE_BAD_BODY');
+        if (!input || typeof input !== 'object')
+            throw badRequest('Invalid tag merge', 'ADMIN_TAGS_MERGE_BAD_BODY');
         requirePositiveId(input.targetTagId, 'Merge target tag id', 'ADMIN_TAGS_MERGE_BAD_TARGET_ID');
         const cleanReason = validateActionReason(input.reason, 'merge');
 
-        if (sourceTagId === input.targetTagId) throw badRequest('A tag cannot be merged into itself', 'ADMIN_TAGS_MERGE_SELF');
+        if (sourceTagId === input.targetTagId)
+            throw badRequest('A tag cannot be merged into itself', 'ADMIN_TAGS_MERGE_SELF');
 
         return this.auditActions.run(async ({ db, audit }) => {
             const lockedTags = await this.tags.findByIdsForUpdate(
@@ -206,13 +213,18 @@ export class AdminTagService {
             const source = lockedTags.find((tag) => tag.id === sourceTagId);
             const target = lockedTags.find((tag) => tag.id === input.targetTagId);
 
-            if (!source) throw notFound('Tag not found', 'ADMIN_TAGS_NOT_FOUND');
-            if (!target) throw notFound('Merge target tag not found', 'ADMIN_TAGS_MERGE_TARGET_NOT_FOUND');
-            if (source.status === 'merged') throw conflict('A merged tag cannot be merged again', 'ADMIN_TAGS_MERGE_INVALID_SOURCE_STATUS');
-            if (target.status !== 'active') throw conflict('A merge target must be active', 'ADMIN_TAGS_MERGE_INVALID_TARGET_STATUS');
+            if (!source)
+                throw notFound('Tag not found', 'ADMIN_TAGS_NOT_FOUND');
+            if (!target)
+                throw notFound('Merge target tag not found', 'ADMIN_TAGS_MERGE_TARGET_NOT_FOUND');
+            if (source.status === 'merged')
+                throw conflict('A merged tag cannot be merged again', 'ADMIN_TAGS_MERGE_INVALID_SOURCE_STATUS');
+            if (target.status !== 'active')
+                throw conflict('A merge target must be active', 'ADMIN_TAGS_MERGE_INVALID_TARGET_STATUS');
 
             const result = await this.tags.merge(sourceTagId, target.id, db);
-            if (!result.merged) throw conflict('Tag status changed concurrently', 'ADMIN_TAGS_STATUS_CONFLICT');
+            if (!result.merged)
+                throw conflict('Tag status changed concurrently', 'ADMIN_TAGS_STATUS_CONFLICT');
 
             const after = await this.requireTagForUpdate(sourceTagId, db);
             await audit.record({
@@ -255,18 +267,21 @@ export class AdminTagService {
     private async requireTagForUpdate(tagId: number, db: Parameters<AdminTagRepository['findByIdsForUpdate']>[1]): Promise<Tag> {
         const tag = (await this.tags.findByIdsForUpdate([tagId], db))[0];
 
-        if (!tag) throw notFound('Tag not found', 'ADMIN_TAGS_NOT_FOUND');
+        if (!tag)
+            throw notFound('Tag not found', 'ADMIN_TAGS_NOT_FOUND');
 
         return tag;
     }
 
     private async requireGroup(groupId: number, db: Parameters<AdminTagRepository['groupExists']>[1]): Promise<void> {
-        if (!(await this.tags.groupExists(groupId, db))) throw notFound('Tag group not found', 'ADMIN_TAGS_GROUP_NOT_FOUND');
+        if (!(await this.tags.groupExists(groupId, db)))
+            throw notFound('Tag group not found', 'ADMIN_TAGS_GROUP_NOT_FOUND');
     }
 }
 
 function validateCreateCommand(input: AdminCreateTagCommand) {
-    if (!input || typeof input !== 'object') throw badRequest('Invalid tag creation', 'ADMIN_TAGS_CREATE_BAD_BODY');
+    if (!input || typeof input !== 'object')
+        throw badRequest('Invalid tag creation', 'ADMIN_TAGS_CREATE_BAD_BODY');
 
     const groupId = requirePositiveId(input.groupId, 'Tag group id', 'ADMIN_TAGS_BAD_GROUP_ID');
     const name = validateName(input.name);
@@ -278,7 +293,8 @@ function validateCreateCommand(input: AdminCreateTagCommand) {
 }
 
 function validateUpdateCommand(input: AdminUpdateTagCommand): AdminUpdateTagCommand {
-    if (!input || typeof input !== 'object') throw badRequest('Invalid tag update', 'ADMIN_TAGS_UPDATE_BAD_BODY');
+    if (!input || typeof input !== 'object')
+        throw badRequest('Invalid tag update', 'ADMIN_TAGS_UPDATE_BAD_BODY');
     if (input.groupId === undefined && input.name === undefined && input.slug === undefined && input.description === undefined)
         throw badRequest('At least one tag field must be provided', 'ADMIN_TAGS_UPDATE_EMPTY');
 
@@ -293,7 +309,8 @@ function validateUpdateCommand(input: AdminUpdateTagCommand): AdminUpdateTagComm
 function validateName(value: unknown): string {
     const name = typeof value === 'string' ? value.trim() : '';
 
-    if (!name) throw badRequest('Tag name is required', 'ADMIN_TAGS_NAME_REQUIRED');
+    if (!name)
+        throw badRequest('Tag name is required', 'ADMIN_TAGS_NAME_REQUIRED');
     if (name.length > TAG_NAME_MAX_LENGTH)
         throw badRequest(`Tag name must be at most ${TAG_NAME_MAX_LENGTH} characters`, 'ADMIN_TAGS_NAME_TOO_LONG');
 
@@ -303,7 +320,8 @@ function validateName(value: unknown): string {
 function normalizeAndValidateName(name: string): string {
     const normalizedName = normalizeTagName(name);
 
-    if (!normalizedName) throw badRequest('Tag name must contain canonical letters or numbers', 'ADMIN_TAGS_NAME_INVALID');
+    if (!normalizedName)
+        throw badRequest('Tag name must contain canonical letters or numbers', 'ADMIN_TAGS_NAME_INVALID');
     if (normalizedName.length > TAG_NAME_MAX_LENGTH)
         throw badRequest(`Normalized tag name must be at most ${TAG_NAME_MAX_LENGTH} characters`, 'ADMIN_TAGS_NAME_TOO_LONG');
 
@@ -320,11 +338,14 @@ function validateSlug(value: unknown): string {
 }
 
 function validateDescription(value: unknown): string | null {
-    if (value === undefined || value === null) return null;
-    if (typeof value !== 'string') throw badRequest('Tag description must be a string or null', 'ADMIN_TAGS_DESCRIPTION_INVALID');
+    if (value === undefined || value === null)
+        return null;
+    if (typeof value !== 'string')
+        throw badRequest('Tag description must be a string or null', 'ADMIN_TAGS_DESCRIPTION_INVALID');
 
     const description = value.trim();
-    if (!description) throw badRequest('Tag description cannot be blank', 'ADMIN_TAGS_DESCRIPTION_INVALID');
+    if (!description)
+        throw badRequest('Tag description cannot be blank', 'ADMIN_TAGS_DESCRIPTION_INVALID');
     if (description.length > TAG_DESCRIPTION_MAX_LENGTH)
         throw badRequest(`Tag description must be at most ${TAG_DESCRIPTION_MAX_LENGTH} characters`, 'ADMIN_TAGS_DESCRIPTION_TOO_LONG');
 
@@ -335,7 +356,8 @@ function validateActionReason(reason: unknown, action: 'deprecate' | 'restore' |
     const cleanReason = typeof reason === 'string' ? reason.trim() : '';
     const codePrefix = `ADMIN_TAGS_${action.toUpperCase()}`;
 
-    if (!cleanReason) throw badRequest('Action reason is required', `${codePrefix}_REASON_REQUIRED`);
+    if (!cleanReason)
+        throw badRequest('Action reason is required', `${codePrefix}_REASON_REQUIRED`);
     if (cleanReason.length < ACTION_REASON_MIN_LENGTH)
         throw badRequest(`Action reason must be at least ${ACTION_REASON_MIN_LENGTH} characters`, `${codePrefix}_REASON_TOO_SHORT`);
     if (cleanReason.length > ACTION_REASON_MAX_LENGTH)
@@ -345,7 +367,8 @@ function validateActionReason(reason: unknown, action: 'deprecate' | 'restore' |
 }
 
 function requirePositiveId(value: unknown, label: string, code: string): number {
-    if (!Number.isSafeInteger(value) || Number(value) <= 0) throw badRequest(`${label} must be a positive integer`, code);
+    if (!Number.isSafeInteger(value) || Number(value) <= 0)
+        throw badRequest(`${label} must be a positive integer`, code);
 
     return Number(value);
 }
@@ -353,7 +376,8 @@ function requirePositiveId(value: unknown, label: string, code: string): number 
 function requireWrittenTag(result: AdminTagWriteResult): Tag {
     if (result.status === 'normalized_name_taken')
         throw conflict('An active tag already uses this canonical name', 'ADMIN_TAGS_NORMALIZED_NAME_TAKEN');
-    if (result.status === 'slug_taken') throw conflict('A tag already uses this slug', 'ADMIN_TAGS_SLUG_TAKEN');
+    if (result.status === 'slug_taken')
+        throw conflict('A tag already uses this slug', 'ADMIN_TAGS_SLUG_TAKEN');
 
     return result.tag;
 }

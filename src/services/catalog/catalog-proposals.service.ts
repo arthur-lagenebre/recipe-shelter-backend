@@ -47,13 +47,15 @@ export class CatalogProposalService {
 }
 
 function validateCommand(proposalType: CatalogProposalType, input: CreateCatalogProposalCommand) {
-    if (!input || typeof input !== 'object') throw badRequest('Invalid catalog proposal', 'CATALOG_PROPOSALS_BAD_BODY');
+    if (!input || typeof input !== 'object')
+        throw badRequest('Invalid catalog proposal', 'CATALOG_PROPOSALS_BAD_BODY');
 
     const authorUserId = requirePositiveId(input.authorUserId, 'Authenticated user id', 'CATALOG_PROPOSALS_BAD_AUTHOR_ID');
     const recipeId = requirePositiveId(input.recipeId, 'Recipe id', 'CATALOG_PROPOSALS_BAD_RECIPE_ID');
     const proposedName = typeof input.name === 'string' ? input.name.trim() : '';
 
-    if (!proposedName) throw badRequest('Proposal name is required', 'CATALOG_PROPOSALS_NAME_REQUIRED');
+    if (!proposedName)
+        throw badRequest('Proposal name is required', 'CATALOG_PROPOSALS_NAME_REQUIRED');
     if (proposedName.length > PROPOSAL_NAME_MAX_LENGTH)
         throw badRequest(`Proposal name must be at most ${PROPOSAL_NAME_MAX_LENGTH} characters`, 'CATALOG_PROPOSALS_NAME_TOO_LONG');
 
@@ -64,7 +66,8 @@ function validateCommand(proposalType: CatalogProposalType, input: CreateCatalog
               ? normalizeIngredientName(proposedName)
               : normalizeEquipmentName(proposedName);
 
-    if (!normalizedName) throw badRequest('Proposal name must contain canonical letters or numbers', 'CATALOG_PROPOSALS_NAME_INVALID');
+    if (!normalizedName)
+        throw badRequest('Proposal name must contain canonical letters or numbers', 'CATALOG_PROPOSALS_NAME_INVALID');
     if (normalizedName.length > PROPOSAL_NAME_MAX_LENGTH)
         throw badRequest(
             `Normalized proposal name must be at most ${PROPOSAL_NAME_MAX_LENGTH} characters`,
@@ -75,7 +78,8 @@ function validateCommand(proposalType: CatalogProposalType, input: CreateCatalog
 }
 
 function requirePositiveId(value: unknown, label: string, code: string): number {
-    if (!Number.isSafeInteger(value) || Number(value) <= 0) throw badRequest(`${label} must be a positive integer`, code);
+    if (!Number.isSafeInteger(value) || Number(value) <= 0)
+        throw badRequest(`${label} must be a positive integer`, code);
 
     return Number(value);
 }

@@ -27,7 +27,8 @@ export class LocalImageStorage implements ImageStorage {
         try {
             await unlink(this.resolveKey(key));
         } catch (error) {
-            if (!isNodeError(error) || error.code !== 'ENOENT') throw error;
+            if (!isNodeError(error) || error.code !== 'ENOENT')
+                throw error;
         }
     }
 
@@ -36,7 +37,8 @@ export class LocalImageStorage implements ImageStorage {
             await access(this.resolveKey(key), constants.F_OK);
             return true;
         } catch (error) {
-            if (isNodeError(error) && error.code === 'ENOENT') return false;
+            if (isNodeError(error) && error.code === 'ENOENT')
+                return false;
 
             throw error;
         }
@@ -51,7 +53,8 @@ export class LocalImageStorage implements ImageStorage {
         const candidate = path.resolve(this.rootPath, ...key.split('/'));
         const relative = path.relative(this.rootPath, candidate);
 
-        if (relative.startsWith('..') || path.isAbsolute(relative)) throw new Error('Image storage key escapes the configured root');
+        if (relative.startsWith('..') || path.isAbsolute(relative))
+            throw new Error('Image storage key escapes the configured root');
 
         return candidate;
     }

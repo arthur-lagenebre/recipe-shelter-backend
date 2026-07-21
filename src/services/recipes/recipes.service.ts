@@ -74,11 +74,14 @@ export class RecipeService {
     async archive(recipeId: number, auth: AuthContext): Promise<boolean> {
         const recipe = await this.recipeRepository.findById(recipeId);
 
-        if (!recipe) throw notFound('Recipe not found', 'RECIPES_NOT_FOUND');
+        if (!recipe)
+            throw notFound('Recipe not found', 'RECIPES_NOT_FOUND');
 
-        if (!isRecipeOwner(recipe, auth)) throw forbidden('Recipe access denied', 'RECIPES_ACCESS_DENIED');
+        if (!isRecipeOwner(recipe, auth))
+            throw forbidden('Recipe access denied', 'RECIPES_ACCESS_DENIED');
 
-        if (!canArchiveRecipe(recipe)) throw forbidden('Recipe cannot be archived', 'RECIPES_ARCHIVE_FORBIDDEN');
+        if (!canArchiveRecipe(recipe))
+            throw forbidden('Recipe cannot be archived', 'RECIPES_ARCHIVE_FORBIDDEN');
 
         return this.recipeRepository.archive(recipeId);
     }
@@ -110,9 +113,11 @@ export class RecipeService {
     private async requireViewableRecipe(recipeId: number, auth: AuthContext): Promise<Recipe> {
         const recipe = await this.recipeRepository.findById(recipeId);
 
-        if (!recipe) throw notFound('Recipe not found', 'RECIPES_NOT_FOUND');
+        if (!recipe)
+            throw notFound('Recipe not found', 'RECIPES_NOT_FOUND');
 
-        if (!canViewRecipe(recipe, auth)) throw forbidden('Recipe access denied', 'RECIPES_ACCESS_DENIED');
+        if (!canViewRecipe(recipe, auth))
+            throw forbidden('Recipe access denied', 'RECIPES_ACCESS_DENIED');
 
         return recipe;
     }
@@ -120,9 +125,11 @@ export class RecipeService {
     private async requireEditableRecipe(recipeId: number, auth: AuthContext): Promise<Recipe> {
         const recipe = await this.recipeRepository.findById(recipeId);
 
-        if (!recipe) throw notFound('Recipe not found', 'RECIPES_NOT_FOUND');
+        if (!recipe)
+            throw notFound('Recipe not found', 'RECIPES_NOT_FOUND');
 
-        if (!canEditRecipe(recipe, auth)) throw forbidden('Recipe cannot be edited', 'RECIPES_EDIT_FORBIDDEN');
+        if (!canEditRecipe(recipe, auth))
+            throw forbidden('Recipe cannot be edited', 'RECIPES_EDIT_FORBIDDEN');
 
         return recipe;
     }

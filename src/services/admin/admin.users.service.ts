@@ -43,7 +43,8 @@ export class AdminUserService {
     async getAdminUserProfile(userId: number): Promise<AdminUserProfileDto> {
         const user = await this.adminUsers.findAdminUserById(userId);
 
-        if (!user) throw notFound('User not found', 'USER_NOT_FOUND');
+        if (!user)
+            throw notFound('User not found', 'USER_NOT_FOUND');
 
         const moderationLogs = await this.adminUsers.findModerationLogsByUserId(userId);
 
@@ -59,7 +60,8 @@ export class AdminUserService {
                     createdAt: log.createdAt
                 };
 
-                if (log.adminUsername) dto.adminUsername = log.adminUsername;
+                if (log.adminUsername)
+                    dto.adminUsername = log.adminUsername;
 
                 return dto;
             })
@@ -69,12 +71,14 @@ export class AdminUserService {
     async ban(userId: number, adminUserId: number, reason: string, context: AdminAuditRequestContext): Promise<boolean> {
         const cleanReason = validateModerationReason(reason, 'ban');
 
-        if (userId === adminUserId) throw forbidden('Admin users cannot ban themselves', 'ADMIN_USERS_BAN_SELF_FORBIDDEN');
+        if (userId === adminUserId)
+            throw forbidden('Admin users cannot ban themselves', 'ADMIN_USERS_BAN_SELF_FORBIDDEN');
 
         return this.auditActions.run(async ({ db, audit }) => {
             const user = await this.users.findById(userId, db);
 
-            if (!user) throw notFound('User not found', 'USER_NOT_FOUND');
+            if (!user)
+                throw notFound('User not found', 'USER_NOT_FOUND');
 
             if (user.accountType !== 'community')
                 throw forbidden('Staff accounts cannot be community-moderated', 'ADMIN_USERS_STAFF_MODERATION_FORBIDDEN');
@@ -110,7 +114,8 @@ export class AdminUserService {
         return this.auditActions.run(async ({ db, audit }) => {
             const user = await this.users.findById(userId, db);
 
-            if (!user) throw notFound('User not found', 'USER_NOT_FOUND');
+            if (!user)
+                throw notFound('User not found', 'USER_NOT_FOUND');
 
             if (user.accountType !== 'community')
                 throw forbidden('Staff accounts cannot be community-moderated', 'ADMIN_USERS_STAFF_MODERATION_FORBIDDEN');
@@ -155,7 +160,8 @@ function validateModerationReason(reason: string, action: 'ban' | 'unban'): stri
     const label = action === 'ban' ? 'Ban' : 'Unban';
     const codePrefix = action === 'ban' ? 'ADMIN_USERS_BAN' : 'ADMIN_USERS_UNBAN';
 
-    if (!cleanReason) throw badRequest(`${label} reason is required`, `${codePrefix}_MISSING_REASON`);
+    if (!cleanReason)
+        throw badRequest(`${label} reason is required`, `${codePrefix}_MISSING_REASON`);
 
     if (cleanReason.length < MODERATION_REASON_MIN_LENGTH)
         throw badRequest(`${label} reason must be at least ${MODERATION_REASON_MIN_LENGTH} characters`, `${codePrefix}_REASON_TOO_SHORT`);

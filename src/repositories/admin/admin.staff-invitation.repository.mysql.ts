@@ -37,7 +37,8 @@ export class StaffInvitationRepositoryMysql implements StaffInvitationRepository
                 return await this.createWithinTransaction(input, db);
             } catch (error) {
                 const duplicateStatus = getDuplicateIdentityStatus(error);
-                if (duplicateStatus) return { status: duplicateStatus };
+                if (duplicateStatus)
+                    return { status: duplicateStatus };
 
                 throw error;
             }
@@ -54,7 +55,8 @@ export class StaffInvitationRepositoryMysql implements StaffInvitationRepository
             await connection.rollback();
 
             const duplicateStatus = getDuplicateIdentityStatus(error);
-            if (duplicateStatus) return { status: duplicateStatus };
+            if (duplicateStatus)
+                return { status: duplicateStatus };
 
             throw error;
         } finally {
@@ -69,7 +71,8 @@ export class StaffInvitationRepositoryMysql implements StaffInvitationRepository
         const selectedRoleCodes = new Set(selectedRoles.map((role) => role.Code));
         const missingRoleCodes = input.roleCodes.filter((code) => !selectedRoleCodes.has(code));
 
-        if (input.roleCodes.length === 0 || missingRoleCodes.length > 0) return { status: 'roles_missing', roleCodes: missingRoleCodes };
+        if (input.roleCodes.length === 0 || missingRoleCodes.length > 0)
+            return { status: 'roles_missing', roleCodes: missingRoleCodes };
 
         const [identityRows] = await db.execute<ExistingIdentityRow[]>(
             `SELECT u.AccountType, sp.Status AS StaffStatus, si.Id AS InvitationId, si.UsedAt AS InvitationUsedAt, u.Mail = ? AS EmailMatches, u.Username = ? AS DisplayNameMatches FROM Users AS u LEFT JOIN StaffProfiles AS sp ON sp.UserId = u.Id LEFT JOIN StaffInvitations AS si ON si.StaffUserId = u.Id WHERE u.Mail = ? OR u.Username = ? FOR UPDATE`,
@@ -93,7 +96,8 @@ export class StaffInvitationRepositoryMysql implements StaffInvitationRepository
             return { status: 'email_taken' };
         }
 
-        if (identityRows.some((row) => Boolean(row.DisplayNameMatches))) return { status: 'display_name_taken' };
+        if (identityRows.some((row) => Boolean(row.DisplayNameMatches)))
+            return { status: 'display_name_taken' };
 
         const [userResult] = await db.execute<ResultSetHeader>(
             `INSERT INTO Users (Mail, Username, Password, AccountType, Status, EmailValidatedAt) VALUES (?, ?, NULL, 'staff', 'inactive', NULL)`,
@@ -120,7 +124,8 @@ export class StaffInvitationRepositoryMysql implements StaffInvitationRepository
         );
         const invitation = invitationRows[0];
 
-        if (!invitation) throw new Error('Staff invitation created but cannot be reloaded');
+        if (!invitation)
+            throw new Error('Staff invitation created but cannot be reloaded');
 
         return {
             status: 'created',
@@ -147,12 +152,15 @@ function mapRole(row: RoleRow): StaffInvitationRole {
 }
 
 function getDuplicateIdentityStatus(error: unknown): 'email_taken' | 'display_name_taken' | null {
-    if (!error || typeof error !== 'object' || !('code' in error) || error.code !== 'ER_DUP_ENTRY') return null;
+    if (!error || typeof error !== 'object' || !('code' in error) || error.code !== 'ER_DUP_ENTRY')
+        return null;
 
     const message = 'message' in error ? String(error.message) : '';
 
-    if (message.includes('users_mail_UK')) return 'email_taken';
-    if (message.includes('users_username_UK')) return 'display_name_taken';
+    if (message.includes('users_mail_UK'))
+        return 'email_taken';
+    if (message.includes('users_username_UK'))
+        return 'display_name_taken';
 
     return null;
 }

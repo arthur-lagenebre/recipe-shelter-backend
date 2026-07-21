@@ -1711,7 +1711,9 @@ CREATE TABLE Comments (
     ON DELETE SET NULL,
 
   CONSTRAINT comments_rating_chk
-    CHECK (Rating IS NULL OR (Rating BETWEEN 1 AND 5))
+    CHECK (Rating IS NULL OR (Rating BETWEEN 1 AND 5)),
+  CONSTRAINT comments_rating_root_only_CK
+    CHECK (Rating IS NULL OR ParentCommentId IS NULL)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CommentId remains as the stable business target after an authorized hard

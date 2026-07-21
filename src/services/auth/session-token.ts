@@ -26,7 +26,8 @@ function getRealmConfig(realm: SessionRealm) {
 export function signSessionToken(user: User, realm: SessionRealm, sessionId: string): string {
     const expectedAccountType = realm === 'app' ? 'community' : 'staff';
 
-    if (user.accountType !== expectedAccountType) throw new TypeError(`Cannot issue ${realm} session for ${user.accountType} account`);
+    if (user.accountType !== expectedAccountType)
+        throw new TypeError(`Cannot issue ${realm} session for ${user.accountType} account`);
 
     const payload: AuthTokenPayload = {
         sub: user.id,
@@ -51,7 +52,8 @@ export function verifySessionToken(token: string, realm: SessionRealm, ignoreExp
         ignoreExpiration
     });
 
-    if (!payload || typeof payload === 'string') return null;
+    if (!payload || typeof payload === 'string')
+        return null;
 
     const data = payload as Partial<AuthTokenPayload>;
     const userId = Number(data.sub);
@@ -63,8 +65,10 @@ export function verifySessionToken(token: string, realm: SessionRealm, ignoreExp
             ? Array.isArray(data.amr) && data.amr.length === 1 && data.amr[0] === 'pwd'
             : Array.isArray(data.amr) && data.amr.length === 2 && data.amr.includes('pwd') && data.amr.includes('webauthn');
 
-    if (!Number.isSafeInteger(userId) || userId <= 0 || !username || !sessionId) return null;
-    if (data.accountType !== expectedAccountType || !hasExpectedAuthenticationMethods) return null;
+    if (!Number.isSafeInteger(userId) || userId <= 0 || !username || !sessionId)
+        return null;
+    if (data.accountType !== expectedAccountType || !hasExpectedAuthenticationMethods)
+        return null;
 
     return { sessionId, userId, username };
 }

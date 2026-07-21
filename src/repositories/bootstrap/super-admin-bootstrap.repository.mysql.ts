@@ -93,7 +93,8 @@ export class SuperAdminBootstrapRepositoryMysql implements SuperAdminBootstrapRe
             await conn.rollback();
 
             const duplicateStatus = getDuplicateIdentityStatus(error);
-            if (duplicateStatus) return { status: duplicateStatus };
+            if (duplicateStatus)
+                return { status: duplicateStatus };
 
             throw error;
         } finally {
@@ -103,12 +104,15 @@ export class SuperAdminBootstrapRepositoryMysql implements SuperAdminBootstrapRe
 }
 
 function getDuplicateIdentityStatus(error: unknown): 'email_taken' | 'username_taken' | null {
-    if (!error || typeof error !== 'object' || !('code' in error) || error.code !== 'ER_DUP_ENTRY') return null;
+    if (!error || typeof error !== 'object' || !('code' in error) || error.code !== 'ER_DUP_ENTRY')
+        return null;
 
     const message = 'message' in error ? String(error.message) : '';
 
-    if (message.includes('users_mail_UK')) return 'email_taken';
-    if (message.includes('users_username_UK')) return 'username_taken';
+    if (message.includes('users_mail_UK'))
+        return 'email_taken';
+    if (message.includes('users_username_UK'))
+        return 'username_taken';
 
     return null;
 }

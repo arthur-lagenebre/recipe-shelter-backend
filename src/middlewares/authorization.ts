@@ -37,20 +37,23 @@ function denyPolicy(
 }
 
 export const CommunityOnly: RequestHandler = (req, _res, next) => {
-    if (!isCommunityAccount(req.auth)) return next(forbidden('Active community account is required', 'AUTH_COMMUNITY_ACCOUNT_REQUIRED'));
+    if (!isCommunityAccount(req.auth))
+        return next(forbidden('Active community account is required', 'AUTH_COMMUNITY_ACCOUNT_REQUIRED'));
 
     return next();
 };
 
 export const StaffOnly: RequestHandler = (req, _res, next) => {
-    if (!isStaffAccount(req.auth)) return next(forbidden('Active staff account is required', 'AUTH_STAFF_ACCOUNT_REQUIRED'));
+    if (!isStaffAccount(req.auth))
+        return next(forbidden('Active staff account is required', 'AUTH_STAFF_ACCOUNT_REQUIRED'));
 
     return next();
 };
 
 export function RequirePermission(permission: PermissionCode): RequestHandler {
     return (req, _res, next) => {
-        if (!hasPermission(req.auth, permission)) return next(forbidden('Required permission is missing', 'AUTH_PERMISSION_REQUIRED'));
+        if (!hasPermission(req.auth, permission))
+            return next(forbidden('Required permission is missing', 'AUTH_PERMISSION_REQUIRED'));
 
         return next();
     };

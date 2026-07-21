@@ -12,7 +12,8 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3
 const ISO_INSTANT_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
 
 export function parseAdminAuditLogFilters(query: unknown): AdminAuditLogFilters {
-    if (!isRecord(query)) throw badRequest('Invalid audit log query', 'ADMIN_AUDIT_LOGS_BAD_QUERY');
+    if (!isRecord(query))
+        throw badRequest('Invalid audit log query', 'ADMIN_AUDIT_LOGS_BAD_QUERY');
 
     const actorUserId = parseOptionalPositiveInteger(query.actorUserId);
     const action = parseOptionalAction(query.action);
@@ -29,12 +30,14 @@ export function parseAdminAuditLogFilters(query: unknown): AdminAuditLogFilters 
 }
 
 function parseOptionalPositiveInteger(value: unknown): number | undefined {
-    if (value === undefined) return undefined;
+    if (value === undefined)
+        return undefined;
     if (typeof value !== 'string' || !/^[1-9]\d*$/.test(value))
         throw badRequest('Actor user id must be a positive integer', 'ADMIN_AUDIT_LOGS_BAD_ACTOR');
 
     const parsed = Number(value);
-    if (!Number.isSafeInteger(parsed)) throw badRequest('Actor user id must be a positive integer', 'ADMIN_AUDIT_LOGS_BAD_ACTOR');
+    if (!Number.isSafeInteger(parsed))
+        throw badRequest('Actor user id must be a positive integer', 'ADMIN_AUDIT_LOGS_BAD_ACTOR');
 
     return parsed;
 }
@@ -42,8 +45,10 @@ function parseOptionalPositiveInteger(value: unknown): number | undefined {
 function parseOptionalAction(value: unknown): AdminAuditEventType | undefined {
     const normalized = parseOptionalNonBlankString(value, 'Action must be an audit event code', 'ADMIN_AUDIT_LOGS_BAD_ACTION');
 
-    if (normalized === undefined) return undefined;
-    if (!ACTIONS.has(normalized)) throw badRequest('Action must be an audit event code', 'ADMIN_AUDIT_LOGS_BAD_ACTION');
+    if (normalized === undefined)
+        return undefined;
+    if (!ACTIONS.has(normalized))
+        throw badRequest('Action must be an audit event code', 'ADMIN_AUDIT_LOGS_BAD_ACTION');
 
     return normalized as AdminAuditEventType;
 }
@@ -51,8 +56,10 @@ function parseOptionalAction(value: unknown): AdminAuditEventType | undefined {
 function parseOptionalTargetType(value: unknown): AdminAuditTargetType | undefined {
     const normalized = parseOptionalNonBlankString(value, 'Target type must be an audit target code', 'ADMIN_AUDIT_LOGS_BAD_TARGET_TYPE');
 
-    if (normalized === undefined) return undefined;
-    if (!TARGET_TYPES.has(normalized)) throw badRequest('Target type must be an audit target code', 'ADMIN_AUDIT_LOGS_BAD_TARGET_TYPE');
+    if (normalized === undefined)
+        return undefined;
+    if (!TARGET_TYPES.has(normalized))
+        throw badRequest('Target type must be an audit target code', 'ADMIN_AUDIT_LOGS_BAD_TARGET_TYPE');
 
     return normalized as AdminAuditTargetType;
 }
@@ -69,11 +76,14 @@ function parseOptionalTargetId(value: unknown): string | undefined {
 function parseOptionalInstant(value: unknown, name: string, code: string): Date | undefined {
     const normalized = parseOptionalNonBlankString(value, `${name} must be an ISO 8601 instant`, code);
 
-    if (normalized === undefined) return undefined;
-    if (!ISO_INSTANT_PATTERN.test(normalized)) throw badRequest(`${name} must be an ISO 8601 instant`, code);
+    if (normalized === undefined)
+        return undefined;
+    if (!ISO_INSTANT_PATTERN.test(normalized))
+        throw badRequest(`${name} must be an ISO 8601 instant`, code);
 
     const instant = new Date(normalized);
-    if (Number.isNaN(instant.getTime())) throw badRequest(`${name} must be an ISO 8601 instant`, code);
+    if (Number.isNaN(instant.getTime()))
+        throw badRequest(`${name} must be an ISO 8601 instant`, code);
 
     return instant;
 }
@@ -81,18 +91,23 @@ function parseOptionalInstant(value: unknown, name: string, code: string): Date 
 function parseOptionalCorrelationId(value: unknown): string | undefined {
     const normalized = parseOptionalNonBlankString(value, 'Correlation id must be a UUID', 'ADMIN_AUDIT_LOGS_BAD_CORRELATION_ID');
 
-    if (normalized === undefined) return undefined;
-    if (!UUID_PATTERN.test(normalized)) throw badRequest('Correlation id must be a UUID', 'ADMIN_AUDIT_LOGS_BAD_CORRELATION_ID');
+    if (normalized === undefined)
+        return undefined;
+    if (!UUID_PATTERN.test(normalized))
+        throw badRequest('Correlation id must be a UUID', 'ADMIN_AUDIT_LOGS_BAD_CORRELATION_ID');
 
     return normalized.toLowerCase();
 }
 
 function parseOptionalNonBlankString(value: unknown, message: string, code: string): string | undefined {
-    if (value === undefined) return undefined;
-    if (typeof value !== 'string') throw badRequest(message, code);
+    if (value === undefined)
+        return undefined;
+    if (typeof value !== 'string')
+        throw badRequest(message, code);
 
     const normalized = value.trim();
-    if (!normalized) throw badRequest(message, code);
+    if (!normalized)
+        throw badRequest(message, code);
 
     return normalized;
 }

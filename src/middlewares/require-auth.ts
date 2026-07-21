@@ -31,19 +31,22 @@ export function configureAuthSessionRepository(repository: SessionRepository): v
 }
 
 async function resolveActiveAuth(session: { sessionId: string; userId: number }, realm: SessionRealm): Promise<AuthContext | null> {
-    if (!authUserRepository || !authSessionRepository) return null;
+    if (!authUserRepository || !authSessionRepository)
+        return null;
 
     const sessionIsActive =
         realm === 'app'
             ? await authSessionRepository.isCommunitySessionActive(session.sessionId, session.userId)
             : await authSessionRepository.isStaffSessionActive(session.sessionId, session.userId);
 
-    if (!sessionIsActive) return null;
+    if (!sessionIsActive)
+        return null;
 
     const user = await authUserRepository.findById(session.userId);
     const expectedAccountType = realm === 'app' ? 'community' : 'staff';
 
-    if (!user || user.status !== 'active' || user.accountType !== expectedAccountType) return null;
+    if (!user || user.status !== 'active' || user.accountType !== expectedAccountType)
+        return null;
 
     const permissions = realm === 'admin' && authRbacRepository ? await authRbacRepository.findPermissionCodesByStaffUserId(user.id) : [];
 

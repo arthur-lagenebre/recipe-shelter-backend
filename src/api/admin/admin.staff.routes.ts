@@ -49,7 +49,8 @@ export function createAdminStaffRouter(controller: AdminStaffController) {
 const requireRecentAuthenticationForSuperAdminChange: RequestHandler = (req, res, next) => {
     const roleCode = typeof req.params.roleCode === 'string' ? req.params.roleCode.trim() : '';
 
-    if (roleCode.toLowerCase() === 'superadmin') return requireRecentStaffAuthentication(req, res, next);
+    if (roleCode.toLowerCase() === 'superadmin')
+        return requireRecentStaffAuthentication(req, res, next);
 
     next();
 };

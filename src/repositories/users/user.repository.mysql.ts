@@ -173,7 +173,8 @@ export class UserRepositoryMysql implements UserRepository {
 
         const created = await this.findById(insertId);
 
-        if (!created) throw new Error('User created but cannot be reloaded');
+        if (!created)
+            throw new Error('User created but cannot be reloaded');
 
         return created;
     }
@@ -223,8 +224,10 @@ function getProfileStatus(input: CreateUserInput): CommunityStatus | StaffStatus
 
     const status = input.status ?? 'invited';
     assertStaffStatus(status);
-    if (status === 'active') throw new TypeError('Staff accounts must be activated through MFA enrollment');
-    if (status === 'disabled') throw new TypeError('Staff accounts must be disabled through staff lifecycle management');
+    if (status === 'active')
+        throw new TypeError('Staff accounts must be activated through MFA enrollment');
+    if (status === 'disabled')
+        throw new TypeError('Staff accounts must be disabled through staff lifecycle management');
     return status;
 }
 
@@ -235,7 +238,9 @@ function getLegacyStatus(accountType: CreateUserInput['accountType'], status: Co
     }
 
     assertStaffStatus(status);
-    if (status === 'invited') return 'inactive';
-    if (status === 'active') return 'active';
+    if (status === 'invited')
+        return 'inactive';
+    if (status === 'active')
+        return 'active';
     return 'banned';
 }

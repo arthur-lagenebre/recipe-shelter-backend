@@ -30,7 +30,8 @@ export function parseAdminIngredientAliasIdParam(value: unknown): number {
 }
 
 export function parseAdminIngredientListFilters(query: unknown): AdminIngredientListFilters {
-    if (!isRecord(query) || Array.isArray(query)) throw badRequest('Invalid ingredient query', 'ADMIN_INGREDIENTS_BAD_QUERY');
+    if (!isRecord(query) || Array.isArray(query))
+        throw badRequest('Invalid ingredient query', 'ADMIN_INGREDIENTS_BAD_QUERY');
 
     const status = parseOptionalStatus(query.status);
     const q = parseOptionalSearch(query.q, 'Ingredient', 'ADMIN_INGREDIENTS_BAD_SEARCH');
@@ -42,7 +43,8 @@ export function parseAdminIngredientListFilters(query: unknown): AdminIngredient
 }
 
 export function parseAdminIngredientAliasListFilters(query: unknown): AdminIngredientAliasListFilters {
-    if (!isRecord(query) || Array.isArray(query)) throw badRequest('Invalid ingredient alias query', 'ADMIN_INGREDIENT_ALIASES_BAD_QUERY');
+    if (!isRecord(query) || Array.isArray(query))
+        throw badRequest('Invalid ingredient alias query', 'ADMIN_INGREDIENT_ALIASES_BAD_QUERY');
 
     const languageCode = query.languageCode === undefined ? undefined : parseLanguageCode(query.languageCode);
     const q = parseOptionalSearch(query.q, 'Ingredient alias', 'ADMIN_INGREDIENT_ALIASES_BAD_SEARCH');
@@ -54,7 +56,8 @@ export function parseAdminIngredientAliasListFilters(query: unknown): AdminIngre
 }
 
 export function parseCreateAdminIngredientBody(body: unknown): AdminCreateIngredientCommand {
-    if (!isRecord(body) || Array.isArray(body)) throw badRequest('Invalid ingredient body', 'ADMIN_INGREDIENTS_CREATE_BAD_BODY');
+    if (!isRecord(body) || Array.isArray(body))
+        throw badRequest('Invalid ingredient body', 'ADMIN_INGREDIENTS_CREATE_BAD_BODY');
 
     const slug = parseOptionalSlug(body.slug);
 
@@ -65,7 +68,8 @@ export function parseCreateAdminIngredientBody(body: unknown): AdminCreateIngred
 }
 
 export function parseUpdateAdminIngredientBody(body: unknown): AdminUpdateIngredientCommand {
-    if (!isRecord(body) || Array.isArray(body)) throw badRequest('Invalid ingredient body', 'ADMIN_INGREDIENTS_UPDATE_BAD_BODY');
+    if (!isRecord(body) || Array.isArray(body))
+        throw badRequest('Invalid ingredient body', 'ADMIN_INGREDIENTS_UPDATE_BAD_BODY');
 
     const name = body.name === undefined ? undefined : parseRequiredName(body.name, 'Ingredient', 'ADMIN_INGREDIENTS');
     const slug = parseOptionalSlug(body.slug);
@@ -87,7 +91,8 @@ export function parseAdminIngredientActionReasonBody(body: unknown, action: 'dep
 }
 
 export function parseMergeAdminIngredientBody(body: unknown): AdminMergeIngredientCommand {
-    if (!isRecord(body) || Array.isArray(body)) throw badRequest('Invalid ingredient merge body', 'ADMIN_INGREDIENTS_MERGE_BAD_BODY');
+    if (!isRecord(body) || Array.isArray(body))
+        throw badRequest('Invalid ingredient merge body', 'ADMIN_INGREDIENTS_MERGE_BAD_BODY');
 
     return {
         targetIngredientId: parseBodyId(body.targetIngredientId, 'Merge target ingredient id', 'ADMIN_INGREDIENTS_MERGE_BAD_TARGET_ID'),
@@ -122,22 +127,26 @@ export function parseUpdateAdminIngredientAliasBody(body: unknown): AdminUpdateI
 }
 
 function parseIdParam(value: unknown, label: string, code: string): number {
-    if (typeof value !== 'string' || !/^[1-9]\d*$/.test(value)) throw badRequest(`${label} must be a positive integer`, code);
+    if (typeof value !== 'string' || !/^[1-9]\d*$/.test(value))
+        throw badRequest(`${label} must be a positive integer`, code);
 
     const id = Number(value);
-    if (!Number.isSafeInteger(id)) throw badRequest(`${label} must be a positive integer`, code);
+    if (!Number.isSafeInteger(id))
+        throw badRequest(`${label} must be a positive integer`, code);
 
     return id;
 }
 
 function parseBodyId(value: unknown, label: string, code: string): number {
-    if (!Number.isSafeInteger(value) || Number(value) <= 0) throw badRequest(`${label} must be a positive integer`, code);
+    if (!Number.isSafeInteger(value) || Number(value) <= 0)
+        throw badRequest(`${label} must be a positive integer`, code);
 
     return Number(value);
 }
 
 function parseOptionalStatus(value: unknown): IngredientStatus | undefined {
-    if (value === undefined) return undefined;
+    if (value === undefined)
+        return undefined;
     if (typeof value !== 'string' || !INGREDIENT_STATUSES.has(value as IngredientStatus))
         throw badRequest('Ingredient status must be active, deprecated or merged', 'ADMIN_INGREDIENTS_BAD_STATUS');
 
@@ -145,18 +154,22 @@ function parseOptionalStatus(value: unknown): IngredientStatus | undefined {
 }
 
 function parseOptionalSearch(value: unknown, label: string, code: string): string | undefined {
-    if (value === undefined) return undefined;
-    if (typeof value !== 'string') throw badRequest(`${label} search must be a non-empty string`, code);
+    if (value === undefined)
+        return undefined;
+    if (typeof value !== 'string')
+        throw badRequest(`${label} search must be a non-empty string`, code);
 
     const q = value.trim();
-    if (!q || q.length > SEARCH_MAX_LENGTH) throw badRequest(`${label} search must contain at most ${SEARCH_MAX_LENGTH} characters`, code);
+    if (!q || q.length > SEARCH_MAX_LENGTH)
+        throw badRequest(`${label} search must contain at most ${SEARCH_MAX_LENGTH} characters`, code);
 
     return q;
 }
 
 function parseRequiredName(value: unknown, label: string, codePrefix: string): string {
     const name = typeof value === 'string' ? value.trim() : '';
-    if (!name) throw badRequest(`${label} name is required`, `${codePrefix}_NAME_REQUIRED`);
+    if (!name)
+        throw badRequest(`${label} name is required`, `${codePrefix}_NAME_REQUIRED`);
     if (name.length > NAME_MAX_LENGTH)
         throw badRequest(`${label} name must be at most ${NAME_MAX_LENGTH} characters`, `${codePrefix}_NAME_TOO_LONG`);
 
@@ -164,8 +177,10 @@ function parseRequiredName(value: unknown, label: string, codePrefix: string): s
 }
 
 function parseOptionalSlug(value: unknown): string | undefined {
-    if (value === undefined) return undefined;
-    if (typeof value !== 'string') throw badRequest('Ingredient slug is invalid', 'ADMIN_INGREDIENTS_SLUG_INVALID');
+    if (value === undefined)
+        return undefined;
+    if (typeof value !== 'string')
+        throw badRequest('Ingredient slug is invalid', 'ADMIN_INGREDIENTS_SLUG_INVALID');
 
     const slug = value.trim();
     if (!slug || slug.length > SLUG_MAX_LENGTH || !SLUG_PATTERN.test(slug))
@@ -186,7 +201,8 @@ function parseReason(value: unknown, action: 'deprecate' | 'restore' | 'merge'):
     const reason = typeof value === 'string' ? value.trim() : '';
     const codePrefix = `ADMIN_INGREDIENTS_${action.toUpperCase()}`;
 
-    if (!reason) throw badRequest('Action reason is required', `${codePrefix}_REASON_REQUIRED`);
+    if (!reason)
+        throw badRequest('Action reason is required', `${codePrefix}_REASON_REQUIRED`);
     if (reason.length < ACTION_REASON_MIN_LENGTH)
         throw badRequest(`Action reason must be at least ${ACTION_REASON_MIN_LENGTH} characters`, `${codePrefix}_REASON_TOO_SHORT`);
     if (reason.length > ACTION_REASON_MAX_LENGTH)

@@ -23,7 +23,8 @@ export type PaginatedResult<T> = {
 const MAX_LIMIT = 50;
 
 export function parsePaginationQuery(query: unknown, defaultLimit: number, codePrefix = 'PAGINATION'): PaginationOptions {
-    if (typeof query !== 'object' || query === null) throw badRequest('Invalid query', `${codePrefix}_BAD_QUERY`);
+    if (typeof query !== 'object' || query === null)
+        throw badRequest('Invalid query', `${codePrefix}_BAD_QUERY`);
 
     const queryRecord = query as Record<string, unknown>;
     const page = parseOptionalPositiveIntegerQueryValue(queryRecord.page, 1, 'Page must be a positive integer', `${codePrefix}_BAD_PAGE`);
@@ -63,18 +64,22 @@ export function formatLimitOffsetClause(pagination: PaginationOptions): string {
 }
 
 function parseOptionalPositiveIntegerQueryValue(value: unknown, defaultValue: number, message: string, code: string): number {
-    if (value === undefined) return defaultValue;
+    if (value === undefined)
+        return defaultValue;
 
-    if (typeof value !== 'string') throw badRequest(message, code);
+    if (typeof value !== 'string')
+        throw badRequest(message, code);
 
     const parsedValue = Number(value);
-    if (!Number.isInteger(parsedValue) || parsedValue <= 0) throw badRequest(message, code);
+    if (!Number.isInteger(parsedValue) || parsedValue <= 0)
+        throw badRequest(message, code);
 
     return parsedValue;
 }
 
 function requireSqlInteger(value: number, min: number, message: string, code: string): number {
-    if (!Number.isSafeInteger(value) || value < min) throw badRequest(message, code);
+    if (!Number.isSafeInteger(value) || value < min)
+        throw badRequest(message, code);
 
     return value;
 }

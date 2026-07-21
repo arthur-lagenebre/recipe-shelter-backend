@@ -112,21 +112,26 @@ function validateCommand(input: CreateStaffInvitationCommand): CreateStaffInvita
     const email = normalizeEmail(typeof input.email === 'string' ? input.email : '');
     const displayName = typeof input.displayName === 'string' ? input.displayName.trim() : '';
 
-    if (!email) throw badRequest('Email is required', 'STAFF_INVITATION_EMAIL_REQUIRED');
-    if (email.length > MAX_EMAIL_LENGTH || !EMAIL_PATTERN.test(email)) throw badRequest('Invalid email', 'STAFF_INVITATION_EMAIL_INVALID');
-    if (!displayName) throw badRequest('Display name is required', 'STAFF_INVITATION_DISPLAY_NAME_REQUIRED');
+    if (!email)
+        throw badRequest('Email is required', 'STAFF_INVITATION_EMAIL_REQUIRED');
+    if (email.length > MAX_EMAIL_LENGTH || !EMAIL_PATTERN.test(email))
+        throw badRequest('Invalid email', 'STAFF_INVITATION_EMAIL_INVALID');
+    if (!displayName)
+        throw badRequest('Display name is required', 'STAFF_INVITATION_DISPLAY_NAME_REQUIRED');
     if (displayName.length < MIN_DISPLAY_NAME_LENGTH)
         throw badRequest('Display name is too short', 'STAFF_INVITATION_DISPLAY_NAME_TOO_SHORT');
     if (displayName.length > MAX_DISPLAY_NAME_LENGTH)
         throw badRequest('Display name is too long', 'STAFF_INVITATION_DISPLAY_NAME_TOO_LONG');
     if (!Array.isArray(input.roles) || input.roles.length === 0)
         throw badRequest('At least one initial role is required', 'STAFF_INVITATION_ROLES_REQUIRED');
-    if (input.roles.length > MAX_ROLE_COUNT) throw badRequest('Too many initial roles', 'STAFF_INVITATION_ROLES_INVALID');
+    if (input.roles.length > MAX_ROLE_COUNT)
+        throw badRequest('Too many initial roles', 'STAFF_INVITATION_ROLES_INVALID');
 
     const roles = input.roles.map((role) => (typeof role === 'string' ? role.trim() : ''));
     if (roles.some((role) => !role || role.length > MAX_ROLE_CODE_LENGTH))
         throw badRequest('Invalid initial role code', 'STAFF_INVITATION_ROLES_INVALID');
-    if (new Set(roles).size !== roles.length) throw badRequest('Initial role codes must be unique', 'STAFF_INVITATION_ROLES_DUPLICATE');
+    if (new Set(roles).size !== roles.length)
+        throw badRequest('Initial role codes must be unique', 'STAFF_INVITATION_ROLES_DUPLICATE');
 
     return { email, displayName, roles };
 }

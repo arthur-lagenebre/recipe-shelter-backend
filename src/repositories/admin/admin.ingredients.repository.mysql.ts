@@ -69,7 +69,8 @@ export class AdminIngredientRepositoryMysql implements AdminIngredientRepository
     }
 
     async findByIdsForUpdate(ids: number[], db: PoolConnection): Promise<Ingredient[]> {
-        if (ids.length === 0) return [];
+        if (ids.length === 0)
+            return [];
 
         const placeholders = ids.map(() => '?').join(', ');
         const [rows] = await db.execute<IngredientRow[]>(
@@ -93,12 +94,14 @@ export class AdminIngredientRepositoryMysql implements AdminIngredientRepository
             ]);
             const ingredient = await this.findById(Number(result.insertId), db);
 
-            if (!ingredient) throw new Error('Ingredient created but cannot be reloaded');
+            if (!ingredient)
+                throw new Error('Ingredient created but cannot be reloaded');
 
             return { status: 'written', ingredient };
         } catch (error) {
             const duplicateStatus = getDuplicateIngredientStatus(error);
-            if (duplicateStatus) return { status: duplicateStatus };
+            if (duplicateStatus)
+                return { status: duplicateStatus };
 
             throw error;
         }
@@ -114,12 +117,14 @@ export class AdminIngredientRepositoryMysql implements AdminIngredientRepository
             ]);
             const ingredient = await this.findById(input.id, db);
 
-            if (!ingredient) throw new Error('Ingredient updated but cannot be reloaded');
+            if (!ingredient)
+                throw new Error('Ingredient updated but cannot be reloaded');
 
             return { status: 'written', ingredient };
         } catch (error) {
             const duplicateStatus = getDuplicateIngredientStatus(error);
-            if (duplicateStatus) return { status: duplicateStatus };
+            if (duplicateStatus)
+                return { status: duplicateStatus };
 
             throw error;
         }
@@ -157,7 +162,8 @@ export class AdminIngredientRepositoryMysql implements AdminIngredientRepository
 
             return result.affectedRows > 0 ? 'restored' : 'not_updated';
         } catch (error) {
-            if (getDuplicateIngredientStatus(error) === 'normalized_name_taken') return 'normalized_name_taken';
+            if (getDuplicateIngredientStatus(error) === 'normalized_name_taken')
+                return 'normalized_name_taken';
 
             throw error;
         }
@@ -227,28 +233,32 @@ export class AdminIngredientRepositoryMysql implements AdminIngredientRepository
             sourceIngredientId
         ]);
 
-        if (recipeResult.affectedRows !== sourceRecipeCount) throw new Error('Ingredient recipe associations changed during merge');
+        if (recipeResult.affectedRows !== sourceRecipeCount)
+            throw new Error('Ingredient recipe associations changed during merge');
 
         const [redirectResult] = await db.execute<ResultSetHeader>(
             `UPDATE Ingredients SET MergedIntoIngredientId = ? WHERE MergedIntoIngredientId = ?`,
             [targetIngredientId, sourceIngredientId]
         );
 
-        if (redirectResult.affectedRows !== mergedRows.length) throw new Error('Merged ingredient references changed during merge');
+        if (redirectResult.affectedRows !== mergedRows.length)
+            throw new Error('Merged ingredient references changed during merge');
 
         const [aliasResult] = await db.execute<ResultSetHeader>(`UPDATE IngredientAliases SET IngredientId = ? WHERE IngredientId = ?`, [
             targetIngredientId,
             sourceIngredientId
         ]);
 
-        if (aliasResult.affectedRows !== sourceAliasCount) throw new Error('Ingredient aliases changed during merge');
+        if (aliasResult.affectedRows !== sourceAliasCount)
+            throw new Error('Ingredient aliases changed during merge');
 
         const [ingredientResult] = await db.execute<ResultSetHeader>(
             `UPDATE Ingredients SET Status = 'merged', MergedIntoIngredientId = ? WHERE Id = ? AND Status IN ('active', 'deprecated')`,
             [targetIngredientId, sourceIngredientId]
         );
 
-        if (ingredientResult.affectedRows === 0) return { status: 'not_merged' };
+        if (ingredientResult.affectedRows === 0)
+            return { status: 'not_merged' };
 
         return {
             status: 'merged',
@@ -318,11 +328,13 @@ export class AdminIngredientRepositoryMysql implements AdminIngredientRepository
             );
             const alias = await this.findAliasForUpdate(input.ingredientId, Number(result.insertId), db);
 
-            if (!alias) throw new Error('Ingredient alias created but cannot be reloaded');
+            if (!alias)
+                throw new Error('Ingredient alias created but cannot be reloaded');
 
             return { status: 'written', alias };
         } catch (error) {
-            if (isDuplicateAlias(error)) return { status: 'alias_taken' };
+            if (isDuplicateAlias(error))
+                return { status: 'alias_taken' };
 
             throw error;
         }
@@ -336,11 +348,13 @@ export class AdminIngredientRepositoryMysql implements AdminIngredientRepository
             );
             const alias = await this.findAliasForUpdate(input.ingredientId, input.id, db);
 
-            if (!alias) throw new Error('Ingredient alias updated but cannot be reloaded');
+            if (!alias)
+                throw new Error('Ingredient alias updated but cannot be reloaded');
 
             return { status: 'written', alias };
         } catch (error) {
-            if (isDuplicateAlias(error)) return { status: 'alias_taken' };
+            if (isDuplicateAlias(error))
+                return { status: 'alias_taken' };
 
             throw error;
         }
@@ -405,11 +419,14 @@ async function findAliasIngredientId(db: PoolConnection, languageCode: string, n
 }
 
 function getDuplicateIngredientStatus(error: unknown): 'normalized_name_taken' | 'slug_taken' | null {
-    if (!isDuplicateEntry(error)) return null;
+    if (!isDuplicateEntry(error))
+        return null;
 
     const message = 'message' in error ? String(error.message) : '';
-    if (message.includes('ingredients_active_normalized_name_UK')) return 'normalized_name_taken';
-    if (message.includes('ingredients_slug_UK')) return 'slug_taken';
+    if (message.includes('ingredients_active_normalized_name_UK'))
+        return 'normalized_name_taken';
+    if (message.includes('ingredients_slug_UK'))
+        return 'slug_taken';
 
     return null;
 }

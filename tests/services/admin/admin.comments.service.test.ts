@@ -41,6 +41,8 @@ class FakeAdminCommentRepository implements AdminCommentRepository {
     restoredId: number | null = null;
     updatedInput: AdminUpdateCommentInput | null = null;
     hardDeletedId: number | null = null;
+    replyCount = 0;
+    replyCountQueriedId: number | null = null;
 
     async findModeratedForAdmin(): Promise<AdminComment[]> {
         return this.comment ? [this.comment] : [];
@@ -60,6 +62,12 @@ class FakeAdminCommentRepository implements AdminCommentRepository {
 
     async findByIdForAdmin(): Promise<AdminComment | null> {
         return this.comment;
+    }
+
+    async countReplies(commentId: number): Promise<number> {
+        this.replyCountQueriedId = commentId;
+
+        return this.replyCount;
     }
 
     async hide(id: number, moderatedByUserId: number, reason: string): Promise<boolean> {
@@ -376,6 +384,36 @@ describe('AdminCommentService', () => {
         );
         assert.equal(repository.hardDeletedId, 1);
         assert.equal(audit.inputs.length, 0);
+    });
+
+    it('rejects hard delete when the comment still has replies', async () => {
+        repository.replyCount = 2;
+
+        await assert.rejects(
+            () => service.hardDelete(1, 99, testAdminAuditContext),
+            (error) => {
+                assertHttpError(error, 'ADMIN_COMMENTS_DELETE_HAS_REPLIES', 409);
+
+                return true;
+            }
+        );
+        assert.equal(repository.replyCountQueriedId, 1);
+        assert.equal(repository.hardDeletedId, null);
+        assert.equal(audit.inputs.length, 0);
+    });
+
+    it('hard deletes a comment without replies and a reply itself, since replies cannot have sub-replies', async () => {
+        repository.replyCount = 0;
+
+        const rootResult = await service.hardDelete(1, 99, testAdminAuditContext);
+        assert.equal(rootResult, true);
+        assert.equal(repository.hardDeletedId, 1);
+
+        repository.comment = { ...baseComment, id: 2, parentCommentId: 1 };
+        repository.hardDeletedId = null;
+        const replyResult = await service.hardDelete(2, 99, testAdminAuditContext);
+        assert.equal(replyResult, true);
+        assert.equal(repository.hardDeletedId, 2);
     });
 
     it('propagates audit failures after the sensitive mutation', async () => {

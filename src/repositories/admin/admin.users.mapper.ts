@@ -44,7 +44,8 @@ export function mapUserModerationLog(row: UserModerationLogRow): UserModerationL
         createdAt: row.CreatedAt
     };
 
-    if (row.AdminUsername) log.adminUsername = row.AdminUsername;
+    if (row.AdminUsername)
+        log.adminUsername = row.AdminUsername;
 
     return log;
 }

@@ -20,7 +20,8 @@ function getBaseSessionCookieOptions(realm: SessionRealm): CookieOptions {
         secure: env.auth.cookie.secure
     };
 
-    if (env.auth.cookie.domain) options.domain = env.auth.cookie.domain;
+    if (env.auth.cookie.domain)
+        options.domain = env.auth.cookie.domain;
 
     return options;
 }

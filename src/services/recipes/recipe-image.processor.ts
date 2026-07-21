@@ -33,21 +33,26 @@ export type ProcessedRecipeImage = {
 
 export class RecipeImageProcessor {
     async process(input: Buffer): Promise<ProcessedRecipeImage> {
-        if (!input.length) throw badRequest('Image file is invalid', 'IMAGE_INVALID');
+        if (!input.length)
+            throw badRequest('Image file is invalid', 'IMAGE_INVALID');
 
-        if (input.length > MAX_RECIPE_IMAGE_BYTES) throw badRequest('Image file exceeds the 10 MB limit', 'IMAGE_TOO_LARGE');
+        if (input.length > MAX_RECIPE_IMAGE_BYTES)
+            throw badRequest('Image file exceeds the 10 MB limit', 'IMAGE_TOO_LARGE');
 
         const detectedFormat = detectFormat(input);
-        if (detectedFormat === 'unsupported') throw badRequest('Image format is not supported', 'IMAGE_FORMAT_NOT_SUPPORTED');
+        if (detectedFormat === 'unsupported')
+            throw badRequest('Image format is not supported', 'IMAGE_FORMAT_NOT_SUPPORTED');
 
-        if (detectedFormat === 'unknown') throw badRequest('Image file is invalid', 'IMAGE_INVALID');
+        if (detectedFormat === 'unknown')
+            throw badRequest('Image file is invalid', 'IMAGE_INVALID');
 
         let metadata: Metadata;
 
         try {
             metadata = await sharp(input, { failOn: 'error', limitInputPixels: MAX_INPUT_PIXELS }).metadata();
         } catch (error) {
-            if (isPixelLimitError(error)) throw badRequest('Image dimensions are too large', 'IMAGE_DIMENSIONS_TOO_LARGE');
+            if (isPixelLimitError(error))
+                throw badRequest('Image dimensions are too large', 'IMAGE_DIMENSIONS_TOO_LARGE');
 
             throw badRequest('Image content cannot be decoded', 'IMAGE_INVALID');
         }
@@ -55,7 +60,8 @@ export class RecipeImageProcessor {
         if (metadata.format !== 'jpeg' && metadata.format !== 'png' && metadata.format !== 'webp')
             throw badRequest('Image format is not supported', 'IMAGE_FORMAT_NOT_SUPPORTED');
 
-        if (!metadata.width || !metadata.height) throw badRequest('Image dimensions are invalid', 'IMAGE_INVALID');
+        if (!metadata.width || !metadata.height)
+            throw badRequest('Image dimensions are invalid', 'IMAGE_INVALID');
 
         const swapsAxes = metadata.orientation !== undefined && metadata.orientation >= 5 && metadata.orientation <= 8;
         const originalWidth = swapsAxes ? metadata.height : metadata.width;
@@ -102,11 +108,14 @@ export class RecipeImageProcessor {
 type DetectedFormat = 'supported' | 'unsupported' | 'unknown';
 
 function detectFormat(input: Buffer): DetectedFormat {
-    if (input.length >= 3 && input[0] === 0xff && input[1] === 0xd8 && input[2] === 0xff) return 'supported';
+    if (input.length >= 3 && input[0] === 0xff && input[1] === 0xd8 && input[2] === 0xff)
+        return 'supported';
 
-    if (input.length >= 8 && input.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return 'supported';
+    if (input.length >= 8 && input.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])))
+        return 'supported';
 
-    if (input.length >= 12 && input.toString('ascii', 0, 4) === 'RIFF' && input.toString('ascii', 8, 12) === 'WEBP') return 'supported';
+    if (input.length >= 12 && input.toString('ascii', 0, 4) === 'RIFF' && input.toString('ascii', 8, 12) === 'WEBP')
+        return 'supported';
 
     const prefix = input.subarray(0, 512).toString('utf8').trimStart().toLowerCase();
     const unsupportedBinary =

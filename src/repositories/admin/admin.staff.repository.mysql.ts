@@ -60,7 +60,8 @@ export class AdminStaffRepositoryMysql implements AdminStaffRepository {
         );
         const row = firstOrNull(rows);
 
-        if (!row) return null;
+        if (!row)
+            return null;
 
         const rolesByStaffUserId = await this.findRolesByStaffUserIds([staffUserId], executor);
         return mapAdminStaffAccount(row, rolesByStaffUserId.get(staffUserId) ?? []);
@@ -82,7 +83,8 @@ export class AdminStaffRepositoryMysql implements AdminStaffRepository {
         ]);
         const role = firstOrNull(roleRows);
 
-        if (!role) return false;
+        if (!role)
+            return false;
 
         const [activeSuperAdmins] = await db.execute<ActiveSuperAdminRow[]>(
             `SELECT sr.StaffUserId FROM StaffRoles AS sr INNER JOIN StaffProfiles AS sp ON sp.UserId = sr.StaffUserId WHERE sr.RoleId = ? AND sp.Status = 'active' ORDER BY sr.StaffUserId FOR UPDATE`,
@@ -103,7 +105,8 @@ export class AdminStaffRepositoryMysql implements AdminStaffRepository {
             [actorStaffUserId, reason, staffUserId]
         );
 
-        if (profileResult.affectedRows === 0) return null;
+        if (profileResult.affectedRows === 0)
+            return null;
 
         return activeSessionCount;
     }
@@ -114,7 +117,8 @@ export class AdminStaffRepositoryMysql implements AdminStaffRepository {
             [staffUserId, auditLogId, staffUserId]
         );
 
-        if (result.affectedRows !== 1) throw new Error('Staff moderation log does not match its administrative audit entry');
+        if (result.affectedRows !== 1)
+            throw new Error('Staff moderation log does not match its administrative audit entry');
     }
 
     async enable(staffUserId: number, db: PoolConnection): Promise<boolean> {
@@ -147,7 +151,8 @@ export class AdminStaffRepositoryMysql implements AdminStaffRepository {
     private async findRolesByStaffUserIds(staffUserIds: number[], db: Pool | PoolConnection): Promise<Map<number, AdminStaffRole[]>> {
         const rolesByStaffUserId = new Map<number, AdminStaffRole[]>();
 
-        if (staffUserIds.length === 0) return rolesByStaffUserId;
+        if (staffUserIds.length === 0)
+            return rolesByStaffUserId;
 
         const placeholders = staffUserIds.map(() => '?').join(', ');
         const [rows] = await db.execute<AdminStaffRoleRow[]>(

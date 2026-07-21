@@ -31,7 +31,8 @@ export class AdminAuditActionRunnerMysql implements AdminAuditActionRunner {
                     record: async (input) => {
                         auditCount += 1;
 
-                        if (auditCount > 1) throw invalidAuditCardinality();
+                        if (auditCount > 1)
+                            throw invalidAuditCardinality();
 
                         return audit.record(input);
                     }
@@ -39,7 +40,8 @@ export class AdminAuditActionRunnerMysql implements AdminAuditActionRunner {
             });
 
             const expectedAuditCount = result === false ? 0 : 1;
-            if (auditCount !== expectedAuditCount) throw invalidAuditCardinality();
+            if (auditCount !== expectedAuditCount)
+                throw invalidAuditCardinality();
 
             await connection.commit();
 

@@ -17,7 +17,8 @@ export type ImageStorageConfig = {
 };
 
 export function createImageStorage(config: ImageStorageConfig): ImageStorage {
-    if (config.driver === 'local') return new LocalImageStorage(config.localRoot, config.publicBaseUrl);
+    if (config.driver === 'local')
+        return new LocalImageStorage(config.localRoot, config.publicBaseUrl);
 
     if (config.driver === 's3') {
         return new S3ImageStorage({

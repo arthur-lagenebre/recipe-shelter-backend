@@ -105,11 +105,13 @@ export class AdminUserRepositoryMysql implements AdminUserRepository {
             [userId, auditLogId, userId]
         );
 
-        if (result.affectedRows !== 1) throw new Error('User moderation log does not match its administrative audit entry');
+        if (result.affectedRows !== 1)
+            throw new Error('User moderation log does not match its administrative audit entry');
     }
 
     private async updateUserTransaction(updateUser: (conn: PoolConnection) => Promise<boolean>, db?: PoolConnection): Promise<boolean> {
-        if (db) return updateUser(db);
+        if (db)
+            return updateUser(db);
 
         const conn = await this.db.getConnection();
 

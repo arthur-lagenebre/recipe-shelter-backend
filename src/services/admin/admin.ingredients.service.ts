@@ -186,7 +186,8 @@ export class AdminIngredientService {
             const result = await this.ingredients.restore(ingredientId, db);
             if (result === 'normalized_name_taken')
                 throw conflict('An active ingredient already uses this canonical name', 'ADMIN_INGREDIENTS_NORMALIZED_NAME_TAKEN');
-            if (result !== 'restored') throw conflict('Ingredient status changed concurrently', 'ADMIN_INGREDIENTS_STATUS_CONFLICT');
+            if (result !== 'restored')
+                throw conflict('Ingredient status changed concurrently', 'ADMIN_INGREDIENTS_STATUS_CONFLICT');
 
             const after = await this.requireIngredientForUpdate(ingredientId, db);
             await audit.record({
@@ -211,7 +212,8 @@ export class AdminIngredientService {
         context: AdminAuditRequestContext
     ): Promise<Ingredient> {
         requirePositiveId(sourceIngredientId, 'Ingredient id', 'ADMIN_INGREDIENTS_BAD_ID');
-        if (!input || typeof input !== 'object') throw badRequest('Invalid ingredient merge', 'ADMIN_INGREDIENTS_MERGE_BAD_BODY');
+        if (!input || typeof input !== 'object')
+            throw badRequest('Invalid ingredient merge', 'ADMIN_INGREDIENTS_MERGE_BAD_BODY');
         requirePositiveId(input.targetIngredientId, 'Merge target ingredient id', 'ADMIN_INGREDIENTS_MERGE_BAD_TARGET_ID');
         const cleanReason = validateActionReason(input.reason, 'merge');
         if (sourceIngredientId === input.targetIngredientId)
@@ -225,8 +227,10 @@ export class AdminIngredientService {
             const source = lockedIngredients.find(({ id }) => id === sourceIngredientId);
             const target = lockedIngredients.find(({ id }) => id === input.targetIngredientId);
 
-            if (!source) throw notFound('Ingredient not found', 'ADMIN_INGREDIENTS_NOT_FOUND');
-            if (!target) throw notFound('Merge target ingredient not found', 'ADMIN_INGREDIENTS_MERGE_TARGET_NOT_FOUND');
+            if (!source)
+                throw notFound('Ingredient not found', 'ADMIN_INGREDIENTS_NOT_FOUND');
+            if (!target)
+                throw notFound('Merge target ingredient not found', 'ADMIN_INGREDIENTS_MERGE_TARGET_NOT_FOUND');
             if (source.status === 'merged')
                 throw conflict('A merged ingredient cannot be merged again', 'ADMIN_INGREDIENTS_MERGE_INVALID_SOURCE_STATUS');
             if (target.status !== 'active')
@@ -429,7 +433,8 @@ export class AdminIngredientService {
 
     private async requireIngredient(ingredientId: number, db: Parameters<AdminIngredientRepository['findById']>[1]): Promise<Ingredient> {
         const ingredient = await this.ingredients.findById(ingredientId, db);
-        if (!ingredient) throw notFound('Ingredient not found', 'ADMIN_INGREDIENTS_NOT_FOUND');
+        if (!ingredient)
+            throw notFound('Ingredient not found', 'ADMIN_INGREDIENTS_NOT_FOUND');
 
         return ingredient;
     }
@@ -439,7 +444,8 @@ export class AdminIngredientService {
         db: Parameters<AdminIngredientRepository['findByIdsForUpdate']>[1]
     ): Promise<Ingredient> {
         const ingredient = (await this.ingredients.findByIdsForUpdate([ingredientId], db))[0];
-        if (!ingredient) throw notFound('Ingredient not found', 'ADMIN_INGREDIENTS_NOT_FOUND');
+        if (!ingredient)
+            throw notFound('Ingredient not found', 'ADMIN_INGREDIENTS_NOT_FOUND');
 
         return ingredient;
     }
@@ -450,7 +456,8 @@ export class AdminIngredientService {
         db: Parameters<AdminIngredientRepository['findAliasForUpdate']>[2]
     ): Promise<IngredientAlias> {
         const alias = await this.ingredients.findAliasForUpdate(ingredientId, aliasId, db);
-        if (!alias) throw notFound('Ingredient alias not found', 'ADMIN_INGREDIENT_ALIASES_NOT_FOUND');
+        if (!alias)
+            throw notFound('Ingredient alias not found', 'ADMIN_INGREDIENT_ALIASES_NOT_FOUND');
 
         return alias;
     }
@@ -469,7 +476,8 @@ export class AdminIngredientService {
 }
 
 function validateCreateIngredientCommand(input: AdminCreateIngredientCommand) {
-    if (!input || typeof input !== 'object') throw badRequest('Invalid ingredient creation', 'ADMIN_INGREDIENTS_CREATE_BAD_BODY');
+    if (!input || typeof input !== 'object')
+        throw badRequest('Invalid ingredient creation', 'ADMIN_INGREDIENTS_CREATE_BAD_BODY');
 
     const name = validateName(input.name, 'Ingredient');
     const normalizedName = normalizeAndValidateName(name);
@@ -482,7 +490,8 @@ function validateCreateIngredientCommand(input: AdminCreateIngredientCommand) {
 }
 
 function validateUpdateIngredientCommand(input: AdminUpdateIngredientCommand): AdminUpdateIngredientCommand {
-    if (!input || typeof input !== 'object') throw badRequest('Invalid ingredient update', 'ADMIN_INGREDIENTS_UPDATE_BAD_BODY');
+    if (!input || typeof input !== 'object')
+        throw badRequest('Invalid ingredient update', 'ADMIN_INGREDIENTS_UPDATE_BAD_BODY');
     if (input.name === undefined && input.slug === undefined)
         throw badRequest('At least one ingredient field must be provided', 'ADMIN_INGREDIENTS_UPDATE_EMPTY');
 
@@ -521,7 +530,8 @@ function validateName(value: unknown, label: 'Ingredient' | 'Ingredient alias'):
     const name = typeof value === 'string' ? value.trim() : '';
     const codePrefix = label === 'Ingredient' ? 'ADMIN_INGREDIENTS' : 'ADMIN_INGREDIENT_ALIASES';
 
-    if (!name) throw badRequest(`${label} name is required`, `${codePrefix}_NAME_REQUIRED`);
+    if (!name)
+        throw badRequest(`${label} name is required`, `${codePrefix}_NAME_REQUIRED`);
     if (name.length > INGREDIENT_NAME_MAX_LENGTH)
         throw badRequest(`${label} name must be at most ${INGREDIENT_NAME_MAX_LENGTH} characters`, `${codePrefix}_NAME_TOO_LONG`);
 
@@ -530,7 +540,8 @@ function validateName(value: unknown, label: 'Ingredient' | 'Ingredient alias'):
 
 function normalizeAndValidateName(name: string): string {
     const normalizedName = normalizeIngredientName(name);
-    if (!normalizedName) throw badRequest('Ingredient name must contain canonical letters or numbers', 'ADMIN_INGREDIENTS_NAME_INVALID');
+    if (!normalizedName)
+        throw badRequest('Ingredient name must contain canonical letters or numbers', 'ADMIN_INGREDIENTS_NAME_INVALID');
     if (normalizedName.length > INGREDIENT_NAME_MAX_LENGTH)
         throw badRequest(
             `Normalized ingredient name must be at most ${INGREDIENT_NAME_MAX_LENGTH} characters`,
@@ -573,7 +584,8 @@ function validateActionReason(reason: unknown, action: 'deprecate' | 'restore' |
     const cleanReason = typeof reason === 'string' ? reason.trim() : '';
     const codePrefix = `ADMIN_INGREDIENTS_${action.toUpperCase()}`;
 
-    if (!cleanReason) throw badRequest('Action reason is required', `${codePrefix}_REASON_REQUIRED`);
+    if (!cleanReason)
+        throw badRequest('Action reason is required', `${codePrefix}_REASON_REQUIRED`);
     if (cleanReason.length < ACTION_REASON_MIN_LENGTH)
         throw badRequest(`Action reason must be at least ${ACTION_REASON_MIN_LENGTH} characters`, `${codePrefix}_REASON_TOO_SHORT`);
     if (cleanReason.length > ACTION_REASON_MAX_LENGTH)
@@ -583,7 +595,8 @@ function validateActionReason(reason: unknown, action: 'deprecate' | 'restore' |
 }
 
 function requirePositiveId(value: unknown, label: string, code: string): number {
-    if (!Number.isSafeInteger(value) || Number(value) <= 0) throw badRequest(`${label} must be a positive integer`, code);
+    if (!Number.isSafeInteger(value) || Number(value) <= 0)
+        throw badRequest(`${label} must be a positive integer`, code);
 
     return Number(value);
 }
@@ -591,7 +604,8 @@ function requirePositiveId(value: unknown, label: string, code: string): number 
 function requireWrittenIngredient(result: AdminIngredientWriteResult): Ingredient {
     if (result.status === 'normalized_name_taken')
         throw conflict('An active ingredient already uses this canonical name', 'ADMIN_INGREDIENTS_NORMALIZED_NAME_TAKEN');
-    if (result.status === 'slug_taken') throw conflict('An ingredient already uses this slug', 'ADMIN_INGREDIENTS_SLUG_TAKEN');
+    if (result.status === 'slug_taken')
+        throw conflict('An ingredient already uses this slug', 'ADMIN_INGREDIENTS_SLUG_TAKEN');
 
     return result.ingredient;
 }

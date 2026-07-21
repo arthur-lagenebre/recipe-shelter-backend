@@ -58,7 +58,8 @@ export class AdminTagRepositoryMysql implements AdminTagRepository {
     }
 
     async findByIdsForUpdate(ids: number[], db: PoolConnection): Promise<Tag[]> {
-        if (ids.length === 0) return [];
+        if (ids.length === 0)
+            return [];
 
         const placeholders = ids.map(() => '?').join(', ');
         const [rows] = await db.execute<TagRow[]>(
@@ -88,12 +89,14 @@ export class AdminTagRepositoryMysql implements AdminTagRepository {
             );
             const tag = await this.findById(Number(result.insertId), db);
 
-            if (!tag) throw new Error('Tag created but cannot be reloaded');
+            if (!tag)
+                throw new Error('Tag created but cannot be reloaded');
 
             return { status: 'written', tag };
         } catch (error) {
             const duplicateStatus = getDuplicateTagStatus(error);
-            if (duplicateStatus) return { status: duplicateStatus };
+            if (duplicateStatus)
+                return { status: duplicateStatus };
 
             throw error;
         }
@@ -107,12 +110,14 @@ export class AdminTagRepositoryMysql implements AdminTagRepository {
             );
             const tag = await this.findById(input.id, db);
 
-            if (!tag) throw new Error('Tag updated but cannot be reloaded');
+            if (!tag)
+                throw new Error('Tag updated but cannot be reloaded');
 
             return { status: 'written', tag };
         } catch (error) {
             const duplicateStatus = getDuplicateTagStatus(error);
-            if (duplicateStatus) return { status: duplicateStatus };
+            if (duplicateStatus)
+                return { status: duplicateStatus };
 
             throw error;
         }
@@ -142,7 +147,8 @@ export class AdminTagRepositoryMysql implements AdminTagRepository {
 
             return result.affectedRows > 0 ? 'restored' : 'not_updated';
         } catch (error) {
-            if (getDuplicateTagStatus(error) === 'normalized_name_taken') return 'normalized_name_taken';
+            if (getDuplicateTagStatus(error) === 'normalized_name_taken')
+                return 'normalized_name_taken';
 
             throw error;
         }
@@ -223,12 +229,15 @@ function buildWhere(filters: AdminTagListFilters): TagWhere {
 }
 
 function getDuplicateTagStatus(error: unknown): 'normalized_name_taken' | 'slug_taken' | null {
-    if (!error || typeof error !== 'object' || !('code' in error) || error.code !== 'ER_DUP_ENTRY') return null;
+    if (!error || typeof error !== 'object' || !('code' in error) || error.code !== 'ER_DUP_ENTRY')
+        return null;
 
     const message = 'message' in error ? String(error.message) : '';
 
-    if (message.includes('tags_active_normalized_name_UK')) return 'normalized_name_taken';
-    if (message.includes('tags_slug_UK')) return 'slug_taken';
+    if (message.includes('tags_active_normalized_name_UK'))
+        return 'normalized_name_taken';
+    if (message.includes('tags_slug_UK'))
+        return 'slug_taken';
 
     return null;
 }

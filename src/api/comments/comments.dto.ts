@@ -18,7 +18,8 @@ export type UpdateCommentBody = {
 function parsePositiveIntegerParam(value: unknown, message: string, code: string): number {
     const id = typeof value === 'string' ? Number(value) : NaN;
 
-    if (!Number.isInteger(id) || id <= 0) throw badRequest(message, code);
+    if (!Number.isInteger(id) || id <= 0)
+        throw badRequest(message, code);
 
     return id;
 }
@@ -46,7 +47,8 @@ function parseParentCommentId(value: unknown): number | null | undefined {
 }
 
 export function parseCreateCommentBody(body: unknown): CreateCommentBody {
-    if (!isRecord(body)) throw badRequest('Invalid body', 'COMMENTS_CREATE_BAD_BODY');
+    if (!isRecord(body))
+        throw badRequest('Invalid body', 'COMMENTS_CREATE_BAD_BODY');
 
     const comment = getRequiredBoundedString(
         body.comment,
@@ -65,7 +67,8 @@ export function parseCreateCommentBody(body: unknown): CreateCommentBody {
 }
 
 export function parseUpdateCommentBody(body: unknown): UpdateCommentBody {
-    if (!isRecord(body)) throw badRequest('Invalid body', 'COMMENTS_UPDATE_BAD_BODY');
+    if (!isRecord(body))
+        throw badRequest('Invalid body', 'COMMENTS_UPDATE_BAD_BODY');
 
     const comment = getRequiredBoundedString(
         body.comment,

@@ -56,10 +56,14 @@ export function parseRegisterBody(body: unknown): RegisterDto {
     const username = getString(obj.username);
     const password = getString(obj.password);
 
-    if (!mail || !username || !password) throw badRequest('Missing fields', 'AUTH_MISSING_FIELDS');
-    if (!mail.includes('@')) throw badRequest('Invalid email', 'AUTH_INVALID_EMAIL');
-    if (username.length < 3) throw badRequest('Username too short', 'AUTH_WEAK_USERNAME');
-    if (password.length < 8) throw badRequest('Password must be at least 8 characters', 'AUTH_WEAK_PASSWORD');
+    if (!mail || !username || !password)
+        throw badRequest('Missing fields', 'AUTH_MISSING_FIELDS');
+    if (!mail.includes('@'))
+        throw badRequest('Invalid email', 'AUTH_INVALID_EMAIL');
+    if (username.length < 3)
+        throw badRequest('Username too short', 'AUTH_WEAK_USERNAME');
+    if (password.length < 8)
+        throw badRequest('Password must be at least 8 characters', 'AUTH_WEAK_PASSWORD');
 
     return { mail, username, password };
 }
@@ -70,7 +74,8 @@ export function parseLoginBody(body: unknown): LoginDto {
     const mail = getString(obj.mail).toLowerCase();
     const password = getString(obj.password);
 
-    if (!mail || !password) throw badRequest('Missing fields', 'AUTH_MISSING_FIELDS');
+    if (!mail || !password)
+        throw badRequest('Missing fields', 'AUTH_MISSING_FIELDS');
 
     return { mail, password };
 }
@@ -79,7 +84,8 @@ export function parseStaffLoginVerificationBody(body: unknown): StaffLoginVerifi
     const obj = asObject(body);
     const flowId = getString(obj.flowId);
 
-    if (!flowId) throw badRequest('MFA flow ID is required', 'AUTH_MFA_FLOW_REQUIRED');
+    if (!flowId)
+        throw badRequest('MFA flow ID is required', 'AUTH_MFA_FLOW_REQUIRED');
 
     return { flowId, credential: parseAuthenticationCredential(obj.credential) };
 }
@@ -88,7 +94,8 @@ export function parseStaffMfaEnrollmentOptionsBody(body: unknown): StaffMfaEnrol
     const obj = asObject(body);
     const invitationToken = getString(obj.invitationToken);
 
-    if (!invitationToken) throw badRequest('Invitation token is required', 'STAFF_MFA_INVITATION_TOKEN_REQUIRED');
+    if (!invitationToken)
+        throw badRequest('Invitation token is required', 'STAFF_MFA_INVITATION_TOKEN_REQUIRED');
 
     return { invitationToken };
 }
@@ -99,9 +106,12 @@ export function parseStaffInvitationActivationBody(invitationTokenParam: unknown
     const flowId = getString(obj.flowId);
     const password = typeof obj.password === 'string' ? obj.password : '';
 
-    if (!invitationToken) throw badRequest('Invitation token is required', 'STAFF_MFA_INVITATION_TOKEN_REQUIRED');
-    if (!flowId) throw badRequest('MFA flow ID is required', 'AUTH_MFA_FLOW_REQUIRED');
-    if (!password) throw badRequest('Password is required', 'AUTH_MISSING_FIELDS');
+    if (!invitationToken)
+        throw badRequest('Invitation token is required', 'STAFF_MFA_INVITATION_TOKEN_REQUIRED');
+    if (!flowId)
+        throw badRequest('MFA flow ID is required', 'AUTH_MFA_FLOW_REQUIRED');
+    if (!password)
+        throw badRequest('Password is required', 'AUTH_MISSING_FIELDS');
 
     return {
         flowId,
@@ -158,7 +168,8 @@ export function parseValidateEmailBody(body: unknown): ValidateEmailDto {
     const obj = asObject(body);
     const token = getString(obj.token);
 
-    if (!token) throw badRequest('Token is required', 'AUTH_EMAIL_VALIDATION_MISSING_TOKEN');
+    if (!token)
+        throw badRequest('Token is required', 'AUTH_EMAIL_VALIDATION_MISSING_TOKEN');
 
     return { token };
 }
@@ -169,7 +180,8 @@ export function parseResetPasswordBody(body: unknown): ResetPasswordDto {
     const rawPassword = typeof obj.password === 'string' ? obj.password : obj.newPassword;
     const password = typeof rawPassword === 'string' ? rawPassword : '';
 
-    if (!token) throw badRequest('Token is required', 'AUTH_RESET_PASSWORD_MISSING_TOKEN');
+    if (!token)
+        throw badRequest('Token is required', 'AUTH_RESET_PASSWORD_MISSING_TOKEN');
 
     return { token, password };
 }
@@ -178,8 +190,10 @@ export function parseResendValidationEmailBody(body: unknown): ResendValidationE
     const obj = asObject(body);
     const mail = getString(obj.mail).toLowerCase();
 
-    if (!mail) throw badRequest('Email is required', 'AUTH_VALIDATION_RESEND_MISSING_EMAIL');
-    if (!mail.includes('@')) throw badRequest('Invalid email', 'AUTH_INVALID_EMAIL');
+    if (!mail)
+        throw badRequest('Email is required', 'AUTH_VALIDATION_RESEND_MISSING_EMAIL');
+    if (!mail.includes('@'))
+        throw badRequest('Invalid email', 'AUTH_INVALID_EMAIL');
 
     return { mail };
 }

@@ -215,6 +215,57 @@ describe('CommentService', () => {
         assert.equal(result.comment, 'Still great');
     });
 
+    it('rejects updating a reply comment with a rating', async () => {
+        repository.comment = { ...baseComment, parentCommentId: 5 };
+
+        await assert.rejects(
+            () =>
+                service.updateComment({
+                    id: 1,
+                    userId: 20,
+                    rating: 4,
+                    comment: 'Adding a rating'
+                }),
+            (error) => {
+                assertHttpError(error, 'COMMENTS_UPDATE_REPLY_WITH_RATING', 400);
+
+                return true;
+            }
+        );
+        assert.equal(repository.updatedInput, null);
+    });
+
+    it('allows updating a reply comment when the rating stays null or omitted', async () => {
+        repository.comment = { ...baseComment, parentCommentId: 5, rating: null };
+
+        const withNullRating = await service.updateComment({
+            id: 1,
+            userId: 20,
+            rating: null,
+            comment: 'Still a reply'
+        });
+        assert.equal(withNullRating.comment, 'Still a reply');
+
+        const withOmittedRating = await service.updateComment({
+            id: 1,
+            userId: 20,
+            comment: 'Still a reply, no rating field'
+        });
+        assert.equal(withOmittedRating.comment, 'Still a reply, no rating field');
+    });
+
+    it('allows updating a root comment with a rating', async () => {
+        const result = await service.updateComment({
+            id: 1,
+            userId: 20,
+            rating: 3,
+            comment: 'Root comment update'
+        });
+
+        assert.equal(result.rating, 3);
+        assert.equal(result.comment, 'Root comment update');
+    });
+
     it('rejects update when comment does not exist', async () => {
         repository.comment = null;
 
