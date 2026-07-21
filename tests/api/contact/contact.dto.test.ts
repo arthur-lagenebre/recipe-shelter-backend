@@ -10,20 +10,26 @@ function assertHttpError(error: unknown, code: string, status: number): void {
     assert.equal(error.statusCode, status);
 }
 
+function renderedAtMsAgo(ms: number): string {
+    return new Date(Date.now() - ms).toISOString();
+}
+
 describe('contact.dto', () => {
     it('parses and trims a contact message body', () => {
         const result = parseContactMessageBody({
             name: ' John Doe ',
             email: ' john@example.com ',
             subject: ' Question ',
-            message: ' Bonjour, je voudrais en savoir plus. '
+            message: ' Bonjour, je voudrais en savoir plus. ',
+            formRenderedAt: renderedAtMsAgo(10_000)
         });
 
         assert.deepEqual(result, {
             name: 'John Doe',
             email: 'john@example.com',
             subject: 'Question',
-            message: 'Bonjour, je voudrais en savoir plus.'
+            message: 'Bonjour, je voudrais en savoir plus.',
+            isSuspectedBot: false
         });
     });
 
@@ -107,5 +113,53 @@ describe('contact.dto', () => {
                 return true;
             }
         );
+    });
+
+    it('flags a filled honeypot field as a suspected bot without throwing', () => {
+        const result = parseContactMessageBody({
+            name: 'John Doe',
+            email: 'john@example.com',
+            subject: 'Question',
+            message: 'Bonjour, je voudrais en savoir plus.',
+            formRenderedAt: renderedAtMsAgo(10_000),
+            company: 'Acme Corp'
+        });
+
+        assert.equal(result.isSuspectedBot, true);
+    });
+
+    it('flags a submission made too quickly after the form was rendered', () => {
+        const result = parseContactMessageBody({
+            name: 'John Doe',
+            email: 'john@example.com',
+            subject: 'Question',
+            message: 'Bonjour, je voudrais en savoir plus.',
+            formRenderedAt: renderedAtMsAgo(500)
+        });
+
+        assert.equal(result.isSuspectedBot, true);
+    });
+
+    it('flags a submission with no formRenderedAt at all', () => {
+        const result = parseContactMessageBody({
+            name: 'John Doe',
+            email: 'john@example.com',
+            subject: 'Question',
+            message: 'Bonjour, je voudrais en savoir plus.'
+        });
+
+        assert.equal(result.isSuspectedBot, true);
+    });
+
+    it('flags a submission whose formRenderedAt is in the future', () => {
+        const result = parseContactMessageBody({
+            name: 'John Doe',
+            email: 'john@example.com',
+            subject: 'Question',
+            message: 'Bonjour, je voudrais en savoir plus.',
+            formRenderedAt: renderedAtMsAgo(-10_000)
+        });
+
+        assert.equal(result.isSuspectedBot, true);
     });
 });

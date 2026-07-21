@@ -45,7 +45,8 @@ const validMessage = {
     name: 'Alice Martin',
     email: 'alice@example.com',
     subject: 'Recipe question',
-    message: 'Could you clarify the cooking time for this recipe?'
+    message: 'Could you clarify the cooking time for this recipe?',
+    formRenderedAt: new Date(Date.now() - 10_000).toISOString()
 };
 
 describe('contact HTTP integration', () => {
@@ -58,7 +59,9 @@ describe('contact HTTP integration', () => {
         assert.equal(response.status, 200);
         assert.deepEqual(await response.json(), { message: 'Contact message sent' });
         assert.equal(mailer.messages.length, 1);
-        assert.deepEqual({ ...mailer.messages[0], sentAt: undefined }, { ...validMessage, sentAt: undefined });
+        const expectedMessage: Partial<typeof validMessage> = { ...validMessage };
+        delete expectedMessage.formRenderedAt;
+        assert.deepEqual({ ...mailer.messages[0], sentAt: undefined }, { ...expectedMessage, sentAt: undefined });
         assert.ok(mailer.messages[0]?.sentAt instanceof Date);
     });
 

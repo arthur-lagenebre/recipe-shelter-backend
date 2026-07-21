@@ -5,9 +5,12 @@ export type ContactMessageDto = {
     email: string;
     subject: string;
     message: string;
+    isSuspectedBot: boolean;
 };
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const HONEYPOT_FIELD = 'company';
+const MIN_SUBMIT_DELAY_MS = 3000;
 
 function asObject(value: unknown): Record<string, unknown> {
     return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
@@ -50,5 +53,15 @@ export function parseContactMessageBody(body: unknown): ContactMessageDto {
     if (!EMAIL_PATTERN.test(email))
         throw badRequest('Invalid email', 'CONTACT_INVALID_EMAIL');
 
-    return { name, email, subject, message };
+    const honeypotValue = typeof obj[HONEYPOT_FIELD] === 'string' ? (obj[HONEYPOT_FIELD] as string).trim() : '';
+    const honeypotTriggered = honeypotValue.length > 0;
+
+    const renderedAtRaw = obj.formRenderedAt;
+    const renderedAtMs = typeof renderedAtRaw === 'string' ? Date.parse(renderedAtRaw) : NaN;
+    const elapsedMs = Number.isFinite(renderedAtMs) ? Date.now() - renderedAtMs : NaN;
+    const timingSuspicious = !Number.isFinite(elapsedMs) || elapsedMs < MIN_SUBMIT_DELAY_MS || elapsedMs < 0;
+
+    const isSuspectedBot = honeypotTriggered || timingSuspicious;
+
+    return { name, email, subject, message, isSuspectedBot };
 }
