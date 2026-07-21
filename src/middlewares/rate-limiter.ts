@@ -14,8 +14,24 @@ function setRateLimitHeaders(res: Response, limit: number, remaining: number, re
     res.setHeader('RateLimit-Reset', String(getRetryAfterSeconds(resetAt, now)));
 }
 
+export function sweepExpiredEntries(attempts: Map<string, { count: number; resetAt: number }>, now: number): number {
+    let evictedCount = 0;
+
+    for (const [key, entry] of attempts) {
+        if (now > entry.resetAt) {
+            attempts.delete(key);
+            evictedCount++;
+        }
+    }
+
+    return evictedCount;
+}
+
 export function rateLimiter(max: number, windowMs: number) {
     const attempts = new Map<string, { count: number; resetAt: number }>();
+
+    const sweepIntervalId = setInterval(() => sweepExpiredEntries(attempts, Date.now()), windowMs);
+    sweepIntervalId.unref();
 
     return (req: Request, res: Response, next: NextFunction) => {
         const key = getRequestKey(req);

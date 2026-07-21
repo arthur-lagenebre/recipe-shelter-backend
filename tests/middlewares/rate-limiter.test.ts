@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { rateLimiter } from '../../src/middlewares/rate-limiter.js';
+import { rateLimiter, sweepExpiredEntries } from '../../src/middlewares/rate-limiter.js';
 
 import type { NextFunction, Request, Response } from 'express';
 
@@ -112,5 +112,57 @@ describe('rateLimiter', () => {
         } finally {
             Date.now = originalNow;
         }
+    });
+});
+
+describe('sweepExpiredEntries', () => {
+    it('evicts expired entries and keeps valid ones', () => {
+        const now = 10_000;
+        const attempts = new Map<string, { count: number; resetAt: number }>([
+            ['expired-1', { count: 1, resetAt: now - 1 }],
+            ['expired-2', { count: 3, resetAt: now - 500 }],
+            ['valid', { count: 1, resetAt: now + 1_000 }]
+        ]);
+
+        const evictedCount = sweepExpiredEntries(attempts, now);
+
+        assert.equal(evictedCount, 2);
+        assert.equal(attempts.size, 1);
+        assert.equal(attempts.has('valid'), true);
+    });
+
+    it('returns 0 and does not throw for an empty map', () => {
+        const attempts = new Map<string, { count: number; resetAt: number }>();
+
+        assert.equal(sweepExpiredEntries(attempts, 10_000), 0);
+        assert.equal(attempts.size, 0);
+    });
+
+    it('leaves the map untouched when no entries are expired', () => {
+        const now = 10_000;
+        const attempts = new Map<string, { count: number; resetAt: number }>([
+            ['a', { count: 1, resetAt: now + 1 }],
+            ['b', { count: 2, resetAt: now + 1_000 }]
+        ]);
+        const before = new Map(attempts);
+
+        const evictedCount = sweepExpiredEntries(attempts, now);
+
+        assert.equal(evictedCount, 0);
+        assert.equal(attempts.size, 2);
+        assert.deepEqual(attempts, before);
+    });
+
+    it('does not evict an entry whose resetAt equals now', () => {
+        const now = 10_000;
+        const attempts = new Map<string, { count: number; resetAt: number }>([
+            ['exact', { count: 1, resetAt: now }]
+        ]);
+
+        const evictedCount = sweepExpiredEntries(attempts, now);
+
+        assert.equal(evictedCount, 0);
+        assert.equal(attempts.size, 1);
+        assert.equal(attempts.has('exact'), true);
     });
 });
