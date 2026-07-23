@@ -928,6 +928,8 @@ CREATE TABLE IngredientAliases (
     ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+DELIMITER $$
+
 CREATE TRIGGER ingredient_aliases_canonical_ingredient_BI
 BEFORE INSERT ON IngredientAliases
 FOR EACH ROW
@@ -945,7 +947,7 @@ BEGIN
       SET MYSQL_ERRNO = 1644,
           MESSAGE_TEXT = 'Ingredient aliases can only reference active canonical ingredients';
   END IF;
-END;
+END$$
 
 CREATE TRIGGER ingredient_aliases_canonical_ingredient_BU
 BEFORE UPDATE ON IngredientAliases
@@ -985,7 +987,7 @@ BEGIN
       SET MYSQL_ERRNO = 1644,
           MESSAGE_TEXT = 'A merged ingredient source-name alias cannot be reassigned';
   END IF;
-END;
+END$$
 
 CREATE TRIGGER ingredient_aliases_merged_name_BD
 BEFORE DELETE ON IngredientAliases
@@ -1003,7 +1005,7 @@ BEGIN
       SET MYSQL_ERRNO = 1644,
           MESSAGE_TEXT = 'A merged ingredient source-name alias cannot be deleted';
   END IF;
-END;
+END$$
 
 CREATE TRIGGER ingredients_merge_integrity_BI
 BEFORE INSERT ON Ingredients
@@ -1029,7 +1031,7 @@ BEGIN
             MESSAGE_TEXT = 'A merged ingredient must reference an active canonical ingredient';
     END IF;
   END IF;
-END;
+END$$
 
 CREATE TRIGGER ingredients_merge_integrity_BU
 BEFORE UPDATE ON Ingredients
@@ -1087,14 +1089,16 @@ BEGIN
       SET MYSQL_ERRNO = 1644,
           MESSAGE_TEXT = 'An ingredient with aliases must remain active';
   END IF;
-END;
+END$$
 
 CREATE TRIGGER ingredients_no_delete_BD
 BEFORE DELETE ON Ingredients
 FOR EACH ROW
 SIGNAL SQLSTATE '45000'
   SET MYSQL_ERRNO = 1644,
-      MESSAGE_TEXT = 'Ingredients cannot be physically deleted; deprecate or merge them instead';
+      MESSAGE_TEXT = 'Ingredients cannot be physically deleted; deprecate or merge them instead'$$
+
+DELIMITER ;
 
 -- ---------- Equipment catalogue ----------
 CREATE TABLE Equipments (
@@ -1191,6 +1195,8 @@ CREATE TABLE Tags (
     ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+DELIMITER $$
+
 CREATE TRIGGER tags_merge_integrity_BI
 BEFORE INSERT ON Tags
 FOR EACH ROW
@@ -1215,7 +1221,7 @@ BEGIN
             MESSAGE_TEXT = 'A merged tag must reference an active canonical tag';
     END IF;
   END IF;
-END;
+END$$
 
 CREATE TRIGGER tags_merge_integrity_BU
 BEFORE UPDATE ON Tags
@@ -1251,7 +1257,9 @@ BEGIN
       SET MYSQL_ERRNO = 1644,
           MESSAGE_TEXT = 'A canonical merge target must remain active';
   END IF;
-END;
+END$$
+
+DELIMITER ;
 
 -- ---------- Catalogue proposals ----------
 -- Proposals are historical review records. They never create canonical
@@ -1364,6 +1372,8 @@ CREATE TABLE CatalogProposals (
     ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+DELIMITER $$
+
 CREATE TRIGGER catalog_proposals_pending_only_BI
 BEFORE INSERT ON CatalogProposals
 FOR EACH ROW
@@ -1373,7 +1383,7 @@ BEGIN
       SET MYSQL_ERRNO = 1644,
           MESSAGE_TEXT = 'Catalog proposals must be created with pending status';
   END IF;
-END;
+END$$
 
 CREATE TRIGGER catalog_proposals_review_BU
 BEFORE UPDATE ON CatalogProposals
@@ -1435,14 +1445,16 @@ BEGIN
             MESSAGE_TEXT = 'A reviewed equipment proposal must match an existing canonical equipment';
     END IF;
   END IF;
-END;
+END$$
 
 CREATE TRIGGER catalog_proposals_no_delete_BD
 BEFORE DELETE ON CatalogProposals
 FOR EACH ROW
 SIGNAL SQLSTATE '45000'
   SET MYSQL_ERRNO = 1644,
-      MESSAGE_TEXT = 'Catalog proposals are historical records and cannot be physically deleted';
+      MESSAGE_TEXT = 'Catalog proposals are historical records and cannot be physically deleted'$$
+
+DELIMITER ;
 
 -- ---------- Recipe content ----------
 CREATE TABLE RecipeSteps (
@@ -1483,6 +1495,8 @@ CREATE TABLE RecipeIngredients (
     ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+DELIMITER $$
+
 CREATE TRIGGER recipe_ingredients_active_ingredient_BI
 BEFORE INSERT ON RecipeIngredients
 FOR EACH ROW
@@ -1502,7 +1516,7 @@ BEGIN
             MESSAGE_TEXT = 'Recipes can only reference active canonical ingredients';
     END IF;
   END IF;
-END;
+END$$
 
 CREATE TRIGGER recipe_ingredients_active_ingredient_BU
 BEFORE UPDATE ON RecipeIngredients
@@ -1523,7 +1537,7 @@ BEGIN
             MESSAGE_TEXT = 'Recipes can only reference active canonical ingredients';
     END IF;
   END IF;
-END;
+END$$
 
 CREATE TRIGGER ingredients_merged_recipe_associations_BU
 BEFORE UPDATE ON Ingredients
@@ -1554,7 +1568,9 @@ BEGIN
       SET MYSQL_ERRNO = 1644,
           MESSAGE_TEXT = 'A merged ingredient must preserve its source name as a target alias';
   END IF;
-END;
+END$$
+
+DELIMITER ;
 
 CREATE TABLE RecipeTags (
   RecipeId BIGINT UNSIGNED NOT NULL,
@@ -1570,6 +1586,8 @@ CREATE TABLE RecipeTags (
     ON UPDATE CASCADE
     ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+DELIMITER $$
 
 CREATE TRIGGER recipe_tags_active_tag_BI
 BEFORE INSERT ON RecipeTags
@@ -1588,7 +1606,7 @@ BEGIN
       SET MYSQL_ERRNO = 1644,
           MESSAGE_TEXT = 'Recipes can only reference active canonical tags';
   END IF;
-END;
+END$$
 
 CREATE TRIGGER tags_merged_recipe_associations_BU
 BEFORE UPDATE ON Tags
@@ -1605,7 +1623,7 @@ BEGIN
       SET MYSQL_ERRNO = 1644,
           MESSAGE_TEXT = 'A tag must have no recipe associations before being merged';
   END IF;
-END;
+END$$
 
 CREATE TRIGGER tags_no_delete_BD
 BEFORE DELETE ON Tags
@@ -1624,7 +1642,9 @@ BEGIN
   SIGNAL SQLSTATE '45000'
     SET MYSQL_ERRNO = 1644,
         MESSAGE_TEXT = 'Tags cannot be physically deleted; deprecate or merge them instead';
-END;
+END$$
+
+DELIMITER ;
 
 CREATE TABLE RecipeEquipments (
   RecipeId BIGINT UNSIGNED NOT NULL,
