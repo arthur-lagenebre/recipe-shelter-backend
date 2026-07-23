@@ -4,6 +4,8 @@ import { after, before, describe, it } from 'node:test';
 
 import mysql from 'mysql2/promise';
 
+import { executeMysqlScript } from './mysql-script.js';
+
 import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin.audit.repository.mysql.js';
 import { AdminIngredientRepositoryMysql } from '../../../src/repositories/admin/admin.ingredients.repository.mysql.js';
 import { AdminTagRepositoryMysql } from '../../../src/repositories/admin/admin.tags.repository.mysql.js';
@@ -90,7 +92,7 @@ describe('catalog proposals schema MySQL integration', { skip: !mysqlEnabled && 
         const schema = targetDatabase(await readFile(schemaPath, 'utf8'), databaseName);
         seed = targetDatabase(await readFile(seedPath, 'utf8'), databaseName);
 
-        await connection.query(schema);
+        await executeMysqlScript(connection, schema);
         await connection.query(seed);
         await connection.query(`INSERT INTO Users (Id, Mail, Username, Password, AccountType, Status) VALUES (?, 'proposal-author@test.local', 'Proposal Author', 'non-secret-test-hash', 'community', 'active'), (?, 'proposal-other@test.local', 'Proposal Other', 'non-secret-test-hash', 'community', 'active'), (?, 'proposal-reviewer@test.local', 'Proposal Reviewer', 'non-secret-test-hash', 'staff', 'inactive'); INSERT INTO Recipes (Id, UserId, Title, Slug, Description, PrepTimeMinutes, Servings) VALUES (?, ?, 'Catalog proposal recipe', 'catalog-proposal-recipe', 'Recipe used to verify proposal isolation.', 10, 2), (?, ?, 'Other catalog proposal recipe', 'other-catalog-proposal-recipe', 'Recipe owned by another author.', 15, 4); INSERT INTO TagGroups (Id, Name, Slug, SortOrder) VALUES (8600, 'Catalog proposal fixtures', 'catalog-proposal-fixtures', 99); INSERT INTO Tags (Id, GroupId, Name, NormalizedName, Slug, Status) VALUES (?, 8600, 'Existing proposal tag', 'existing proposal tag', 'existing-proposal-tag', 'active'), (?, 8600, 'Deprecated proposal tag', 'deprecated proposal tag', 'deprecated-proposal-tag', 'deprecated'); INSERT INTO Ingredients (Id, Name, NormalizedName, Slug, Status) VALUES (?, 'Accepted proposal ingredient', 'accepted proposal ingredient', 'accepted-proposal-ingredient', 'active'), (?, 'Deprecated proposal ingredient', 'deprecated proposal ingredient', 'deprecated-proposal-ingredient', 'deprecated'); INSERT INTO Equipments (Id, Name, NormalizedName, Slug) VALUES (?, 'Existing proposal equipment', 'existing proposal equipment', 'existing-proposal-equipment')`, [ authorUserId, otherAuthorUserId, reviewerUserId, authorRecipeId, authorUserId, otherAuthorRecipeId, otherAuthorUserId, activeTagId, deprecatedTagId, activeIngredientId, deprecatedIngredientId, activeEquipmentId ]);
 

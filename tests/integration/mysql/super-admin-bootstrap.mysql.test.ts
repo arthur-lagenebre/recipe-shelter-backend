@@ -4,6 +4,8 @@ import { after, before, describe, it } from 'node:test';
 
 import mysql from 'mysql2/promise';
 
+import { executeMysqlScript } from './mysql-script.js';
+
 import { SuperAdminBootstrapRepositoryMysql } from '../../../src/repositories/bootstrap/super-admin-bootstrap.repository.mysql.js';
 import { SuperAdminBootstrapService } from '../../../src/services/bootstrap/super-admin-bootstrap.service.js';
 import { env } from '../../../src/utils/env.js';
@@ -65,7 +67,7 @@ describe('SuperAdmin bootstrap MySQL integration', { skip: !mysqlEnabled && 'Set
         const schema = targetDatabase(await readFile(schemaPath, 'utf8'), databaseName);
         seed = targetDatabase(await readFile(seedPath, 'utf8'), databaseName);
 
-        await adminConnection.query(schema);
+        await executeMysqlScript(adminConnection, schema);
         await adminConnection.query(seed);
 
         pool = mysql.createPool({

@@ -4,6 +4,8 @@ import { after, before, describe, it } from 'node:test';
 
 import mysql from 'mysql2/promise';
 
+import { executeMysqlScript } from './mysql-script.js';
+
 import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin.audit.repository.mysql.js';
 import { AdminIngredientRepositoryMysql } from '../../../src/repositories/admin/admin.ingredients.repository.mysql.js';
 import { AdminRecipeRepositoryMysql } from '../../../src/repositories/admin/admin.recipe.repository.mysql.js';
@@ -141,7 +143,7 @@ describe('ingredient catalog schema integration', { skip: !mysqlEnabled && 'Set 
         const schema = targetDatabase(await readFile(schemaPath, 'utf8'), databaseName);
         seed = targetDatabase(await readFile(seedPath, 'utf8'), databaseName);
 
-        await connection.query(schema);
+        await executeMysqlScript(connection, schema);
         await connection.query(seed);
         pool = mysql.createPool({
             host: env.db.host,

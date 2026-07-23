@@ -4,6 +4,8 @@ import { after, before, describe, it } from 'node:test';
 
 import mysql from 'mysql2/promise';
 
+import { executeMysqlScript } from './mysql-script.js';
+
 import { SessionRepositoryMysql } from '../../../src/repositories/auth/session.repository.mysql.js';
 import { StaffMfaRepositoryMysql } from '../../../src/repositories/auth/staff-mfa.repository.mysql.js';
 import { PERMISSIONS } from '../../../src/security/permissions.js';
@@ -55,7 +57,7 @@ describe('RBAC schema and seed integration', { skip: !mysqlEnabled && 'Set TEST_
         const schema = targetDatabase(await readFile(schemaPath, 'utf8'), databaseName);
         seed = targetDatabase(await readFile(seedPath, 'utf8'), databaseName);
 
-        await connection.query(schema);
+        await executeMysqlScript(connection, schema);
         await connection.query(seed);
         pool = mysql.createPool({
             host: env.db.host,

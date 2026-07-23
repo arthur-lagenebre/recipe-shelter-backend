@@ -6,6 +6,8 @@ import cookieParser from 'cookie-parser';
 import express from 'express';
 import mysql from 'mysql2/promise';
 
+import { executeMysqlScript } from './mysql-script.js';
+
 import { createAdminCatalogProposalsRouter } from '../../../src/api/admin/admin.catalog-proposals.routes.js';
 import { createAdminStaffController } from '../../../src/api/admin/admin.staff.controller.js';
 import { createAdminStaffRouter } from '../../../src/api/admin/admin.staff.routes.js';
@@ -150,7 +152,7 @@ describe(
 
             const schemaPath = new URL('../../../database/migrations/1_create_schema.sql', import.meta.url);
             const seedPath = new URL('../../../database/seed.sql', import.meta.url);
-            await connection.query(targetDatabase(await readFile(schemaPath, 'utf8'), databaseName));
+            await executeMysqlScript(connection, targetDatabase(await readFile(schemaPath, 'utf8'), databaseName));
             await connection.query(targetDatabase(await readFile(seedPath, 'utf8'), databaseName));
             const [seededUsers] = await connection.query<RowDataPacket[]>(`SELECT COUNT(*) AS UserCount FROM Users`);
             cleanSeedUserCount = Number(seededUsers[0]?.UserCount);

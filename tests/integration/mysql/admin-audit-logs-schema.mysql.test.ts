@@ -4,6 +4,8 @@ import { after, before, describe, it } from 'node:test';
 
 import mysql from 'mysql2/promise';
 
+import { executeMysqlScript } from './mysql-script.js';
+
 import { AdminUserRepositoryMysql } from '../../../src/repositories/admin/admin.users.repository.mysql.js';
 import { AdminAuditQueryRepositoryMysql } from '../../../src/repositories/admin/admin.audit-query.repository.mysql.js';
 import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin.audit.repository.mysql.js';
@@ -80,7 +82,7 @@ describe('admin audit logs schema integration', { skip: !mysqlEnabled && 'Set TE
         const schema = targetDatabase(await readFile(schemaPath, 'utf8'), databaseName);
         const seed = targetDatabase(await readFile(seedPath, 'utf8'), databaseName);
 
-        await connection.query(schema);
+        await executeMysqlScript(connection, schema);
         await connection.query(seed);
         await connection.query(`INSERT INTO Users (Id, Mail, Username, Password, AccountType, Status) VALUES (900, 'audit-staff@test.local', 'audit-staff', 'non-secret-test-hash', 'staff', 'inactive'), (901, 'audit-community@test.local', 'audit-community', 'non-secret-test-hash', 'community', 'active')`);
         pool = mysql.createPool({

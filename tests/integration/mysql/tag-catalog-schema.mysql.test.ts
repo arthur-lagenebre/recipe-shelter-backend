@@ -4,6 +4,8 @@ import { after, before, describe, it } from 'node:test';
 
 import mysql from 'mysql2/promise';
 
+import { executeMysqlScript } from './mysql-script.js';
+
 import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin.audit.repository.mysql.js';
 import { AdminTagRepositoryMysql } from '../../../src/repositories/admin/admin.tags.repository.mysql.js';
 import { TagRepositoryMysql } from '../../../src/repositories/tag/tag.repository.mysql.js';
@@ -99,7 +101,7 @@ describe('tag catalog schema integration', { skip: !mysqlEnabled && 'Set TEST_DB
         const schema = targetDatabase(await readFile(schemaPath, 'utf8'), databaseName);
         seed = targetDatabase(await readFile(seedPath, 'utf8'), databaseName);
 
-        await connection.query(schema);
+        await executeMysqlScript(connection, schema);
         await connection.query(seed);
         pool = mysql.createPool({
             host: env.db.host,

@@ -4,6 +4,8 @@ import { after, before, describe, it } from 'node:test';
 
 import mysql from 'mysql2/promise';
 
+import { executeMysqlScript } from './mysql-script.js';
+
 import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin.audit.repository.mysql.js';
 import { StaffInvitationRepositoryMysql } from '../../../src/repositories/admin/admin.staff-invitation.repository.mysql.js';
 import { AdminAuditActionRunnerMysql } from '../../../src/services/admin/admin.audit-action.runner.js';
@@ -61,7 +63,7 @@ describe('staff invitation MySQL integration', { skip: !mysqlEnabled && 'Set TES
         const schema = targetDatabase(await readFile(schemaPath, 'utf8'), databaseName);
         const seed = targetDatabase(await readFile(seedPath, 'utf8'), databaseName);
 
-        await adminConnection.query(schema);
+        await executeMysqlScript(adminConnection, schema);
         await adminConnection.query(seed);
         pool = mysql.createPool({
             host: env.db.host,

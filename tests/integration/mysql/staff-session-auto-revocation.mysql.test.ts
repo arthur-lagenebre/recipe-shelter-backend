@@ -5,6 +5,8 @@ import { after, before, describe, it } from 'node:test';
 
 import mysql from 'mysql2/promise';
 
+import { executeMysqlScript } from './mysql-script.js';
+
 import { SessionRepositoryMysql } from '../../../src/repositories/auth/session.repository.mysql.js';
 import { StaffMfaRepositoryMysql } from '../../../src/repositories/auth/staff-mfa.repository.mysql.js';
 import { env } from '../../../src/utils/env.js';
@@ -55,7 +57,7 @@ describe(
             const seedPath = new URL('../../../database/seed.sql', import.meta.url);
             const schema = targetDatabase(await readFile(schemaPath, 'utf8'), databaseName);
             const seed = targetDatabase(await readFile(seedPath, 'utf8'), databaseName);
-            await adminConnection.query(schema);
+            await executeMysqlScript(adminConnection, schema);
             await adminConnection.query(seed);
 
             pool = mysql.createPool({

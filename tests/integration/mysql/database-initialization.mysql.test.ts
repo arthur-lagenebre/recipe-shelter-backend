@@ -4,6 +4,8 @@ import { after, before, describe, it } from 'node:test';
 
 import mysql from 'mysql2/promise';
 
+import { executeMysqlScript } from './mysql-script.js';
+
 import { CategoryRepositoryMysql } from '../../../src/repositories/category/category.repository.mysql.js';
 import { EquipmentRepositoryMysql } from '../../../src/repositories/equipments/equipment.repository.mysql.js';
 import { IngredientRepositoryMysql } from '../../../src/repositories/ingredients/ingredient.repository.mysql.js';
@@ -227,7 +229,7 @@ describe(
             seed = await readFile(seedPath, 'utf8');
             inventory = extractSchemaInventory(schema);
 
-            await connection.query(targetDatabase(schema, databaseName));
+            await executeMysqlScript(connection, targetDatabase(schema, databaseName));
             pool = mysql.createPool({
                 host: env.db.host,
                 port: env.db.port,

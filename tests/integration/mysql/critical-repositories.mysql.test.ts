@@ -4,6 +4,8 @@ import { after, before, describe, it } from 'node:test';
 
 import mysql from 'mysql2/promise';
 
+import { executeMysqlScript } from './mysql-script.js';
+
 import { AdminCommentRepositoryMysql } from '../../../src/repositories/admin/admin.comments.repository.mysql.js';
 import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin.audit.repository.mysql.js';
 import { AdminRecipeRepositoryMysql } from '../../../src/repositories/admin/admin.recipe.repository.mysql.js';
@@ -54,7 +56,7 @@ describe('critical MySQL repositories integration', { skip: !mysqlEnabled && 'Se
 
         const schemaPath = new URL('../../../database/migrations/1_create_schema.sql', import.meta.url);
         const schema = (await readFile(schemaPath, 'utf8')).replace(/USE\s+recipe_shelter\s*;/i, `USE \`${databaseName}\`;`);
-        await adminConnection.query(schema);
+        await executeMysqlScript(adminConnection, schema);
 
         await adminConnection.query(`
             USE \`${databaseName}\`;

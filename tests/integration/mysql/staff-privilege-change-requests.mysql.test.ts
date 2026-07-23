@@ -4,6 +4,8 @@ import { after, before, describe, it } from 'node:test';
 
 import mysql from 'mysql2/promise';
 
+import { executeMysqlScript } from './mysql-script.js';
+
 import { env } from '../../../src/utils/env.js';
 
 const baseTestDatabaseName = process.env.TEST_DB_NAME?.trim() ?? '';
@@ -56,7 +58,7 @@ describe(
             const schema = targetDatabase(await readFile(schemaPath, 'utf8'), databaseName);
             const seed = targetDatabase(await readFile(seedPath, 'utf8'), databaseName);
 
-            await connection.query(schema);
+            await executeMysqlScript(connection, schema);
             await connection.query(seed);
             await connection.query(`INSERT INTO Users (Id, Mail, Username, Password, AccountType, Status) VALUES (?, 'privilege-requester@test.local', 'Privilege Requester', 'non-secret-test-hash', 'staff', 'inactive'), (?, 'privilege-target@test.local', 'Privilege Target', 'non-secret-test-hash', 'staff', 'inactive'), (?, 'privilege-reviewer@test.local', 'Privilege Reviewer', 'non-secret-test-hash', 'staff', 'inactive'); INSERT INTO StaffRoles (StaffUserId, RoleId) VALUES (?, ?)`, [requesterUserId, targetUserId, reviewerUserId, targetUserId, superAdminRoleId]);
         });

@@ -4,6 +4,8 @@ import { after, before, describe, it } from 'node:test';
 
 import mysql from 'mysql2/promise';
 
+import { executeMysqlScript } from './mysql-script.js';
+
 import { AdminAuditRepositoryMysql } from '../../../src/repositories/admin/admin.audit.repository.mysql.js';
 import { AdminStaffRepositoryMysql } from '../../../src/repositories/admin/admin.staff.repository.mysql.js';
 import { SessionRepositoryMysql } from '../../../src/repositories/auth/session.repository.mysql.js';
@@ -58,7 +60,7 @@ describe('staff management MySQL integration', { skip: !mysqlEnabled && 'Set TES
         const seedPath = new URL('../../../database/seed.sql', import.meta.url);
         const schema = targetDatabase(await readFile(schemaPath, 'utf8'), databaseName);
         const seed = targetDatabase(await readFile(seedPath, 'utf8'), databaseName);
-        await adminConnection.query(schema);
+        await executeMysqlScript(adminConnection, schema);
         await adminConnection.query(seed);
 
         pool = mysql.createPool({
